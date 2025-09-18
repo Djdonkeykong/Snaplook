@@ -1,31 +1,31 @@
 {
   "mcpServers": {
-    "dart": {
-      "command": "dart-mcp-server",
-      "args": ["--project-root", "."],
+    "supabase": {
+      "command": "npx",
+      "args": ["@supabase/mcp-server-supabase"],
       "env": {
-        "DART_PROJECT_ROOT": "."
+        "SUPABASE_URL": "${SUPABASE_URL}",
+        "SUPABASE_ANON_KEY": "${SUPABASE_ANON_KEY}"
       }
     },
-    "firebase": {
-      "command": "firebase-mcp-server",
-      "args": ["--project", "snaplook"],
+    "filesystem": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem", "D:\\Snaplook"]
+    },
+    "notion": {
+      "command": "npx",
+      "args": ["@notionhq/notion-mcp-server"],
       "env": {
-        "FIREBASE_PROJECT_ID": "snaplook"
+        "NOTION_API_KEY": "${NOTION_API_KEY}"
       }
     },
-    "github": {
-      "command": "github-mcp-server",
-      "args": ["--repo", "Djdonkeykong/Snaplook"],
+    "sentry": {
+      "command": "npx",
+      "args": ["@sentry/mcp-server"],
       "env": {
-        "GITHUB_TOKEN": "your_github_token_here"
-      }
-    },
-    "replicate": {
-      "command": "replicate-mcp-server",
-      "args": ["--model", "anthropic/claude-4-sonnet"],
-      "env": {
-        "REPLICATE_API_TOKEN": "${REPLICATE_API_KEY}"
+        "SENTRY_ORG": "${SENTRY_ORG}",
+        "SENTRY_PROJECT": "${SENTRY_PROJECT}",
+        "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}"
       }
     }
   }
