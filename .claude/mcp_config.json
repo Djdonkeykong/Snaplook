@@ -1,5 +1,9 @@
 {
   "mcpServers": {
+    "dart": {
+      "command": "npx",
+      "args": ["dart-mcp-server"]
+    },
     "supabase": {
       "command": "npx",
       "args": ["@supabase/mcp-server-supabase"],
