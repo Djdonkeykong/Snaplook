@@ -42,16 +42,20 @@ cd Snaplook
 flutter pub get
 ```
 
-3. Configure environment variables in `lib/src/core/constants/app_constants.dart`:
-```dart
-static const String supabaseUrl = 'https://tlqpkoknwfptfzejpchy.supabase.co';
-static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscXBrb2tud2ZwdGZ6ZWpwY2h5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDAzMzM3MSwiZXhwIjoyMDY5NjA5MzcxfQ._oMzqi-ikCHrJmcXI-D5M0d-6PakOWzVYDBehoW27Ow';
-static const String replicateApiKey = 'YOUR_REPLICATE_API_KEY';
+3. Configure environment variables:
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env with your actual API keys
+# SUPABASE_URL=your_supabase_url
+# SUPABASE_ANON_KEY=your_supabase_anon_key
+# REPLICATE_API_KEY=your_replicate_api_key
 ```
 
-4. Run the app:
+4. Run the app with environment variables:
 ```bash
-flutter run
+flutter run --dart-define-from-file=.env
 ```
 
 ## Project Structure

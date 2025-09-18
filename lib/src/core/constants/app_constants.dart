@@ -1,11 +1,23 @@
 class AppConstants {
-  // Supabase Configuration
-  static const String supabaseUrl = 'https://tlqpkoknwfptfzejpchy.supabase.co';
-  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscXBrb2tud2ZwdGZ6ZWpwY2h5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDAzMzM3MSwiZXhwIjoyMDY5NjA5MzcxfQ._oMzqi-ikCHrJmcXI-D5M0d-6PakOWzVYDBehoW27Ow';
+  // Supabase Configuration - Use environment variables for production
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://tlqpkoknwfptfzejpchy.supabase.co',
+  );
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: 'YOUR_SUPABASE_ANON_KEY_HERE',
+  );
 
   // Replicate Configuration
-  static const String replicateApiKey = 'YOUR_REPLICATE_API_KEY';
-  static const String replicateModelVersion = 'YOUR_CLAUDE_SONNET_4_MODEL_VERSION';
+  static const String replicateApiKey = String.fromEnvironment(
+    'REPLICATE_API_KEY',
+    defaultValue: 'YOUR_REPLICATE_API_KEY',
+  );
+  static const String replicateModelVersion = String.fromEnvironment(
+    'REPLICATE_MODEL_VERSION',
+    defaultValue: 'YOUR_CLAUDE_SONNET_4_MODEL_VERSION',
+  );
 
   // App Configuration
   static const String appName = 'Snaplook';
