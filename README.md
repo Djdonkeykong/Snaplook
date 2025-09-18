@@ -33,7 +33,7 @@ Snaplook is a Flutter mobile application that uses AI to analyze fashion images 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/Snaplook.git
+git clone https://github.com/Djdonkeykong/Snaplook.git
 cd Snaplook
 ```
 
@@ -44,8 +44,8 @@ flutter pub get
 
 3. Configure environment variables in `lib/src/core/constants/app_constants.dart`:
 ```dart
-static const String supabaseUrl = 'YOUR_SUPABASE_URL';
-static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+static const String supabaseUrl = 'https://tlqpkoknwfptfzejpchy.supabase.co';
+static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscXBrb2tud2ZwdGZ6ZWpwY2h5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDAzMzM3MSwiZXhwIjoyMDY5NjA5MzcxfQ._oMzqi-ikCHrJmcXI-D5M0d-6PakOWzVYDBehoW27Ow';
 static const String replicateApiKey = 'YOUR_REPLICATE_API_KEY';
 ```
 
