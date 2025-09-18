@@ -29,7 +29,7 @@ class SnaplookApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        fontFamily: 'Inter',
+        // fontFamily: 'Inter',
         appBarTheme: const AppBarTheme(
           elevation: 0,
           centerTitle: true,
@@ -43,7 +43,7 @@ class SnaplookApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
-        fontFamily: 'Inter',
+        // fontFamily: 'Inter',
         appBarTheme: const AppBarTheme(
           elevation: 0,
           centerTitle: true,
