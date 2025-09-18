@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "dart": {
+      "command": "dart-mcp-server",
+      "args": ["--project-root", "."],
+      "env": {
+        "DART_PROJECT_ROOT": "."
+      }
+    },
+    "firebase": {
+      "command": "firebase-mcp-server",
+      "args": ["--project", "snaplook"],
+      "env": {
+        "FIREBASE_PROJECT_ID": "snaplook"
+      }
+    },
+    "github": {
+      "command": "github-mcp-server",
+      "args": ["--repo", "Djdonkeykong/Snaplook"],
+      "env": {
+        "GITHUB_TOKEN": "your_github_token_here"
+      }
+    },
+    "replicate": {
+      "command": "replicate-mcp-server",
+      "args": ["--model", "anthropic/claude-4-sonnet"],
+      "env": {
+        "REPLICATE_API_TOKEN": "${REPLICATE_API_KEY}"
+      }
+    }
+  }
+}

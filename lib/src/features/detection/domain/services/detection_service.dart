@@ -8,6 +8,32 @@ import '../../../../core/constants/app_constants.dart';
 class DetectionService {
   static const String _replicateEndpoint = '${AppConstants.baseApiUrl}/predictions';
 
+  // Comprehensive fashion analysis system prompt from working Python code
+  static const String _fashionAnalysisPrompt = '''You are a comprehensive fashion analyst. Analyze this image and detect ALL fashion items visible.
+
+MANDATORY CATEGORIES TO CHECK:
+- bag, wallet, purse, handbag, backpack, tote, clutch
+- belt
+- cardigan, sweater
+- coat, jacket, blazer
+- dress
+- glasses, sunglasses
+- headband, hat, cap, beanie, head covering, hair accessory
+- jeans, pants, trousers
+- jumpsuit, romper
+- scarf
+- shirt, blouse, top, t-shirt, sweatshirt
+- shoes (sandals, sneakers, heels, boots, flats, loafers, pumps)
+- shorts
+- skirt
+- swimwear
+- tie
+- vest
+
+EXCLUSIONS: Ignore all jewelry items including necklaces, earrings, bracelets, rings, watches, brooches, body jewelry.
+
+Return JSON with detected fashion items for product matching.''';
+
   Future<List<DetectionResult>> analyzeImage(XFile image) async {
     try {
       // First, upload image to Replicate
@@ -25,7 +51,8 @@ class DetectionService {
           'version': AppConstants.replicateModelVersion,
           'input': {
             'image': 'data:image/jpeg;base64,$base64Image',
-            'prompt': 'Analyze this fashion image and identify clothing items, accessories, and their characteristics including style, color, pattern, and type.',
+            'prompt': _fashionAnalysisPrompt,
+            'system_prompt': _fashionAnalysisPrompt,
           },
         }),
       );
