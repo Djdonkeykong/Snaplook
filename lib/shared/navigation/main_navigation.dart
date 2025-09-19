@@ -26,9 +26,21 @@ class MainNavigation extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: IndexedStack(
-        index: selectedIndex,
-        children: pages,
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: selectedIndex,
+            children: pages,
+          ),
+          // Floating Action Bar - only show on home page
+          if (selectedIndex == 0)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 100, // Position above bottom nav
+              child: _FloatingActionBar(),
+            ),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -113,6 +125,109 @@ class _NavigationItem extends StatelessWidget {
               ? AppColors.secondary
               : AppColors.onSurfaceVariant,
           size: 30,
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingActionBar extends StatelessWidget {
+  const _FloatingActionBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF5722), // Orange color matching the image
+        borderRadius: BorderRadius.circular(35),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _FloatingActionButton(
+            icon: Icons.arrow_upward,
+            label: 'Send',
+            onTap: () {
+              // TODO: Implement send functionality
+            },
+          ),
+          _FloatingActionButton(
+            icon: Icons.arrow_downward,
+            label: 'Request',
+            onTap: () {
+              // TODO: Implement request functionality
+            },
+          ),
+          _FloatingActionButton(
+            icon: Icons.qr_code_scanner,
+            label: 'Scan',
+            onTap: () {
+              // TODO: Implement scan functionality
+            },
+          ),
+          _FloatingActionButton(
+            icon: Icons.qr_code,
+            label: 'Show QR',
+            onTap: () {
+              // TODO: Implement show QR functionality
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FloatingActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _FloatingActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(35),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 24,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
