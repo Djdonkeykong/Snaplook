@@ -37,7 +37,7 @@ class CustomButton extends StatelessWidget {
           foregroundColor: isPrimary
               ? Colors.white
               : theme.colorScheme.primary,
-          elevation: isPrimary ? 2 : 0,
+          elevation: 0,
           side: isPrimary ? null : BorderSide(
             color: theme.colorScheme.primary,
             width: 1.5,

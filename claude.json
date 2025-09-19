@@ -1,0 +1,41 @@
+{
+  "model": "claude-4-sonnet",
+  "project_memory": {
+    "design_system": {
+      "primary_color": "#000000",
+      "secondary_color": "#F2F2F7", 
+      "spacing_system": [4, 8, 16, 24, 32, 48],
+      "radius_system": {
+        "small": 8,
+        "medium": 16, 
+        "full": 999
+      },
+      "typography": {
+        "heading_font": "Montserrat",
+        "body_font": "Inter"
+      }
+    },
+    "coding_preferences": {
+      "always_use_theme_tokens": true,
+      "prefer_const_constructors": true,
+      "include_accessibility": true,
+      "support_dark_theme": true,
+      "follow_material3": true
+    }
+  },
+  "hooks": {
+    "pre_edit": [
+      "flutter analyze --no-fatal-infos"
+    ],
+    "post_edit": [
+      "dart format lib/",
+      "flutter analyze --no-fatal-infos"
+    ]
+  },
+  "allowed_tools": [
+    "file_edit",
+    "terminal",
+    "file_read",
+    "file_create"
+  ]
+}

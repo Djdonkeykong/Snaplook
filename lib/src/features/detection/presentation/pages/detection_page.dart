@@ -140,15 +140,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withOpacity(0.3),
-              Colors.black.withOpacity(0.1),
-              Colors.black.withOpacity(0.3),
-            ],
-          ),
+          color: Colors.black.withOpacity(0.2),
         ),
         child: Center(
           child: Column(
@@ -189,15 +181,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withOpacity(0.3),
-              Colors.transparent,
-              Colors.black.withOpacity(0.5),
-            ],
-          ),
+          color: Colors.black.withOpacity(0.3),
         ),
         child: Center(
           child: Container(
@@ -316,6 +300,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
   }
 
   void _startDetection() async {
+    print('Starting detection process...');
     final selectedImage = ref.read(selectedImageProvider);
     if (selectedImage == null) return;
 
@@ -332,6 +317,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
         );
       }
     } catch (e) {
+      print('DETECTION ERROR: $e');
+      print('Error type: ${e.runtimeType}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

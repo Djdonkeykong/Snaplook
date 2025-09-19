@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../../core/theme/theme_extensions.dart';
 
 class ResultsPage extends ConsumerStatefulWidget {
   final List<DetectionResult> results;
@@ -39,7 +40,9 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   @override
   Widget build(BuildContext context) {
     final selectedImage = ref.watch(selectedImageProvider);
-    final categories = ['All', 'Tops', 'Bottoms', 'Shoes', 'Headwear'];
+    final categories = ['All', 'Tops', 'Bottoms', 'Shoes', 'Headwear', 'Accessories'];
+    final spacing = context.spacing;
+    final radius = context.radius;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -86,87 +89,102 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
             maxChildSize: 0.9,
             builder: (context, scrollController) {
               return Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(AppConstants.largeBorderRadius),
+                    top: Radius.circular(radius.large),
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
-                    // Handle
+                    // Enhanced Drag Handle Area
                     Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        vertical: spacing.l,
+                        horizontal: spacing.m,
                       ),
-                    ),
-
-                    // Header
-                    Padding(
-                      padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                      child: Row(
+                      child: Column(
                         children: [
-                          const Expanded(
-                            child: Text(
-                              'Similar matches',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          // Larger, more visible handle
+                          Container(
+                            width: 50,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[400],
+                              borderRadius: BorderRadius.circular(3),
                             ),
                           ),
-                          Text(
-                            '${widget.results.length} results',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                          SizedBox(height: spacing.m),
+
+                          // Header
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Similar matches',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '${widget.results.length} results',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: spacing.m),
+
+                          // Category Tabs (non-scrollable to avoid conflicts)
+                          SizedBox(
+                            height: 40,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              physics: const NeverScrollableScrollPhysics(), // Prevent scroll conflicts
+                              itemCount: categories.length,
+                              itemBuilder: (context, index) {
+                                final category = categories[index];
+                                final isSelected = selectedCategory == category;
+
+                                return Container(
+                                  margin: EdgeInsets.only(right: spacing.sm),
+                                  child: FilterChip(
+                                    label: Text(category),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        selectedCategory = category;
+                                      });
+                                    },
+                                    backgroundColor: Colors.grey[100],
+                                    selectedColor: Theme.of(context).colorScheme.primary,
+                                    labelStyle: TextStyle(
+                                      color: isSelected ? Colors.white : Colors.black,
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                    ),
+                                    side: BorderSide.none,
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                    // Category Tabs
-                    Container(
-                      height: 40,
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: AppConstants.defaultPadding,
-                      ),
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: categories.length,
-                        itemBuilder: (context, index) {
-                          final category = categories[index];
-                          final isSelected = selectedCategory == category;
-
-                          return Container(
-                            margin: const EdgeInsets.only(right: 12),
-                            child: FilterChip(
-                              label: Text(category),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                setState(() {
-                                  selectedCategory = category;
-                                });
-                              },
-                              backgroundColor: Colors.grey[100],
-                              selectedColor: Theme.of(context).colorScheme.primary,
-                              labelStyle: TextStyle(
-                                color: isSelected ? Colors.white : Colors.black,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                              ),
-                              side: BorderSide.none,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
+                    SizedBox(height: spacing.sm),
 
                     // Results List
                     Expanded(
@@ -234,17 +252,22 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = context.spacing;
+    final radius = context.radius;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: spacing.m),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        borderRadius: BorderRadius.circular(radius.medium),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(spacing.m),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-            border: Border.all(color: Colors.grey[200]!),
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(radius.medium),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.04),
@@ -257,7 +280,7 @@ class _ProductCard extends StatelessWidget {
             children: [
               // Product Image
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(radius.small),
                 child: CachedNetworkImage(
                   imageUrl: result.imageUrl,
                   width: 80,
@@ -280,7 +303,7 @@ class _ProductCard extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(width: 12),
+              SizedBox(width: spacing.sm),
 
               // Product Details
               Expanded(
@@ -296,7 +319,7 @@ class _ProductCard extends StatelessWidget {
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: spacing.xs),
                     Text(
                       result.productName,
                       style: const TextStyle(
@@ -306,7 +329,7 @@ class _ProductCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: spacing.sm),
                     Text(
                       '\$${result.price.toStringAsFixed(2)}',
                       style: const TextStyle(
@@ -322,13 +345,13 @@ class _ProductCard extends StatelessWidget {
               Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: spacing.sm,
+                      vertical: spacing.xs,
                     ),
                     decoration: BoxDecoration(
                       color: _getConfidenceColor(result.confidence).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(radius.medium),
                     ),
                     child: Text(
                       '${(result.confidence * 100).toInt()}%',
@@ -339,7 +362,7 @@ class _ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: spacing.sm),
                   Icon(
                     Icons.arrow_forward_ios,
                     size: 16,

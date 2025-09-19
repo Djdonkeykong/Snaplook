@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'src/core/constants/app_constants.dart';
-import 'src/features/home/presentation/pages/home_page.dart';
+import 'core/constants/app_constants.dart';
+import 'core/theme/app_theme.dart';
+import 'shared/navigation/main_navigation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,35 +24,10 @@ class SnaplookApp extends StatelessWidget {
     return MaterialApp(
       title: 'Snaplook',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6C5CE7),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-        // fontFamily: 'Inter',
-        appBarTheme: const AppBarTheme(
-          elevation: 0,
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.black,
-        ),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6C5CE7),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        // fontFamily: 'Inter',
-        appBarTheme: const AppBarTheme(
-          elevation: 0,
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
-        ),
-      ),
-      home: const HomePage(),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.lightTheme, // Use light theme for both
+      themeMode: ThemeMode.light, // Force light theme for clean design
+      home: const MainNavigation(),
     );
   }
 }
