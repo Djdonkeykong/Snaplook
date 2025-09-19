@@ -124,28 +124,97 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                           ),
                           SizedBox(height: spacing.m),
 
-                          // Header
+                          // Header with improved search indicator
                           Row(
                             children: [
-                              const Expanded(
-                                child: Text(
-                                  'Similar matches',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Smart matches',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Enhanced color matching active',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.green[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              Text(
-                                '${widget.results.length} results',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '${widget.results.length} results',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  if (widget.results.isNotEmpty && _hasHighQualityMatches())
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[100],
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        'High quality',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.green[700],
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ],
                           ),
                           SizedBox(height: spacing.m),
+
+                          // Smart search insights
+                          if (widget.results.isNotEmpty)
+                            Container(
+                              padding: EdgeInsets.all(spacing.sm),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(radius.small),
+                                border: Border.all(color: Colors.blue[200]!, width: 1),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.auto_awesome,
+                                    size: 16,
+                                    color: Colors.blue[600],
+                                  ),
+                                  SizedBox(width: spacing.xs),
+                                  Expanded(
+                                    child: Text(
+                                      _getSearchInsightText(),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.blue[700],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (widget.results.isNotEmpty)
+                            SizedBox(height: spacing.m),
 
                           // Category Tabs (non-scrollable to avoid conflicts)
                           SizedBox(
@@ -214,12 +283,35 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   }
 
   List<DetectionResult> _getFilteredResults() {
+    List<DetectionResult> filtered;
     if (selectedCategory == 'All') {
-      return widget.results;
+      filtered = List.from(widget.results);
+    } else {
+      filtered = widget.results
+          .where((result) => result.category.toLowerCase().contains(selectedCategory.toLowerCase()))
+          .toList();
     }
-    return widget.results
-        .where((result) => result.category.toLowerCase().contains(selectedCategory.toLowerCase()))
-        .toList();
+
+    // Sort by confidence score (highest first) to show best matches first
+    filtered.sort((a, b) => b.confidence.compareTo(a.confidence));
+    return filtered;
+  }
+
+  bool _hasHighQualityMatches() {
+    return widget.results.any((result) => result.confidence >= 0.85);
+  }
+
+  String _getSearchInsightText() {
+    final highQualityCount = widget.results.where((r) => r.confidence >= 0.85).length;
+    final mediumQualityCount = widget.results.where((r) => r.confidence >= 0.75 && r.confidence < 0.85).length;
+
+    if (highQualityCount > 0) {
+      return 'Found ${highQualityCount} precise color matches using smart matching';
+    } else if (mediumQualityCount > 0) {
+      return 'Found ${mediumQualityCount} good matches using enhanced color database';
+    } else {
+      return 'Smart search analyzed ${widget.results.length} potential matches';
+    }
   }
 
   void _shareResults() {
@@ -341,26 +433,64 @@ class _ProductCard extends StatelessWidget {
                 ),
               ),
 
-              // Confidence & Action
+              // Enhanced Confidence & Match Info
               Column(
                 children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: spacing.sm,
-                      vertical: spacing.xs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getConfidenceColor(result.confidence).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(radius.medium),
-                    ),
-                    child: Text(
-                      '${(result.confidence * 100).toInt()}%',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _getConfidenceColor(result.confidence),
+                  Column(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: spacing.sm,
+                          vertical: spacing.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getConfidenceColor(result.confidence).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(radius.medium),
+                        ),
+                        child: Text(
+                          '${(result.confidence * 100).toInt()}%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _getConfidenceColor(result.confidence),
+                          ),
+                        ),
                       ),
-                    ),
+                      if (result.confidence >= 0.85)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green[100],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Precise',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                        )
+                      else if (result.confidence >= 0.75)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[100],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Good',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue[700],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   SizedBox(height: spacing.sm),
                   Icon(

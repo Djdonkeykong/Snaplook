@@ -163,11 +163,20 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
               ),
               const SizedBox(height: 20),
               const Text(
-                'Analyzing fashion items...',
+                'Smart color matching active...',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Enhanced matching with 3-tier color database',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
             ],

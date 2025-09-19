@@ -9,6 +9,9 @@ class DetectionResult {
   final String? description;
   final List<String> tags;
   final String? purchaseUrl;
+  final String? colorMatchType;
+  final double? colorMatchScore;
+  final List<String>? matchedColors;
 
   const DetectionResult({
     required this.id,
@@ -21,6 +24,9 @@ class DetectionResult {
     this.description,
     this.tags = const [],
     this.purchaseUrl,
+    this.colorMatchType,
+    this.colorMatchScore,
+    this.matchedColors,
   });
 
   factory DetectionResult.fromJson(Map<String, dynamic> json) {
@@ -35,6 +41,9 @@ class DetectionResult {
       description: json['description'] as String?,
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
       purchaseUrl: json['purchase_url'] as String?,
+      colorMatchType: json['color_match_type'] as String?,
+      colorMatchScore: (json['color_match_score'] as num?)?.toDouble(),
+      matchedColors: (json['matched_colors'] as List<dynamic>?)?.cast<String>(),
     );
   }
 
@@ -50,6 +59,9 @@ class DetectionResult {
       'description': description,
       'tags': tags,
       'purchase_url': purchaseUrl,
+      'color_match_type': colorMatchType,
+      'color_match_score': colorMatchScore,
+      'matched_colors': matchedColors,
     };
   }
 }
