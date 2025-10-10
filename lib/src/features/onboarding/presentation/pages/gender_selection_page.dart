@@ -1,0 +1,310 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/theme_extensions.dart';
+import '../widgets/progress_indicator.dart';
+import 'discovery_source_page.dart';
+
+enum Gender { male, female, other }
+
+final selectedGenderProvider = StateProvider<Gender?>((ref) => null);
+
+class GenderSelectionPage extends ConsumerStatefulWidget {
+  const GenderSelectionPage({super.key});
+
+  @override
+  ConsumerState<GenderSelectionPage> createState() => _GenderSelectionPageState();
+}
+
+class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
+    with TickerProviderStateMixin, RouteAware {
+  late List<AnimationController> _animationControllers;
+  late List<Animation<double>> _fadeAnimations;
+  late List<Animation<double>> _scaleAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationControllers = List.generate(3, (index) {
+      return AnimationController(
+        duration: const Duration(milliseconds: 400),
+        vsync: this,
+      );
+    });
+
+    _fadeAnimations = _animationControllers.map((controller) {
+      return Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeOut),
+      );
+    }).toList();
+
+    _scaleAnimations = _animationControllers.map((controller) {
+      return Tween<double>(begin: 0.8, end: 1.0).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeOutBack),
+      );
+    }).toList();
+
+    // Start animation after the frame is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startStaggeredAnimation();
+    });
+  }
+
+  void _startStaggeredAnimation() {
+    // Reset all controllers first
+    for (var controller in _animationControllers) {
+      controller.reset();
+    }
+
+    // Then start staggered animation
+    for (int i = 0; i < _animationControllers.length; i++) {
+      Future.delayed(Duration(milliseconds: i * 100), () {
+        if (mounted) {
+          _animationControllers[i].forward();
+        }
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      // Trigger animation when page becomes visible
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _startStaggeredAnimation();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _animationControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedGender = ref.watch(selectedGenderProvider);
+    final spacing = context.spacing;
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.arrow_back,
+              color: Colors.black,
+              size: 20,
+            ),
+          ),
+        ),
+        centerTitle: true,
+        title: const OnboardingProgressIndicator(
+          currentStep: 1,
+          totalSteps: 5,
+        ),
+      ),
+      body: Padding(
+        padding: EdgeInsets.symmetric(horizontal: spacing.l),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: spacing.l),
+
+            // Title
+            const Text(
+              'Choose your style',
+              style: TextStyle(
+                fontSize: 38,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+                fontFamily: 'PlusJakartaSans',
+                letterSpacing: -1.0,
+                height: 1.3,
+              ),
+            ),
+
+            SizedBox(height: spacing.m),
+
+            // Subtitle
+            const Text(
+              'Select your style preference to personalize\nyour experience.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black,
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.3,
+              ),
+            ),
+
+            SizedBox(height: spacing.l),
+
+            // Gender Options
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Men's Clothing
+                  AnimatedBuilder(
+                    animation: _animationControllers[0],
+                    builder: (context, child) {
+                      return FadeTransition(
+                        opacity: _fadeAnimations[0],
+                        child: ScaleTransition(
+                          scale: _scaleAnimations[0],
+                          child: _GenderOption(
+                            gender: Gender.male,
+                            label: "Men's Clothing",
+                            isSelected: selectedGender == Gender.male,
+                            onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.male,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  SizedBox(height: spacing.l),
+
+                  // Women's Clothing
+                  AnimatedBuilder(
+                    animation: _animationControllers[1],
+                    builder: (context, child) {
+                      return FadeTransition(
+                        opacity: _fadeAnimations[1],
+                        child: ScaleTransition(
+                          scale: _scaleAnimations[1],
+                          child: _GenderOption(
+                            gender: Gender.female,
+                            label: "Women's Clothing",
+                            isSelected: selectedGender == Gender.female,
+                            onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.female,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  SizedBox(height: spacing.l),
+
+                  // Both
+                  AnimatedBuilder(
+                    animation: _animationControllers[2],
+                    builder: (context, child) {
+                      return FadeTransition(
+                        opacity: _fadeAnimations[2],
+                        child: ScaleTransition(
+                          scale: _scaleAnimations[2],
+                          child: _GenderOption(
+                            gender: Gender.other,
+                            label: 'Both',
+                            isSelected: selectedGender == Gender.other,
+                            onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.other,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Next Button
+            Container(
+              width: double.infinity,
+              height: 56,
+              margin: EdgeInsets.only(bottom: spacing.xxl),
+              child: ElevatedButton(
+                onPressed: selectedGender != null
+                    ? () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const DiscoverySourcePage(),
+                          ),
+                        );
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: selectedGender != null ? const Color(0xFFf2003c) : Colors.grey.shade300,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+                child: Text(
+                  'Next',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -0.2,
+                    color: selectedGender != null ? Colors.white : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GenderOption extends StatelessWidget {
+  final Gender gender;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _GenderOption({
+    required this.gender,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFf2003c) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? Colors.white : Colors.black,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

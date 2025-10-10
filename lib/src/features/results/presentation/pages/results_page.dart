@@ -5,15 +5,17 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../home/domain/providers/image_provider.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../favorites/presentation/widgets/favorite_button.dart';
 
 class ResultsPage extends ConsumerStatefulWidget {
   final List<DetectionResult> results;
+  final String? originalImageUrl; // For network images from scan button
 
   const ResultsPage({
     super.key,
     required this.results,
+    this.originalImageUrl,
   });
 
   @override
@@ -40,7 +42,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   @override
   Widget build(BuildContext context) {
     final selectedImage = ref.watch(selectedImageProvider);
-    final categories = ['All', 'Tops', 'Bottoms', 'Shoes', 'Headwear', 'Accessories'];
+    final categories = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Headwear', 'Accessories'];
     final spacing = context.spacing;
     final radius = context.radius;
 
@@ -70,16 +72,23 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
       body: Stack(
         children: [
           // Background Image (smaller, top portion)
-          if (selectedImage != null)
+          if (selectedImage != null || widget.originalImageUrl != null)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               height: MediaQuery.of(context).size.height * 0.6,
-              child: Image.file(
-                File(selectedImage.path),
-                fit: BoxFit.cover,
-              ),
+              child: widget.originalImageUrl != null
+                  // Network image from scan button
+                  ? Image.network(
+                      widget.originalImageUrl!,
+                      fit: BoxFit.cover,
+                    )
+                  // Local image from camera/gallery
+                  : Image.file(
+                      File(selectedImage!.path),
+                      fit: BoxFit.cover,
+                    ),
             ),
 
           // Results Bottom Sheet
@@ -132,105 +141,47 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Text(
-                                      'Smart matches',
+                                      'Similar matches',
                                       style: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Enhanced color matching active',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.green[600],
-                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'PlusJakartaSans',
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '${widget.results.length} results',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  if (widget.results.isNotEmpty && _hasHighQualityMatches())
-                                    Container(
-                                      margin: const EdgeInsets.only(top: 2),
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green[100],
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        'High quality',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.green[700],
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                ],
+                              Text(
+                                '${widget.results.length} results',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green[600],
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'PlusJakartaSans',
+                                ),
                               ),
                             ],
                           ),
                           SizedBox(height: spacing.m),
 
-                          // Smart search insights
-                          if (widget.results.isNotEmpty)
-                            Container(
-                              padding: EdgeInsets.all(spacing.sm),
-                              decoration: BoxDecoration(
-                                color: Colors.blue[50],
-                                borderRadius: BorderRadius.circular(radius.small),
-                                border: Border.all(color: Colors.blue[200]!, width: 1),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.auto_awesome,
-                                    size: 16,
-                                    color: Colors.blue[600],
-                                  ),
-                                  SizedBox(width: spacing.xs),
-                                  Expanded(
-                                    child: Text(
-                                      _getSearchInsightText(),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.blue[700],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          if (widget.results.isNotEmpty)
-                            SizedBox(height: spacing.m),
 
-                          // Category Tabs (non-scrollable to avoid conflicts)
-                          SizedBox(
-                            height: 40,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              physics: const NeverScrollableScrollPhysics(), // Prevent scroll conflicts
-                              itemCount: categories.length,
-                              itemBuilder: (context, index) {
-                                final category = categories[index];
+                          // Category Tabs
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: categories.map((category) {
                                 final isSelected = selectedCategory == category;
-
                                 return Container(
                                   margin: EdgeInsets.only(right: spacing.sm),
                                   child: FilterChip(
-                                    label: Text(category),
+                                    label: Text(
+                                      category,
+                                      style: TextStyle(
+                                        fontFamily: 'PlusJakartaSans',
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected ? Colors.white : Colors.black,
+                                      ),
+                                    ),
                                     selected: isSelected,
                                     onSelected: (selected) {
                                       setState(() {
@@ -238,15 +189,14 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                                       });
                                     },
                                     backgroundColor: Colors.grey[100],
-                                    selectedColor: Theme.of(context).colorScheme.primary,
-                                    labelStyle: TextStyle(
-                                      color: isSelected ? Colors.white : Colors.black,
-                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                    ),
+                                    selectedColor: const Color(0xFFf2003c),
+                                    checkmarkColor: Colors.white,
                                     side: BorderSide.none,
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: VisualDensity.compact,
                                   ),
                                 );
-                              },
+                              }).toList(),
                             ),
                           ),
                         ],
@@ -259,8 +209,8 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                     Expanded(
                       child: ListView.builder(
                         controller: scrollController,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppConstants.defaultPadding,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: spacing.m,
                         ),
                         itemCount: _getFilteredResults().length,
                         itemBuilder: (context, index) {
@@ -353,7 +303,12 @@ class _ProductCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(radius.medium),
         child: Container(
-          padding: EdgeInsets.all(spacing.m),
+          padding: EdgeInsets.only(
+            top: spacing.m,
+            bottom: spacing.m,
+            left: 0,
+            right: spacing.m,
+          ),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(radius.medium),
@@ -370,32 +325,45 @@ class _ProductCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Product Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(radius.small),
-                child: CachedNetworkImage(
-                  imageUrl: result.imageUrl,
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: CircularProgressIndicator(),
+              // Product Image with Favorite Button
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(radius.small),
+                    child: CachedNetworkImage(
+                      imageUrl: result.imageUrl,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        width: 80,
+                        height: 80,
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        width: 80,
+                        height: 80,
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.image_not_supported),
+                      ),
                     ),
                   ),
-                  errorWidget: (context, url, error) => Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.image_not_supported),
+                  // Favorite button in top-right corner
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: FavoriteButton(
+                      product: result,
+                      size: 18,
+                    ),
                   ),
-                ),
+                ],
               ),
 
-              SizedBox(width: spacing.sm),
+              SizedBox(width: spacing.m),
 
               // Product Details
               Expanded(
@@ -409,6 +377,7 @@ class _ProductCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: Colors.grey[600],
                         letterSpacing: 0.5,
+                        fontFamily: 'PlusJakartaSans',
                       ),
                     ),
                     SizedBox(height: spacing.xs),
@@ -417,6 +386,7 @@ class _ProductCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
+                        fontFamily: 'PlusJakartaSans',
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -427,78 +397,18 @@ class _ProductCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        fontFamily: 'PlusJakartaSans',
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Enhanced Confidence & Match Info
-              Column(
-                children: [
-                  Column(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: spacing.sm,
-                          vertical: spacing.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getConfidenceColor(result.confidence).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(radius.medium),
-                        ),
-                        child: Text(
-                          '${(result.confidence * 100).toInt()}%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _getConfidenceColor(result.confidence),
-                          ),
-                        ),
-                      ),
-                      if (result.confidence >= 0.85)
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green[100],
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'Precise',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.green[700],
-                            ),
-                          ),
-                        )
-                      else if (result.confidence >= 0.75)
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[100],
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'Good',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue[700],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  SizedBox(height: spacing.sm),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Colors.grey[400],
-                  ),
-                ],
+              // Arrow indicator
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.grey[400],
               ),
             ],
           ),

@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../domain/providers/image_provider.dart';
+import '../../domain/providers/inspiration_provider.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
-import '../../../detection/domain/services/detection_service.dart';
+import '../../../product/presentation/pages/product_detail_page.dart';
+import '../../../product/presentation/pages/detected_products_page.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../detection/domain/models/detection_result.dart';
+import '../../../favorites/presentation/widgets/favorite_button.dart';
+import '../../../../../shared/navigation/main_navigation.dart' show scrollToTopTriggerProvider, isAtHomeRootProvider;
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -16,197 +25,395 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   final ImagePicker _picker = ImagePicker();
+  final ScrollController _scrollController = ScrollController();
+  final Set<String> _preloadedImages = <String>{};
 
+  @override
+  void initState() {
+    super.initState();
 
-  static const List<Map<String, dynamic>> _trendingStyles = [
-    {
-      'title': 'Minimalist',
-      'subtitle': 'Clean & Simple',
-      'icon': Icons.minimize_outlined,
-      'color': Color(0xFFE3F2FD),
-    },
-    {
-      'title': 'Vintage',
-      'subtitle': 'Retro Vibes',
-      'icon': Icons.history_outlined,
-      'color': Color(0xFFF3E5F5),
-    },
-    {
-      'title': 'Casual',
-      'subtitle': 'Everyday Comfort',
-      'icon': Icons.weekend_outlined,
-      'color': Color(0xFFE8F5E8),
-    },
-    {
-      'title': 'Business',
-      'subtitle': 'Professional',
-      'icon': Icons.business_center_outlined,
-      'color': Color(0xFFFFF3E0),
-    },
-  ];
+    // Load initial inspiration images
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(inspirationProvider.notifier).loadImages();
+    });
+
+    // Setup infinite scrolling
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final currentPixels = _scrollController.position.pixels;
+    final maxExtent = _scrollController.position.maxScrollExtent;
+
+    if (currentPixels >= maxExtent * 0.7) {
+      ref.read(inspirationProvider.notifier).loadMoreImages();
+    }
+
+    // Preload images when user scrolls past 50%
+    if (currentPixels >= maxExtent * 0.5) {
+      _preloadNearbyImages();
+    }
+  }
+
+  void _preloadNearbyImages() {
+    final state = ref.read(inspirationProvider);
+    if (state.images.isEmpty) return;
+
+    // Preload next 10 images that aren't loaded yet
+    final imagesToPreload = state.images
+        .where((image) => !_preloadedImages.contains(image['image_url']))
+        .take(10)
+        .toList();
+
+    for (final image in imagesToPreload) {
+      final imageUrl = image['image_url'] as String?;
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        _preloadedImages.add(imageUrl);
+        // Preload in background without blocking UI
+        precacheImage(
+          NetworkImage(imageUrl),
+          context,
+          onError: (exception, stackTrace) {
+            // Remove from preloaded set if it fails
+            _preloadedImages.remove(imageUrl);
+          },
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final spacing = context.spacing;
-    final radius = context.radius;
+    final inspirationState = ref.watch(inspirationProvider);
+
+    // Listen to scroll to top trigger
+    ref.listen(scrollToTopTriggerProvider, (previous, next) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
         backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        toolbarHeight: 64,
-        automaticallyImplyLeading: false,
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Logo/Brand on the left
-            Image.asset(
-              'assets/images/logo.png',
-              height: 35,
-              fit: BoxFit.contain,
+        body: Stack(
+        children: [
+          // Main content - full screen
+          RefreshIndicator(
+            onRefresh: () async {
+              // Haptic feedback for pull-to-refresh
+              HapticFeedback.mediumImpact();
+              await ref.read(inspirationProvider.notifier).refreshImages();
+            },
+            backgroundColor: AppColors.surface,
+            color: AppColors.secondary,
+            child: _buildInspirationGrid(inspirationState),
+          ),
+          // Floating logo overlay
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Image.asset(
+                'assets/images/logo.png',
+                height: 32,
+                fit: BoxFit.contain,
+              ),
             ),
-            // Search icon on the right
-            IconButton(
-              onPressed: () {
-                // TODO: Implement search functionality
-              },
-              icon: Icon(
-                Icons.search,
+          ),
+          // Floating Action Bar
+          Positioned(
+            left: MediaQuery.of(context).size.width * 0.125,
+            right: MediaQuery.of(context).size.width * 0.125,
+            bottom: 24,
+            child: _FloatingActionBar(
+              onSnapTap: () => _pickImage(ImageSource.camera),
+              onUploadTap: () => _pickImage(ImageSource.gallery),
+              onShareTap: _shareApp,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInspirationGrid(InspirationState state) {
+    if (state.images.isEmpty && state.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: AppColors.secondary,
+        ),
+      );
+    }
+
+    if (state.images.isEmpty && state.error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: AppColors.tertiary.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load inspiration',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              state.error!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppColors.tertiary,
-                size: 24,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.read(inspirationProvider.notifier).loadImages(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                foregroundColor: AppColors.primary,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (state.images.isEmpty) {
+      return const Center(
+        child: Text('No inspiration images available'),
+      );
+    }
+
+    return _buildBurberryStyleGrid(state);
+  }
+
+  Widget _buildBurberryStyleGrid(InspirationState state) {
+    final images = List<Map<String, dynamic>>.from(state.images);
+
+    if (images.length < 3) {
+      return _buildFallbackGrid(images);
+    }
+
+    // Simple pattern: Every 3 images = 1 large + 2 small (2 rows)
+    // All images are already premium brands from service filtering
+    final maxPatterns = (images.length / 3).floor().clamp(1, 1000);
+    final totalRows = maxPatterns * 2;
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: EdgeInsets.zero,
+      itemCount: totalRows,
+      itemBuilder: (context, rowIndex) {
+        return _buildSimplePatternRow(rowIndex, images);
+      },
+    );
+  }
+
+  Widget _buildSimplePatternRow(int rowIndex, List<Map<String, dynamic>> images) {
+    final isLargeRow = rowIndex.isEven;
+
+    if (isLargeRow) {
+      // Large image row - use every 3rd image starting from pattern index
+      final patternIndex = rowIndex ~/ 2;
+      final imageIndex = patternIndex * 3;
+      final image = images[imageIndex % images.length];
+      return _buildLargeImageRow(image, imageIndex);
+    } else {
+      // Two image row - use the next 2 images after the large one
+      final patternIndex = rowIndex ~/ 2;
+      final baseIndex = patternIndex * 3;
+
+      final List<Map<String, dynamic>> twoImages = [
+        images[(baseIndex + 1) % images.length],
+        images[(baseIndex + 2) % images.length],
+      ];
+
+      return _buildTwoImageRow(twoImages, baseIndex + 1);
+    }
+  }
+
+  Widget _buildStrictPatternRow(int rowIndex, List<Map<String, dynamic>> premiumImages, List<Map<String, dynamic>> regularImages) {
+    final isLargeRow = rowIndex.isEven;
+
+    if (isLargeRow) {
+      // Large image row - use premium images in order
+      final largeImageIndex = rowIndex ~/ 2;
+      final image = premiumImages[largeImageIndex % premiumImages.length];
+      return _buildLargeImageRow(image, largeImageIndex);
+    } else {
+      // Two image row - use regular images in order, avoiding duplicates within same pattern
+      final patternIndex = rowIndex ~/ 2;
+      final baseIndex = patternIndex * 2;
+
+      final List<Map<String, dynamic>> twoImages = [
+        regularImages[baseIndex % regularImages.length],
+        regularImages[(baseIndex + 1) % regularImages.length],
+      ];
+
+      return _buildTwoImageRow(twoImages, baseIndex);
+    }
+  }
+
+  Widget _buildPremiumPatternRow(int rowIndex, List<Map<String, dynamic>> premiumImages, List<Map<String, dynamic>> regularImages) {
+    final isLargeRow = rowIndex.isEven;
+
+    if (isLargeRow) {
+      // Large image row - use premium images
+      final largeImageIndex = rowIndex ~/ 2;
+      final image = premiumImages[largeImageIndex % premiumImages.length];
+      return _buildLargeImageRow(image, largeImageIndex);
+    } else {
+      // Two image row - use regular images
+      final patternIndex = rowIndex ~/ 2;
+      final baseIndex = patternIndex * 2;
+
+      final List<Map<String, dynamic>> twoImages = [
+        regularImages[baseIndex % regularImages.length],
+        regularImages[(baseIndex + 1) % regularImages.length],
+      ];
+
+      return _buildTwoImageRow(twoImages, baseIndex);
+    }
+  }
+
+  bool _isImageSuitableForLarge(Map<String, dynamic> image) {
+    final brand = (image['brand'] as String?)?.toLowerCase() ?? '';
+    final category = (image['category'] as String?)?.toLowerCase() ?? '';
+
+    // Only H&M, Zara, PrincessPolly for large images
+    final allowedBrands = ['h&m', 'zara', 'princesspolly'];
+    final hasPremiumBrand = allowedBrands.any((allowedBrand) => brand.contains(allowedBrand));
+
+    if (!hasPremiumBrand) {
+      return false;
+    }
+
+    // Exclude shoes
+    if (category.contains('shoe') || category.contains('shoes')) {
+      return false;
+    }
+
+    return true;
+  }
+
+  Widget _buildFallbackGrid(List<Map<String, dynamic>> images) {
+    final itemCount = (images.length / 2).ceil();
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: EdgeInsets.zero,
+      itemCount: itemCount,
+      itemBuilder: (context, rowIndex) {
+        final startIndex = rowIndex * 2;
+        final endIndex = (startIndex + 2).clamp(0, images.length);
+        final rowImages = images.sublist(startIndex, endIndex);
+
+        if (rowImages.length == 1) {
+          return _buildLargeImageRow(rowImages[0], startIndex);
+        } else {
+          return _buildTwoImageRow(rowImages, startIndex);
+        }
+      },
+    );
+  }
+
+
+
+
+  Widget _buildLargeImageRow(Map<String, dynamic> image, int imageIndex) {
+    return Column(
+      children: [
+        AspectRatio(
+          aspectRatio: 0.75, // Portrait aspect ratio for hero images
+          child: _MagazineStyleImageCard(
+            image: image,
+            index: imageIndex,
+            isLarge: true,
+            onTap: () => _onImageTap(image, imageIndex),
+          ),
+        ),
+        Container(
+          height: 3,
+          color: Colors.white.withOpacity(0.3),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTwoImageRow(List<Map<String, dynamic>> images, int startIndex) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: 0.85, // Slightly more square for side-by-side
+                child: _MagazineStyleImageCard(
+                  image: images[0],
+                  index: startIndex,
+                  isLarge: false,
+                  onTap: () => _onImageTap(images[0], startIndex),
+                ),
+              ),
+            ),
+            Container(
+              width: 3,
+              color: Colors.white.withOpacity(0.3),
+            ),
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: 0.85,
+                child: _MagazineStyleImageCard(
+                  image: images[1],
+                  index: startIndex + 1,
+                  isLarge: false,
+                  onTap: () => _onImageTap(images[1], startIndex + 1),
+                ),
               ),
             ),
           ],
         ),
-      ),
-      body: SingleChildScrollView(
-              child: Padding(
-                padding: EdgeInsets.all(spacing.l),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Inspiration Section
-                    Container(
-                      height: 200,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: AppColors.tertiary,
-                        borderRadius: BorderRadius.circular(radius.large),
-                      ),
-                      child: Stack(
-                        children: [
-                          // Background image
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(radius.large),
-                            child: Container(
-                              width: double.infinity,
-                              height: double.infinity,
-                              child: Image.asset(
-                                'assets/images/pexels-mizunokozuki-13929216.jpg',
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                alignment: Alignment.bottomCenter,
-                              ),
-                            ),
-                          ),
-                          // Overlay with text
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(radius.large),
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.black.withOpacity(0.3),
-                                ],
-                              ),
-                            ),
-                          ),
-                          // Content
-                          Positioned(
-                            left: spacing.l,
-                            bottom: spacing.l,
-                            right: spacing.l,
-                            child: GestureDetector(
-                              onTap: () => _showImageSourceDialog(context),
-                              child: Center(
-                                child: Text(
-                                  'Find Your\nInspiration',
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1.1,
-                                    fontSize: (Theme.of(context).textTheme.headlineLarge?.fontSize ?? 32) * 1.1,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: spacing.xl),
-
-                    // Trending Styles Section
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Trending Styles',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: AppColors.onSurface,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            // TODO: Navigate to full trends page
-                          },
-                          child: Text(
-                            'See all',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.secondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: spacing.m),
-                    SizedBox(
-                      height: 120,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _trendingStyles.length,
-                        padding: EdgeInsets.zero,
-                        itemBuilder: (context, index) {
-                          final style = _trendingStyles[index];
-                          return Padding(
-                            padding: EdgeInsets.only(right: spacing.m),
-                            child: _TrendingStyleCard(
-                              title: style['title'] as String,
-                              subtitle: style['subtitle'] as String,
-                              icon: style['icon'] as IconData,
-                              color: style['color'] as Color,
-                              onTap: () {
-                                // TODO: Navigate to style details
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    SizedBox(height: spacing.xl),
-                  ],
-                ),
-              ),
-      ),
+        Container(
+          height: 3,
+          color: Colors.white.withOpacity(0.3),
+        ),
+      ],
     );
+  }
+
+
+  void _onImageTap(Map<String, dynamic> image, int index) {
+    // Hide floating bar when navigating away
+    ref.read(isAtHomeRootProvider.notifier).state = false;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProductDetailPage(
+          product: image,
+          heroTag: 'product_${image['id']}_$index',
+        ),
+      ),
+    ).then((_) {
+      // Show floating bar again when coming back
+      ref.read(isAtHomeRootProvider.notifier).state = true;
+    });
   }
 
   void _showImageSourceDialog(BuildContext context) {
@@ -281,7 +488,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
 
       if (image != null) {
-        ref.read(selectedImageProvider.notifier).setImage(image);
+        ref.read(selectedImagesProvider.notifier).setImage(image);
 
         if (mounted) {
           Navigator.of(context).push(
@@ -303,48 +510,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  void _importFromSocialMedia() {
-    // TODO: Implement social media import
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Social media import coming soon!'),
-      ),
+  void _shareApp() {
+    Share.share(
+      'Check out Snaplook - The AI-powered fashion discovery app! Find similar clothing items by taking photos. Download now!',
+      subject: 'Discover Fashion with Snaplook',
     );
   }
 
-  Future<void> _testApiConnection() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Testing API connection...'),
-        backgroundColor: Colors.blue,
-      ),
-    );
-
-    try {
-      final detectionService = DetectionService();
-      final isConnected = await detectionService.testApiConnection();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isConnected ? 'API connection successful!' : 'API connection failed!',
-            ),
-            backgroundColor: isConnected ? Colors.green : Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error testing API: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 }
 
 class _SourceOption extends StatelessWidget {
@@ -409,69 +581,52 @@ class _SourceOption extends StatelessWidget {
   }
 }
 
-class _QuickActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
+class _InspirationImageCard extends StatelessWidget {
+  final Map<String, dynamic> image;
   final VoidCallback onTap;
 
-  const _QuickActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
+  const _InspirationImageCard({
+    required this.image,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final spacing = context.spacing;
-    final radius = context.radius;
+    final imageUrl = image['image_url'] as String?;
+    final category = (image['category'] as String?)?.toLowerCase() ?? '';
+    final isShoeCategory = category.contains('shoe') || category.contains('sneaker') || category.contains('boot');
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(radius.medium),
         child: Container(
-          padding: EdgeInsets.all(spacing.m),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(radius.medium),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-            ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            // No border radius for clean corners as requested
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(radius.small),
-                ),
-                child: Icon(
-                  icon,
-                  size: 20,
-                  color: AppColors.secondary,
-                ),
-              ),
-              SizedBox(height: spacing.sm),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
+              // Main image with adaptive fitting for different product types
+              Expanded(
+                child: ClipRect(
+                  child: imageUrl != null
+                      ? _AdaptiveProductImage(
+                          imageUrl: imageUrl,
+                          isShoeCategory: isShoeCategory,
+                        )
+                      : Container(
+                          color: AppColors.surface,
+                          child: Icon(
+                            Icons.image_outlined,
+                            size: 32,
+                            color: AppColors.tertiary.withOpacity(0.5),
+                          ),
+                        ),
                 ),
               ),
-              SizedBox(height: spacing.xs / 2),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
+              // Clean Pinterest-style: No overlays, just pure image
             ],
           ),
         ),
@@ -480,68 +635,555 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
-
-class _TrendingStyleCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
+class _StaggeredInspirationImageCard extends StatefulWidget {
+  final Map<String, dynamic> image;
+  final int index;
   final VoidCallback onTap;
 
-  const _TrendingStyleCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
+  const _StaggeredInspirationImageCard({
+    required this.image,
+    required this.index,
+    required this.onTap,
+  });
+
+  @override
+  State<_StaggeredInspirationImageCard> createState() => _StaggeredInspirationImageCardState();
+}
+
+class _StaggeredInspirationImageCardState extends State<_StaggeredInspirationImageCard> {
+  bool _isLiked = false;
+
+  void _navigateToDetectionPage(String imageUrl) {
+    // Navigate to detection page with the image URL as parameter - use root navigator
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => DetectionPage(imageUrl: imageUrl),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = widget.image['image_url'] as String?;
+    final category = (widget.image['category'] as String?)?.toLowerCase() ?? '';
+    final isShoeCategory = category.contains('shoe') || category.contains('sneaker') || category.contains('boot');
+
+    // Create varied heights for staggered effect - alternating between different sizes
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = (screenWidth - 12) / 2; // Account for padding and spacing
+
+    // Generate pseudo-random height based on image ID for consistent staggering
+    final imageId = widget.image['id']?.toString() ?? '0';
+    final heightVariant = imageId.hashCode % 3; // Only 3 variants now
+
+    late double aspectRatio;
+    switch (heightVariant) {
+      case 0:
+        aspectRatio = 0.7; // Tall
+        break;
+      case 1:
+        aspectRatio = 1.0; // Square
+        break;
+      case 2:
+        aspectRatio = 0.8; // Medium tall
+        break;
+    }
+
+    final cardHeight = cardWidth / aspectRatio;
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        height: cardHeight,
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          // No border radius for clean corners as requested
+        ),
+        child: Stack(
+          children: [
+            // Main image content - tappable background
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: widget.onTap,
+                child: Hero(
+                  tag: 'product_${widget.image['id']}_${widget.index}',
+                  child: imageUrl != null
+                      ? _AdaptiveProductImage(
+                          imageUrl: imageUrl,
+                          isShoeCategory: isShoeCategory,
+                        )
+                      : Container(
+                          color: AppColors.surface,
+                          child: Icon(
+                            Icons.image_outlined,
+                            size: 32,
+                            color: AppColors.tertiary.withOpacity(0.5),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            // Favorite button overlay - positioned at top right
+            Positioned(
+              top: 8,
+              right: 8,
+              child: FavoriteButton(
+                product: DetectionResult(
+                  id: widget.image['id']?.toString() ?? '',
+                  productName: widget.image['title'] ?? 'Unknown',
+                  brand: widget.image['brand'] ?? 'Unknown',
+                  price: double.tryParse(widget.image['price']?.toString() ?? '0') ?? 0.0,
+                  imageUrl: widget.image['image_url'] ?? '',
+                  purchaseUrl: null,
+                  category: widget.image['category'] ?? 'Unknown',
+                  confidence: 1.0,
+                ),
+                size: 18,
+              ),
+            ),
+            // Scan button overlay - positioned at bottom left
+            Positioned(
+              bottom: 8,
+              left: 8,
+              child: GestureDetector(
+                onTap: () {
+                  if (imageUrl != null) {
+                    _navigateToDetectionPage(imageUrl);
+                  }
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.crop_free,
+                    size: 18,
+                    color: Colors.black54,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MagazineStyleImageCard extends ConsumerWidget {
+  final Map<String, dynamic> image;
+  final int index;
+  final bool isLarge;
+  final VoidCallback onTap;
+
+  const _MagazineStyleImageCard({
+    required this.image,
+    required this.index,
+    required this.isLarge,
+    required this.onTap,
+  });
+
+  static void _navigateToDetectionPage(BuildContext context, String imageUrl) {
+    // Navigate to detection page with the image URL as parameter - use root navigator
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => DetectionPage(imageUrl: imageUrl),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final imageUrl = image['image_url'] as String?;
+    final category = (image['category'] as String?)?.toLowerCase() ?? '';
+    final isShoeCategory = category.contains('shoe') || category.contains('sneaker') || category.contains('boot');
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          // Clean corners like Burberry - no border radius
+        ),
+        child: Stack(
+          children: [
+            // Main image - fills entire container - tappable
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: onTap,
+                child: Hero(
+                  tag: 'product_${image['id']}_$index',
+                  child: imageUrl != null
+                      ? _AdaptiveProductImage(
+                          imageUrl: imageUrl,
+                          isShoeCategory: isShoeCategory,
+                        )
+                      : Container(
+                          color: AppColors.surface,
+                          child: Icon(
+                            Icons.image_outlined,
+                            size: isLarge ? 48 : 32,
+                            color: AppColors.tertiary.withOpacity(0.5),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            // Favorite button - positioned at bottom right
+            Positioned(
+              bottom: isLarge ? 16 : 12,
+              right: isLarge ? 16 : 12,
+              child: FavoriteButton(
+                product: DetectionResult(
+                  id: image['id']?.toString() ?? '',
+                  productName: image['title'] ?? 'Unknown',
+                  brand: image['brand'] ?? 'Unknown',
+                  price: double.tryParse(image['price']?.toString() ?? '0') ?? 0.0,
+                  imageUrl: image['image_url'] ?? '',
+                  purchaseUrl: null,
+                  category: image['category'] ?? 'Unknown',
+                  confidence: 1.0,
+                ),
+                size: isLarge ? 20 : 18,
+              ),
+            ),
+            // Scan button - positioned at bottom left
+            Positioned(
+              bottom: isLarge ? 16 : 12,
+              left: isLarge ? 16 : 12,
+              child: _ScanIcon(
+                size: isLarge ? 36 : 32,
+                onTap: () {
+                  _navigateToDetectionPage(context, imageUrl!);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeartIcon extends StatefulWidget {
+  final double size;
+  final VoidCallback onTap;
+
+  const _HeartIcon({
+    required this.size,
+    required this.onTap,
+  });
+
+  @override
+  State<_HeartIcon> createState() => _HeartIconState();
+}
+
+class _HeartIconState extends State<_HeartIcon> {
+  bool _isLiked = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isLiked = !_isLiked;
+        });
+        widget.onTap();
+      },
+      child: Container(
+        width: widget.size,
+        height: widget.size,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          _isLiked ? Icons.favorite : Icons.favorite_border,
+          size: widget.size * 0.5,
+          color: _isLiked ? Colors.red : Colors.black54,
+        ),
+      ),
+    );
+  }
+}
+
+class _ScanIcon extends StatelessWidget {
+  final double size;
+  final VoidCallback onTap;
+
+  const _ScanIcon({
+    required this.size,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: 140,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.outline.withOpacity(0.1),
-              width: 1,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
+          ],
+        ),
+        child: Icon(
+          Icons.crop_free,
+          size: size * 0.5,
+          color: Colors.black54,
+        ),
+      ),
+    );
+  }
+}
+
+class _AdaptiveProductImage extends StatefulWidget {
+  final String imageUrl;
+  final bool isShoeCategory;
+
+  const _AdaptiveProductImage({
+    required this.imageUrl,
+    required this.isShoeCategory,
+  });
+
+  @override
+  State<_AdaptiveProductImage> createState() => _AdaptiveProductImageState();
+}
+
+class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
+  BoxFit? _boxFit;
+
+  @override
+  Widget build(BuildContext context) {
+
+    // Default fit based on category
+    final defaultFit = widget.isShoeCategory ? BoxFit.contain : BoxFit.cover;
+    final currentFit = _boxFit ?? defaultFit;
+
+    return SizedBox.expand(
+      child: FutureBuilder<void>(
+        future: Future.delayed(const Duration(milliseconds: 100)),
+        builder: (context, snapshot) {
+          return Image.network(
+            widget.imageUrl,
+            fit: currentFit,
+            alignment: Alignment.center,
+            // Removed cache size limits to preserve original image quality
+            headers: const {
+              'User-Agent': 'Mozilla/5.0 (compatible; Flutter app)',
+            },
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) {
+                // Image loaded, check if we need to adjust fit for shoes
+                if (widget.isShoeCategory && _boxFit == null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _determineOptimalFit();
+                  });
+                }
+                return AnimatedOpacity(
+                  opacity: 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: child,
+                );
+              }
+
+              // Simple loading indicator without timeout complexity
+
+              return Container(
+                color: AppColors.surface,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.secondary,
+                    strokeWidth: 2,
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                  ),
+                ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: AppColors.surface,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.broken_image_outlined,
+                      size: 32,
+                      color: AppColors.tertiary.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Image unavailable',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.tertiary.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _determineOptimalFit() {
+    if (!mounted || !widget.isShoeCategory) return;
+
+    // For shoes, check if the image would look better with cover vs contain
+    final image = NetworkImage(widget.imageUrl);
+
+    image.resolve(const ImageConfiguration()).addListener(
+      ImageStreamListener((ImageInfo info, bool _) {
+        if (!mounted) return;
+
+        final imageAspectRatio = info.image.width / info.image.height;
+        const containerAspectRatio = 0.85; // Our grid aspect ratio
+
+        // If the image aspect ratio is close to container ratio, use cover
+        // If it's very different (too wide or too tall), use contain
+        final aspectRatioDifference = (imageAspectRatio - containerAspectRatio).abs();
+
+        // If difference is small (< 0.3), the image should fit well with cover
+        // If difference is large, keep using contain to show full product
+        final shouldUseCover = aspectRatioDifference < 0.3;
+
+        if (mounted && shouldUseCover && _boxFit != BoxFit.cover) {
+          setState(() {
+            _boxFit = BoxFit.cover;
+          });
+        }
+      }),
+    );
+  }
+}
+
+class _FloatingActionBar extends StatelessWidget {
+  final VoidCallback onSnapTap;
+  final VoidCallback onUploadTap;
+  final VoidCallback onShareTap;
+
+  const _FloatingActionBar({
+    required this.onSnapTap,
+    required this.onUploadTap,
+    required this.onShareTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        color: const Color(0xFFf2003c),
+        borderRadius: BorderRadius.circular(35),
+        border: Border.all(
+          color: const Color(0xFFf2003c),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.20),
+            blurRadius: 35,
+            offset: const Offset(0, 6),
+            spreadRadius: 1,
           ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/camera_filled.svg',
+              label: 'Snap',
+              onTap: onSnapTap,
+            ),
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/upload_filled.svg',
+              label: 'Upload',
+              onTap: onUploadTap,
+            ),
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/tutorials_filled.svg',
+              label: 'Tutorials',
+              onTap: () {},
+            ),
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/share_filled.svg',
+              label: 'Share',
+              onTap: onShareTap,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingActionButtonSvg extends StatelessWidget {
+  final String svgIcon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _FloatingActionButtonSvg({
+    required this.svgIcon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
+              SvgPicture.asset(
+                svgIcon,
+                width: 24,
+                height: 24,
+                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: const TextStyle(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  size: 20,
-                  color: AppColors.tertiary,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColors.tertiary,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.tertiary.withOpacity(0.7),
                 ),
               ),
             ],

@@ -1,21 +1,23 @@
 # Flutter App Design System & Guidelines for Snaplook
 
 ## Project Overview
-A Flutter mobile application for "Snaplook", an AI-powered fashion discovery app. Users can scan clothing items to find similar fashion products. The design features a sophisticated dark theme with golden accents.
+A Flutter mobile application for "Snaplook", an AI-powered fashion discovery app. Users can scan clothing items to find similar fashion products. The design features a clean white/black theme with red accent color.
 
 ## Design System Rules - ALWAYS FOLLOW THESE
 
 ### Colors
-- **Primary Color**: `#1c1c25` (Dark Navy/Charcoal) - Used for backgrounds, primary UI elements
-- **Secondary Color**: `#fec948` (Golden Yellow) - Used for accents, highlights, and call-to-action elements
+- **Primary Color**: `#FFFFFF` (Pure White) - Used for backgrounds, surfaces
+- **Secondary Color**: `#f2003c` (Red) - Used for accents, highlights, and call-to-action elements
+- **Black**: `#080808` (Near Black) - Used for text, icons, and secondary elements
 - **Surface Colors**:
-  - Main Surface: `#1f1f28` (Dark Surface)
-  - Surface Variant: `#252530` (Slightly Lighter Surface)
-  - Navigation Background: `#1a1a22` (Darker Navigation)
+  - Main Surface: `#FFFFFF` (White)
+  - Surface Variant: `#F9F9F9` (Very light gray)
+  - Background: `#FFFFFF` (Pure white)
+  - Outline: `#E5E7EB` (Light gray borders)
 - **Text Colors**:
-  - Primary Text: `#E8E8EA` (Light text on dark)
-  - Secondary Text: `#B8B8BA` (Muted text)
-  - Navigation Unselected: `#6a6a75` (Muted for inactive tabs)
+  - Primary Text: `#1c1c25` (Dark text on light)
+  - Secondary Text: `#6B7280` (Muted gray text)
+  - Navigation Unselected: `#9CA3AF` (Light gray for inactive)
 - **State Colors**:
   - Error: `#EF4444` (Red 500)
   - Success: `#22C55E` (Green 500)
@@ -25,21 +27,22 @@ A Flutter mobile application for "Snaplook", an AI-powered fashion discovery app
 - **Small**: 8px - Small elements (chips, badges, small cards)
 - **Medium**: 12px - Cards, containers, inputs
 - **Large**: 16px - Modals, bottom sheets, large cards
-- **Extra Large**: 24px - Special containers, hero elements
+- **Extra Large**: 28px - Buttons, major interactive elements
 
 ### Navigation System
 - **Bottom Navigation**: Uses IndexedStack to preserve state between tabs
 - **Tabs**: Home (Camera), Wardrobe (Favorites), Discover (Search), Profile
 - **Icons Only**: No text labels on navigation items
-- **Active State**: Golden yellow (#fec948) with subtle background highlight
-- **Inactive State**: Muted gray (#6a6a75)
+- **Active State**: Red accent (#f2003c)
+- **Inactive State**: Light gray (#9CA3AF)
 
 ### Component Styles
-- **Primary Actions**: Golden yellow background with dark text
-- **Secondary Actions**: Dark surface with golden border
-- **Cards**: Dark surface (#1f1f28) with subtle borders
+- **Primary Actions**: Red background (#f2003c) with white text, rounded 28px
+- **Secondary Actions**: White surface with light gray border, rounded 28px
+- **Cards**: White surface with light gray borders (#E5E7EB)
 - **Navigation Items**: Rounded containers with smooth transitions
-- **Modal Sheets**: Rounded top corners, dark surface with lighter drag handle
+- **Modal Sheets**: Rounded top corners, white surface
+- **Back Buttons**: Light gray circle (#F3F4F6) with black icon
 
 ### Typography Scale (Material 3)
 - **Display Small**: 36px, Bold - Hero headings
@@ -60,27 +63,28 @@ A Flutter mobile application for "Snaplook", an AI-powered fashion discovery app
 - **XXL**: 48px - Maximum spacing, major sections
 
 ### Visual Hierarchy
-- **Primary elements**: Golden yellow accents, bold typography
-- **Secondary elements**: Light text on dark surfaces
+- **Primary elements**: Red accent (#f2003c), bold typography
+- **Secondary elements**: Black text on white surfaces
 - **Interactive states**: Smooth color transitions, subtle scale changes
-- **Focus states**: Golden border or background highlight
+- **Focus states**: Red accent border or background
 
 ## CRITICAL RULES & INSTRUCTIONS
 - **ALWAYS use the Snaplook design system values above.**
-- **Force dark theme for consistent experience** - App should always use dark mode
-- **Golden accents are key** - Use secondary color (#fec948) for highlights, CTAs, and active states
+- **Clean white/black aesthetic** - White backgrounds with black text and red accents
+- **Red accents are key** - Use secondary color (#f2003c) for highlights, CTAs, and active states
 - **Use IndexedStack navigation** - Preserve state between tabs for optimal UX
 - Reference theme tokens for colors, fonts, and spacing using context extensions
-- Use `AppColors.primary` for dark navy, `AppColors.secondary` for golden yellow
+- Use `AppColors.primary` for white, `AppColors.secondary` for red accent
 - Use `context.spacing.m` and `context.radius.medium` for consistent spacing/radius
 
 ### UI Development Guidelines:
-- Use `Theme.of(context).colorScheme.primary` for dark navy primary color
-- Use `Theme.of(context).colorScheme.secondary` for golden yellow accents
+- Use `AppColors.primary` or `Colors.white` for backgrounds
+- Use `AppColors.secondary` (#f2003c) for primary CTAs and accents
+- Use `AppColors.black` or `Colors.black` for text and icons
 - Use `context.spacing.m` for medium spacing (16px)
 - Use `context.radius.medium` for medium border radius (12px)
+- Buttons should have 28px border radius for modern look
 - Always use theme extensions for custom properties: `AppSpacingExtension`, `AppRadiusExtension`
-- Prefer dark surface colors for all backgrounds
 - Include smooth transitions and animations for state changes
 - Use Material 3 components with custom theming
 

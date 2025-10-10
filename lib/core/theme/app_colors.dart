@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 
 /// Design System Colors
-/// Clean white theme with golden accents and dark tertiary
+/// Clean white/black theme with red accent
 class AppColors {
   AppColors._();
 
-  // Primary Colors (Clean White Scale)
-  static const Color primary = Color(0xFFF8F8F8); // Clean off-white
+  // Primary Colors (Pure White Scale)
+  static const Color primary = Color(0xFFFFFFFF); // Pure white
   static const Color primaryLight = Color(0xFFFFFFFF); // Pure white
-  static const Color primaryDark = Color(0xFFF0F0F0); // Slightly darker white
+  static const Color primaryDark = Color(0xFFFAFAFA); // Very light gray
 
-  // Secondary Colors (Black Scale) - Accent color
-  static const Color secondary = Color(0xFF000000); // Black
-  static const Color secondaryLight = Color(0xFF333333); // Lighter black
-  static const Color secondaryDark = Color(0xFF000000); // Darker black
+  // Secondary Colors (Red Accent) - Primary accent color for CTAs
+  static const Color secondary = Color(0xFFf2003c); // Red accent
+  static const Color secondaryLight = Color(0xFFff4d78); // Lighter red
+  static const Color secondaryDark = Color(0xFFc4002e); // Darker red
+
+  // Black accent (former secondary)
+  static const Color black = Color(0xFF080808); // Black accent
+  static const Color blackLight = Color(0xFF333333); // Lighter black
+  static const Color blackDark = Color(0xFF000000); // Darker black
 
   // Tertiary Colors (Dark Scale) - Former primary, now tertiary
   static const Color tertiary = Color(0xFF1c1c25); // Dark Navy
@@ -22,8 +27,8 @@ class AppColors {
 
   // Neutral Colors (Light Theme)
   static const Color surface = Color(0xFFFFFFFF); // White surface for cards
-  static const Color surfaceVariant = Color(0xFFF5F5F5); // Light gray variant
-  static const Color background = Color(0xFFF8F8F8); // Clean background (primary)
+  static const Color surfaceVariant = Color(0xFFF9F9F9); // Very light gray variant
+  static const Color background = Color(0xFFFFFFFF); // Pure white background
   static const Color outline = Color(0xFFE5E7EB); // Light gray borders
   static const Color outlineVariant = Color(0xFFF3F4F6); // Even lighter borders
 
@@ -54,7 +59,7 @@ class AppColors {
 
   // Navigation Colors
   static const Color navigationBackground = Color(0xFFFFFFFF); // Clean white
-  static const Color navigationSelected = secondary; // Golden yellow for active
+  static const Color navigationSelected = secondary; // Red accent for active
   static const Color navigationUnselected = Color(0xFF9CA3AF); // Light gray for inactive
 
   // Category Colors for Fashion Items (Light Theme Compatible)
