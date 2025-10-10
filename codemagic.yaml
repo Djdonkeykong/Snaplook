@@ -1,0 +1,54 @@
+workflows:
+  ios-workflow:
+    name: iOS Workflow
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Snaplook
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.snaplook.snaplook
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up .env file
+        script: |
+          cat > .env <<EOF
+          SUPABASE_URL=$SUPABASE_URL
+          SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+          REPLICATE_API_KEY=$REPLICATE_API_KEY
+          REPLICATE_MODEL_VERSION=anthropic/claude-4-sonnet
+          UNSPLASH_ACCESS_KEY=$UNSPLASH_ACCESS_KEY
+          PEXELS_API_KEY=$PEXELS_API_KEY
+          PIXABAY_API_KEY=$PIXABAY_API_KEY
+          HUGGINGFACE_API_TOKEN=$HUGGINGFACE_API_TOKEN
+          GOOGLE_IOS_CLIENT_ID=134752292541-4289b71rova6eldn9f67qom4u2qc5onp.apps.googleusercontent.com
+          GOOGLE_WEB_CLIENT_ID=134752292541-hekkkdi2mbl0jrdsct0l2n3hjm2sckmh.apps.googleusercontent.com
+          EOF
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Install pods
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Flutter build ipa
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
