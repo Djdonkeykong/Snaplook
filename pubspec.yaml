@@ -86,6 +86,7 @@ flutter:
     - assets/icons/
     - assets/animations/
     - assets/videos/
+    - .env
 
   fonts:
     - family: Shinier
