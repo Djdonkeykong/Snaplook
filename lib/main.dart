@@ -15,6 +15,10 @@ import 'src/features/auth/domain/providers/auth_provider.dart';
 import 'src/features/splash/presentation/pages/splash_page.dart';
 import 'src/services/instagram_service.dart';
 import 'src/shared/services/video_preloader.dart';
+import 'src/shared/services/share_handler_service.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +47,7 @@ class SnaplookApp extends ConsumerStatefulWidget {
 class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderStateMixin {
   late StreamSubscription _intentSub;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  late ShareHandlerService _shareHandlerService;
 
   // Progress tracking for Instagram downloads
   late AnimationController _progressAnimationController;
@@ -71,6 +76,17 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
         // Update the visual progress with animated value
       });
     });
+
+    // Initialize ShareHandlerService for iOS Share Extension
+    if (Platform.isIOS) {
+      _shareHandlerService = ShareHandlerService();
+      _shareHandlerService.onSharedData = _handleSharedDataFromExtension;
+
+      // Check for shared data after a delay to ensure app is ready
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        _shareHandlerService.checkForSharedData();
+      });
+    }
 
     // Listen to media sharing coming from outside the app while the app is in the memory.
     _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
@@ -133,6 +149,37 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     } else if (sharedFile.type == SharedMediaType.text) {
       // Handle text sharing (like Instagram URLs)
       _handleSharedText(sharedFile.path);
+    }
+  }
+
+  void _handleSharedDataFromExtension(Map<String, dynamic> data) async {
+    print("===== SHARE EXTENSION DATA =====");
+    print("Received data type: ${data['type']}");
+
+    if (data['type'] == 'image' && data['imageBytes'] != null) {
+      // Handle image shared from extension
+      print("Processing shared image from extension");
+
+      // Save image bytes to a temporary file
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/shared_image_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await tempFile.writeAsBytes(data['imageBytes'] as Uint8List);
+
+      final imageFile = XFile(tempFile.path);
+      ref.read(selectedImagesProvider.notifier).setImage(imageFile);
+
+      // Navigate to detection page
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => const DetectionPage(),
+          ),
+        );
+      });
+    } else if (data['type'] == 'url' && data['url'] != null) {
+      // Handle URL shared from extension
+      print("Processing shared URL from extension: ${data['url']}");
+      _handleSharedText(data['url']);
     }
   }
 
