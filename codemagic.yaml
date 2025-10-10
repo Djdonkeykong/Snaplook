@@ -6,6 +6,8 @@ workflows:
     integrations:
       app_store_connect: Snaplook
     environment:
+      groups:
+        - env_vars
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.snaplook.snaplook
