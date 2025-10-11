@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:image_picker/image_picker.dart';
+import '../../core/constants/app_constants.dart';
 
 class InstagramService {
   static const String _userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
   // ScrapingBee API configuration
-  static const String _scrapingBeeApiKey = 'MBVJU10S1A0YUDAMPSUBIVSPGPA6MIJ5R1HNXZBSRQSDD06JH6K8UK74XZF9N8AISFWXTOLQH3U37NZF';
   static const String _scrapingBeeApiUrl = 'https://app.scrapingbee.com/api/v1/';
 
   /// ScrapingBee Instagram scraper with smart image quality detection
@@ -19,7 +19,7 @@ class InstagramService {
 
       final uri = Uri.parse(_scrapingBeeApiUrl);
       final queryParams = {
-        'api_key': _scrapingBeeApiKey,
+        'api_key': AppConstants.scrapingBeeApiKey,
         'url': instagramUrl,
         'render_js': 'true', // Instagram needs JS rendering
         'wait': '2000', // Optimal 2s wait for best speed/reliability balance
@@ -251,7 +251,8 @@ class InstagramService {
     try {
       print('Fetching Instagram post using ScrapingBee API: $instagramUrl');
 
-      if (_scrapingBeeApiKey.isEmpty || _scrapingBeeApiKey.startsWith('your_') || _scrapingBeeApiKey.contains('***')) {
+      final apiKey = AppConstants.scrapingBeeApiKey;
+      if (apiKey.isEmpty || apiKey.startsWith('your_') || apiKey.contains('***')) {
         print('❌ ScrapingBee API key not configured');
         return [];
       }

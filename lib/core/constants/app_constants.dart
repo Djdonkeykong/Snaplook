@@ -32,4 +32,8 @@ class AppConstants {
 
   static String get replicateModelVersion =>
     dotenv.env['REPLICATE_MODEL_VERSION'] ?? 'default-model-version';
+
+  // ScrapingBee API for Instagram downloads
+  static String get scrapingBeeApiKey =>
+    dotenv.env['SCRAPINGBEE_API_KEY'] ?? '';
 }
