@@ -43,11 +43,12 @@ class ShareExtensionPage extends ConsumerWidget {
           totalSteps: 6,
         ),
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: spacing.l),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: spacing.l),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             SizedBox(height: spacing.l),
 
             // Title
@@ -83,10 +84,7 @@ class ShareExtensionPage extends ConsumerWidget {
               ),
             ),
 
-            // Spacer to push buttons down
-            const Spacer(),
-
-            SizedBox(height: spacing.l),
+            SizedBox(height: spacing.xl),
 
             // Try it now Button
             Container(
