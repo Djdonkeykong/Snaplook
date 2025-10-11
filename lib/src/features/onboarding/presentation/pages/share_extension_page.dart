@@ -43,12 +43,11 @@ class ShareExtensionPage extends ConsumerWidget {
           totalSteps: 6,
         ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: spacing.l),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      body: Padding(
+        padding: EdgeInsets.symmetric(horizontal: spacing.l),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             SizedBox(height: spacing.l),
 
             // Title
@@ -68,7 +67,7 @@ class ShareExtensionPage extends ConsumerWidget {
 
             // Video Demo - Optimal size
             Container(
-              height: 480, // Increased from 380 to 480 for bigger size
+              height: 360,
               width: double.infinity,
               margin: EdgeInsets.symmetric(horizontal: spacing.l),
               decoration: BoxDecoration(
@@ -84,7 +83,8 @@ class ShareExtensionPage extends ConsumerWidget {
               ),
             ),
 
-            SizedBox(height: spacing.xl),
+            // Spacer to push buttons down
+            const Spacer(),
 
             // Try it now Button
             Container(
@@ -148,7 +148,6 @@ class ShareExtensionPage extends ConsumerWidget {
           ],
         ),
       ),
-    ),
     );
   }
 }
