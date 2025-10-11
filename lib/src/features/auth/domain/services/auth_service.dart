@@ -16,11 +16,14 @@ class AuthService {
       const webClientId = '134752292541-hekkkdi2mbl0jrdsct0l2n3hjm2sckmh.apps.googleusercontent.com';
       const iosClientId = '134752292541-4289b71rova6eldn9f67qom4u2qc5onp.apps.googleusercontent.com';
 
-      // Trigger the native Google Sign In flow
-      final GoogleSignInAccount? googleUser = await GoogleSignIn(
+      // Create GoogleSignIn instance
+      final googleSignIn = GoogleSignIn(
         clientId: iosClientId,
         serverClientId: webClientId,
-      ).signIn();
+      );
+
+      // Trigger the native Google Sign In flow
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
         throw Exception('Google sign in was cancelled');
