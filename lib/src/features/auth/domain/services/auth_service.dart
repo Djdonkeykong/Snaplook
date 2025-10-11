@@ -12,24 +12,15 @@ class AuthService {
 
   Future<AuthResponse> signInWithGoogle() async {
     try {
-      // Use the web flow for Google Sign In
-      const webClientId = '134752292541-hekkkdi2mbl0jrdsct0l2n3hjm2sckmh.apps.googleusercontent.com';
-      const iosClientId = '134752292541-4289b71rova6eldn9f67qom4u2qc5onp.apps.googleusercontent.com';
-
-      // Create GoogleSignIn instance
       final googleSignIn = GoogleSignIn(
-        clientId: iosClientId,
-        serverClientId: webClientId,
+        serverClientId: '134752292541-hekkkdi2mbl0jrdsct0l2n3hjm2sckmh.apps.googleusercontent.com',
       );
 
-      // Trigger the native Google Sign In flow
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
+      final googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         throw Exception('Google sign in was cancelled');
       }
 
-      // Get authentication tokens
       final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
       final accessToken = googleAuth.accessToken;
@@ -38,7 +29,6 @@ class AuthService {
         throw Exception('No ID token found');
       }
 
-      // Sign in to Supabase with Google credentials
       return await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
