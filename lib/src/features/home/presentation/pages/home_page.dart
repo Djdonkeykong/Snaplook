@@ -477,8 +477,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    Navigator.of(context).pop();
-
     try {
       final XFile? image = await _picker.pickImage(
         source: source,
