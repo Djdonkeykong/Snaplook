@@ -19,7 +19,6 @@ import 'src/shared/services/video_preloader.dart';
 import 'src/shared/services/share_handler_service.dart';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:path_provider/path_provider.dart';
 
 // Custom LocalStorage implementation using SharedPreferences
 // This avoids flutter_secure_storage crash on iOS 18.6.2
@@ -201,8 +200,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       // Handle image shared from extension
       print("Processing shared image from extension");
 
-      // Save image bytes to a temporary file
-      final tempDir = await getTemporaryDirectory();
+      // Save image bytes to a temporary file using system temp directory
+      // This avoids path_provider which crashes on iOS 18.6.2
+      final tempDir = Directory.systemTemp;
       final tempFile = File('${tempDir.path}/shared_image_${DateTime.now().millisecondsSinceEpoch}.jpg');
       await tempFile.writeAsBytes(data['imageBytes'] as Uint8List);
 
