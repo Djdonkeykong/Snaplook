@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 
 class SelectedImagesState {
@@ -54,7 +53,7 @@ class SelectedImagesNotifier extends StateNotifier<SelectedImagesState> {
       // Download the image and create an XFile from it
       final response = await http.get(Uri.parse(imageUrl));
       if (response.statusCode == 200) {
-        final tempDir = await getTemporaryDirectory();
+        final tempDir = Directory.systemTemp;
         final fileName = path.basename(Uri.parse(imageUrl).path);
         final file = File('${tempDir.path}/scan_$fileName');
         await file.writeAsBytes(response.bodyBytes);

@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/pages/results_page.dart';
@@ -577,7 +576,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
         // Network image - download and create XFile
         final response = await http.get(Uri.parse(widget.imageUrl!));
         if (response.statusCode == 200) {
-          final tempDir = await getTemporaryDirectory();
+          final tempDir = Directory.systemTemp;
           final fileName = 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
           final file = File('${tempDir.path}/$fileName');
           await file.writeAsBytes(response.bodyBytes);
@@ -633,7 +632,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
         print('Downloading network image: ${widget.imageUrl}');
         final response = await http.get(Uri.parse(widget.imageUrl!));
         if (response.statusCode == 200) {
-          final tempDir = await getTemporaryDirectory();
+          final tempDir = Directory.systemTemp;
           final fileName = 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
           final file = File('${tempDir.path}/$fileName');
           await file.writeAsBytes(response.bodyBytes);

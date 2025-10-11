@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
-import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 
 class InstagramService {
@@ -230,7 +229,7 @@ class InstagramService {
       print('Image downloaded successfully, size: ${imageResponse.bodyBytes.length} bytes');
 
       // Save image to temporary file
-      final tempDir = await getTemporaryDirectory();
+      final tempDir = Directory.systemTemp;
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = 'instagram_image_$timestamp.jpg';
       final file = File('${tempDir.path}/$fileName');
