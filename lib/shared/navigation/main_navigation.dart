@@ -140,12 +140,12 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         ),
         child: SafeArea(
           child: Container(
-            height: 80,
+            height: 70,
             padding: EdgeInsets.only(
-              left: spacing.l + 40, // Increased by 50% more (16px -> 40px) for even more icon spacing
-              right: spacing.l + 40, // Increased by 50% more (16px -> 40px) for even more icon spacing
-              top: 4, // Move icons down by 4px
-              bottom: spacing.l, // Keep bottom padding
+              left: spacing.l + 40,
+              right: spacing.l + 40,
+              top: 8,
+              bottom: 4, // Reduced from spacing.l (24px) to 4px to sit lower
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
