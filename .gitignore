@@ -68,4 +68,5 @@ android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 
 # Firebase
-firebase_options.dartprebuild_script.sh
+firebase_options.dart
+prebuild_script.sh
