@@ -24,25 +24,34 @@ import 'package:path_provider/path_provider.dart';
 // Custom LocalStorage implementation using SharedPreferences
 // This avoids flutter_secure_storage crash on iOS 18.6.2
 class SharedPreferencesLocalStorage extends LocalStorage {
-  SharedPreferencesLocalStorage() : super(
-    initialize: () async {},
-    hasAccessToken: () async {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.containsKey('supabase_token');
-    },
-    accessToken: () async {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('supabase_token');
-    },
-    removePersistedSession: () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('supabase_token');
-    },
-    persistSession: (String session) async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('supabase_token', session);
-    },
-  );
+  @override
+  Future<void> initialize() async {
+    // No initialization needed for SharedPreferences
+  }
+
+  @override
+  Future<bool> hasAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.containsKey('supabase_token');
+  }
+
+  @override
+  Future<String?> accessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('supabase_token');
+  }
+
+  @override
+  Future<void> removePersistedSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('supabase_token');
+  }
+
+  @override
+  Future<void> persistSession(String persistSessionString) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('supabase_token', persistSessionString);
+  }
 }
 
 void main() async {
@@ -58,7 +67,9 @@ void main() async {
   await Supabase.initialize(
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
-    localStorage: SharedPreferencesLocalStorage(),
+    authOptions: FlutterAuthClientOptions(
+      localStorage: SharedPreferencesLocalStorage(),
+    ),
   );
 
   // Preload video immediately on app startup
