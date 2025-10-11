@@ -122,14 +122,16 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     });
 
     // Initialize ShareHandlerService for iOS Share Extension
+    // IMPORTANT: Initialize immediately - no delay!
+    // The AppDelegate calls notifyFlutterOfSharedData 0.5s after URL scheme launch
     if (Platform.isIOS) {
+      print("[SHARE HANDLER] Initializing ShareHandlerService immediately");
       _shareHandlerService = ShareHandlerService();
       _shareHandlerService.onSharedData = _handleSharedDataFromExtension;
 
-      // Check for shared data after a delay to ensure app is ready
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        _shareHandlerService.checkForSharedData();
-      });
+      // Check for shared data immediately - no delay
+      print("[SHARE HANDLER] Checking for shared data immediately");
+      _shareHandlerService.checkForSharedData();
     }
 
     // Listen to media sharing coming from outside the app while the app is in the memory.
