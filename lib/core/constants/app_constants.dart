@@ -1,15 +1,14 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class AppConstants {
   AppConstants._();
 
-  // Supabase Configuration
-  static const String supabaseUrl = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: 'https://your-project.supabase.co',
-  );
-  static const String supabaseAnonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: 'your-anon-key-here',
-  );
+  // Supabase Configuration - reads from .env file at runtime
+  static String get supabaseUrl =>
+    dotenv.env['SUPABASE_URL'] ?? 'https://your-project.supabase.co';
+
+  static String get supabaseAnonKey =>
+    dotenv.env['SUPABASE_ANON_KEY'] ?? 'your-anon-key-here';
 
   // Spacing
   static const double defaultPadding = 16.0;
@@ -24,19 +23,13 @@ class AppConstants {
   // Animation
   static const Duration mediumAnimation = Duration(milliseconds: 300);
 
-  // API
-  static const String baseApiUrl = String.fromEnvironment(
-    'REPLICATE_BASE_URL',
-    defaultValue: 'https://api.replicate.com/v1',
-  );
+  // API - reads from .env file at runtime
+  static String get baseApiUrl =>
+    dotenv.env['REPLICATE_BASE_URL'] ?? 'https://api.replicate.com/v1';
 
-  static const String replicateApiKey = String.fromEnvironment(
-    'REPLICATE_API_KEY',
-    defaultValue: 'your-replicate-api-key-here',
-  );
+  static String get replicateApiKey =>
+    dotenv.env['REPLICATE_API_KEY'] ?? 'your-replicate-api-key-here';
 
-  static const String replicateModelVersion = String.fromEnvironment(
-    'REPLICATE_MODEL_VERSION',
-    defaultValue: 'default-model-version',
-  );
+  static String get replicateModelVersion =>
+    dotenv.env['REPLICATE_MODEL_VERSION'] ?? 'default-model-version';
 }
