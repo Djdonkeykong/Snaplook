@@ -87,6 +87,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     final pages = [
       Navigator(
         key: homeNavigatorKey,
+        initialRoute: '/',
         onGenerateRoute: (settings) {
           return PageRouteBuilder(
             settings: settings,
@@ -100,6 +101,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       ),
       Navigator(
         key: wardrobeNavigatorKey,
+        initialRoute: '/',
         onGenerateRoute: (settings) {
           return MaterialPageRoute(
             builder: (context) => const WardrobePage(),
@@ -109,6 +111,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       ),
       Navigator(
         key: profileNavigatorKey,
+        initialRoute: '/',
         onGenerateRoute: (settings) {
           return MaterialPageRoute(
             builder: (context) => const ProfilePage(),
