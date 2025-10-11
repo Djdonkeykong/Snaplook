@@ -17,9 +17,7 @@ import 'src/features/auth/domain/providers/auth_provider.dart';
 import 'src/features/splash/presentation/pages/splash_page.dart';
 import 'src/services/instagram_service.dart';
 import 'src/shared/services/video_preloader.dart';
-import 'src/shared/services/share_handler_service.dart';
 import 'dart:io';
-import 'dart:typed_data';
 
 // Custom LocalStorage implementation using SharedPreferences
 // This avoids flutter_secure_storage crash on iOS 18.6.2
@@ -88,7 +86,6 @@ class SnaplookApp extends ConsumerStatefulWidget {
 class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderStateMixin {
   late StreamSubscription _intentSub;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  late ShareHandlerService _shareHandlerService;
 
   // Progress tracking for Instagram downloads
   late AnimationController _progressAnimationController;
@@ -121,18 +118,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       });
     });
 
-    // Initialize ShareHandlerService for iOS Share Extension
-    // IMPORTANT: Initialize immediately - no delay!
-    // The AppDelegate calls notifyFlutterOfSharedData 0.5s after URL scheme launch
-    if (Platform.isIOS) {
-      print("[SHARE HANDLER] Initializing ShareHandlerService immediately");
-      _shareHandlerService = ShareHandlerService();
-      _shareHandlerService.onSharedData = _handleSharedDataFromExtension;
-
-      // Check for shared data immediately - no delay
-      print("[SHARE HANDLER] Checking for shared data immediately");
-      _shareHandlerService.checkForSharedData();
-    }
+    // ShareHandlerService is NO LONGER NEEDED!
+    // The receive_sharing_intent package's RSIShareViewController
+    // automatically handles everything via ReceiveSharingIntent.getInitialMedia()
+    // which we're already listening to above
 
     // Listen to media sharing coming from outside the app while the app is in the memory.
     _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
@@ -219,53 +208,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     }
   }
 
-  // Call this method after the app has fully initialized
-  void handlePendingSharedMedia() {
-    print("[SHARE EXTENSION] handlePendingSharedMedia called - pending: ${_pendingSharedMedia?.length ?? 0}");
-    if (_pendingSharedMedia != null && _pendingSharedMedia!.isNotEmpty) {
-      print("[SHARE EXTENSION] Processing pending shared media");
-      _handleSharedMedia(_pendingSharedMedia!, isInitial: true);
-      _pendingSharedMedia = null;
-    } else {
-      print("[SHARE EXTENSION] No pending shared media to process");
-    }
-  }
-
-  void _handleSharedDataFromExtension(Map<String, dynamic> data) async {
-    print("===== SHARE EXTENSION DATA FROM IOS EXTENSION =====");
-    print("[IOS EXTENSION] Received data type: ${data['type']}");
-    print("[IOS EXTENSION] Data keys: ${data.keys.toList()}");
-
-    if (data['type'] == 'image' && data['imageBytes'] != null) {
-      // Handle image shared from extension
-      print("[IOS EXTENSION] Processing shared image from extension");
-      print("[IOS EXTENSION] Image bytes length: ${(data['imageBytes'] as Uint8List).length}");
-
-      // Save image bytes to a temporary file using system temp directory
-      // This avoids path_provider which crashes on iOS 18.6.2
-      final tempDir = Directory.systemTemp;
-      final tempFile = File('${tempDir.path}/shared_image_${DateTime.now().millisecondsSinceEpoch}.jpg');
-      print("[IOS EXTENSION] Writing image to temp file: ${tempFile.path}");
-      await tempFile.writeAsBytes(data['imageBytes'] as Uint8List);
-      print("[IOS EXTENSION] Image written successfully");
-
-      final imageFile = XFile(tempFile.path);
-      print("[IOS EXTENSION] Setting image in provider: ${imageFile.path}");
-      ref.read(selectedImagesProvider.notifier).setImage(imageFile);
-      print("[IOS EXTENSION] Image set in provider");
-
-      // Set pending shared image so HomePage can handle navigation
-      print("[IOS EXTENSION] Setting pending shared image for HomePage");
-      ref.read(pendingSharedImageProvider.notifier).state = imageFile;
-      print("[IOS EXTENSION] Pending share set - HomePage will handle navigation when ready");
-    } else if (data['type'] == 'url' && data['url'] != null) {
-      // Handle URL shared from extension
-      print("[IOS EXTENSION] Processing shared URL from extension: ${data['url']}");
-      _handleSharedText(data['url']);
-    } else {
-      print("[IOS EXTENSION WARNING] Unknown data type or missing data");
-    }
-  }
+  // NOTE: handlePendingSharedMedia and _handleSharedDataFromExtension removed
+  // These are no longer needed - the package handles everything automatically!
 
   void _handleSharedText(String text) async {
     print("Handling shared text: $text");
