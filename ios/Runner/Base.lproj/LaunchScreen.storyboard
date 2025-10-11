@@ -20,10 +20,10 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <imageView opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleAspectFit" image="LaunchImage" translatesAutoresizingMaskIntoConstraints="NO" id="YRO-k0-Ey4">
-                                <rect key="frame" x="97" y="351" width="200" height="150"/>
+                                <rect key="frame" x="97" y="356" width="200" height="140"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="200" id="logo-width"/>
-                                    <constraint firstAttribute="height" constant="150" id="logo-height"/>
+                                    <constraint firstAttribute="height" constant="140" id="logo-height"/>
                                 </constraints>
                             </imageView>
                         </subviews>
