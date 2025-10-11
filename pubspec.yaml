@@ -2,7 +2,7 @@ name: snaplook
 description: "A Flutter app for fashion detection and styling recommendations"
 publish_to: 'none'
 
-version: 1.0.0+5
+version: 1.0.0+6
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -39,7 +39,6 @@ dependencies:
   crop_your_image: ^2.0.0
 
   # Camera & Media
-  camera: ^0.11.0+3
   photo_manager: ^3.2.3
   video_player: ^2.8.6
 
