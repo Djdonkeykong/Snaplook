@@ -85,7 +85,7 @@ class SnaplookApp extends ConsumerStatefulWidget {
 }
 
 class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderStateMixin {
-  StreamSubscription? _intentSub;
+  late StreamSubscription _intentSub;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   late ShareHandlerService _shareHandlerService;
 
@@ -118,7 +118,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     });
 
     // Initialize ShareHandlerService for iOS Share Extension
-    // On iOS we use Share Extension exclusively to avoid receive_sharing_intent crash on iOS 18.6.2
     if (Platform.isIOS) {
       _shareHandlerService = ShareHandlerService();
       _shareHandlerService.onSharedData = _handleSharedDataFromExtension;
@@ -127,50 +126,49 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       Future.delayed(const Duration(milliseconds: 1000), () {
         _shareHandlerService.checkForSharedData();
       });
-    } else {
-      // On Android, use receive_sharing_intent for media sharing
-      // Listen to media sharing coming from outside the app while the app is in the memory.
-      _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
-        print("===== MEDIA STREAM =====");
-        print("Received shared media: ${value.length} files");
-        for (var file in value) {
-          print("Shared file: ${file.path}");
-          print("  - type: ${file.type}");
-          print("  - mimeType: ${file.mimeType}");
-          print("  - thumbnail: ${file.thumbnail}");
-          print("  - duration: ${file.duration}");
-        }
-        if (value.isNotEmpty) {
-          _handleSharedMedia(value);
-        } else {
-          print("No media files received in stream");
-        }
-      }, onError: (err) {
-        print("getIntentDataStream error: $err");
-      });
-
-      // Get the media sharing coming from outside the app while the app is closed.
-      ReceiveSharingIntent.instance.getInitialMedia().then((value) {
-        print("===== INITIAL MEDIA =====");
-        print("Initial shared media: ${value.length} files");
-        for (var file in value) {
-          print("Initial shared file: ${file.path}");
-          print("  - type: ${file.type}");
-          print("  - mimeType: ${file.mimeType}");
-          print("  - thumbnail: ${file.thumbnail}");
-          print("  - duration: ${file.duration}");
-        }
-        if (value.isNotEmpty) {
-          _handleSharedMedia(value);
-          // Tell the library that we are done processing the intent.
-          ReceiveSharingIntent.instance.reset();
-        } else {
-          print("No initial media files received");
-        }
-      }).catchError((error) {
-        print("Error getting initial media: $error");
-      });
     }
+
+    // Listen to media sharing coming from outside the app while the app is in the memory.
+    _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
+      print("===== MEDIA STREAM =====");
+      print("Received shared media: ${value.length} files");
+      for (var file in value) {
+        print("Shared file: ${file.path}");
+        print("  - type: ${file.type}");
+        print("  - mimeType: ${file.mimeType}");
+        print("  - thumbnail: ${file.thumbnail}");
+        print("  - duration: ${file.duration}");
+      }
+      if (value.isNotEmpty) {
+        _handleSharedMedia(value);
+      } else {
+        print("No media files received in stream");
+      }
+    }, onError: (err) {
+      print("getIntentDataStream error: $err");
+    });
+
+    // Get the media sharing coming from outside the app while the app is closed.
+    ReceiveSharingIntent.instance.getInitialMedia().then((value) {
+      print("===== INITIAL MEDIA =====");
+      print("Initial shared media: ${value.length} files");
+      for (var file in value) {
+        print("Initial shared file: ${file.path}");
+        print("  - type: ${file.type}");
+        print("  - mimeType: ${file.mimeType}");
+        print("  - thumbnail: ${file.thumbnail}");
+        print("  - duration: ${file.duration}");
+      }
+      if (value.isNotEmpty) {
+        _handleSharedMedia(value);
+        // Tell the library that we are done processing the intent.
+        ReceiveSharingIntent.instance.reset();
+      } else {
+        print("No initial media files received");
+      }
+    }).catchError((error) {
+      print("Error getting initial media: $error");
+    });
   }
 
   void _handleSharedMedia(List<SharedMediaFile> sharedFiles) {
@@ -428,7 +426,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
 
   @override
   void dispose() {
-    _intentSub?.cancel();
+    _intentSub.cancel();
     _progressAnimationController.dispose();
     super.dispose();
   }
