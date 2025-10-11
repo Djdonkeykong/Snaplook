@@ -477,7 +477,9 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    print("[IMAGE PICKER] Starting image picker - source: ${source == ImageSource.camera ? 'CAMERA' : 'GALLERY'}");
     try {
+      print("[IMAGE PICKER] Calling ImagePicker.pickImage...");
       final XFile? image = await _picker.pickImage(
         source: source,
         maxWidth: 1024,
@@ -485,18 +487,35 @@ class _HomePageState extends ConsumerState<HomePage> {
         imageQuality: 85,
       );
 
+      print("[IMAGE PICKER] pickImage returned - image: ${image?.path ?? 'null'}");
+
       if (image != null) {
+        print("[IMAGE PICKER] Image selected: ${image.path}");
+        print("[IMAGE PICKER] Setting image in provider...");
         ref.read(selectedImagesProvider.notifier).setImage(image);
+        print("[IMAGE PICKER] Image set in provider");
 
         if (mounted) {
+          print("[IMAGE PICKER] Widget is mounted - navigating to DetectionPage");
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => const DetectionPage(),
+              builder: (context) {
+                print("[IMAGE PICKER] DetectionPage builder called");
+                return const DetectionPage();
+              },
             ),
-          );
+          ).then((value) {
+            print("[IMAGE PICKER] Returned from DetectionPage");
+          });
+        } else {
+          print("[IMAGE PICKER ERROR] Widget not mounted - cannot navigate");
         }
+      } else {
+        print("[IMAGE PICKER] No image selected (user cancelled)");
       }
     } catch (e) {
+      print("[IMAGE PICKER ERROR] Error picking image: $e");
+      print("[IMAGE PICKER ERROR] Error type: ${e.runtimeType}");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

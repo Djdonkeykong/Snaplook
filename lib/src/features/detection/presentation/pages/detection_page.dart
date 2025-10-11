@@ -32,6 +32,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
   @override
   void initState() {
     super.initState();
+    print("[DETECTION PAGE] initState called");
+    print("[DETECTION PAGE] imageUrl: ${widget.imageUrl}");
     _animationController = AnimationController(
       duration: AppConstants.mediumAnimation,
       vsync: this,
@@ -68,6 +70,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
     final imagesState = ref.watch(selectedImagesProvider);
     final selectedImage = imagesState.currentImage;
     final detectionState = ref.watch(detectionProvider);
+
+    print("[DETECTION PAGE] build called");
+    print("[DETECTION PAGE] selectedImage: ${selectedImage?.path ?? 'null'}");
+    print("[DETECTION PAGE] widget.imageUrl: ${widget.imageUrl ?? 'null'}");
+    print("[DETECTION PAGE] hasMultipleImages: ${imagesState.hasMultipleImages}");
+    print("[DETECTION PAGE] totalImages: ${imagesState.totalImages}");
 
     return Scaffold(
       backgroundColor: Colors.black,

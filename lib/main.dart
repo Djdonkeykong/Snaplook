@@ -93,6 +93,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
   late AnimationController _progressAnimationController;
   late Animation<double> _progressAnimation;
 
+  // Track if we have pending shared media to handle after app init
+  List<SharedMediaFile>? _pendingSharedMedia;
+
   @override
   void initState() {
     super.initState();
@@ -130,97 +133,176 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
 
     // Listen to media sharing coming from outside the app while the app is in the memory.
     _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
-      print("===== MEDIA STREAM =====");
-      print("Received shared media: ${value.length} files");
+      print("===== MEDIA STREAM (App in Memory) =====");
+      print("[SHARE EXTENSION] Received shared media: ${value.length} files");
       for (var file in value) {
-        print("Shared file: ${file.path}");
-        print("  - type: ${file.type}");
-        print("  - mimeType: ${file.mimeType}");
-        print("  - thumbnail: ${file.thumbnail}");
-        print("  - duration: ${file.duration}");
+        print("[SHARE EXTENSION] Shared file: ${file.path}");
+        print("[SHARE EXTENSION]   - type: ${file.type}");
+        print("[SHARE EXTENSION]   - mimeType: ${file.mimeType}");
+        print("[SHARE EXTENSION]   - thumbnail: ${file.thumbnail}");
+        print("[SHARE EXTENSION]   - duration: ${file.duration}");
       }
       if (value.isNotEmpty) {
+        print("[SHARE EXTENSION] Handling shared media immediately (app is open)");
         _handleSharedMedia(value);
       } else {
-        print("No media files received in stream");
+        print("[SHARE EXTENSION] No media files received in stream");
       }
     }, onError: (err) {
-      print("getIntentDataStream error: $err");
+      print("[SHARE EXTENSION ERROR] getIntentDataStream error: $err");
     });
 
     // Get the media sharing coming from outside the app while the app is closed.
     ReceiveSharingIntent.instance.getInitialMedia().then((value) {
-      print("===== INITIAL MEDIA =====");
-      print("Initial shared media: ${value.length} files");
+      print("===== INITIAL MEDIA (App was Closed) =====");
+      print("[SHARE EXTENSION] Initial shared media: ${value.length} files");
       for (var file in value) {
-        print("Initial shared file: ${file.path}");
-        print("  - type: ${file.type}");
-        print("  - mimeType: ${file.mimeType}");
-        print("  - thumbnail: ${file.thumbnail}");
-        print("  - duration: ${file.duration}");
+        print("[SHARE EXTENSION] Initial shared file: ${file.path}");
+        print("[SHARE EXTENSION]   - type: ${file.type}");
+        print("[SHARE EXTENSION]   - mimeType: ${file.mimeType}");
+        print("[SHARE EXTENSION]   - thumbnail: ${file.thumbnail}");
+        print("[SHARE EXTENSION]   - duration: ${file.duration}");
       }
       if (value.isNotEmpty) {
-        _handleSharedMedia(value);
+        print("[SHARE EXTENSION] Storing pending shared media - will handle after app init");
+        // Store the shared media and wait for app to fully initialize
+        _pendingSharedMedia = value;
         // Tell the library that we are done processing the intent.
         ReceiveSharingIntent.instance.reset();
+        print("[SHARE EXTENSION] Reset sharing intent - pending media stored");
+
+        // Process pending shared media after app initialization completes
+        // Wait for splash screen (1.5s) + navigation (0.5s) + buffer (1s) = 3s
+        Future.delayed(const Duration(milliseconds: 3000), () {
+          print("[SHARE EXTENSION] Delayed callback triggered - checking for pending media");
+          handlePendingSharedMedia();
+        });
       } else {
-        print("No initial media files received");
+        print("[SHARE EXTENSION] No initial media files received");
       }
     }).catchError((error) {
-      print("Error getting initial media: $error");
+      print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
     });
   }
 
-  void _handleSharedMedia(List<SharedMediaFile> sharedFiles) {
-    if (sharedFiles.isEmpty) return;
+  void _handleSharedMedia(List<SharedMediaFile> sharedFiles, {bool isInitial = false}) {
+    print("[SHARE EXTENSION] _handleSharedMedia called - isInitial: $isInitial, files: ${sharedFiles.length}");
+    if (sharedFiles.isEmpty) {
+      print("[SHARE EXTENSION] No files to handle - returning");
+      return;
+    }
 
     final sharedFile = sharedFiles.first;
+    print("[SHARE EXTENSION] Processing first file: ${sharedFile.path}");
+    print("[SHARE EXTENSION] File type: ${sharedFile.type}");
 
     if (sharedFile.type == SharedMediaType.image) {
+      print("[SHARE EXTENSION] Handling image file");
       // Handle actual image files
       final imageFile = XFile(sharedFile.path);
+      print("[SHARE EXTENSION] Setting image in provider: ${imageFile.path}");
       ref.read(selectedImagesProvider.notifier).setImage(imageFile);
 
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (context) => const DetectionPage(),
-        ),
-      );
+      print("[SHARE EXTENSION] Navigator ready: ${navigatorKey.currentState != null}");
+      if (navigatorKey.currentState != null) {
+        print("[SHARE EXTENSION] Pushing DetectionPage to navigator");
+        navigatorKey.currentState!.push(
+          MaterialPageRoute(
+            builder: (context) {
+              print("[SHARE EXTENSION] DetectionPage builder called");
+              return const DetectionPage();
+            },
+          ),
+        );
+      } else {
+        print("[SHARE EXTENSION WARNING] Navigator not ready yet - will retry after delay");
+        // Wait a bit and try again
+        Future.delayed(const Duration(milliseconds: 500), () {
+          print("[SHARE EXTENSION] Retrying navigation after delay");
+          if (navigatorKey.currentState != null) {
+            print("[SHARE EXTENSION] Navigator now ready - pushing DetectionPage");
+            navigatorKey.currentState!.push(
+              MaterialPageRoute(
+                builder: (context) {
+                  print("[SHARE EXTENSION] DetectionPage builder called (retry)");
+                  return const DetectionPage();
+                },
+              ),
+            );
+          } else {
+            print("[SHARE EXTENSION ERROR] Navigator still not ready after delay");
+          }
+        });
+      }
     } else if (sharedFile.type == SharedMediaType.text) {
+      print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
       // Handle text sharing (like Instagram URLs)
       _handleSharedText(sharedFile.path);
+    } else {
+      print("[SHARE EXTENSION] Unknown file type: ${sharedFile.type}");
+    }
+  }
+
+  // Call this method after the app has fully initialized
+  void handlePendingSharedMedia() {
+    print("[SHARE EXTENSION] handlePendingSharedMedia called - pending: ${_pendingSharedMedia?.length ?? 0}");
+    if (_pendingSharedMedia != null && _pendingSharedMedia!.isNotEmpty) {
+      print("[SHARE EXTENSION] Processing pending shared media");
+      _handleSharedMedia(_pendingSharedMedia!, isInitial: true);
+      _pendingSharedMedia = null;
+    } else {
+      print("[SHARE EXTENSION] No pending shared media to process");
     }
   }
 
   void _handleSharedDataFromExtension(Map<String, dynamic> data) async {
-    print("===== SHARE EXTENSION DATA =====");
-    print("Received data type: ${data['type']}");
+    print("===== SHARE EXTENSION DATA FROM IOS EXTENSION =====");
+    print("[IOS EXTENSION] Received data type: ${data['type']}");
+    print("[IOS EXTENSION] Data keys: ${data.keys.toList()}");
 
     if (data['type'] == 'image' && data['imageBytes'] != null) {
       // Handle image shared from extension
-      print("Processing shared image from extension");
+      print("[IOS EXTENSION] Processing shared image from extension");
+      print("[IOS EXTENSION] Image bytes length: ${(data['imageBytes'] as Uint8List).length}");
 
       // Save image bytes to a temporary file using system temp directory
       // This avoids path_provider which crashes on iOS 18.6.2
       final tempDir = Directory.systemTemp;
       final tempFile = File('${tempDir.path}/shared_image_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      print("[IOS EXTENSION] Writing image to temp file: ${tempFile.path}");
       await tempFile.writeAsBytes(data['imageBytes'] as Uint8List);
+      print("[IOS EXTENSION] Image written successfully");
 
       final imageFile = XFile(tempFile.path);
+      print("[IOS EXTENSION] Setting image in provider: ${imageFile.path}");
       ref.read(selectedImagesProvider.notifier).setImage(imageFile);
+      print("[IOS EXTENSION] Image set in provider");
 
       // Navigate to detection page
+      print("[IOS EXTENSION] Scheduling navigation to DetectionPage");
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (context) => const DetectionPage(),
-          ),
-        );
+        print("[IOS EXTENSION] PostFrameCallback executing");
+        print("[IOS EXTENSION] Navigator ready: ${navigatorKey.currentState != null}");
+        if (navigatorKey.currentState != null) {
+          print("[IOS EXTENSION] Pushing DetectionPage");
+          navigatorKey.currentState!.push(
+            MaterialPageRoute(
+              builder: (context) {
+                print("[IOS EXTENSION] DetectionPage builder called");
+                return const DetectionPage();
+              },
+            ),
+          );
+        } else {
+          print("[IOS EXTENSION ERROR] Navigator not ready in postFrameCallback");
+        }
       });
     } else if (data['type'] == 'url' && data['url'] != null) {
       // Handle URL shared from extension
-      print("Processing shared URL from extension: ${data['url']}");
+      print("[IOS EXTENSION] Processing shared URL from extension: ${data['url']}");
       _handleSharedText(data['url']);
+    } else {
+      print("[IOS EXTENSION WARNING] Unknown data type or missing data");
     }
   }
 
