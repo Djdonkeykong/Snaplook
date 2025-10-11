@@ -2,7 +2,7 @@ name: snaplook
 description: "A Flutter app for fashion detection and styling recommendations"
 publish_to: 'none'
 
-version: 1.0.0+16
+version: 1.0.0+17
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -45,7 +45,7 @@ dependencies:
   # Social Media Integration
   url_launcher: ^6.3.0
   share_plus: ^10.0.2
-  receive_sharing_intent: ^1.8.1
+  receive_sharing_intent: ^1.8.1  # Matches FlutterFlow configuration that works on iOS 18.6.2
 
   # File Handling
   file_picker: ^8.1.2
