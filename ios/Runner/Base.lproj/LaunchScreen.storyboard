@@ -19,11 +19,11 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleAspectFit" image="AppIcon" translatesAutoresizingMaskIntoConstraints="NO" id="YRO-k0-Ey4">
-                                <rect key="frame" x="154" y="383.5" width="85" height="85"/>
+                            <imageView opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleAspectFit" misplaced="YES" image="LaunchImage" translatesAutoresizingMaskIntoConstraints="NO" id="YRO-k0-Ey4">
+                                <rect key="frame" x="100" y="315" width="193" height="222"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="85" id="logo-width"/>
                                     <constraint firstAttribute="height" constant="85" id="logo-height"/>
+                                    <constraint firstAttribute="width" constant="85" id="logo-width"/>
                                 </constraints>
                             </imageView>
                         </subviews>
@@ -40,6 +40,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="AppIcon" width="60" height="60"/>
+        <image name="LaunchImage" width="171.66667175292969" height="107.33333587646484"/>
     </resources>
 </document>
