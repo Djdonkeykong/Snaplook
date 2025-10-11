@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../domain/providers/image_provider.dart';
 import '../../domain/providers/inspiration_provider.dart';
+import '../../domain/providers/pending_share_provider.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
 import '../../../product/presentation/pages/product_detail_page.dart';
 import '../../../product/presentation/pages/detected_products_page.dart';
@@ -32,13 +33,46 @@ class _HomePageState extends ConsumerState<HomePage> {
   void initState() {
     super.initState();
 
+    print("[HOME PAGE] initState called");
+
     // Load initial inspiration images
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(inspirationProvider.notifier).loadImages();
+
+      // Check for pending shared image after a delay to ensure UI is ready
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _checkPendingSharedImage();
+      });
     });
 
     // Setup infinite scrolling
     _scrollController.addListener(_onScroll);
+  }
+
+  void _checkPendingSharedImage() {
+    print("[HOME PAGE] Checking for pending shared image");
+    final pendingImage = ref.read(pendingSharedImageProvider);
+    print("[HOME PAGE] Pending image: ${pendingImage?.path ?? 'null'}");
+
+    if (pendingImage != null && mounted) {
+      print("[HOME PAGE] Found pending shared image - navigating to DetectionPage");
+      // Clear the pending image first
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+
+      // Navigate to DetectionPage using the home tab's navigator
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) {
+            print("[HOME PAGE] DetectionPage builder called for shared image");
+            return const DetectionPage();
+          },
+        ),
+      ).then((value) {
+        print("[HOME PAGE] Returned from DetectionPage (shared image)");
+      });
+    } else {
+      print("[HOME PAGE] No pending shared image found");
+    }
   }
 
   @override

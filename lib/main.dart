@@ -10,6 +10,7 @@ import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'shared/navigation/main_navigation.dart';
 import 'src/features/home/domain/providers/image_provider.dart';
+import 'src/features/home/domain/providers/pending_share_provider.dart';
 import 'src/features/detection/presentation/pages/detection_page.dart';
 import 'src/features/auth/presentation/pages/login_page.dart';
 import 'src/features/auth/domain/providers/auth_provider.dart';
@@ -203,37 +204,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       print("[SHARE EXTENSION] Setting image in provider: ${imageFile.path}");
       ref.read(selectedImagesProvider.notifier).setImage(imageFile);
 
-      print("[SHARE EXTENSION] Navigator ready: ${navigatorKey.currentState != null}");
-      if (navigatorKey.currentState != null) {
-        print("[SHARE EXTENSION] Pushing DetectionPage to navigator");
-        navigatorKey.currentState!.push(
-          MaterialPageRoute(
-            builder: (context) {
-              print("[SHARE EXTENSION] DetectionPage builder called");
-              return const DetectionPage();
-            },
-          ),
-        );
-      } else {
-        print("[SHARE EXTENSION WARNING] Navigator not ready yet - will retry after delay");
-        // Wait a bit and try again
-        Future.delayed(const Duration(milliseconds: 500), () {
-          print("[SHARE EXTENSION] Retrying navigation after delay");
-          if (navigatorKey.currentState != null) {
-            print("[SHARE EXTENSION] Navigator now ready - pushing DetectionPage");
-            navigatorKey.currentState!.push(
-              MaterialPageRoute(
-                builder: (context) {
-                  print("[SHARE EXTENSION] DetectionPage builder called (retry)");
-                  return const DetectionPage();
-                },
-              ),
-            );
-          } else {
-            print("[SHARE EXTENSION ERROR] Navigator still not ready after delay");
-          }
-        });
-      }
+      // Also set in pending share provider so HomePage can handle navigation
+      print("[SHARE EXTENSION] Setting pending shared image for HomePage");
+      ref.read(pendingSharedImageProvider.notifier).state = imageFile;
+      print("[SHARE EXTENSION] Pending share set - HomePage will handle navigation");
     } else if (sharedFile.type == SharedMediaType.text) {
       print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
       // Handle text sharing (like Instagram URLs)
@@ -278,25 +252,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       ref.read(selectedImagesProvider.notifier).setImage(imageFile);
       print("[IOS EXTENSION] Image set in provider");
 
-      // Navigate to detection page
-      print("[IOS EXTENSION] Scheduling navigation to DetectionPage");
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        print("[IOS EXTENSION] PostFrameCallback executing");
-        print("[IOS EXTENSION] Navigator ready: ${navigatorKey.currentState != null}");
-        if (navigatorKey.currentState != null) {
-          print("[IOS EXTENSION] Pushing DetectionPage");
-          navigatorKey.currentState!.push(
-            MaterialPageRoute(
-              builder: (context) {
-                print("[IOS EXTENSION] DetectionPage builder called");
-                return const DetectionPage();
-              },
-            ),
-          );
-        } else {
-          print("[IOS EXTENSION ERROR] Navigator not ready in postFrameCallback");
-        }
-      });
+      // Set pending shared image so HomePage can handle navigation
+      print("[IOS EXTENSION] Setting pending shared image for HomePage");
+      ref.read(pendingSharedImageProvider.notifier).state = imageFile;
+      print("[IOS EXTENSION] Pending share set - HomePage will handle navigation when ready");
     } else if (data['type'] == 'url' && data['url'] != null) {
       // Handle URL shared from extension
       print("[IOS EXTENSION] Processing shared URL from extension: ${data['url']}");
