@@ -148,6 +148,7 @@ class ShareExtensionPage extends ConsumerWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
