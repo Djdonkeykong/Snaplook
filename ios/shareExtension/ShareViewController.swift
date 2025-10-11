@@ -162,36 +162,27 @@ class ShareViewController: UIViewController {
         let url = URL(string: "snaplook://share")!
         print("[SHARE EXTENSION] Attempting to open URL: \(url)")
 
-        var responder: UIResponder? = self as UIResponder
-        let selector = #selector(openURL(_:))
+        // Use extensionContext.open() which is the proper way for extensions to open URLs
+        if let extensionContext = self.extensionContext {
+            print("[SHARE EXTENSION] Using extensionContext.open()")
+            extensionContext.open(url, completionHandler: { [weak self] success in
+                print("[SHARE EXTENSION] extensionContext.open() completed - success: \(success)")
+                if success {
+                    print("[SHARE EXTENSION] Successfully opened main app!")
+                } else {
+                    print("[SHARE EXTENSION ERROR] Failed to open main app")
+                }
 
-        var foundResponder = false
-        while responder != nil {
-            if responder!.responds(to: selector) && responder != self {
-                print("[SHARE EXTENSION] Found responder, performing selector")
-                responder!.perform(selector, with: url)
-                foundResponder = true
-                break
-            }
-            responder = responder?.next
-        }
-
-        if foundResponder {
-            print("[SHARE EXTENSION] Successfully triggered URL open")
+                // Complete the request after opening
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    print("[SHARE EXTENSION] Completing request and closing extension")
+                    self?.completeRequest()
+                }
+            })
         } else {
-            print("[SHARE EXTENSION WARNING] No responder found to open URL")
+            print("[SHARE EXTENSION ERROR] No extensionContext available")
+            self.completeRequest()
         }
-
-        // Complete the request after a short delay
-        print("[SHARE EXTENSION] Will complete request in 0.5 seconds")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            print("[SHARE EXTENSION] Completing request and closing extension")
-            self?.completeRequest()
-        }
-    }
-
-    @objc private func openURL(_ url: URL) {
-        // This method is called via perform selector
     }
 
     private func completeRequest() {
