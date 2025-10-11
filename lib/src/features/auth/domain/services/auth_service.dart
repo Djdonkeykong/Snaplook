@@ -12,18 +12,23 @@ class AuthService {
 
   Future<AuthResponse> signInWithGoogle() async {
     try {
-      final googleSignIn = GoogleSignIn(
+      final googleSignIn = GoogleSignIn.instance;
+
+      // Initialize with server client ID
+      await googleSignIn.initialize(
+        clientId: '134752292541-4289b71rova6eldn9f67qom4u2qc5onp.apps.googleusercontent.com',
         serverClientId: '134752292541-hekkkdi2mbl0jrdsct0l2n3hjm2sckmh.apps.googleusercontent.com',
       );
 
-      final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
+      // Authenticate
+      final account = await googleSignIn.authenticate();
+      if (account == null) {
         throw Exception('Google sign in was cancelled');
       }
 
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
-      final accessToken = googleAuth.accessToken;
+      // Get ID token
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
 
       if (idToken == null) {
         throw Exception('No ID token found');
@@ -32,7 +37,6 @@ class AuthService {
       return await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
-        accessToken: accessToken,
       );
     } catch (e) {
       print('Google sign in error: $e');
