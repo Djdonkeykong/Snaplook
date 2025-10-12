@@ -126,7 +126,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     // Listen to media sharing coming from outside the app while the app is in the memory.
     _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
       if (_hasHandledInitialShare && value.isNotEmpty) {
+        print("[SHARE EXTENSION] Stream received initial share again; skipping");
         _hasHandledInitialShare = false;
+        return;
       }
       print("===== MEDIA STREAM (App in Memory) =====");
       print("[SHARE EXTENSION] Received shared media: ${value.length} files");
@@ -202,8 +204,12 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       // Also set in pending share provider so HomePage can handle navigation
       print("[SHARE EXTENSION] Setting pending shared image for HomePage");
       ref.read(pendingSharedImageProvider.notifier).state = imageFile;
-      print("[SHARE EXTENSION] Pending share set - navigating to DetectionPage");
-      _navigateToDetection();
+      if (isInitial) {
+        print("[SHARE EXTENSION] Pending share set - will navigate after home initializes");
+      } else {
+        print("[SHARE EXTENSION] Pending share set - navigating to DetectionPage");
+        _navigateToDetection();
+      }
     } else if (sharedFile.type == SharedMediaType.text) {
       print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
       // Handle text sharing (like Instagram URLs)
@@ -466,5 +472,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     );
   }
 }
+
 
 
