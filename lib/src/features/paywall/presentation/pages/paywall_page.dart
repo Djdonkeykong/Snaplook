@@ -51,7 +51,7 @@ class PaywallPage extends ConsumerWidget {
             // Main heading
             Text(
               selectedPlan == SubscriptionPlan.monthly
-                ? 'Unlock Snaplook to discover\nyour perfect style.'
+                ? 'Unlock everything Snaplook offers.'
                 : 'Start your 3-day FREE\ntrial to continue.',
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
@@ -94,7 +94,7 @@ class PaywallPage extends ConsumerWidget {
                       icon: Icons.lock_open,
                       iconColor: AppColors.secondary,
                       title: 'Today',
-                      subtitle: 'Unlock everything Snaplook offers.',
+                      subtitle: 'Unlock all the app\'s features like AI\nfashion analysis and more.',
                       isFirst: true,
                     ),
                     _TimelineItem(
