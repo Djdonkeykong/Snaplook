@@ -92,20 +92,20 @@ class PaywallPage extends ConsumerWidget {
                   children: [
                     _TimelineItem(
                       icon: Icons.lock_open,
-                      iconColor: Colors.orange,
+                      iconColor: AppColors.secondary,
                       title: 'Today',
                       subtitle: 'Unlock all the app\'s features like AI\nfashion analysis and more.',
                       isFirst: true,
                     ),
                     _TimelineItem(
                       icon: Icons.notifications_outlined,
-                      iconColor: Colors.orange,
+                      iconColor: AppColors.secondary,
                       title: 'In 2 Days - Reminder',
                       subtitle: 'We\'ll send you a reminder that your trial\nis ending soon.',
                     ),
                     _TimelineItem(
                       icon: Icons.account_balance_wallet_outlined,
-                      iconColor: Colors.black,
+                      iconColor: AppColors.secondary,
                       title: 'In 3 Days - Billing Starts',
                       subtitle: 'You\'ll be charged on 30 Sep 2025 unless\nyou cancel anytime before.',
                       isLast: true,
@@ -344,7 +344,7 @@ class _TimelineItem extends StatelessWidget {
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: isLast ? Colors.grey.shade300 : iconColor,
+                    color: iconColor,
                   ),
                 ),
             ],
