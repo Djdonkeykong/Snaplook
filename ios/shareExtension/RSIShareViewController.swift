@@ -81,6 +81,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     var appGroupId = ""
     var sharedMedia: [SharedMediaFile] = []
     private var loadingView: UIView?
+    private var loadingShownAt: Date?
+    private var loadingHideWorkItem: DispatchWorkItem?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -96,6 +98,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         } else {
             shareLog("ERROR: Failed to resolve container URL for \(appGroupId)")
         }
+        loadingHideWorkItem?.cancel()
         setupLoadingUI()
     }
 
@@ -413,11 +416,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         view.addSubview(overlay)
         loadingView = overlay
+        loadingShownAt = Date()
     }
 
     private func hideLoadingUI() {
-        loadingView?.removeFromSuperview()
-        loadingView = nil
+        guard loadingView != nil else { return }
+        let elapsed = loadingShownAt.map { Date().timeIntervalSince($0) } ?? 0
+        let minimumDuration: TimeInterval = 3
+        let delay = max(0, minimumDuration - elapsed)
+
+        loadingHideWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            self.loadingView?.removeFromSuperview()
+            self.loadingView = nil
+            self.loadingHideWorkItem = nil
+        }
+        loadingHideWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 }
 
