@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -292,6 +293,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
               child: ElevatedButton(
                 onPressed: selectedSource != null
                     ? () {
+                        HapticFeedback.mediumImpact();
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const AwesomeIntroPage(),
@@ -344,7 +346,10 @@ class _DiscoverySourceOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        onTap();
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,

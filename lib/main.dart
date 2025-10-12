@@ -12,8 +12,6 @@ import 'shared/navigation/main_navigation.dart';
 import 'src/features/home/domain/providers/image_provider.dart';
 import 'src/features/home/domain/providers/pending_share_provider.dart';
 import 'src/features/detection/presentation/pages/detection_page.dart';
-import 'src/features/auth/presentation/pages/login_page.dart';
-import 'src/features/auth/domain/providers/auth_provider.dart';
 import 'src/features/splash/presentation/pages/splash_page.dart';
 import 'src/services/instagram_service.dart';
 import 'src/shared/services/video_preloader.dart';
@@ -93,6 +91,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
 
   bool _isNavigatingToDetection = false;
   bool _hasHandledInitialShare = false;
+  bool _shouldIgnoreNextStreamEmission = false;
 
   @override
   void initState() {
@@ -125,9 +124,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
 
     // Listen to media sharing coming from outside the app while the app is in the memory.
     _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
-      if (_hasHandledInitialShare && value.isNotEmpty) {
-        print("[SHARE EXTENSION] Stream received initial share again; skipping");
-        _hasHandledInitialShare = false;
+      if (_shouldIgnoreNextStreamEmission && value.isNotEmpty) {
+        print("[SHARE EXTENSION] Ignoring first stream emission after initial share");
+        _shouldIgnoreNextStreamEmission = false;
         return;
       }
       print("===== MEDIA STREAM (App in Memory) =====");
@@ -167,6 +166,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       if (value.isNotEmpty) {
         print("[SHARE EXTENSION] Handling initial shared media immediately");
         _hasHandledInitialShare = true;
+        _shouldIgnoreNextStreamEmission = true;
         ReceiveSharingIntent.instance.reset();
         print("[SHARE EXTENSION] Reset sharing intent");
         _handleSharedMedia(value, isInitial: true);
@@ -206,6 +206,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       ref.read(pendingSharedImageProvider.notifier).state = imageFile;
       if (isInitial) {
         _hasHandledInitialShare = true;
+        _shouldIgnoreNextStreamEmission = true;
         print("[SHARE EXTENSION] Deferring navigation to home init");
         return;
       }
@@ -222,13 +223,15 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
   }
 
   void _navigateToDetection() {
-    _hasHandledInitialShare = true;
     if (_isNavigatingToDetection) {
       print("[SHARE EXTENSION] Navigation already in progress");
       ref.read(pendingSharedImageProvider.notifier).state = null;
       return;
     }
     _isNavigatingToDetection = true;
+
+    // Ensure the main navigation is showing the home tab before pushing detection.
+    ref.read(selectedIndexProvider.notifier).state = 0;
 
     void pushRoute() {
       final navigator = navigatorKey.currentState;
@@ -251,7 +254,13 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       });
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final homeNavigator = homeNavigatorKey.currentState;
+      if (homeNavigator?.canPop() ?? false) {
+        homeNavigator!.popUntil((route) => route.isFirst);
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
+    });
   }
 
   void _handleSharedText(String text) async {

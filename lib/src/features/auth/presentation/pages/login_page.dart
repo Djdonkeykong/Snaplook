@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -66,6 +67,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
                 child: ElevatedButton(
                   onPressed: () {
+                    HapticFeedback.mediumImpact();
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => const GenderSelectionPage(),
@@ -403,7 +405,10 @@ class _AuthButton extends StatelessWidget {
             : null,
       ),
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: () {
+          HapticFeedback.mediumImpact();
+          onPressed();
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: textColor,
@@ -470,7 +475,10 @@ class _AuthButtonWithSvg extends StatelessWidget {
             : null,
       ),
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: () {
+          HapticFeedback.mediumImpact();
+          onPressed();
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: textColor,

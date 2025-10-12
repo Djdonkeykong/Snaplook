@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -127,6 +128,7 @@ class AwesomeIntroPage extends ConsumerWidget {
               margin: EdgeInsets.only(bottom: spacing.xxl),
               child: ElevatedButton(
                 onPressed: () {
+                  HapticFeedback.mediumImpact();
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const ShareExtensionPage(),

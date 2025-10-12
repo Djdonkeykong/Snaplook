@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -49,6 +50,8 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
 
   Future<void> _handleContinue() async {
     if (!_isButtonEnabled) return;
+
+    HapticFeedback.mediumImpact();
 
     try {
       final authService = ref.read(authServiceProvider);
