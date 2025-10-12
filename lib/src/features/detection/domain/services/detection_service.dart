@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:image_picker/image_picker.dart';
@@ -11,9 +12,19 @@ class DetectionService {
   // For local development: http://localhost:8000
   // For Android emulator: http://10.0.2.2:8000
   // For production: https://your-api-domain.com
-  static final String _apiBaseUrl = _resolveApiBaseUrl();
+  static String get _apiBaseUrl => _resolveApiBaseUrl();
 
   static String _resolveApiBaseUrl() {
+    final envOverride = dotenv.env['DETECTION_API_URL'];
+    if (envOverride != null && envOverride.isNotEmpty) {
+      return envOverride;
+    }
+
+    const compileTimeOverride = String.fromEnvironment('DETECTION_API_URL');
+    if (compileTimeOverride.isNotEmpty) {
+      return compileTimeOverride;
+    }
+
     if (kIsWeb) {
       return 'http://localhost:8000';
     }
