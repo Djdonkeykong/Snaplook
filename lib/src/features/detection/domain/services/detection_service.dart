@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:image_picker/image_picker.dart';
@@ -10,7 +11,25 @@ class DetectionService {
   // For local development: http://localhost:8000
   // For Android emulator: http://10.0.2.2:8000
   // For production: https://your-api-domain.com
-  static const String _apiBaseUrl = 'http://10.0.2.2:8000';
+  static final String _apiBaseUrl = _resolveApiBaseUrl();
+
+  static String _resolveApiBaseUrl() {
+    if (kIsWeb) {
+      return 'http://localhost:8000';
+    }
+
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:8000';
+    }
+
+    // iOS simulator and desktop development hosts can use localhost
+    if (Platform.isIOS || Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+      return 'http://localhost:8000';
+    }
+
+    // Fallback to localhost; consider replacing with production URL when deploying
+    return 'http://localhost:8000';
+  }
 
   Future<List<DetectionResult>> analyzeImage(XFile image) async {
     try {
