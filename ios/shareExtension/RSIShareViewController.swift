@@ -1,4 +1,4 @@
-﻿//
+//
 //  RSIShareViewController.swift
 //  Snaplook Share Extension
 //
@@ -92,7 +92,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         super.viewDidLoad()
         loadIds()
         sharedMedia.removeAll()
-        shareLog("View did load – cleared sharedMedia array")
+        shareLog("View did load - cleared sharedMedia array")
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) {
             shareLog("Resolved container URL: \(containerURL.path)")
         } else {
@@ -121,7 +121,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     shareLog("Loading attachment index \(index) as \(type)")
                     attachment.loadItem(forTypeIdentifier: type.toUTTypeIdentifier) { [weak self] data, error in
                         guard let self = self, error == nil else {
-                            shareLog("ERROR: loadItem failed for index \(index) – \(error?.localizedDescription ?? "unknown error")")
+                            shareLog("ERROR: loadItem failed for index \(index) - \(error?.localizedDescription ?? "unknown error")")
                             DispatchQueue.main.async { self?.dismissWithError() }
                             return
                         }
@@ -188,7 +188,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             mimeType: type == .text ? "text/plain" : nil,
             type: type
         ))
-        shareLog("Appended literal item (type \(type)) – count now \(sharedMedia.count)")
+        shareLog("Appended literal item (type \(type)) - count now \(sharedMedia.count)")
         if index == (content.attachments?.count ?? 0) - 1, shouldAutoRedirect() {
             saveAndRedirect()
         }
@@ -207,7 +207,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 mimeType: type == .image ? "image/png" : nil,
                 type: type
             ))
-            shareLog("Saved UIImage to \(newPathDecoded) – count now \(sharedMedia.count)")
+            shareLog("Saved UIImage to \(newPathDecoded) - count now \(sharedMedia.count)")
         } else {
             shareLog("ERROR: Failed to write UIImage for index \(index)")
         }
@@ -237,7 +237,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         duration: videoInfo.duration,
                         type: type
                     ))
-                    shareLog("Stored video at \(newPathDecoded) – count now \(sharedMedia.count)")
+                    shareLog("Stored video at \(newPathDecoded) - count now \(sharedMedia.count)")
                 }
             } else {
                 sharedMedia.append(SharedMediaFile(
@@ -245,7 +245,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     mimeType: url.mimeType(),
                     type: type
                 ))
-                shareLog("Stored file at \(newPathDecoded) – count now \(sharedMedia.count)")
+                shareLog("Stored file at \(newPathDecoded) - count now \(sharedMedia.count)")
             }
         } else {
             shareLog("ERROR: Failed to copy file \(url)")
@@ -354,7 +354,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             shareLog("writeTempFile succeeded at \(dstURL.path)")
             return true
         } catch {
-            shareLog("ERROR: Cannot write temp file – \(error.localizedDescription)")
+            shareLog("ERROR: Cannot write temp file - \(error.localizedDescription)")
             return false
         }
     }
@@ -390,7 +390,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             try UIImage(cgImage: img).pngData()?.write(to: thumbnailPath)
             saved = true
         } catch {
-            shareLog("ERROR: Failed to generate video thumbnail – \(error.localizedDescription)")
+            shareLog("ERROR: Failed to generate video thumbnail - \(error.localizedDescription)")
             saved = false
         }
 
@@ -411,7 +411,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func setupLoadingUI() {
         let overlay = UIView(frame: view.bounds)
         overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        overlay.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.92)
+        overlay.backgroundColor = UIColor.systemBackground
 
         let stack = UIStackView()
         stack.axis = .vertical
@@ -422,7 +422,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         activity.startAnimating()
 
         let label = UILabel()
-        label.text = "Importing…"
+        label.text = "Importing..."
         label.font = UIFont.preferredFont(forTextStyle: .headline)
         label.textColor = UIColor.label
 
@@ -465,3 +465,5 @@ extension URL {
         return "application/octet-stream"
     }
 }
+
+
