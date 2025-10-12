@@ -154,7 +154,7 @@ class PaywallPage extends ConsumerWidget {
               ),
             ),
 
-            SizedBox(height: spacing.xl),
+            SizedBox(height: spacing.m),
 
             // No Payment Due Now
             Row(
