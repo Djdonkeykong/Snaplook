@@ -144,7 +144,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
             const Text(
               'Choose your style',
               style: TextStyle(
-                fontSize: 38,
+                fontSize: 34,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
                 fontFamily: 'PlusJakartaSans',

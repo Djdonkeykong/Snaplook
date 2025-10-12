@@ -44,15 +44,16 @@ class AwesomeIntroPage extends ConsumerWidget {
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: spacing.l),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: spacing.l),
 
             // Title
             const Text(
               'Share your style,\nfind the look',
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.start,
               style: TextStyle(
-                fontSize: 38,
+                fontSize: 34,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -1.0,
                 fontWeight: FontWeight.bold,

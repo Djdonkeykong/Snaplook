@@ -53,7 +53,7 @@ class AddFirstStylePage extends ConsumerWidget {
             const Text(
               'Add your first style',
               style: TextStyle(
-                fontSize: 38,
+                fontSize: 34,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -1.0,
                 fontWeight: FontWeight.bold,

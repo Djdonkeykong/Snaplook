@@ -51,7 +51,7 @@ class AccountCreationPage extends ConsumerWidget {
             const Text(
               'Create an account',
               style: TextStyle(
-                fontSize: 38,
+                fontSize: 34,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -1.0,
                 fontWeight: FontWeight.bold,

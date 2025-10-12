@@ -55,7 +55,7 @@ class ShareExtensionPage extends ConsumerWidget {
             const Text(
               'Analyze fashion from\nany app',
               style: TextStyle(
-                fontSize: 38,
+                fontSize: 34,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -1.0,
                 fontWeight: FontWeight.bold,
