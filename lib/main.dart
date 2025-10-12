@@ -191,7 +191,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     if (sharedFile.type == SharedMediaType.image) {
       print("[SHARE EXTENSION] Handling image file");
       // Handle actual image files
-      final imageFile = XFile(sharedFile.path);
+      final String normalizedPath = sharedFile.path.startsWith('file://')
+          ? Uri.parse(sharedFile.path).toFilePath()
+          : sharedFile.path;
+      final imageFile = XFile(normalizedPath);
       print("[SHARE EXTENSION] Setting image in provider: ${imageFile.path}");
       ref.read(selectedImagesProvider.notifier).setImage(imageFile);
 
