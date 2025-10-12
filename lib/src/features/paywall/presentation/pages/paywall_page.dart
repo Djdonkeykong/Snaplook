@@ -94,7 +94,7 @@ class PaywallPage extends ConsumerWidget {
                       icon: Icons.lock_open,
                       iconColor: AppColors.secondary,
                       title: 'Today',
-                      subtitle: 'Unlock all the app\'s features like AI\nfashion analysis and more.',
+                      subtitle: 'Unlock everything Snaplook offers.',
                       isFirst: true,
                     ),
                     _TimelineItem(
