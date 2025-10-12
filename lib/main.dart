@@ -208,8 +208,18 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     }
   }
 
-  // NOTE: handlePendingSharedMedia and _handleSharedDataFromExtension removed
-  // These are no longer needed - the package handles everything automatically!
+  void handlePendingSharedMedia() {
+    if (_pendingSharedMedia == null || _pendingSharedMedia!.isEmpty) {
+      print("[SHARE EXTENSION] No pending media to handle");
+      return;
+    }
+
+    final pending = _pendingSharedMedia!;
+    print("[SHARE EXTENSION] Handling pending media (${pending.length} files)");
+    _pendingSharedMedia = null;
+
+    _handleSharedMedia(pending, isInitial: true);
+  }
 
   void _handleSharedText(String text) async {
     print("Handling shared text: $text");
