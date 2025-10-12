@@ -102,30 +102,36 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
               // Sign in link
               TextButton(
+                style: TextButton.styleFrom(
+                  alignment: Alignment.centerLeft,
+                ),
                 onPressed: () {
                   _showSignInBottomSheet(context);
                 },
-                child: RichText(
-                  text: const TextSpan(
-                    text: 'Already have an account? ',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: -0.2,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: 'Sign In',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -0.2,
-                        ),
+                child: const Align(
+                  alignment: Alignment.centerLeft,
+                  child: RichText(
+                    text: TextSpan(
+                      text: 'Already have an account? ',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 14,
+                        fontFamily: 'PlusJakartaSans',
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: -0.2,
                       ),
-                    ],
+                      children: [
+                        TextSpan(
+                          text: 'Sign In',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'PlusJakartaSans',
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

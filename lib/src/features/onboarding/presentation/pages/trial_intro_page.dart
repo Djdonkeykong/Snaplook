@@ -133,15 +133,18 @@ class TrialIntroPage extends ConsumerWidget {
             SizedBox(height: spacing.m),
 
             // Pricing text
-            const Text(
-              'Just \$59.99 per year (\$4.99/mo)',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-                fontFamily: 'PlusJakartaSans',
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.2,
+            const Align(
+              alignment: Alignment.center,
+              child: Text(
+                'Just \$59.99 per year (\$4.99/mo)',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontFamily: 'PlusJakartaSans',
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
 
