@@ -9,7 +9,7 @@ import '../../../../../core/constants/app_constants.dart';
 import '../../../../services/debug_logger.dart';
 
 class DetectionService {
-  static const String _replicateEndpoint = '${AppConstants.baseApiUrl}/predictions';
+  static String get _replicateEndpoint => '${AppConstants.baseApiUrl}/predictions';
 
   // Performance optimization: Cache color matching results to avoid duplicate API calls
   final Map<String, List<Map<String, dynamic>>> _colorMatchCache = {};
