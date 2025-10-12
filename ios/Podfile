@@ -41,6 +41,7 @@ target 'Runner' do
   # This allows the Share Extension to access receive_sharing_intent
   target 'shareExtension' do
     inherit! :search_paths
+    flutter_install_ios_plugin_pods File.dirname(File.realpath(__FILE__))
   end
 end
 
