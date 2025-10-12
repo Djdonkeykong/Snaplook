@@ -203,11 +203,12 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
 
       // Also set in pending share provider so HomePage can handle navigation
       print("[SHARE EXTENSION] Setting pending shared image for HomePage");
-      ref.read(pendingSharedImageProvider.notifier).state = imageFile;
+      ref.read(pendingSharedImageProvider.notifier).state = null;
       if (isInitial) {
-        print("[SHARE EXTENSION] Pending share set - will navigate after home initializes");
+        print("[SHARE EXTENSION] Scheduling navigation after splash/home");
+        _navigateToDetection(fromInitial: true);
       } else {
-        print("[SHARE EXTENSION] Pending share set - navigating to DetectionPage");
+        print("[SHARE EXTENSION] Navigating to DetectionPage immediately");
         _navigateToDetection();
       }
     } else if (sharedFile.type == SharedMediaType.text) {
@@ -219,7 +220,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     }
   }
 
-  void _navigateToDetection() {
+  void _navigateToDetection({bool fromInitial = false}) {
     _hasHandledInitialShare = true;
     if (_isNavigatingToDetection) {
       print("[SHARE EXTENSION] Navigation already in progress");
@@ -227,6 +228,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       return;
     }
     _isNavigatingToDetection = true;
+
+    final delay = fromInitial ? const Duration(milliseconds: 700) : Duration.zero;
 
     void pushRoute() {
       final navigator = navigatorKey.currentState;
@@ -249,7 +252,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       });
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
+    Future.delayed(delay, () {
+      WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
+    });
   }
 
   void _handleSharedText(String text) async {
@@ -472,6 +477,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     );
   }
 }
+
 
 
 
