@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../shared/navigation/route_observer.dart';
 import '../widgets/progress_indicator.dart';
 import 'discovery_source_page.dart';
 
@@ -22,6 +23,8 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _fadeAnimations;
   late List<Animation<double>> _scaleAnimations;
+
+  bool _isRouteAware = false;
 
   @override
   void initState() {
@@ -45,11 +48,6 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
         CurvedAnimation(parent: controller, curve: Curves.easeOutBack),
       );
     }).toList();
-
-    // Start animation after the frame is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startStaggeredAnimation();
-    });
   }
 
   void _startStaggeredAnimation() {
@@ -72,22 +70,34 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
-    if (route is PageRoute) {
-      // Trigger animation when page becomes visible
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _startStaggeredAnimation();
-        }
-      });
+    if (!_isRouteAware && route is PageRoute) {
+      routeObserver.subscribe(this, route);
+      _isRouteAware = true;
+      if (route.isCurrent) {
+        _startStaggeredAnimation();
+      }
     }
   }
 
   @override
   void dispose() {
+    if (_isRouteAware) {
+      routeObserver.unsubscribe(this);
+    }
     for (var controller in _animationControllers) {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  @override
+  void didPush() {
+    _startStaggeredAnimation();
+  }
+
+  @override
+  void didPopNext() {
+    _startStaggeredAnimation();
   }
 
   @override

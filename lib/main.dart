@@ -9,6 +9,7 @@ import 'dart:async';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'shared/navigation/main_navigation.dart';
+import 'shared/navigation/route_observer.dart';
 import 'src/features/home/domain/providers/image_provider.dart';
 import 'src/features/home/domain/providers/pending_share_provider.dart';
 import 'src/features/detection/presentation/pages/detection_page.dart';
@@ -479,6 +480,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.lightTheme,
       themeMode: ThemeMode.light,
+      navigatorObservers: [routeObserver],
       home: const SplashPage(),
     );
   }
