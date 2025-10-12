@@ -203,14 +203,15 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
 
       // Also set in pending share provider so HomePage can handle navigation
       print("[SHARE EXTENSION] Setting pending shared image for HomePage");
-      ref.read(pendingSharedImageProvider.notifier).state = null;
+      ref.read(pendingSharedImageProvider.notifier).state = imageFile;
       if (isInitial) {
-        print("[SHARE EXTENSION] Scheduling navigation after splash/home");
-        _navigateToDetection(fromInitial: true);
-      } else {
-        print("[SHARE EXTENSION] Navigating to DetectionPage immediately");
-        _navigateToDetection();
+        _hasHandledInitialShare = true;
+        print("[SHARE EXTENSION] Deferring navigation to home init");
+        return;
       }
+
+      print("[SHARE EXTENSION] Navigating to DetectionPage immediately");
+      _navigateToDetection();
     } else if (sharedFile.type == SharedMediaType.text) {
       print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
       // Handle text sharing (like Instagram URLs)
@@ -220,7 +221,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     }
   }
 
-  void _navigateToDetection({bool fromInitial = false}) {
+  void _navigateToDetection() {
     _hasHandledInitialShare = true;
     if (_isNavigatingToDetection) {
       print("[SHARE EXTENSION] Navigation already in progress");
@@ -228,8 +229,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       return;
     }
     _isNavigatingToDetection = true;
-
-    final delay = fromInitial ? const Duration(milliseconds: 700) : Duration.zero;
 
     void pushRoute() {
       final navigator = navigatorKey.currentState;
@@ -252,9 +251,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       });
     }
 
-    Future.delayed(delay, () {
-      WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
   }
 
   void _handleSharedText(String text) async {

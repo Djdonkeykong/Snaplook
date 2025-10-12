@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../src/features/home/presentation/pages/home_page.dart';
@@ -143,17 +144,11 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         ),
         child: SafeArea(
           child: Container(
-            height: 70,
-            padding: EdgeInsets.only(
-              left: spacing.l + 40,
-              right: spacing.l + 40,
-              top: 8,
-              bottom: 4, // Reduced from spacing.l (24px) to 4px to sit lower
-            ),
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Expanded(flex: 3, child: SizedBox()), // Larger left space
+                const Spacer(flex: 3),
                 _NavigationItem(
                   svgIcon: 'assets/icons/solar--home-2-outline.svg',
                   selectedSvgIcon: 'assets/icons/solar--home-2-bold.svg',
@@ -161,10 +156,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                   index: 0,
                   isSelected: selectedIndex == 0,
                   onTap: () => _handleTabTap(0),
-                  iconSize: 26.0, // Decreased unfilled by 1 more px (was 27.0)
-                  selectedIconSize: 29.0, // Decreased by 2px (was 31.0)
+                  iconSize: 26.0,
+                  selectedIconSize: 29.0,
                 ),
-                const Expanded(flex: 22, child: SizedBox()), // Extreme space between icons
+                const Spacer(flex: 8),
                 _NavigationItem(
                   svgIcon: 'assets/icons/solar--heart-linear.svg',
                   selectedSvgIcon: 'assets/icons/solar--heart-bold.svg',
@@ -172,10 +167,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                   index: 1,
                   isSelected: selectedIndex == 1,
                   onTap: () => _handleTabTap(1),
-                  iconSize: 30.0, // Decreased by 2px (was 32.0)
-                  selectedIconSize: 33.0, // Increased filled by 1px (was 32.0)
+                  iconSize: 28.0,
+                  selectedIconSize: 31.0,
                 ),
-                const Expanded(flex: 22, child: SizedBox()), // Extreme space between icons
+                const Spacer(flex: 8),
                 _NavigationItem(
                   svgIcon: 'assets/icons/solar--user-outline.svg',
                   selectedSvgIcon: 'assets/icons/solar--user-bold.svg',
@@ -183,11 +178,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                   index: 2,
                   isSelected: selectedIndex == 2,
                   onTap: () => _handleTabTap(2),
-                  iconSize: 27.0, // Decreased by 1px (was 28.0)
-                  selectedIconSize: 29.0, // Decreased by 1px (was 30.0)
-                  topPadding: 0.0, // Move up by 1px (was 1.0)
+                  iconSize: 26.0,
+                  selectedIconSize: 29.0,
                 ),
-                const Expanded(flex: 3, child: SizedBox()), // Larger right space
+                const Spacer(flex: 3),
               ],
             ),
           ),
@@ -209,7 +203,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         ref.read(selectedImagesProvider.notifier).setImage(image);
 
         if (mounted) {
-          Navigator.of(context).push(
+          Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) => const DetectionPage(),
             ),
@@ -266,10 +260,13 @@ class _NavigationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        onTap();
+      },
       child: Container(
-        width: 48.0, // Match reference nav bar container size
-        height: 48.0, // Match reference nav bar container size
+        width: 48.0,
+        height: 48.0,
         padding: EdgeInsets.only(top: topPadding ?? 0.0),
         child: Center(
           child: _buildIcon(),
@@ -392,7 +389,10 @@ class _FloatingActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: GestureDetector(
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          onTap();
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
@@ -435,7 +435,10 @@ class _FloatingActionButtonSvg extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: GestureDetector(
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          onTap();
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(

@@ -426,8 +426,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         label.font = UIFont.preferredFont(forTextStyle: .headline)
         label.textColor = UIColor.label
 
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = UIFont.preferredFont(forTextStyle: .body)
+        cancelButton.addTarget(self, action: #selector(cancelImportTapped), for: .touchUpInside)
+
         stack.addArrangedSubview(activity)
         stack.addArrangedSubview(label)
+        stack.addArrangedSubview(cancelButton)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         overlay.addSubview(stack)
@@ -446,6 +452,29 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingHideWorkItem = nil
         loadingView?.removeFromSuperview()
         loadingView = nil
+    }
+
+    @objc private func cancelImportTapped() {
+        shareLog("Cancel tapped")
+        loadingHideWorkItem?.cancel()
+        loadingHideWorkItem = nil
+        clearSharedData()
+        hideLoadingUI()
+        let error = NSError(
+            domain: "com.snaplook.shareExtension",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: "User cancelled import"]
+        )
+        extensionContext?.cancelRequest(withError: error)
+    }
+
+    private func clearSharedData() {
+        sharedMedia.removeAll()
+        if let defaults = UserDefaults(suiteName: appGroupId) {
+            defaults.removeObject(forKey: kUserDefaultsKey)
+            defaults.removeObject(forKey: kUserDefaultsMessageKey)
+            defaults.synchronize()
+        }
     }
 }
 

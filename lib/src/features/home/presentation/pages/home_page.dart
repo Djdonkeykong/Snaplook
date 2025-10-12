@@ -40,7 +40,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       ref.read(inspirationProvider.notifier).loadImages();
 
       // Check for pending shared image after a delay to ensure UI is ready
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 1000), () {
         _checkPendingSharedImage();
       });
     });
@@ -59,7 +59,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       // Clear the pending image first
       ref.read(pendingSharedImageProvider.notifier).state = null;
 
-      // Navigate to DetectionPage using the home tab's navigator
+      // Navigate to DetectionPage using the root navigator
       Navigator.of(context, rootNavigator: true)
           .push(
             MaterialPageRoute(
@@ -1220,7 +1220,10 @@ class _FloatingActionButtonSvg extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: GestureDetector(
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          onTap();
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
