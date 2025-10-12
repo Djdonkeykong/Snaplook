@@ -91,8 +91,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
   late AnimationController _progressAnimationController;
   late Animation<double> _progressAnimation;
 
-  // Track if we have pending shared media to handle after app init
-  List<SharedMediaFile>? _pendingSharedMedia;
+  bool _isNavigatingToDetection = false;
 
   @override
   void initState() {
@@ -149,31 +148,22 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       print("===== INITIAL MEDIA (App was Closed) =====");
       print("[SHARE EXTENSION] Initial shared media: ${value.length} files");
       for (var file in value) {
-        print("[SHARE EXTENSION] Initial shared file: ${file.path}");
-        print("[SHARE EXTENSION]   - type: ${file.type}");
-        print("[SHARE EXTENSION]   - mimeType: ${file.mimeType}");
-        print("[SHARE EXTENSION]   - thumbnail: ${file.thumbnail}");
-        print("[SHARE EXTENSION]   - duration: ${file.duration}");
-      }
-      if (value.isNotEmpty) {
-        print("[SHARE EXTENSION] Storing pending shared media - will handle after app init");
-        // Store the shared media and wait for app to fully initialize
-        _pendingSharedMedia = value;
-        // Tell the library that we are done processing the intent.
-        ReceiveSharingIntent.instance.reset();
-        print("[SHARE EXTENSION] Reset sharing intent - pending media stored");
-
-        // Process pending shared media after app initialization completes
-        // Wait for splash screen (1.5s) + navigation (0.5s) + buffer (1s) = 3s
-        Future.delayed(const Duration(milliseconds: 3000), () {
-          print("[SHARE EXTENSION] Delayed callback triggered - checking for pending media");
-          handlePendingSharedMedia();
-        });
-      } else {
-        print("[SHARE EXTENSION] No initial media files received");
-      }
-    }).catchError((error) {
-      print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
+      print("[SHARE EXTENSION] Initial shared file: ${file.path}");
+      print("[SHARE EXTENSION]   - type: ${file.type}");
+      print("[SHARE EXTENSION]   - mimeType: ${file.mimeType}");
+      print("[SHARE EXTENSION]   - thumbnail: ${file.thumbnail}");
+      print("[SHARE EXTENSION]   - duration: ${file.duration}");
+    }
+    if (value.isNotEmpty) {
+      print("[SHARE EXTENSION] Handling initial shared media immediately");
+      ReceiveSharingIntent.instance.reset();
+      print("[SHARE EXTENSION] Reset sharing intent");
+      _handleSharedMedia(value, isInitial: true);
+    } else {
+      print("[SHARE EXTENSION] No initial media files received");
+    }
+  }).catchError((error) {
+    print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
     });
   }
 
@@ -201,7 +191,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       // Also set in pending share provider so HomePage can handle navigation
       print("[SHARE EXTENSION] Setting pending shared image for HomePage");
       ref.read(pendingSharedImageProvider.notifier).state = imageFile;
-      print("[SHARE EXTENSION] Pending share set - HomePage will handle navigation");
+      print("[SHARE EXTENSION] Pending share set - navigating to DetectionPage");
     } else if (sharedFile.type == SharedMediaType.text) {
       print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
       // Handle text sharing (like Instagram URLs)
@@ -211,17 +201,35 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     }
   }
 
-  void handlePendingSharedMedia() {
-    if (_pendingSharedMedia == null || _pendingSharedMedia!.isEmpty) {
-      print("[SHARE EXTENSION] No pending media to handle");
+  void _navigateToDetection() {
+    if (_isNavigatingToDetection) {
+      print("[SHARE EXTENSION] Navigation already in progress");
       return;
     }
+    _isNavigatingToDetection = true;
 
-    final pending = _pendingSharedMedia!;
-    print("[SHARE EXTENSION] Handling pending media (${pending.length} files)");
-    _pendingSharedMedia = null;
+    void pushRoute() {
+      final navigator = navigatorKey.currentState;
+      if (navigator == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
+        return;
+      }
 
-    _handleSharedMedia(pending, isInitial: true);
+      // Clear the pending image so downstream listeners don't trigger a duplicate navigation.
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+
+      navigator
+          .push(
+            MaterialPageRoute(
+              builder: (_) => const DetectionPage(),
+            ),
+          )
+          .whenComplete(() {
+        _isNavigatingToDetection = false;
+      });
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
   }
 
   void _handleSharedText(String text) async {
