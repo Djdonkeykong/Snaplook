@@ -92,6 +92,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
   late Animation<double> _progressAnimation;
 
   bool _isNavigatingToDetection = false;
+  bool _hasHandledInitialShare = false;
 
   @override
   void initState() {
@@ -124,6 +125,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
 
     // Listen to media sharing coming from outside the app while the app is in the memory.
     _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
+      if (_hasHandledInitialShare && value.isNotEmpty) {
+        _hasHandledInitialShare = false;
+      }
       print("===== MEDIA STREAM (App in Memory) =====");
       print("[SHARE EXTENSION] Received shared media: ${value.length} files");
       for (var file in value) {
@@ -145,25 +149,30 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
 
     // Get the media sharing coming from outside the app while the app is closed.
     ReceiveSharingIntent.instance.getInitialMedia().then((value) {
+      if (_hasHandledInitialShare) {
+        print("[SHARE EXTENSION] Initial media already handled; skipping");
+        return;
+      }
       print("===== INITIAL MEDIA (App was Closed) =====");
       print("[SHARE EXTENSION] Initial shared media: ${value.length} files");
       for (var file in value) {
-      print("[SHARE EXTENSION] Initial shared file: ${file.path}");
-      print("[SHARE EXTENSION]   - type: ${file.type}");
-      print("[SHARE EXTENSION]   - mimeType: ${file.mimeType}");
-      print("[SHARE EXTENSION]   - thumbnail: ${file.thumbnail}");
-      print("[SHARE EXTENSION]   - duration: ${file.duration}");
-    }
-    if (value.isNotEmpty) {
-      print("[SHARE EXTENSION] Handling initial shared media immediately");
-      ReceiveSharingIntent.instance.reset();
-      print("[SHARE EXTENSION] Reset sharing intent");
-      _handleSharedMedia(value, isInitial: true);
-    } else {
-      print("[SHARE EXTENSION] No initial media files received");
-    }
-  }).catchError((error) {
-    print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
+        print("[SHARE EXTENSION] Initial shared file: ${file.path}");
+        print("[SHARE EXTENSION]   - type: ${file.type}");
+        print("[SHARE EXTENSION]   - mimeType: ${file.mimeType}");
+        print("[SHARE EXTENSION]   - thumbnail: ${file.thumbnail}");
+        print("[SHARE EXTENSION]   - duration: ${file.duration}");
+      }
+      if (value.isNotEmpty) {
+        print("[SHARE EXTENSION] Handling initial shared media immediately");
+        _hasHandledInitialShare = true;
+        ReceiveSharingIntent.instance.reset();
+        print("[SHARE EXTENSION] Reset sharing intent");
+        _handleSharedMedia(value, isInitial: true);
+      } else {
+        print("[SHARE EXTENSION] No initial media files received");
+      }
+    }).catchError((error) {
+      print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
     });
   }
 
@@ -205,6 +214,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
   }
 
   void _navigateToDetection() {
+    _hasHandledInitialShare = true;
     if (_isNavigatingToDetection) {
       print("[SHARE EXTENSION] Navigation already in progress");
       return;
@@ -455,3 +465,4 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     );
   }
 }
+
