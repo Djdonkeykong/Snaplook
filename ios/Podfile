@@ -36,13 +36,6 @@ target 'Runner' do
   target 'RunnerTests' do
     inherit! :search_paths
   end
-
-  # Share Extension target - inherits search paths from Runner
-  # This allows the Share Extension to access receive_sharing_intent
-  target 'shareExtension' do
-    inherit! :search_paths
-    pod 'receive_sharing_intent', :path => '.symlinks/plugins/receive_sharing_intent/ios'
-  end
 end
 
 post_install do |installer|
