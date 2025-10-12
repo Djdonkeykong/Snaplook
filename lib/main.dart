@@ -217,6 +217,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     _hasHandledInitialShare = true;
     if (_isNavigatingToDetection) {
       print("[SHARE EXTENSION] Navigation already in progress");
+      ref.read(pendingSharedImageProvider.notifier).state = null;
       return;
     }
     _isNavigatingToDetection = true;
@@ -465,4 +466,5 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     );
   }
 }
+
 
