@@ -29,7 +29,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Top spacing
               SizedBox(height: spacing.xxl),
@@ -43,19 +43,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               SizedBox(height: spacing.xxl),
 
               // Main heading
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Fashion discovery\nmade easy',
-                  textAlign: TextAlign.start,
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -1.0,
-                    height: 1.3,
-                  ),
+              const Text(
+                'Fashion discovery\nmade easy',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  fontFamily: 'PlusJakartaSans',
+                  letterSpacing: -1.0,
+                  height: 1.3,
                 ),
               ),
 
@@ -102,36 +99,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
               // Sign in link
               TextButton(
-                style: TextButton.styleFrom(
-                  alignment: Alignment.centerLeft,
-                ),
                 onPressed: () {
                   _showSignInBottomSheet(context);
                 },
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: RichText(
-                    text: TextSpan(
-                      text: 'Already have an account? ',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 14,
-                        fontFamily: 'PlusJakartaSans',
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: -0.2,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: 'Sign In',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'PlusJakartaSans',
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: const TextSpan(
+                    text: 'Already have an account? ',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: -0.2,
                     ),
+                    children: [
+                      TextSpan(
+                        text: 'Sign In',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

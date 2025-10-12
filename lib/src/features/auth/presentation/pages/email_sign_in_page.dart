@@ -89,7 +89,12 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () async {
+            FocusScope.of(context).unfocus();
+            await Future.delayed(const Duration(milliseconds: 150));
+            if (!mounted) return;
+            Navigator.of(context).pop();
+          },
           icon: Container(
             width: 40,
             height: 40,

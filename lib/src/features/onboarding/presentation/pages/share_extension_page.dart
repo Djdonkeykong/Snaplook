@@ -68,9 +68,9 @@ class ShareExtensionPage extends ConsumerWidget {
 
             // Video Demo - Optimal size
             Container(
-              height: 360,
+              height: 420,
               width: double.infinity,
-              margin: EdgeInsets.symmetric(horizontal: spacing.l),
+              margin: EdgeInsets.symmetric(horizontal: spacing.m),
               decoration: BoxDecoration(
                 color: Colors.transparent,
                 borderRadius: BorderRadius.circular(16),

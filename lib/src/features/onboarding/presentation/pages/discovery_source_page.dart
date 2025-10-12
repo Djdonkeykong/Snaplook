@@ -158,140 +158,130 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
 
             // Discovery Source Options
             Expanded(
-              child: Column(
-                children: [
-                  // Instagram
-                  AnimatedBuilder(
-                    animation: _animationControllers[0],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[0],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[0],
-                          child: _DiscoverySourceOption(
-                            source: DiscoverySource.instagram,
-                            label: 'Instagram',
-                            icon: Image.asset('assets/icons/insta.png', width: 24, height: 24),
-                            isSelected: selectedSource == DiscoverySource.instagram,
-                            onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.instagram,
-                          ),
-                        ),
+              child: ListView.separated(
+                padding: EdgeInsets.only(bottom: spacing.l),
+                physics: const BouncingScrollPhysics(),
+                itemCount: 6,
+                separatorBuilder: (_, __) => SizedBox(height: spacing.l),
+                itemBuilder: (context, index) {
+                  switch (index) {
+                    case 0:
+                      return AnimatedBuilder(
+                        animation: _animationControllers[0],
+                        builder: (context, child) {
+                          return FadeTransition(
+                            opacity: _fadeAnimations[0],
+                            child: ScaleTransition(
+                              scale: _scaleAnimations[0],
+                              child: _DiscoverySourceOption(
+                                source: DiscoverySource.instagram,
+                                label: 'Instagram',
+                                icon: Image.asset('assets/icons/insta.png', width: 24, height: 24),
+                                isSelected: selectedSource == DiscoverySource.instagram,
+                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.instagram,
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-
-                  SizedBox(height: spacing.l),
-
-                  // Facebook
-                  AnimatedBuilder(
-                    animation: _animationControllers[1],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[1],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[1],
-                          child: _DiscoverySourceOption(
-                            source: DiscoverySource.facebook,
-                            label: 'Facebook',
-                            icon: SvgPicture.asset('assets/icons/5296499_fb_facebook_facebook logo_icon.svg', width: 24, height: 24),
-                            isSelected: selectedSource == DiscoverySource.facebook,
-                            onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.facebook,
-                          ),
-                        ),
+                    case 1:
+                      return AnimatedBuilder(
+                        animation: _animationControllers[1],
+                        builder: (context, child) {
+                          return FadeTransition(
+                            opacity: _fadeAnimations[1],
+                            child: ScaleTransition(
+                              scale: _scaleAnimations[1],
+                              child: _DiscoverySourceOption(
+                                source: DiscoverySource.facebook,
+                                label: 'Facebook',
+                                icon: SvgPicture.asset('assets/icons/5296499_fb_facebook_facebook logo_icon.svg', width: 24, height: 24),
+                                isSelected: selectedSource == DiscoverySource.facebook,
+                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.facebook,
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-
-                  SizedBox(height: spacing.l),
-
-                  // TikTok (selected in your image)
-                  AnimatedBuilder(
-                    animation: _animationControllers[2],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[2],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[2],
-                          child: _DiscoverySourceOption(
-                            source: DiscoverySource.tiktok,
-                            label: 'TikTok',
-                            icon: SvgPicture.asset('assets/icons/4362958_tiktok_logo_social media_icon.svg', width: 24, height: 24),
-                            isSelected: selectedSource == DiscoverySource.tiktok,
-                            onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.tiktok,
-                          ),
-                        ),
+                    case 2:
+                      return AnimatedBuilder(
+                        animation: _animationControllers[2],
+                        builder: (context, child) {
+                          return FadeTransition(
+                            opacity: _fadeAnimations[2],
+                            child: ScaleTransition(
+                              scale: _scaleAnimations[2],
+                              child: _DiscoverySourceOption(
+                                source: DiscoverySource.tiktok,
+                                label: 'TikTok',
+                                icon: SvgPicture.asset('assets/icons/4362958_tiktok_logo_social media_icon.svg', width: 24, height: 24),
+                                isSelected: selectedSource == DiscoverySource.tiktok,
+                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.tiktok,
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-
-                  SizedBox(height: spacing.l),
-
-                  // YouTube
-                  AnimatedBuilder(
-                    animation: _animationControllers[3],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[3],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[3],
-                          child: _DiscoverySourceOption(
-                            source: DiscoverySource.youtube,
-                            label: 'YouTube',
-                            icon: SvgPicture.asset('assets/icons/5296521_play_video_vlog_youtube_youtube logo_icon.svg', width: 24, height: 24),
-                            isSelected: selectedSource == DiscoverySource.youtube,
-                            onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.youtube,
-                          ),
-                        ),
+                    case 3:
+                      return AnimatedBuilder(
+                        animation: _animationControllers[3],
+                        builder: (context, child) {
+                          return FadeTransition(
+                            opacity: _fadeAnimations[3],
+                            child: ScaleTransition(
+                              scale: _scaleAnimations[3],
+                              child: _DiscoverySourceOption(
+                                source: DiscoverySource.youtube,
+                                label: 'YouTube',
+                                icon: SvgPicture.asset('assets/icons/5296521_play_video_vlog_youtube_youtube logo_icon.svg', width: 24, height: 24),
+                                isSelected: selectedSource == DiscoverySource.youtube,
+                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.youtube,
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-
-                  SizedBox(height: spacing.l),
-
-                  // Google
-                  AnimatedBuilder(
-                    animation: _animationControllers[4],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[4],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[4],
-                          child: _DiscoverySourceOption(
-                            source: DiscoverySource.google,
-                            label: 'Google',
-                            icon: SvgPicture.asset('assets/icons/4975303_search_web_internet_google search_search engine_icon.svg', width: 24, height: 24),
-                            isSelected: selectedSource == DiscoverySource.google,
-                            onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.google,
-                          ),
-                        ),
+                    case 4:
+                      return AnimatedBuilder(
+                        animation: _animationControllers[4],
+                        builder: (context, child) {
+                          return FadeTransition(
+                            opacity: _fadeAnimations[4],
+                            child: ScaleTransition(
+                              scale: _scaleAnimations[4],
+                              child: _DiscoverySourceOption(
+                                source: DiscoverySource.google,
+                                label: 'Google',
+                                icon: SvgPicture.asset('assets/icons/4975303_search_web_internet_google search_search engine_icon.svg', width: 24, height: 24),
+                                isSelected: selectedSource == DiscoverySource.google,
+                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.google,
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-
-                  SizedBox(height: spacing.l),
-
-                  // TV
-                  AnimatedBuilder(
-                    animation: _animationControllers[5],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[5],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[5],
-                          child: _DiscoverySourceOption(
-                            source: DiscoverySource.tv,
-                            label: 'TV',
-                            icon: SvgPicture.asset('assets/icons/9035017_tv_icon.svg', width: 24, height: 24),
-                            isSelected: selectedSource == DiscoverySource.tv,
-                            onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.tv,
-                          ),
-                        ),
+                    case 5:
+                    default:
+                      return AnimatedBuilder(
+                        animation: _animationControllers[5],
+                        builder: (context, child) {
+                          return FadeTransition(
+                            opacity: _fadeAnimations[5],
+                            child: ScaleTransition(
+                              scale: _scaleAnimations[5],
+                              child: _DiscoverySourceOption(
+                                source: DiscoverySource.tv,
+                                label: 'TV',
+                                icon: SvgPicture.asset('assets/icons/9035017_tv_icon.svg', width: 24, height: 24),
+                                isSelected: selectedSource == DiscoverySource.tv,
+                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.tv,
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  ),
-
-                  const Spacer(),
-                ],
+                  }
+                },
               ),
             ),
 
