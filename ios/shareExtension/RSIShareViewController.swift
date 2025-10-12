@@ -86,6 +86,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     var hostAppBundleIdentifier = ""
     var appGroupId = ""
     var sharedMedia: [SharedMediaFile] = []
+    private var loadingView: UIView?
 
     /// Override this method to return false if you don't want to redirect to host app automatically
     /// Default is true
@@ -99,9 +100,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
     
     open override func viewDidLoad() {
         super.viewDidLoad()
-        
+
         // load group and app id from build info
         loadIds()
+        setupLoadingUI()
     }
     
     // Redirect to host app when user click on Post
@@ -265,7 +267,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadIds()
         let url = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share")
         var responder = self as UIResponder?
-        
+        hideLoadingUI()
+
         if #available(iOS 18.0, *) {
             while responder != nil {
                 if let application = responder as? UIApplication {
@@ -289,12 +292,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     
     private func dismissWithError() {
         print("[ERROR] Error loading data!")
+        hideLoadingUI()
         let alert = UIAlertController(title: "Error", message: "Error loading data", preferredStyle: .alert)
-        
+
         let action = UIAlertAction(title: "Error", style: .cancel) { _ in
             self.dismiss(animated: true, completion: nil)
         }
-        
+
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
         extensionContext!.completeRequest(returningItems: [], completionHandler: nil)
@@ -379,6 +383,43 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func toData(data: [SharedMediaFile]) -> Data {
         let encodedData = try? JSONEncoder().encode(data)
         return encodedData!
+    }
+
+    private func setupLoadingUI() {
+        let overlay = UIView(frame: view.bounds)
+        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        overlay.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.92)
+
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 12
+
+        let activity = UIActivityIndicatorView(style: .large)
+        activity.startAnimating()
+
+        let label = UILabel()
+        label.text = "Importing…"
+        label.font = UIFont.preferredFont(forTextStyle: .headline)
+        label.textColor = UIColor.label
+
+        stack.addArrangedSubview(activity)
+        stack.addArrangedSubview(label)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        overlay.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor)
+        ])
+
+        view.addSubview(overlay)
+        loadingView = overlay
+    }
+
+    private func hideLoadingUI() {
+        loadingView?.removeFromSuperview()
+        loadingView = nil
     }
 }
 
