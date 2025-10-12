@@ -261,20 +261,42 @@ open class RSIShareViewController: SLComposeServiceViewController {
         userDefaults?.set(toData(data: sharedMedia), forKey: kUserDefaultsKey)
         userDefaults?.set(message, forKey: kUserDefaultsMessageKey)
         userDefaults?.synchronize()
-        shareLog("Saved \(sharedMedia.count) item(s) to UserDefaults – redirecting")
+        shareLog("Saved \(sharedMedia.count) item(s) to UserDefaults - redirecting")
         redirectToHostApp()
     }
 
     private func redirectToHostApp() {
         loadIds()
-        let url = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share")
-        shareLog("Redirecting to host app with URL: \(url?.absoluteString ?? "nil")")
-        DispatchQueue.main.async { self.hideLoadingUI() }
+        guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share") else {
+            shareLog("ERROR: Failed to build redirect URL")
+            dismissWithError()
+            return
+        }
 
+        let minimumDuration: TimeInterval = 3
+        let elapsed = loadingShownAt.map { Date().timeIntervalSince($0) } ?? 0
+        let delay = max(0, minimumDuration - elapsed)
+        shareLog("Redirect scheduled in \(delay) seconds (elapsed: \(elapsed))")
+
+        loadingHideWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            self.loadingHideWorkItem = nil
+            DispatchQueue.main.async {
+                self.hideLoadingUI()
+                self.performRedirect(to: redirectURL)
+            }
+        }
+        loadingHideWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
+    private func performRedirect(to url: URL) {
+        shareLog("Redirecting to host app with URL: \(url.absoluteString)")
         var responder: UIResponder? = self
         if #available(iOS 18.0, *) {
             while let current = responder {
-                if let application = current as? UIApplication, let url = url {
+                if let application = current as? UIApplication {
                     application.open(url, options: [:], completionHandler: nil)
                     break
                 }
@@ -283,7 +305,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         } else {
             let selectorOpenURL = sel_registerName("openURL:")
             while let current = responder {
-                if current.responds(to: selectorOpenURL), let url = url {
+                if current.responds(to: selectorOpenURL) {
                     _ = current.perform(selectorOpenURL, with: url)
                     break
                 }
@@ -420,20 +442,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func hideLoadingUI() {
-        guard loadingView != nil else { return }
-        let elapsed = loadingShownAt.map { Date().timeIntervalSince($0) } ?? 0
-        let minimumDuration: TimeInterval = 3
-        let delay = max(0, minimumDuration - elapsed)
-
         loadingHideWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
-            self.loadingView?.removeFromSuperview()
-            self.loadingView = nil
-            self.loadingHideWorkItem = nil
-        }
-        loadingHideWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+        loadingHideWorkItem = nil
+        loadingView?.removeFromSuperview()
+        loadingView = nil
     }
 }
 
