@@ -108,7 +108,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 onPressed: () {
                   _showSignInBottomSheet(context);
                 },
-                child: const Align(
+                child: Align(
                   alignment: Alignment.centerLeft,
                   child: RichText(
                     text: TextSpan(
