@@ -170,6 +170,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func loadIds() {
         // loading Share extension App Id
         let shareExtensionAppBundleIdentifier = Bundle.main.bundleIdentifier!
+        print("[ShareExtension] bundle id: \(shareExtensionAppBundleIdentifier)")
         
         
         // extract host app bundle id from ShareExtension id
@@ -178,12 +179,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let lastIndexOfPoint = shareExtensionAppBundleIdentifier.lastIndex(of: ".")
         hostAppBundleIdentifier = String(shareExtensionAppBundleIdentifier[..<lastIndexOfPoint!])
         let defaultAppGroupId = "group.\(hostAppBundleIdentifier)"
+        print("[ShareExtension] default app group: \(defaultAppGroupId)")
         
         
         // loading custom AppGroupId from Build Settings or use group.<hostAppBundleIdentifier>
         let customAppGroupId = Bundle.main.object(forInfoDictionaryKey: kAppGroupIdKey) as? String
-        
-        appGroupId = customAppGroupId ?? defaultAppGroupId
+        print("[ShareExtension] Info.plist AppGroupId: \(customAppGroupId ?? "nil")")
+
+        appGroupId = (customAppGroupId?.isEmpty ?? true) || customAppGroupId == "$(CUSTOM_GROUP_ID)"
+            ? defaultAppGroupId
+            : customAppGroupId!
+        print("[ShareExtension] using app group: \(appGroupId)")
     }
     
     
