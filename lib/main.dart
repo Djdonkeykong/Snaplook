@@ -185,13 +185,16 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
           ? Uri.parse(sharedFile.path).toFilePath()
           : sharedFile.path;
       final imageFile = XFile(normalizedPath);
-      print("[SHARE EXTENSION] Setting image in provider: ${imageFile.path}");
+      final fileExists = File(imageFile.path).existsSync();
+      print("[SHARE EXTENSION] Normalized path: ${imageFile.path}");
+      print("[SHARE EXTENSION] File exists: $fileExists");
       ref.read(selectedImagesProvider.notifier).setImage(imageFile);
 
       // Also set in pending share provider so HomePage can handle navigation
       print("[SHARE EXTENSION] Setting pending shared image for HomePage");
       ref.read(pendingSharedImageProvider.notifier).state = imageFile;
       print("[SHARE EXTENSION] Pending share set - navigating to DetectionPage");
+      _navigateToDetection();
     } else if (sharedFile.type == SharedMediaType.text) {
       print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
       // Handle text sharing (like Instagram URLs)
