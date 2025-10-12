@@ -116,7 +116,7 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
             const Text(
               'Sign In',
               style: TextStyle(
-                fontSize: 38,
+                fontSize: 34,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
                 fontFamily: 'PlusJakartaSans',

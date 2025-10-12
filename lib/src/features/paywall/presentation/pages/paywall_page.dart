@@ -55,7 +55,7 @@ class PaywallPage extends ConsumerWidget {
                 : 'Start your 3-day FREE\ntrial to continue.',
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
-                fontSize: 28,
+                fontSize: 34,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
                 letterSpacing: -1.0,

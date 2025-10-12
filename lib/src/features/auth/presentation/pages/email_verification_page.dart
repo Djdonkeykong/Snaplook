@@ -183,7 +183,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
             const Text(
               'Confirm your email',
               style: TextStyle(
-                fontSize: 38,
+                fontSize: 34,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
                 fontFamily: 'PlusJakartaSans',

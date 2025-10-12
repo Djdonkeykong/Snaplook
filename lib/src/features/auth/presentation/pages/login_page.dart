@@ -29,6 +29,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Top spacing
               SizedBox(height: spacing.xxl),
@@ -42,16 +43,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               SizedBox(height: spacing.xxl),
 
               // Main heading
-              const Text(
-                'Fashion discovery\nmade easy',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 38,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -1.0,
-                  height: 1.3,
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Fashion discovery\nmade easy',
+                  textAlign: TextAlign.start,
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -1.0,
+                    height: 1.3,
+                  ),
                 ),
               ),
 
