@@ -60,14 +60,16 @@ class _HomePageState extends ConsumerState<HomePage> {
       ref.read(pendingSharedImageProvider.notifier).state = null;
 
       // Navigate to DetectionPage using the home tab's navigator
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) {
-            print("[HOME PAGE] DetectionPage builder called for shared image");
-            return const DetectionPage();
-          },
-        ),
-      ).then((value) {
+      Navigator.of(context, rootNavigator: true)
+          .push(
+            MaterialPageRoute(
+              builder: (context) {
+                print("[HOME PAGE] DetectionPage builder called for shared image");
+                return const DetectionPage();
+              },
+            ),
+          )
+          .then((value) {
         print("[HOME PAGE] Returned from DetectionPage (shared image)");
       });
     } else {
@@ -531,14 +533,16 @@ class _HomePageState extends ConsumerState<HomePage> {
 
         if (mounted) {
           print("[IMAGE PICKER] Widget is mounted - navigating to DetectionPage");
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) {
-                print("[IMAGE PICKER] DetectionPage builder called");
-                return const DetectionPage();
-              },
-            ),
-          ).then((value) {
+          Navigator.of(context, rootNavigator: true)
+              .push(
+                MaterialPageRoute(
+                  builder: (context) {
+                    print("[IMAGE PICKER] DetectionPage builder called");
+                    return const DetectionPage();
+                  },
+                ),
+              )
+              .then((value) {
             print("[IMAGE PICKER] Returned from DetectionPage");
           });
         } else {
