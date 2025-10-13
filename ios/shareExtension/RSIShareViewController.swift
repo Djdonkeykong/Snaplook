@@ -607,7 +607,31 @@ open class RSIShareViewController: SLComposeServiceViewController {
         sanitized = sanitized.replacingOccurrences(of: "\\u0026", with: "&")
         sanitized = sanitized.replacingOccurrences(of: "\\/", with: "/")
         sanitized = sanitized.replacingOccurrences(of: "&amp;", with: "&")
-        return sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
+        sanitized = sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
+        return normalizeInstagramCdnUrl(sanitized)
+    }
+
+    private func normalizeInstagramCdnUrl(_ urlString: String) -> String {
+        guard var components = URLComponents(string: urlString) else {
+            return urlString
+        }
+
+        if var queryItems = components.percentEncodedQueryItems {
+            queryItems.removeAll { $0.name == "stp" }
+            components.percentEncodedQueryItems = queryItems.isEmpty ? nil : queryItems
+        }
+
+        let path = components.percentEncodedPath
+        if let regex = try? NSRegularExpression(pattern: "_s\\d+x\\d+", options: []) {
+            let range = NSRange(location: 0, length: path.count)
+            if regex.firstMatch(in: path, options: [], range: range) != nil {
+                let mutablePath = NSMutableString(string: path)
+                regex.replaceMatches(in: mutablePath, options: [], range: range, withTemplate: "")
+                components.percentEncodedPath = mutablePath as String
+            }
+        }
+
+        return components.string ?? urlString
     }
 
     private func downloadInstagramImages(
