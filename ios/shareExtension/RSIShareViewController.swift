@@ -86,7 +86,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var loadingShownAt: Date?
     private var loadingHideWorkItem: DispatchWorkItem?
     private var currentProcessingSession: String?
-    private var didCompleteRequest = false
+    private var didCompleteRequest = false\n    private var statusLabel: UILabel?\n    private var activityIndicator: UIActivityIndicatorView?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -295,6 +295,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         userDefaults?.synchronize()
         shareLog("Saved \(sharedMedia.count) item(s) to UserDefaults - redirecting (session: \(sessionId))")
         let containsTextShare = sharedMedia.contains { $0.type == .text || $0.type == .url }
+        let message = containsTextShare ? "Fetching link preview..." : "Importing..."
+        updateStatusMessage(message)
         redirectToHostApp(sessionId: sessionId, deferUntilCompleted: containsTextShare)
     }
 
@@ -510,15 +512,31 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.alignment = .center
-        stack.spacing = 12
+        stack.spacing = 16
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        if let icon = UIImage(named: "ProgressIcon") {
+            let imageView = UIImageView(image: icon)
+            imageView.translatesAutoresizingMaskIntoConstraints = false
+            imageView.contentMode = .scaleAspectFit
+            imageView.heightAnchor.constraint(equalToConstant: 64).isActive = true
+            imageView.widthAnchor.constraint(equalToConstant: 64).isActive = true
+            stack.addArrangedSubview(imageView)
+        }
 
         let activity = UIActivityIndicatorView(style: .large)
         activity.startAnimating()
+        activityIndicator = activity
+        stack.addArrangedSubview(activity)
 
         let label = UILabel()
         label.text = "Importing..."
         label.font = UIFont.preferredFont(forTextStyle: .headline)
         label.textColor = UIColor.label
+        label.textAlignment = .center
+        label.numberOfLines = 2
+        statusLabel = label
+        stack.addArrangedSubview(label)
 
         let cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
@@ -526,10 +544,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cancelButton.addTarget(self, action: #selector(cancelImportTapped), for: .touchUpInside)
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
         cancelButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
-
-        stack.addArrangedSubview(activity)
-        stack.addArrangedSubview(label)
-        stack.translatesAutoresizingMaskIntoConstraints = false
 
         overlay.addSubview(stack)
         overlay.addSubview(cancelButton)
@@ -550,6 +564,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingHideWorkItem = nil
         loadingView?.removeFromSuperview()
         loadingView = nil
+        statusLabel = nil
+        activityIndicator?.stopAnimating()
+        activityIndicator = nil
     }
 
     @objc private func cancelImportTapped() {
@@ -565,6 +582,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         )
         didCompleteRequest = true
         extensionContext?.cancelRequest(withError: error)
+    }
+
+    private func updateStatusMessage(_ message: String) {
+        DispatchQueue.main.async { [weak self] in
+            self?.statusLabel?.text = message
+        }
     }
 
     private func clearSharedData() {
@@ -595,6 +618,7 @@ extension URL {
         return "application/octet-stream"
     }
 }
+
 
 
 
