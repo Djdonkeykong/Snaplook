@@ -48,7 +48,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       });
     });
 
-    _pendingShareListener ??= ref.listen<XFile?>(
+    _pendingShareListener ??= ref.listenManual<XFile?>(
       pendingSharedImageProvider,
       (previous, next) {
         if (next != null && mounted) {
