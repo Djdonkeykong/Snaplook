@@ -40,7 +40,7 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>AppGroupId</key>
-	<string>$(CUSTOM_GROUP_ID)</string>
+	<string>group.com.snaplook.snaplook</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
