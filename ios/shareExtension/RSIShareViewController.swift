@@ -166,8 +166,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     open override func configurationItems() -> [Any]! { [] }
 
     private func suppressKeyboard() {
+        let isResponder = textView?.isFirstResponder ?? false
+        let isEditable = textView?.isEditable ?? false
+        shareLog("suppressKeyboard invoked (isFirstResponder: \(isResponder), isEditable: \(isEditable))")
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
+            let scheduledResponder = self.textView?.isFirstResponder ?? false
+            shareLog("suppressKeyboard applying changes (isFirstResponder: \(scheduledResponder))")
             self.textView?.isEditable = false
             self.textView?.isSelectable = false
             self.textView?.text = ""
@@ -177,6 +182,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self.textView?.inputView = UIView()
             self.textView?.inputAccessoryView = UIView()
             self.textView?.isHidden = true
+            let finalResponder = self.textView?.isFirstResponder ?? false
+            shareLog("suppressKeyboard completed (isFirstResponder: \(finalResponder))")
         }
     }
 
