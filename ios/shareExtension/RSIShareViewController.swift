@@ -97,6 +97,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadIds()
         sharedMedia.removeAll()
         shareLog("View did load - cleared sharedMedia array")
+        suppressKeyboard()
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) {
             shareLog("Resolved container URL: \(containerURL.path)")
         } else {
@@ -113,6 +114,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        suppressKeyboard()
         guard let content = extensionContext?.inputItems.first as? NSExtensionItem,
               let attachments = content.attachments else {
             shareLog("No attachments found on extension context")
@@ -162,6 +164,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     open override func configurationItems() -> [Any]! { [] }
+
+    private func suppressKeyboard() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.textView?.isEditable = false
+            self.textView?.isSelectable = false
+            self.textView?.text = ""
+            self.placeholder = ""
+            self.textView?.resignFirstResponder()
+            self.view.endEditing(true)
+            self.textView?.inputView = UIView()
+            self.textView?.inputAccessoryView = UIView()
+            self.textView?.isHidden = true
+        }
+    }
 
     private func loadIds() {
         let shareExtensionAppBundleIdentifier = Bundle.main.bundleIdentifier ?? ""
