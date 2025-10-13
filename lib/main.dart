@@ -238,6 +238,61 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
   }
 
+  SharedMediaFile _selectSharedFile(List<SharedMediaFile> sharedFiles) {
+    if (sharedFiles.length == 1) {
+      final file = sharedFiles.first;
+      print(
+        "[SHARE EXTENSION] Single shared file received - using ${file.path} (${file.type})",
+      );
+      return file;
+    }
+
+    SharedMediaFile? firstExistingImage;
+    SharedMediaFile? firstImage;
+    SharedMediaFile? firstVideo;
+    SharedMediaFile? firstFile;
+    SharedMediaFile? firstTextOrUrl;
+    SharedMediaFile? firstFallback;
+
+    for (final file in sharedFiles) {
+      firstFallback ??= file;
+      final type = file.type;
+      if (type == SharedMediaType.image) {
+        firstImage ??= file;
+        final normalizedPath = file.path.startsWith('file://')
+            ? Uri.parse(file.path).toFilePath()
+            : file.path;
+        if (normalizedPath.isNotEmpty &&
+            File(normalizedPath).existsSync()) {
+          firstExistingImage ??= file;
+        }
+      } else if (type == SharedMediaType.video) {
+        firstVideo ??= file;
+      } else if (type == SharedMediaType.file) {
+        firstFile ??= file;
+      } else if (type == SharedMediaType.text || type == SharedMediaType.url) {
+        firstTextOrUrl ??= file;
+      }
+
+      if (firstExistingImage != null) {
+        break;
+      }
+    }
+
+    final selected = firstExistingImage ??
+        firstImage ??
+        firstVideo ??
+        firstFile ??
+        firstTextOrUrl ??
+        firstFallback!;
+
+    print(
+      "[SHARE EXTENSION] Selected shared file: ${selected.path} (type: ${selected.type})",
+    );
+
+    return selected;
+  }
+
   Future<void> _handleSharedMedia(
     List<SharedMediaFile> sharedFiles, {
     bool isInitial = false,
