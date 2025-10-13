@@ -187,7 +187,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     });
 
     // Ensure we catch any pending share when the app is already running.
-    _checkForPendingSharedMediaOnResume();
   }
 
   @override
