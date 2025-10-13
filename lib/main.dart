@@ -379,15 +379,19 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         // Set all downloaded images in the provider
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
+        ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
         await ShareImportStatus.markComplete();
 
-        // Navigate to detection page
-        navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (context) => const DetectionPage(),
-          ),
-        );
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _navigateToDetection();
+            }
+          });
+        }
       } else {
+        ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
         _showInstagramErrorMessage();
       }
@@ -399,6 +403,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         Navigator.of(navigatorKey.currentContext!).pop();
       }
 
+      ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
 
       _showInstagramErrorMessage();
@@ -545,3 +550,5 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     );
   }
 }
+
+
