@@ -635,6 +635,23 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
         }
 
+        let imgPattern = "<img[^>]+src=\"([^\"]+)\""
+        if let regex = try? NSRegularExpression(pattern: imgPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                let candidate = sanitizeInstagramURLString(String(html[range]))
+                if candidate.contains("ig_cache_key") && !priorityResults.contains(candidate) {
+                    priorityResults.append(candidate)
+                } else if !candidate.contains("ig_cache_key"),
+                          !results.contains(candidate) {
+                    results.append(candidate)
+                }
+            }
+        }
+
         if !priorityResults.isEmpty {
             return priorityResults
         }
