@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../home/domain/providers/image_provider.dart';
+import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 
@@ -24,22 +25,24 @@ class ResultsPage extends ConsumerStatefulWidget {
 
 class _ResultsPageState extends ConsumerState<ResultsPage>
     with SingleTickerProviderStateMixin {
-  static const double _minSheetExtent = 0.35;
-  static const double _initialSheetExtent = 0.45;
-  static const double _midSheetExtent = 0.65;
+  static const double _minSheetExtent = 0.5;
+  static const double _midSheetExtent = 0.7;
   static const double _maxSheetExtent = 0.9;
 
   late TabController _tabController;
   String selectedCategory = 'All';
+  late final DraggableScrollableController _sheetController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _sheetController = DraggableScrollableController();
   }
 
   @override
   void dispose() {
+    _sheetController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -106,14 +109,14 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
 
           // Results Bottom Sheet
           DraggableScrollableSheet(
-            initialChildSize: _initialSheetExtent,
+            controller: _sheetController,
+            initialChildSize: _minSheetExtent,
             minChildSize: _minSheetExtent,
             maxChildSize: _maxSheetExtent,
             expand: false,
             snap: true,
             snapSizes: const [
               _minSheetExtent,
-              _initialSheetExtent,
               _midSheetExtent,
               _maxSheetExtent
             ],
@@ -138,10 +141,52 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                   ),
                   child: Container(
                     color: Theme.of(context).colorScheme.surface,
-                    child: CustomScrollView(
-                      controller: scrollController,
-                      slivers: [
-                        SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onVerticalDragUpdate: (details) {
+                            if (!_sheetController.isAttached) return;
+                            const minExtent = _minSheetExtent;
+                            const maxExtent = _maxSheetExtent;
+                            final height = MediaQuery.of(context).size.height;
+                            final delta = details.delta.dy / height;
+                            final newExtent = (_sheetController.size - delta)
+                                .clamp(minExtent, maxExtent);
+                            _sheetController.jumpTo(newExtent);
+                          },
+                          onVerticalDragEnd: (details) {
+                            if (!_sheetController.isAttached) return;
+                            const minExtent = _minSheetExtent;
+                            const maxExtent = _maxSheetExtent;
+                            final velocity =
+                                details.velocity.pixelsPerSecond.dy;
+                            const snapTargets = [
+                              _minSheetExtent,
+                              _midSheetExtent,
+                              _maxSheetExtent,
+                            ];
+
+                            double targetExtent;
+                            if (velocity.abs() > 600) {
+                              targetExtent =
+                                  velocity < 0 ? maxExtent : minExtent;
+                            } else {
+                              final current = _sheetController.size;
+                              targetExtent = snapTargets.reduce(
+                                (a, b) =>
+                                    (a - current).abs() < (b - current).abs()
+                                        ? a
+                                        : b,
+                              );
+                            }
+
+                            _sheetController.animateTo(
+                              targetExtent.clamp(minExtent, maxExtent),
+                              duration: AppConstants.mediumAnimation,
+                              curve: Curves.easeOut,
+                            );
+                          },
                           child: Padding(
                             padding: EdgeInsets.symmetric(
                               vertical: spacing.l,
@@ -231,26 +276,22 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                             ),
                           ),
                         ),
-                        SliverPadding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: spacing.m,
-                            vertical: spacing.sm,
-                          ),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final result = filteredResults[index];
-                                return _ProductCard(
-                                  result: result,
-                                  onTap: () => _openProduct(result),
-                                );
-                              },
-                              childCount: filteredResults.length,
+                        Expanded(
+                          child: ListView.builder(
+                            controller: scrollController,
+                            physics: const BouncingScrollPhysics(),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: spacing.m,
                             ),
+                            itemCount: filteredResults.length,
+                            itemBuilder: (context, index) {
+                              final result = filteredResults[index];
+                              return _ProductCard(
+                                result: result,
+                                onTap: () => _openProduct(result),
+                              );
+                            },
                           ),
-                        ),
-                        SliverPadding(
-                          padding: EdgeInsets.only(bottom: spacing.l),
                         ),
                       ],
                     ),
@@ -279,6 +320,26 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
     // Sort by confidence score (highest first) to show best matches first
     filtered.sort((a, b) => b.confidence.compareTo(a.confidence));
     return filtered;
+  }
+
+  bool _hasHighQualityMatches() {
+    return widget.results.any((result) => result.confidence >= 0.85);
+  }
+
+  String _getSearchInsightText() {
+    final highQualityCount =
+        widget.results.where((r) => r.confidence >= 0.85).length;
+    final mediumQualityCount = widget.results
+        .where((r) => r.confidence >= 0.75 && r.confidence < 0.85)
+        .length;
+
+    if (highQualityCount > 0) {
+      return 'Found ${highQualityCount} precise color matches using smart matching';
+    } else if (mediumQualityCount > 0) {
+      return 'Found ${mediumQualityCount} good matches using enhanced color database';
+    } else {
+      return 'Smart search analyzed ${widget.results.length} potential matches';
+    }
   }
 
   void _shareResults() {
@@ -434,4 +495,9 @@ class _ProductCard extends StatelessWidget {
     );
   }
 
+  Color _getConfidenceColor(double confidence) {
+    if (confidence >= 0.8) return Colors.green;
+    if (confidence >= 0.6) return Colors.orange;
+    return Colors.red;
+  }
 }
