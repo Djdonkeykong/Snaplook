@@ -294,10 +294,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         userDefaults?.set(sessionId, forKey: kProcessingSessionKey)
         userDefaults?.synchronize()
         shareLog("Saved \(sharedMedia.count) item(s) to UserDefaults - redirecting (session: \(sessionId))")
-        redirectToHostApp(sessionId: sessionId)
+        let containsTextShare = sharedMedia.contains { $0.type == .text || $0.type == .url }
+        redirectToHostApp(sessionId: sessionId, deferUntilCompleted: containsTextShare)
     }
 
-    private func redirectToHostApp(sessionId: String) {
+    private func redirectToHostApp(sessionId: String, deferUntilCompleted: Bool) {
         loadIds()
         guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share") else {
             shareLog("ERROR: Failed to build redirect URL")
@@ -308,13 +309,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let minimumDuration: TimeInterval = 3
         let elapsed = loadingShownAt.map { Date().timeIntervalSince($0) } ?? 0
         let delay = max(0, minimumDuration - elapsed)
-        shareLog("Redirect scheduled in \(delay) seconds (elapsed: \(elapsed))")
+        shareLog("Redirect scheduled in \(delay) seconds (elapsed: \(elapsed)) (deferUntilCompleted: \(deferUntilCompleted))")
 
         loadingHideWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             self.loadingHideWorkItem = nil
-            self.awaitHostCompletionAndRedirect(sessionId: sessionId, url: redirectURL)
+            if deferUntilCompleted {
+                self.awaitHostCompletionAndRedirect(sessionId: sessionId, url: redirectURL)
+            } else {
+                shareLog("Bypassing completion wait (no text share detected)")
+                self.performRedirect(to: redirectURL)
+                self.finishExtensionRequest()
+            }
         }
         loadingHideWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
@@ -588,5 +595,7 @@ extension URL {
         return "application/octet-stream"
     }
 }
+
+
 
 
