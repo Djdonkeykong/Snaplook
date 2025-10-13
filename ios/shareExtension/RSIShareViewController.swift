@@ -470,14 +470,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         activityIndicator = activity
         stack.addArrangedSubview(activity)
 
-        let label = UILabel()
-        label.text = "Importing..."
-        label.font = UIFont.preferredFont(forTextStyle: .headline)
-        label.textColor = UIColor.label
-        label.textAlignment = .center
-        label.numberOfLines = 2
-        stack.addArrangedSubview(label)
-
         let cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
         cancelButton.titleLabel?.font = UIFont.preferredFont(forTextStyle: .body)

@@ -369,56 +369,51 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     String instagramUrl, {
     bool showProgress = true,
   }) async {
-    // Reset progress animation to start fresh
-    _progressAnimationController.reset();
-
-    // Show progress dialog
-    _showProgressDialog(title: 'Instagram Image Download');
+    if (showProgress) {
+      _progressAnimationController.reset();
+      _showProgressDialog(title: 'Instagram Image Download');
+      _updateProgress(0.1);
+    }
 
     try {
-      // Step 1: Initialize
-      _updateProgress(0.1);
       await Future.delayed(const Duration(milliseconds: 300));
 
-      // Step 2: API Request
-      _updateProgress(0.3);
+      if (showProgress) {
+        _updateProgress(0.3);
+      }
 
-      // Run the download in background while updating progress
       final downloadFuture = InstagramService.downloadImageFromInstagramUrl(
         instagramUrl,
       );
 
-      // Simulate progress stages while actual download happens
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted) _updateProgress(0.5);
-      });
-
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) _updateProgress(0.7);
-      });
-
-      Future.delayed(const Duration(milliseconds: 2500), () {
-        if (mounted) _updateProgress(0.9);
-      });
+      if (showProgress) {
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) _updateProgress(0.5);
+        });
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) _updateProgress(0.7);
+        });
+        Future.delayed(const Duration(milliseconds: 2500), () {
+          if (mounted) _updateProgress(0.9);
+        });
+      }
 
       final imageFiles = await downloadFuture;
 
-      // Complete
-      _updateProgress(1.0);
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      // Hide progress dialog
-      if (navigatorKey.currentContext != null) {
-        Navigator.of(navigatorKey.currentContext!).pop();
+      if (showProgress) {
+        _updateProgress(1.0);
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (navigatorKey.currentContext != null) {
+          Navigator.of(navigatorKey.currentContext!).pop();
+        }
       }
 
       if (imageFiles.isNotEmpty) {
-        print('dY", Downloaded  image(s) from Instagram');
+        print('dY", Downloaded ${imageFiles.length} image(s) from Instagram');
         if (imageFiles.length > 1) {
-          print('dYZ? Carousel post detected - setting up image slider');
+          print('dYZï¿½ Carousel post detected - setting up image slider');
         }
 
-        // Set all downloaded images in the provider
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
@@ -437,51 +432,37 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         _showInstagramErrorMessage();
       }
     } catch (e) {
-      print('Error downloading Instagram image: ');
+      print('Error downloading Instagram image: $e');
 
-      // Hide progress dialog
-      if (navigatorKey.currentContext != null) {
+      if (showProgress && navigatorKey.currentContext != null) {
         Navigator.of(navigatorKey.currentContext!).pop();
       }
 
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
-
       _showInstagramErrorMessage();
     }
-  }
-
-  String? _extractFirstUrl(String input) {
-    final match = RegExp(
-      r'https?://[^\s]+',
-      caseSensitive: false,
-    ).firstMatch(input);
-    if (match == null) {
-      return null;
-    }
-    var url = match.group(0)!;
-    // Trim trailing punctuation that commonly appears after links
-    while (url.isNotEmpty && '.!,)'.contains(url[url.length - 1])) {
-      url = url.substring(0, url.length - 1);
-    }
-    return url;
   }
 
   Future<void> _downloadGenericLink(
     String url, {
     bool showProgress = true,
   }) async {
-    _progressAnimationController.reset();
-    _showProgressDialog(title: 'Fetching Shared Link');
+    if (showProgress) {
+      _progressAnimationController.reset();
+      _showProgressDialog(title: 'Fetching Shared Link');
+      _updateProgress(0.2);
+    }
 
     try {
-      _updateProgress(0.2);
       final imageFiles = await LinkScraperService.downloadImagesFromUrl(url);
-      _updateProgress(1.0);
-      await Future.delayed(const Duration(milliseconds: 200));
 
-      if (navigatorKey.currentContext != null) {
-        Navigator.of(navigatorKey.currentContext!).pop();
+      if (showProgress) {
+        _updateProgress(1.0);
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (navigatorKey.currentContext != null) {
+          Navigator.of(navigatorKey.currentContext!).pop();
+        }
       }
 
       if (imageFiles.isNotEmpty) {
@@ -503,8 +484,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         _showGenericLinkErrorMessage(url);
       }
     } catch (e) {
-      print('Error downloading images from shared link: ');
-      if (navigatorKey.currentContext != null) {
+      print('Error downloading images from shared link: $e');
+      if (showProgress && navigatorKey.currentContext != null) {
         Navigator.of(navigatorKey.currentContext!).pop();
       }
       ref.read(pendingSharedImageProvider.notifier).state = null;
@@ -592,9 +573,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
             title: const Text('Instagram Image Download Failed'),
             content: const Text(
               'Unable to download the image from Instagram. This can happen due to:\n\n'
-              '• Privacy settings on the post\n'
-              '• Network connectivity issues\n'
-              '• Instagram\'s anti-scraping measures\n\n'
+              'Ã¢â‚¬Â¢ Privacy settings on the post\n'
+              'Ã¢â‚¬Â¢ Network connectivity issues\n'
+              'Ã¢â‚¬Â¢ Instagram\'s anti-scraping measures\n\n'
               'Try taking a screenshot instead and use the "Upload" button to analyze it.',
             ),
             actions: [
