@@ -84,7 +84,7 @@ class SnaplookApp extends ConsumerStatefulWidget {
 }
 
 class _SnaplookAppState extends ConsumerState<SnaplookApp>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late StreamSubscription _intentSub;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -99,6 +99,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     // Initialize progress animation controller
     _progressAnimationController = AnimationController(
@@ -182,6 +183,33 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }).catchError((error) {
       print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
     });
+
+    // Ensure we catch any pending share when the app is already running.
+    _checkForPendingSharedMediaOnResume();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkForPendingSharedMediaOnResume();
+    }
+    super.didChangeAppLifecycleState(state);
+  }
+
+  Future<void> _checkForPendingSharedMediaOnResume() async {
+    try {
+      final pendingMedia =
+          await ReceiveSharingIntent.instance.getInitialMedia();
+      if (pendingMedia.isNotEmpty) {
+        print(
+            "[SHARE EXTENSION] Found pending media after resume: ${pendingMedia.length} files");
+        ReceiveSharingIntent.instance.reset();
+        _handleSharedMedia(pendingMedia);
+      }
+    } catch (e) {
+      print(
+          "[SHARE EXTENSION ERROR] Error checking pending media on resume: $e");
+    }
   }
 
   void _handleSharedMedia(List<SharedMediaFile> sharedFiles,
@@ -476,6 +504,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _intentSub.cancel();
     _progressAnimationController.dispose();
     super.dispose();
