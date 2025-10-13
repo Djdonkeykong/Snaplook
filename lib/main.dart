@@ -333,7 +333,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     });
   }
 
-  void _handleSharedText(String text, {bool fromShareExtension = false}) async {
+  Future<void> _handleSharedText(
+    String text, {
+    bool fromShareExtension = false,
+  }) async {
     print("Handling shared text: $text");
 
     // Check if it's an Instagram URL
@@ -650,4 +653,3 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     );
   }
 }
-
