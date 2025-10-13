@@ -314,15 +314,57 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             self.loadingHideWorkItem = nil
-            DispatchQueue.main.async {
-                self.performRedirect(to: redirectURL, sessionId: sessionId)
-            }
+            self.awaitHostCompletionAndRedirect(sessionId: sessionId, url: redirectURL)
         }
         loadingHideWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
-    private func performRedirect(to url: URL, sessionId: String) {
+    private func awaitHostCompletionAndRedirect(sessionId: String, url: URL) {
+        shareLog("Waiting for host completion before redirect (session: \(sessionId))")
+        let timeout: TimeInterval = 30
+        let pollInterval: TimeInterval = 0.25
+        let deadline = Date().addingTimeInterval(timeout)
+
+        func redirectAndFinish(reason: String) {
+            guard !self.didCompleteRequest else { return }
+            shareLog("\(reason) – proceeding to host app for session \(sessionId)")
+            self.performRedirect(to: url)
+            self.finishExtensionRequest()
+        }
+
+        func poll() {
+            guard !self.didCompleteRequest else { return }
+            let defaults = UserDefaults(suiteName: self.appGroupId)
+            let currentSession = defaults?.string(forKey: kProcessingSessionKey)
+            let status = defaults?.string(forKey: kProcessingStatusKey)
+
+            if currentSession != sessionId {
+                redirectAndFinish(reason: "Session mismatch while waiting (current: \(currentSession ?? "nil"))")
+                return
+            }
+
+            if status == "completed" {
+                redirectAndFinish(reason: "Host reported completion")
+                return
+            }
+
+            if Date() >= deadline {
+                redirectAndFinish(reason: "Timed out waiting for host completion")
+                return
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + pollInterval) {
+                poll()
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + pollInterval) {
+            poll()
+        }
+    }
+
+    private func performRedirect(to url: URL) {
         shareLog("Redirecting to host app with URL: \(url.absoluteString)")
         var responder: UIResponder? = self
         if #available(iOS 18.0, *) {
@@ -342,48 +384,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
                 responder = current.next
             }
-        }
-
-        waitForHostCompletion(sessionId: sessionId)
-    }
-
-    private func waitForHostCompletion(sessionId: String) {
-        shareLog("Waiting for host completion (session: \(sessionId))")
-        let timeout: TimeInterval = 30
-        let pollInterval: TimeInterval = 0.25
-        let deadline = Date().addingTimeInterval(timeout)
-
-        func poll() {
-            guard !self.didCompleteRequest else { return }
-            let defaults = UserDefaults(suiteName: self.appGroupId)
-            let currentSession = defaults?.string(forKey: kProcessingSessionKey)
-            let status = defaults?.string(forKey: kProcessingStatusKey)
-
-            if currentSession != sessionId {
-                shareLog("Session mismatch while waiting (current: \(currentSession ?? "nil")) - completing")
-                finishExtensionRequest()
-                return
-            }
-
-            if status == "completed" {
-                shareLog("Host reported completion for session \(sessionId)")
-                finishExtensionRequest()
-                return
-            }
-
-            if Date() >= deadline {
-                shareLog("Timed out waiting for host completion for session \(sessionId)")
-                finishExtensionRequest()
-                return
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + pollInterval) {
-                poll()
-            }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + pollInterval) {
-            poll()
         }
     }
 
