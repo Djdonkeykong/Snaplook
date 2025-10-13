@@ -29,6 +29,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   final ImagePicker _picker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
   final Set<String> _preloadedImages = <String>{};
+  ProviderSubscription<XFile?>? _pendingShareListener;
   bool _isProcessingPendingNavigation = false;
 
   @override
@@ -47,13 +48,16 @@ class _HomePageState extends ConsumerState<HomePage> {
       });
     });
 
-    ref.listen<XFile?>(pendingSharedImageProvider, (previous, next) {
-      if (next != null && mounted) {
-        print(
-            '[HOME PAGE] pendingSharedImageProvider changed -> navigating to detection');
-        _handlePendingSharedImage(next);
-      }
-    });
+    _pendingShareListener ??= ref.listen<XFile?>(
+      pendingSharedImageProvider,
+      (previous, next) {
+        if (next != null && mounted) {
+          print(
+              '[HOME PAGE] pendingSharedImageProvider changed -> navigating to detection');
+          _handlePendingSharedImage(next);
+        }
+      },
+    );
 
     // Setup infinite scrolling
     _scrollController.addListener(_onScroll);
@@ -98,6 +102,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   void dispose() {
+    _pendingShareListener?.close();
     _scrollController.dispose();
     super.dispose();
   }
