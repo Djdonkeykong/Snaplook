@@ -122,7 +122,10 @@ class LinkScraperService {
       final client = http.Client();
       try {
         for (int i = 0; i < 5; i++) {
-          final request = http.Request('GET', current)
+          final uri = current;
+          if (uri == null) break;
+
+          final request = http.Request('GET', uri)
             ..followRedirects = false
             ..headers['User-Agent'] = _userAgent;
           final response = await client.send(request);
@@ -130,11 +133,11 @@ class LinkScraperService {
           if (response.isRedirect) {
             final location = response.headers['location'];
             if (location == null) break;
-            current = current.resolve(location);
+            current = uri.resolve(location);
             continue;
           }
 
-          return response.request?.url.toString() ?? current.toString();
+          return response.request?.url.toString() ?? uri.toString();
         }
       } finally {
         client.close();
