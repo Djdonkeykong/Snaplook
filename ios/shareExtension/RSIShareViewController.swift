@@ -616,10 +616,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return urlString
         }
 
-        if var queryItems = components.percentEncodedQueryItems {
-            queryItems.removeAll { $0.name == "stp" }
-            components.percentEncodedQueryItems = queryItems.isEmpty ? nil : queryItems
+        var queryItems = components.percentEncodedQueryItems ?? []
+        var didNormalizeSTP = false
+        for index in 0..<queryItems.count {
+            if queryItems[index].name == "stp" {
+                queryItems[index].value = "dst-jpg_e35_tt6"
+                didNormalizeSTP = true
+            }
         }
+        if !didNormalizeSTP {
+            queryItems.append(URLQueryItem(name: "stp", value: "dst-jpg_e35_tt6"))
+        }
+        components.percentEncodedQueryItems = queryItems
 
         let path = components.percentEncodedPath
         if let regex = try? NSRegularExpression(pattern: "_s\\d+x\\d+", options: []) {
