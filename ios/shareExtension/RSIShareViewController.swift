@@ -94,6 +94,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingAttachmentCount = 0
     private var hasQueuedRedirect = false
     private var pendingPostMessage: String?
+    private let maxInstagramScrapeAttempts = 2
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -175,6 +176,106 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         maybeFinalizeShare()
+    }
+
+    private func performInstagramScrape(
+        instagramUrl: String,
+        apiKey: String,
+        attempt: Int,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard attempt <= maxInstagramScrapeAttempts else {
+            completion(.failure(makeInstagramError("Exceeded Instagram scrape attempts")))
+            return
+        }
+
+        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
+            completion(.failure(makeInstagramError("Invalid ScrapingBee URL")))
+            return
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "api_key", value: apiKey),
+            URLQueryItem(name: "url", value: instagramUrl),
+            URLQueryItem(name: "render_js", value: "true"),
+            URLQueryItem(name: "wait", value: "2000")
+        ]
+
+        guard let requestURL = components.url else {
+            completion(.failure(makeInstagramError("Failed to build ScrapingBee request URL")))
+            return
+        }
+
+        shareLog("Fetching Instagram HTML via ScrapingBee (attempt \(attempt + 1)) for \(instagramUrl)")
+
+        var request = URLRequest(url: requestURL)
+        request.timeoutInterval = 20.0
+
+        let session = URLSession(configuration: .ephemeral)
+        let deliver: (Result<[SharedMediaFile], Error>) -> Void = { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                switch result {
+                case .success:
+                    completion(result)
+                case .failure(let error):
+                    if attempt < self.maxInstagramScrapeAttempts {
+                        shareLog("WARNING: ScrapingBee attempt \(attempt + 1) failed (\(error.localizedDescription)) - retrying")
+                        self.performInstagramScrape(
+                            instagramUrl: instagramUrl,
+                            apiKey: apiKey,
+                            attempt: attempt + 1,
+                            completion: completion
+                        )
+                    } else {
+                        shareLog("ERROR: ScrapingBee failed after \(attempt + 1) attempts - \(error.localizedDescription)")
+                        completion(.failure(error))
+                    }
+                }
+            }
+        }
+
+        session.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            if let error = error {
+                session.invalidateAndCancel()
+                deliver(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeInstagramError("Missing HTTP response")))
+                return
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeInstagramError("ScrapingBee returned status \(httpResponse.statusCode)", code: httpResponse.statusCode)))
+                return
+            }
+
+            guard let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeInstagramError("Unable to decode ScrapingBee response body")))
+                return
+            }
+
+            let imageUrls = self.extractInstagramImageUrls(from: html)
+            if imageUrls.isEmpty {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeInstagramError("No image URLs found in Instagram response")))
+                return
+            }
+
+            self.downloadInstagramImages(
+                imageUrls,
+                originalURL: instagramUrl,
+                session: session,
+                completion: deliver
+            )
+        }.resume()
     }
 
     open override func configurationItems() -> [Any]! { [] }
@@ -489,75 +590,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
-            completion(.failure(makeInstagramError("Invalid ScrapingBee URL")))
-            return
-        }
-
-        components.queryItems = [
-            URLQueryItem(name: "api_key", value: apiKey),
-            URLQueryItem(name: "url", value: urlString),
-            URLQueryItem(name: "render_js", value: "true"),
-            URLQueryItem(name: "wait", value: "2000")
-        ]
-
-        guard let requestURL = components.url else {
-            completion(.failure(makeInstagramError("Failed to build ScrapingBee request URL")))
-            return
-        }
-
-        shareLog("Fetching Instagram HTML via ScrapingBee for \(urlString)")
-
-        var request = URLRequest(url: requestURL)
-        request.timeoutInterval = 20.0
-
-        let session = URLSession(configuration: .ephemeral)
-        let deliver: (Result<[SharedMediaFile], Error>) -> Void = { result in
-            DispatchQueue.main.async {
-                completion(result)
-            }
-        }
-
-        session.dataTask(with: request) { data, response, error in
-            if let error = error {
-                session.invalidateAndCancel()
-                deliver(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeInstagramError("Missing HTTP response")))
-                return
-            }
-
-            guard httpResponse.statusCode == 200 else {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeInstagramError("ScrapingBee returned status \(httpResponse.statusCode)", code: httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data,
-                  let html = String(data: data, encoding: .utf8) else {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeInstagramError("Unable to decode ScrapingBee response body")))
-                return
-            }
-
-            let imageUrls = self.extractInstagramImageUrls(from: html)
-            if imageUrls.isEmpty {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeInstagramError("No image URLs found in Instagram response")))
-                return
-            }
-
-            self.downloadInstagramImages(
-                imageUrls,
-                originalURL: urlString,
-                session: session,
-                completion: deliver
-            )
-        }.resume()
+        performInstagramScrape(
+            instagramUrl: urlString,
+            apiKey: apiKey,
+            attempt: 0,
+            completion: completion
+        )
     }
 
     private func extractInstagramImageUrls(from html: String) -> [String] {
