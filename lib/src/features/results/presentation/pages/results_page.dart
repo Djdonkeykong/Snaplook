@@ -25,8 +25,9 @@ class ResultsPage extends ConsumerStatefulWidget {
 
 class _ResultsPageState extends ConsumerState<ResultsPage>
     with SingleTickerProviderStateMixin {
-  static const double _minSheetExtent = 0.5;
-  static const double _midSheetExtent = 0.7;
+  static const double _minSheetExtent = 0.35;
+  static const double _initialSheetExtent = 0.45;
+  static const double _midSheetExtent = 0.65;
   static const double _maxSheetExtent = 0.9;
 
   late TabController _tabController;
@@ -110,13 +111,14 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
           // Results Bottom Sheet
           DraggableScrollableSheet(
             controller: _sheetController,
-            initialChildSize: _minSheetExtent,
+            initialChildSize: _initialSheetExtent,
             minChildSize: _minSheetExtent,
             maxChildSize: _maxSheetExtent,
             expand: false,
             snap: true,
             snapSizes: const [
               _minSheetExtent,
+              _initialSheetExtent,
               _midSheetExtent,
               _maxSheetExtent
             ],
