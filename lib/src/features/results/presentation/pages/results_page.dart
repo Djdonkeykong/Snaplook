@@ -25,24 +25,17 @@ class ResultsPage extends ConsumerStatefulWidget {
 
 class _ResultsPageState extends ConsumerState<ResultsPage>
     with SingleTickerProviderStateMixin {
-  static const double _minSheetExtent = 0.5;
-  static const double _midSheetExtent = 0.7;
-  static const double _maxSheetExtent = 0.9;
-
   late TabController _tabController;
   String selectedCategory = 'All';
-  late final DraggableScrollableController _sheetController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _sheetController = DraggableScrollableController();
   }
 
   @override
   void dispose() {
-    _sheetController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -50,15 +43,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   @override
   Widget build(BuildContext context) {
     final selectedImage = ref.watch(selectedImageProvider);
-    final categories = [
-      'All',
-      'Tops',
-      'Bottoms',
-      'Outerwear',
-      'Shoes',
-      'Headwear',
-      'Accessories'
-    ];
+    final categories = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Headwear', 'Accessories'];
     final spacing = context.spacing;
     final radius = context.radius;
 
@@ -109,193 +94,159 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
 
           // Results Bottom Sheet
           DraggableScrollableSheet(
-            controller: _sheetController,
-            initialChildSize: _minSheetExtent,
-            minChildSize: _minSheetExtent,
-            maxChildSize: _maxSheetExtent,
-            expand: false,
-            snap: true,
-            snapSizes: const [
-              _minSheetExtent,
-              _midSheetExtent,
-              _maxSheetExtent
-            ],
+            initialChildSize: 0.5,
+            minChildSize: 0.5,
+            maxChildSize: 0.9,
             builder: (context, scrollController) {
-              final filteredResults = _getFilteredResults();
               return Container(
                 decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(radius.large),
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
-                      blurRadius: 12,
+                      blurRadius: 10,
                       offset: const Offset(0, -2),
                     ),
                   ],
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(radius.large),
-                  ),
-                  child: Container(
-                    color: Theme.of(context).colorScheme.surface,
-                    child: Column(
-                      children: [
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onVerticalDragUpdate: (details) {
-                            if (!_sheetController.isAttached) return;
-                            const minExtent = _minSheetExtent;
-                            const maxExtent = _maxSheetExtent;
-                            final height = MediaQuery.of(context).size.height;
-                            final delta = details.delta.dy / height;
-                            final newExtent = (_sheetController.size - delta)
-                                .clamp(minExtent, maxExtent);
-                            _sheetController.jumpTo(newExtent);
-                          },
-                          onVerticalDragEnd: (details) {
-                            if (!_sheetController.isAttached) return;
-                            const minExtent = _minSheetExtent;
-                            const maxExtent = _maxSheetExtent;
-                            final velocity =
-                                details.velocity.pixelsPerSecond.dy;
-                            const snapTargets = [
-                              _minSheetExtent,
-                              _midSheetExtent,
-                              _maxSheetExtent,
-                            ];
-
-                            double targetExtent;
-                            if (velocity.abs() > 600) {
-                              targetExtent =
-                                  velocity < 0 ? maxExtent : minExtent;
-                            } else {
-                              final current = _sheetController.size;
-                              targetExtent = snapTargets.reduce(
-                                (a, b) =>
-                                    (a - current).abs() < (b - current).abs()
-                                        ? a
-                                        : b,
-                              );
-                            }
-
-                            _sheetController.animateTo(
-                              targetExtent.clamp(minExtent, maxExtent),
-                              duration: AppConstants.mediumAnimation,
-                              curve: Curves.easeOut,
-                            );
-                          },
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: spacing.l,
-                              horizontal: spacing.m,
+                child: Column(
+                  children: [
+                    // Enhanced Drag Handle Area
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onVerticalDragUpdate: (details) {
+                        if (!scrollController.hasClients) return;
+                        final position = scrollController.position;
+                        final min = position.minScrollExtent;
+                        final max = position.maxScrollExtent;
+                        final newOffset =
+                            (position.pixels - details.delta.dy).clamp(min, max);
+                        scrollController.jumpTo(newOffset);
+                      },
+                      onVerticalDragEnd: (details) {
+                        if (!scrollController.hasClients) return;
+                        final position = scrollController.position;
+                        if (position.pixels < position.minScrollExtent) {
+                          scrollController.animateTo(
+                            position.minScrollExtent,
+                            duration: AppConstants.mediumAnimation,
+                            curve: Curves.easeOut,
+                          );
+                        } else if (position.pixels > position.maxScrollExtent) {
+                          scrollController.animateTo(
+                            position.maxScrollExtent,
+                            duration: AppConstants.mediumAnimation,
+                            curve: Curves.easeOut,
+                          );
+                        }
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          vertical: spacing.l,
+                          horizontal: spacing.m,
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[400],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
                             ),
-                            child: Column(
+                            SizedBox(height: spacing.m),
+                            Row(
                               children: [
-                                Container(
-                                  width: 36,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[400],
-                                    borderRadius: BorderRadius.circular(30),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: const [
+                                      Text(
+                                        'Similar matches',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'PlusJakartaSans',
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                SizedBox(height: spacing.m),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: const [
-                                          Text(
-                                            'Similar matches',
-                                            style: TextStyle(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                              fontFamily: 'PlusJakartaSans',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Text(
-                                      '${widget.results.length} results',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.green[600],
-                                        fontWeight: FontWeight.w600,
-                                        fontFamily: 'PlusJakartaSans',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: spacing.m),
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: categories.map((category) {
-                                      final isSelected =
-                                          selectedCategory == category;
-                                      return Container(
-                                        margin:
-                                            EdgeInsets.only(right: spacing.sm),
-                                        child: FilterChip(
-                                          label: Text(
-                                            category,
-                                            style: TextStyle(
-                                              fontFamily: 'PlusJakartaSans',
-                                              fontWeight: FontWeight.bold,
-                                              color: isSelected
-                                                  ? Colors.white
-                                                  : Colors.black,
-                                            ),
-                                          ),
-                                          selected: isSelected,
-                                          onSelected: (selected) {
-                                            setState(() {
-                                              selectedCategory = category;
-                                            });
-                                          },
-                                          backgroundColor: Colors.grey[100],
-                                          selectedColor:
-                                              const Color(0xFFf2003c),
-                                          checkmarkColor: Colors.white,
-                                          side: BorderSide.none,
-                                          materialTapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                      );
-                                    }).toList(),
+                                Text(
+                                  '${widget.results.length} results',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.green[600],
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'PlusJakartaSans',
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.builder(
-                            controller: scrollController,
-                            physics: const BouncingScrollPhysics(),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: spacing.m,
+                            SizedBox(height: spacing.m),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: categories.map((category) {
+                                  final isSelected = selectedCategory == category;
+                                  return Container(
+                                    margin: EdgeInsets.only(right: spacing.sm),
+                                    child: FilterChip(
+                                      label: Text(
+                                        category,
+                                        style: TextStyle(
+                                          fontFamily: 'PlusJakartaSans',
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected ? Colors.white : Colors.black,
+                                        ),
+                                      ),
+                                      selected: isSelected,
+                                      onSelected: (selected) {
+                                        setState(() {
+                                          selectedCategory = category;
+                                        });
+                                      },
+                                      backgroundColor: Colors.grey[100],
+                                      selectedColor: const Color(0xFFf2003c),
+                                      checkmarkColor: Colors.white,
+                                      side: BorderSide.none,
+                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
                             ),
-                            itemCount: filteredResults.length,
-                            itemBuilder: (context, index) {
-                              final result = filteredResults[index];
-                              return _ProductCard(
-                                result: result,
-                                onTap: () => _openProduct(result),
-                              );
-                            },
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+
+                    SizedBox(height: spacing.sm),
+
+                    // Results List
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: spacing.m,
+                        ),
+                        itemCount: _getFilteredResults().length,
+                        itemBuilder: (context, index) {
+                          final result = _getFilteredResults()[index];
+                          return _ProductCard(
+                            result: result,
+                            onTap: () => _openProduct(result),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -311,9 +262,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
       filtered = List.from(widget.results);
     } else {
       filtered = widget.results
-          .where((result) => result.category
-              .toLowerCase()
-              .contains(selectedCategory.toLowerCase()))
+          .where((result) => result.category.toLowerCase().contains(selectedCategory.toLowerCase()))
           .toList();
     }
 
@@ -327,11 +276,8 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   }
 
   String _getSearchInsightText() {
-    final highQualityCount =
-        widget.results.where((r) => r.confidence >= 0.85).length;
-    final mediumQualityCount = widget.results
-        .where((r) => r.confidence >= 0.75 && r.confidence < 0.85)
-        .length;
+    final highQualityCount = widget.results.where((r) => r.confidence >= 0.85).length;
+    final mediumQualityCount = widget.results.where((r) => r.confidence >= 0.75 && r.confidence < 0.85).length;
 
     if (highQualityCount > 0) {
       return 'Found ${highQualityCount} precise color matches using smart matching';
