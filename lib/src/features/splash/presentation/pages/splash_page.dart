@@ -59,11 +59,15 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final logoWidth = screenWidth * 0.458; // Matches iOS launch storyboard (180pt on 393pt wide base)
+    final clampedWidth = logoWidth.clamp(140.0, 260.0);
+
     return Scaffold(
       backgroundColor: const Color(0xFFf2003c),
       body: Center(
         child: SizedBox(
-          width: 180,
+          width: clampedWidth,
           child: Image.asset(
             'assets/images/snaplook-logo-splash-text.png',
             fit: BoxFit.contain,
