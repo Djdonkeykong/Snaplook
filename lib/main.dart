@@ -420,6 +420,38 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
   }
 
+  String? _extractFirstUrl(String text) {
+    if (text.isEmpty) {
+      print("[SHARE EXTENSION] No text provided for URL extraction");
+      return null;
+    }
+
+    final urlRegex = RegExp(
+      r'(https?:\/\/[^\s<>"]+|www\.[^\s<>"]+)',
+      caseSensitive: false,
+    );
+    final match = urlRegex.firstMatch(text);
+
+    if (match == null) {
+      print("[SHARE EXTENSION] No URL detected in shared text");
+      return null;
+    }
+
+    var matchedUrl = match.group(0);
+    if (matchedUrl == null || matchedUrl.isEmpty) {
+      print("[SHARE EXTENSION] URL match found but empty");
+      return null;
+    }
+
+    matchedUrl = matchedUrl.replaceAll(RegExp(r'[).,!?;:]+$'), '');
+    if (!matchedUrl.toLowerCase().startsWith('http')) {
+      matchedUrl = 'https://$matchedUrl';
+    }
+
+    print("[SHARE EXTENSION] Extracted URL: $matchedUrl");
+    return matchedUrl;
+  }
+
   Future<void> _downloadInstagramImage(
     String instagramUrl, {
     bool showProgress = true,
