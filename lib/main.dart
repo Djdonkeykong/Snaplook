@@ -286,7 +286,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       FocusManager.instance.primaryFocus?.unfocus();
       print("[SHARE EXTENSION] Navigating to DetectionPage immediately");
       _navigateToDetection();
-    } else if (sharedFile.type == SharedMediaType.text) {
+    } else if (sharedFile.type == SharedMediaType.text || sharedFile.type == SharedMediaType.url) {
       print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
       // Handle text sharing (like Instagram URLs)
       _handleSharedText(sharedFile.path);
@@ -640,3 +640,4 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     );
   }
 }
+
