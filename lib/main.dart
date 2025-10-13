@@ -16,6 +16,7 @@ import 'src/features/detection/presentation/pages/detection_page.dart';
 import 'src/features/splash/presentation/pages/splash_page.dart';
 import 'src/services/instagram_service.dart';
 import 'src/shared/services/video_preloader.dart';
+import 'src/shared/services/share_import_status.dart';
 import 'dart:io';
 
 // Custom LocalStorage implementation using SharedPreferences
@@ -248,16 +249,19 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
       // Also set in pending share provider so HomePage can handle navigation
       if (isInitial) {
-        print("[SHARE EXTENSION] Setting pending shared image for HomePage (initial share)");
+        print(
+            "[SHARE EXTENSION] Setting pending shared image for HomePage (initial share)");
         _skipNextResumePendingCheck = true;
         ref.read(pendingSharedImageProvider.notifier).state = imageFile;
         _hasHandledInitialShare = true;
         _shouldIgnoreNextStreamEmission = true;
+        unawaited(ShareImportStatus.markComplete());
         print("[SHARE EXTENSION] Deferring navigation to home init");
         return;
       }
 
       // Clear any stale pending share and navigate immediately when the app is already running.
+      unawaited(ShareImportStatus.markComplete());
       ref.read(pendingSharedImageProvider.notifier).state = null;
       FocusManager.instance.primaryFocus?.unfocus();
       print("[SHARE EXTENSION] Navigating to DetectionPage immediately");
@@ -320,6 +324,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       await _downloadInstagramImage(text);
     } else {
       _showUnsupportedMessage(text);
+      await ShareImportStatus.markComplete();
     }
   }
 
@@ -374,6 +379,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         // Set all downloaded images in the provider
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
+        await ShareImportStatus.markComplete();
 
         // Navigate to detection page
         navigatorKey.currentState?.push(
@@ -382,6 +388,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           ),
         );
       } else {
+        await ShareImportStatus.markComplete();
         _showInstagramErrorMessage();
       }
     } catch (e) {
@@ -391,6 +398,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       if (navigatorKey.currentContext != null) {
         Navigator.of(navigatorKey.currentContext!).pop();
       }
+
+      await ShareImportStatus.markComplete();
 
       _showInstagramErrorMessage();
     }

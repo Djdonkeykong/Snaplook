@@ -17,6 +17,8 @@ let kSchemePrefix = "ShareMedia"
 let kUserDefaultsKey = "ShareKey"
 let kUserDefaultsMessageKey = "ShareMessageKey"
 let kAppGroupIdKey = "AppGroupId"
+let kProcessingStatusKey = "ShareProcessingStatus"
+let kProcessingSessionKey = "ShareProcessingSession"
 
 @inline(__always)
 private func shareLog(_ message: String) {
@@ -83,6 +85,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var loadingView: UIView?
     private var loadingShownAt: Date?
     private var loadingHideWorkItem: DispatchWorkItem?
+    private var currentProcessingSession: String?
+    private var didCompleteRequest = false
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -260,12 +264,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let userDefaults = UserDefaults(suiteName: appGroupId)
         userDefaults?.set(toData(data: sharedMedia), forKey: kUserDefaultsKey)
         userDefaults?.set(message, forKey: kUserDefaultsMessageKey)
+        let sessionId = UUID().uuidString
+        currentProcessingSession = sessionId
+        userDefaults?.set("pending", forKey: kProcessingStatusKey)
+        userDefaults?.set(sessionId, forKey: kProcessingSessionKey)
         userDefaults?.synchronize()
-        shareLog("Saved \(sharedMedia.count) item(s) to UserDefaults - redirecting")
-        redirectToHostApp()
+        shareLog("Saved \(sharedMedia.count) item(s) to UserDefaults - redirecting (session: \(sessionId))")
+        redirectToHostApp(sessionId: sessionId)
     }
 
-    private func redirectToHostApp() {
+    private func redirectToHostApp(sessionId: String) {
         loadIds()
         guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share") else {
             shareLog("ERROR: Failed to build redirect URL")
@@ -283,15 +291,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard let self = self else { return }
             self.loadingHideWorkItem = nil
             DispatchQueue.main.async {
-                self.hideLoadingUI()
-                self.performRedirect(to: redirectURL)
+                self.performRedirect(to: redirectURL, sessionId: sessionId)
             }
         }
         loadingHideWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
-    private func performRedirect(to url: URL) {
+    private func performRedirect(to url: URL, sessionId: String) {
         shareLog("Redirecting to host app with URL: \(url.absoluteString)")
         var responder: UIResponder? = self
         if #available(iOS 18.0, *) {
@@ -313,8 +320,63 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
         }
 
-        extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
-        shareLog("Completed extension request")
+        waitForHostCompletion(sessionId: sessionId)
+    }
+
+    private func waitForHostCompletion(sessionId: String) {
+        shareLog("Waiting for host completion (session: \(sessionId))")
+        let timeout: TimeInterval = 30
+        let pollInterval: TimeInterval = 0.25
+        let deadline = Date().addingTimeInterval(timeout)
+
+        func poll() {
+            guard !self.didCompleteRequest else { return }
+            let defaults = UserDefaults(suiteName: self.appGroupId)
+            let currentSession = defaults?.string(forKey: kProcessingSessionKey)
+            let status = defaults?.string(forKey: kProcessingStatusKey)
+
+            if currentSession != sessionId {
+                shareLog("Session mismatch while waiting (current: \(currentSession ?? "nil")) - completing")
+                finishExtensionRequest()
+                return
+            }
+
+            if status == "completed" {
+                shareLog("Host reported completion for session \(sessionId)")
+                finishExtensionRequest()
+                return
+            }
+
+            if Date() >= deadline {
+                shareLog("Timed out waiting for host completion for session \(sessionId)")
+                finishExtensionRequest()
+                return
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + pollInterval) {
+                poll()
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + pollInterval) {
+            poll()
+        }
+    }
+
+    private func finishExtensionRequest() {
+        guard !didCompleteRequest else { return }
+        didCompleteRequest = true
+        DispatchQueue.main.async {
+            self.currentProcessingSession = nil
+            if let defaults = UserDefaults(suiteName: self.appGroupId) {
+                defaults.removeObject(forKey: kProcessingStatusKey)
+                defaults.removeObject(forKey: kProcessingSessionKey)
+                defaults.synchronize()
+            }
+            self.hideLoadingUI()
+            self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            shareLog("Completed extension request")
+        }
     }
 
     private func dismissWithError() {
@@ -327,6 +389,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
             alert.addAction(action)
             self.present(alert, animated: true, completion: nil)
+            self.didCompleteRequest = true
             self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
         }
     }
@@ -469,6 +532,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             code: -1,
             userInfo: [NSLocalizedDescriptionKey: "User cancelled import"]
         )
+        didCompleteRequest = true
         extensionContext?.cancelRequest(withError: error)
     }
 
@@ -477,6 +541,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if let defaults = UserDefaults(suiteName: appGroupId) {
             defaults.removeObject(forKey: kUserDefaultsKey)
             defaults.removeObject(forKey: kUserDefaultsMessageKey)
+            defaults.removeObject(forKey: kProcessingStatusKey)
+            defaults.removeObject(forKey: kProcessingSessionKey)
             defaults.synchronize()
         }
     }
