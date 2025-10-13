@@ -33,6 +33,18 @@ import receive_sharing_intent
         }
 
         switch call.method {
+        case "updateShareProcessingStatus":
+          guard
+            let args = call.arguments as? [String: Any],
+            let status = args["status"] as? String,
+            let defaults = self.sharedUserDefaults()
+          else {
+            result(nil)
+            return
+          }
+          defaults.set(status, forKey: self.processingStatusKey)
+          defaults.synchronize()
+          result(nil)
         case "markShareProcessingComplete":
           guard let defaults = self.sharedUserDefaults() else {
             result(nil)

@@ -305,6 +305,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       return;
     }
 
+    unawaited(ShareImportStatus.markProcessing());
+
     final sharedFile = _selectSharedFile(sharedFiles);
     print("[SHARE EXTENSION] Processing first file: ${sharedFile.path}");
     print("[SHARE EXTENSION] File type: ${sharedFile.type}");

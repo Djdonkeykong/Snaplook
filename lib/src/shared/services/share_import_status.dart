@@ -5,7 +5,14 @@ class ShareImportStatus {
   static const MethodChannel _channel =
       MethodChannel('com.snaplook.snaplook/share_status');
 
+  static Future<void> markProcessing() => _updateStatus('processing');
+
   static Future<void> markComplete() async {
+    final didUpdate = await _updateStatus('completed');
+    if (didUpdate) {
+      return;
+    }
+
     try {
       await _channel.invokeMethod('markShareProcessingComplete');
     } on MissingPluginException {
@@ -14,6 +21,25 @@ class ShareImportStatus {
       debugPrint(
         'ShareImportStatus markComplete failed: $error\n$stackTrace',
       );
+    }
+  }
+
+  static Future<bool> _updateStatus(String status) async {
+    try {
+      await _channel.invokeMethod(
+        'updateShareProcessingStatus',
+        {
+          'status': status,
+        },
+      );
+      return true;
+    } on MissingPluginException {
+      return false;
+    } catch (error, stackTrace) {
+      debugPrint(
+        'ShareImportStatus updateStatus($status) failed: $error\n$stackTrace',
+      );
+      return false;
     }
   }
 

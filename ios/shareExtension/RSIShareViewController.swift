@@ -88,6 +88,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var currentProcessingSession: String?
     private var didCompleteRequest = false
     private var activityIndicator: UIActivityIndicatorView?
+    private var statusLabel: UILabel?
+    private var statusPollTimer: Timer?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -106,6 +108,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
         loadingHideWorkItem?.cancel()
         setupLoadingUI()
+        startStatusPolling()
     }
 
     open override func didSelectPost() {
@@ -306,7 +309,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        let minimumDuration: TimeInterval = 3
+        let minimumDuration: TimeInterval = 0.5
         let elapsed = loadingShownAt.map { Date().timeIntervalSince($0) } ?? 0
         let delay = max(0, minimumDuration - elapsed)
         shareLog("Redirect scheduled in \(delay) seconds (elapsed: \(elapsed))")
@@ -470,6 +473,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         activityIndicator = activity
         stack.addArrangedSubview(activity)
 
+        let status = UILabel()
+        status.text = "Preparing Snaplook..."
+        status.font = UIFont.preferredFont(forTextStyle: .body)
+        status.textAlignment = .center
+        status.textColor = UIColor.secondaryLabel
+        status.numberOfLines = 2
+        stack.addArrangedSubview(status)
+        statusLabel = status
+
         let cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
         cancelButton.titleLabel?.font = UIFont.preferredFont(forTextStyle: .body)
@@ -491,6 +503,42 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingShownAt = Date()
     }
 
+    private func startStatusPolling() {
+        guard !appGroupId.isEmpty else { return }
+        stopStatusPolling()
+
+        statusPollTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in
+            self?.refreshStatusLabel()
+        }
+        statusPollTimer?.tolerance = 0.1
+        if let timer = statusPollTimer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
+        refreshStatusLabel()
+    }
+
+    private func stopStatusPolling() {
+        statusPollTimer?.invalidate()
+        statusPollTimer = nil
+    }
+
+    private func refreshStatusLabel() {
+        guard let defaults = UserDefaults(suiteName: appGroupId) else { return }
+        let status = defaults.string(forKey: kProcessingStatusKey) ?? "pending"
+        DispatchQueue.main.async { [weak self] in
+            switch status {
+            case "processing":
+                self?.statusLabel?.text = "Downloading in Snaplook..."
+            case "completed":
+                self?.statusLabel?.text = "Finishing up..."
+            case "pending":
+                self?.statusLabel?.text = "Opening Snaplook..."
+            default:
+                self?.statusLabel?.text = "Preparing Snaplook..."
+            }
+        }
+    }
+
     private func hideLoadingUI() {
         loadingHideWorkItem?.cancel()
         loadingHideWorkItem = nil
@@ -498,6 +546,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingView = nil
         activityIndicator?.stopAnimating()
         activityIndicator = nil
+        stopStatusPolling()
+        statusLabel = nil
     }
 
     @objc private func cancelImportTapped() {
