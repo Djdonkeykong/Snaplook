@@ -21,7 +21,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   Future<void> _precacheAndNavigate() async {
     // Precache the logo image first
     await precacheImage(
-      const AssetImage('assets/images/snaplook-logo-splash-text.png'),
+      const AssetImage('assets/images/splash_logo.png'),
       context,
     );
 
@@ -59,15 +59,11 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final logoWidth = screenWidth * 0.458; // Matches iOS launch storyboard (180pt on 393pt wide base)
-    final clampedWidth = logoWidth.clamp(140.0, 260.0);
-
     return Scaffold(
       backgroundColor: const Color(0xFFf2003c),
       body: Center(
         child: SizedBox(
-          width: clampedWidth,
+          width: 180,
           child: Image.asset(
             'assets/images/splash_logo.png',
             fit: BoxFit.contain,
