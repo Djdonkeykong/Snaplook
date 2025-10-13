@@ -313,89 +313,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let minimumDuration: TimeInterval = 3
         let elapsed = loadingShownAt.map { Date().timeIntervalSince($0) } ?? 0
         let delay = max(0, minimumDuration - elapsed)
-        shareLog("Redirect scheduled in \(delay) seconds (elapsed: \(elapsed)) (deferUntilCompleted: \(deferUntilCompleted))")
+        shareLog("Redirect scheduled in \(delay) seconds (elapsed: \(elapsed))")
 
         loadingHideWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             self.loadingHideWorkItem = nil
-            if deferUntilCompleted {
-                self.awaitHostCompletionAndRedirect(sessionId: sessionId, url: redirectURL)
-            } else {
-                shareLog("Bypassing completion wait (no text share detected)")
-                self.performRedirect(to: redirectURL)
-                self.finishExtensionRequest()
-            }
+            self.updateStatusMessage("Opening Snaplook...")
+            self.performRedirect(to: redirectURL)
+            self.finishExtensionRequest()
         }
         loadingHideWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
-    }
-
-    private func awaitHostCompletionAndRedirect(sessionId: String, url: URL) {
-        shareLog("Waiting for host completion before redirect (session: \(sessionId))")
-        let timeout: TimeInterval = 30
-        let pollInterval: TimeInterval = 0.25
-        let deadline = Date().addingTimeInterval(timeout)
-
-        func redirectAndFinish(reason: String) {
-            guard !self.didCompleteRequest else { return }
-            shareLog("\(reason) – proceeding to host app for session \(sessionId)")
-            self.performRedirect(to: url)
-            self.finishExtensionRequest()
-        }
-
-        func poll() {
-            guard !self.didCompleteRequest else { return }
-            let defaults = UserDefaults(suiteName: self.appGroupId)
-            let currentSession = defaults?.string(forKey: kProcessingSessionKey)
-            let status = defaults?.string(forKey: kProcessingStatusKey)
-
-            if currentSession != sessionId {
-                redirectAndFinish(reason: "Session mismatch while waiting (current: \(currentSession ?? "nil"))")
-                return
-            }
-
-            if status == "completed" {
-                redirectAndFinish(reason: "Host reported completion")
-                return
-            }
-
-            if Date() >= deadline {
-                redirectAndFinish(reason: "Timed out waiting for host completion")
-                return
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + pollInterval) {
-                poll()
-            }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + pollInterval) {
-            poll()
-        }
-    }
-
-    private func performRedirect(to url: URL) {
-        shareLog("Redirecting to host app with URL: \(url.absoluteString)")
-        var responder: UIResponder? = self
-        if #available(iOS 18.0, *) {
-            while let current = responder {
-                if let application = current as? UIApplication {
-                    application.open(url, options: [:], completionHandler: nil)
-                    break
-                }
-                responder = current.next
-            }
-        } else {
-            let selectorOpenURL = sel_registerName("openURL:")
-            while let current = responder {
-                if current.responds(to: selectorOpenURL) {
-                    _ = current.perform(selectorOpenURL, with: url)
-                    break
-                }
-                responder = current.next
-            }
-        }
     }
 
     private func finishExtensionRequest() {
@@ -517,15 +446,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stack.spacing = 16
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        if let icon = UIImage(named: "ProgressIcon") {
-            let imageView = UIImageView(image: icon)
-            imageView.translatesAutoresizingMaskIntoConstraints = false
-            imageView.contentMode = .scaleAspectFit
-            imageView.heightAnchor.constraint(equalToConstant: 64).isActive = true
-            imageView.widthAnchor.constraint(equalToConstant: 64).isActive = true
-            stack.addArrangedSubview(imageView)
-        }
-
         let activity = UIActivityIndicatorView(style: .large)
         activity.startAnimating()
         activityIndicator = activity
@@ -620,12 +540,3 @@ extension URL {
         return "application/octet-stream"
     }
 }
-
-
-
-
-
-
-
-
-

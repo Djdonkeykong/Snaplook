@@ -286,10 +286,11 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       FocusManager.instance.primaryFocus?.unfocus();
       print("[SHARE EXTENSION] Navigating to DetectionPage immediately");
       _navigateToDetection();
-    } else if (sharedFile.type == SharedMediaType.text || sharedFile.type == SharedMediaType.url) {
+    } else if (sharedFile.type == SharedMediaType.text ||
+        sharedFile.type == SharedMediaType.url) {
       print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
       // Handle text sharing (like Instagram URLs)
-      _handleSharedText(sharedFile.path);
+      await _handleSharedText(sharedFile.path, fromShareExtension: true);
     } else {
       print("[SHARE EXTENSION] Unknown file type: ${sharedFile.type}");
     }
@@ -332,17 +333,26 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     });
   }
 
-  void _handleSharedText(String text) async {
+  void _handleSharedText(
+    String text, {
+    bool fromShareExtension = false,
+  }) async {
     print("Handling shared text: $text");
 
     // Check if it's an Instagram URL
     if (InstagramService.isInstagramUrl(text)) {
-      await _downloadInstagramImage(text);
+      await _downloadInstagramImage(
+        text,
+        showProgress: !fromShareExtension,
+      );
     } else {
       final parsed = Uri.tryParse(text.trim());
       if (parsed != null &&
           (parsed.scheme == 'http' || parsed.scheme == 'https')) {
-        await _downloadGenericLink(text.trim());
+        await _downloadGenericLink(
+          text.trim(),
+          showProgress: !fromShareExtension,
+        );
       } else {
         _showUnsupportedMessage(text);
         await ShareImportStatus.markComplete();
@@ -350,7 +360,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
   }
 
-  Future<void> _downloadInstagramImage(String instagramUrl) async {
+  Future<void> _downloadInstagramImage(
+    String instagramUrl, {
+    bool showProgress = true,
+  }) async {
     // Reset progress animation to start fresh
     _progressAnimationController.reset();
 
@@ -433,7 +446,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
   }
 
-  Future<void> _downloadGenericLink(String url) async {
+  Future<void> _downloadGenericLink(
+    String url, {
+    bool showProgress = true,
+  }) async {
     _progressAnimationController.reset();
     _showProgressDialog(title: 'Fetching Shared Link');
 
@@ -640,4 +656,5 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     );
   }
 }
+
 
