@@ -6,6 +6,8 @@ import 'instagram_service.dart';
 
 class LinkScraperService {
   static const String _scrapingBeeApiHost = 'app.scrapingbee.com';
+  static const String _userAgent =
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
   /// Attempts to scrape generic web pages for <img> tags and downloads the images.
   /// Returns a list of locally saved [XFile]s.
@@ -15,6 +17,9 @@ class LinkScraperService {
       print('[LINK SCRAPER] ScrapingBee API key is missing');
       return [];
     }
+
+    final resolvedUrl = await _resolveFinalUrl(url) ?? url;
+    print('[LINK SCRAPER] Resolved shared URL -> $resolvedUrl');
 
     try {
       final extractRules = jsonEncode({
@@ -27,18 +32,26 @@ class LinkScraperService {
 
       final requestUri = Uri.https(_scrapingBeeApiHost, '/api/v1/', {
         'api_key': apiKey,
-        'url': url,
+        'url': resolvedUrl,
         'extract_rules': extractRules,
         'json_response': 'true',
-        'render_js': 'false',
+        'render_js': 'true',
+        'wait': '1500',
       });
 
-      print('[LINK SCRAPER] Requesting ScrapingBee for $url');
+      print('[LINK SCRAPER] Requesting ScrapingBee for $resolvedUrl');
       final response = await http
           .get(requestUri)
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode != 200) {
+      Map<String, dynamic>? data;
+      try {
+        data = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        data = null;
+      }
+
+      if (response.statusCode != 200 && data == null) {
         print(
           '[LINK SCRAPER] ScrapingBee request failed: ${response.statusCode}',
         );
@@ -46,32 +59,28 @@ class LinkScraperService {
         return [];
       }
 
-      final Map<String, dynamic> data = jsonDecode(response.body);
-      final List<dynamic>? images = data['images'] as List<dynamic>?;
+      final body = (data?['body'] ?? data) as Map<String, dynamic>?;
+      final images = body?['images'] as List<dynamic>? ?? [];
 
-      if (images == null || images.isEmpty) {
-        print('[LINK SCRAPER] No images found for $url');
+      if (images.isEmpty) {
+        print('[LINK SCRAPER] No images found for $resolvedUrl');
         return [];
       }
 
-      final baseUri = Uri.parse(url);
+      final baseUri = Uri.parse(resolvedUrl);
       final resolvedUrls = <String>{};
 
       for (final item in images) {
         if (item is Map<String, dynamic>) {
           final rawSrc = item['src'] as String?;
-          if (rawSrc == null || rawSrc.isEmpty) {
-            continue;
-          }
-          if (rawSrc.startsWith('data:')) {
-            // Skip inline images (icons, svgs, etc.)
+          if (rawSrc == null || rawSrc.isEmpty || rawSrc.startsWith('data:')) {
             continue;
           }
           Uri? resolved;
           try {
             resolved = baseUri.resolve(rawSrc);
           } catch (_) {
-            continue;
+            resolved = null;
           }
           if (resolved != null &&
               (resolved.scheme == 'http' || resolved.scheme == 'https')) {
@@ -81,7 +90,9 @@ class LinkScraperService {
       }
 
       if (resolvedUrls.isEmpty) {
-        print('[LINK SCRAPER] No valid HTTP image URLs resolved for $url');
+        print(
+          '[LINK SCRAPER] No valid HTTP image URLs resolved for $resolvedUrl',
+        );
         return [];
       }
 
@@ -98,8 +109,39 @@ class LinkScraperService {
       );
       return downloaded;
     } catch (e) {
-      print('[LINK SCRAPER] Error scraping $url -> $e');
+      print('[LINK SCRAPER] Error scraping $resolvedUrl -> $e');
       return [];
     }
+  }
+
+  static Future<String?> _resolveFinalUrl(String url) async {
+    try {
+      Uri? current = Uri.tryParse(url);
+      if (current == null) return null;
+
+      final client = http.Client();
+      try {
+        for (int i = 0; i < 5; i++) {
+          final request = http.Request('GET', current)
+            ..followRedirects = false
+            ..headers['User-Agent'] = _userAgent;
+          final response = await client.send(request);
+
+          if (response.isRedirect) {
+            final location = response.headers['location'];
+            if (location == null) break;
+            current = current.resolve(location);
+            continue;
+          }
+
+          return response.request?.url.toString() ?? current.toString();
+        }
+      } finally {
+        client.close();
+      }
+    } catch (e) {
+      print('[LINK SCRAPER] Failed to resolve redirects: $e');
+    }
+    return null;
   }
 }
