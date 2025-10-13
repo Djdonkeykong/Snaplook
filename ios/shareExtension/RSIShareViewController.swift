@@ -626,6 +626,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let sanitized = sanitizeInstagramURLString(url)
             if !sanitized.isEmpty && !uniqueUrls.contains(sanitized) {
                 uniqueUrls.append(sanitized)
+                shareLog("Queueing Instagram image candidate: \(sanitized)")
             }
         }
 
@@ -645,6 +646,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             let urlString = uniqueUrls[index]
+            shareLog("Preparing download for Instagram image \(index + 1)/\(total): \(urlString)")
 
             downloadSingleImage(
                 urlString: urlString,
@@ -687,6 +689,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148", forHTTPHeaderField: "User-Agent")
         request.setValue("https://www.instagram.com/", forHTTPHeaderField: "Referer")
 
+        shareLog("Downloading Instagram CDN image: \(urlString)")
         session.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
@@ -714,6 +717,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     try FileManager.default.removeItem(at: fileURL)
                 }
                 try data.write(to: fileURL, options: .atomic)
+                shareLog("Saved Instagram image to shared container: \(fileURL.path)")
                 let sharedFile = SharedMediaFile(
                     path: fileURL.absoluteString,
                     mimeType: "image/jpeg",
