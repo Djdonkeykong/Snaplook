@@ -212,18 +212,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       // Also set in pending share provider so HomePage can handle navigation
       print("[SHARE EXTENSION] Setting pending shared image for HomePage");
       ref.read(pendingSharedImageProvider.notifier).state = imageFile;
-      FocusManager.instance.primaryFocus?.unfocus();
       if (isInitial) {
         _hasHandledInitialShare = true;
         _shouldIgnoreNextStreamEmission = true;
-        print("[SHARE EXTENSION] Scheduling navigation after initial launch");
-        Future.delayed(const Duration(milliseconds: 1200), () {
-          print("[SHARE EXTENSION] Attempting navigation from initial share");
-          _navigateToDetection();
-        });
+        print("[SHARE EXTENSION] Deferring navigation to home init");
         return;
       }
 
+      FocusManager.instance.primaryFocus?.unfocus();
       print("[SHARE EXTENSION] Navigating to DetectionPage immediately");
       _navigateToDetection();
     } else if (sharedFile.type == SharedMediaType.text) {
