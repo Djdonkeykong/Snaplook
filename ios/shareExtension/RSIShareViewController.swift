@@ -689,24 +689,39 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        let targetUrl = uniqueUrls.first!
-        shareLog("Downloading first Instagram image only: \(targetUrl)")
+        func attempt(index: Int) {
+            if index >= uniqueUrls.count {
+                session.invalidateAndCancel()
+                completion(.failure(makeInstagramError("All Instagram image downloads failed")))
+                return
+            }
 
-        downloadSingleImage(
-            urlString: targetUrl,
-            originalURL: originalURL,
-            containerURL: containerURL,
-            session: session,
-            index: 0
-        ) { result in
-            session.finishTasksAndInvalidate()
-            switch result {
-            case .success(let file):
-                completion(.success(file.map { [$0] } ?? []))
-            case .failure(let error):
-                completion(.failure(error))
+            let targetUrl = uniqueUrls[index]
+            shareLog("Attempting Instagram image download \(index + 1)/\(uniqueUrls.count): \(targetUrl)")
+
+            downloadSingleImage(
+                urlString: targetUrl,
+                originalURL: originalURL,
+                containerURL: containerURL,
+                session: session,
+                index: index
+            ) { result in
+                switch result {
+                case .success(let file):
+                    session.finishTasksAndInvalidate()
+                    if let file = file {
+                        completion(.success([file]))
+                    } else {
+                        completion(.success([]))
+                    }
+                case .failure(let error):
+                    shareLog("WARNING: Instagram download candidate failed (\(error.localizedDescription)) - trying next")
+                    attempt(index: index + 1)
+                }
             }
         }
+
+        attempt(index: 0)
     }
 
     private func downloadSingleImage(
