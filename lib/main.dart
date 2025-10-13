@@ -154,7 +154,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           print(
             "[SHARE EXTENSION] Handling shared media immediately (app is open)",
           );
-          _handleSharedMedia(value);
+          unawaited(_handleSharedMedia(value));
         } else {
           print("[SHARE EXTENSION] No media files received in stream");
         }
@@ -192,7 +192,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
             _shouldIgnoreNextStreamEmission = true;
             ReceiveSharingIntent.instance.reset();
             print("[SHARE EXTENSION] Reset sharing intent");
-            _handleSharedMedia(value, isInitial: true);
+            unawaited(_handleSharedMedia(value, isInitial: true));
           } else {
             print("[SHARE EXTENSION] No initial media files received");
           }
@@ -229,7 +229,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           "[SHARE EXTENSION] Found pending media after resume: ${pendingMedia.length} files",
         );
         ReceiveSharingIntent.instance.reset();
-        _handleSharedMedia(pendingMedia);
+        await _handleSharedMedia(pendingMedia);
       }
     } catch (e) {
       print(
@@ -238,7 +238,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
   }
 
-  void _handleSharedMedia(
+  Future<void> _handleSharedMedia(
     List<SharedMediaFile> sharedFiles, {
     bool isInitial = false,
   }) {
@@ -333,18 +333,12 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     });
   }
 
-  void _handleSharedText(
-    String text, {
-    bool fromShareExtension = false,
-  }) async {
+  void _handleSharedText(String text, {bool fromShareExtension = false}) async {
     print("Handling shared text: $text");
 
     // Check if it's an Instagram URL
     if (InstagramService.isInstagramUrl(text)) {
-      await _downloadInstagramImage(
-        text,
-        showProgress: !fromShareExtension,
-      );
+      await _downloadInstagramImage(text, showProgress: !fromShareExtension);
     } else {
       final parsed = Uri.tryParse(text.trim());
       if (parsed != null &&
@@ -656,5 +650,3 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     );
   }
 }
-
-
