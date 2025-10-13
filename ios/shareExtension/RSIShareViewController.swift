@@ -561,7 +561,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func extractInstagramImageUrls(from html: String) -> [String] {
+        var priorityResults: [String] = []
         var results: [String] = []
+        let cacheKeyPattern = "\"src\":\"(https:\\\\/\\\\/scontent[^\"]+?ig_cache_key[^\"]*)\""
+        if let regex = try? NSRegularExpression(pattern: cacheKeyPattern, options: []) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                let candidate = sanitizeInstagramURLString(String(html[range]))
+                if !candidate.isEmpty && !priorityResults.contains(candidate) {
+                    priorityResults.append(candidate)
+                }
+            }
+        }
+
         let pattern = "\"display_url\"\\s*:\\s*\"([^\"]+)\""
 
         if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
@@ -580,6 +595,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     results.append(candidate)
                 }
             }
+        }
+
+        if !priorityResults.isEmpty {
+            return priorityResults
         }
 
         if !results.isEmpty {
@@ -608,6 +627,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         sanitized = sanitized.replacingOccurrences(of: "\\/", with: "/")
         sanitized = sanitized.replacingOccurrences(of: "&amp;", with: "&")
         sanitized = sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
+        if sanitized.contains("ig_cache_key") {
+            return sanitized
+        }
         return normalizeInstagramCdnUrl(sanitized)
     }
 
@@ -616,18 +638,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return urlString
         }
 
-        var queryItems = components.percentEncodedQueryItems ?? []
-        var didNormalizeSTP = false
-        for index in 0..<queryItems.count {
-            if queryItems[index].name == "stp" {
-                queryItems[index].value = "dst-jpg_e35_tt6"
-                didNormalizeSTP = true
+        if var queryItems = components.percentEncodedQueryItems {
+            for index in 0..<queryItems.count {
+                if queryItems[index].name == "stp",
+                   let value = queryItems[index].value,
+                   value.contains("c") || value.contains("s640x640") {
+                    queryItems[index].value = value
+                        .replacingOccurrences(of: "c288.0.864.864a_", with: "")
+                        .replacingOccurrences(of: "s640x640_", with: "")
+                }
             }
+            components.percentEncodedQueryItems = queryItems
         }
-        if !didNormalizeSTP {
-            queryItems.append(URLQueryItem(name: "stp", value: "dst-jpg_e35_tt6"))
-        }
-        components.percentEncodedQueryItems = queryItems
 
         let path = components.percentEncodedPath
         if let regex = try? NSRegularExpression(pattern: "_s\\d+x\\d+", options: []) {
