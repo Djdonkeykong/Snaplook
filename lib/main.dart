@@ -58,7 +58,8 @@ void main() async {
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    print('Warning: .env file not found. Using environment variables from build.');
+    print(
+        'Warning: .env file not found. Using environment variables from build.');
   }
 
   await Supabase.initialize(
@@ -82,7 +83,8 @@ class SnaplookApp extends ConsumerStatefulWidget {
   ConsumerState<SnaplookApp> createState() => _SnaplookAppState();
 }
 
-class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderStateMixin {
+class _SnaplookAppState extends ConsumerState<SnaplookApp>
+    with TickerProviderStateMixin {
   late StreamSubscription _intentSub;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -100,7 +102,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
 
     // Initialize progress animation controller
     _progressAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 500), // 500ms for smooth transitions
+      duration:
+          const Duration(milliseconds: 500), // 500ms for smooth transitions
       vsync: this,
     );
 
@@ -126,7 +129,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     // Listen to media sharing coming from outside the app while the app is in the memory.
     _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen((value) {
       if (_shouldIgnoreNextStreamEmission && value.isNotEmpty) {
-        print("[SHARE EXTENSION] Ignoring first stream emission after initial share");
+        print(
+            "[SHARE EXTENSION] Ignoring first stream emission after initial share");
         _shouldIgnoreNextStreamEmission = false;
         return;
       }
@@ -140,7 +144,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
         print("[SHARE EXTENSION]   - duration: ${file.duration}");
       }
       if (value.isNotEmpty) {
-        print("[SHARE EXTENSION] Handling shared media immediately (app is open)");
+        print(
+            "[SHARE EXTENSION] Handling shared media immediately (app is open)");
         _handleSharedMedia(value);
       } else {
         print("[SHARE EXTENSION] No media files received in stream");
@@ -179,8 +184,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     });
   }
 
-  void _handleSharedMedia(List<SharedMediaFile> sharedFiles, {bool isInitial = false}) {
-    print("[SHARE EXTENSION] _handleSharedMedia called - isInitial: $isInitial, files: ${sharedFiles.length}");
+  void _handleSharedMedia(List<SharedMediaFile> sharedFiles,
+      {bool isInitial = false}) {
+    print(
+        "[SHARE EXTENSION] _handleSharedMedia called - isInitial: $isInitial, files: ${sharedFiles.length}");
     if (sharedFiles.isEmpty) {
       print("[SHARE EXTENSION] No files to handle - returning");
       return;
@@ -205,10 +212,15 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       // Also set in pending share provider so HomePage can handle navigation
       print("[SHARE EXTENSION] Setting pending shared image for HomePage");
       ref.read(pendingSharedImageProvider.notifier).state = imageFile;
+      FocusManager.instance.primaryFocus?.unfocus();
       if (isInitial) {
         _hasHandledInitialShare = true;
         _shouldIgnoreNextStreamEmission = true;
-        print("[SHARE EXTENSION] Deferring navigation to home init");
+        print("[SHARE EXTENSION] Scheduling navigation after initial launch");
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          print("[SHARE EXTENSION] Attempting navigation from initial share");
+          _navigateToDetection();
+        });
         return;
       }
 
@@ -246,10 +258,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
 
       navigator
           .push(
-            MaterialPageRoute(
-              builder: (_) => const DetectionPage(),
-            ),
-          )
+        MaterialPageRoute(
+          builder: (_) => const DetectionPage(),
+        ),
+      )
           .whenComplete(() {
         _isNavigatingToDetection = false;
       });
@@ -291,7 +303,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
       _updateProgress(0.3);
 
       // Run the download in background while updating progress
-      final downloadFuture = InstagramService.downloadImageFromInstagramUrl(instagramUrl);
+      final downloadFuture =
+          InstagramService.downloadImageFromInstagramUrl(instagramUrl);
 
       // Simulate progress stages while actual download happens
       Future.delayed(const Duration(milliseconds: 800), () {
@@ -361,8 +374,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
                   Text(
                     'Instagram Image Download',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
@@ -373,9 +386,13 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
                       builder: (context, child) => CircularProgressIndicator(
                         value: _progressAnimation.value,
                         strokeWidth: 6,
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).colorScheme.secondary, // Golden yellow
+                          Theme.of(context)
+                              .colorScheme
+                              .secondary, // Golden yellow
                         ),
                       ),
                     ),
@@ -413,7 +430,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     _progressAnimationController.forward();
   }
 
-
   void _showInstagramErrorMessage() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (navigatorKey.currentContext != null) {
@@ -422,12 +438,11 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
           builder: (context) => AlertDialog(
             title: const Text('Instagram Image Download Failed'),
             content: const Text(
-              'Unable to download the image from Instagram. This can happen due to:\n\n'
-              '• Privacy settings on the post\n'
-              '• Network connectivity issues\n'
-              '• Instagram\'s anti-scraping measures\n\n'
-              'Try taking a screenshot instead and use the "Upload" button to analyze it.'
-            ),
+                'Unable to download the image from Instagram. This can happen due to:\n\n'
+                '• Privacy settings on the post\n'
+                '• Network connectivity issues\n'
+                '• Instagram\'s anti-scraping measures\n\n'
+                'Try taking a screenshot instead and use the "Upload" button to analyze it.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -448,10 +463,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
           builder: (context) => AlertDialog(
             title: const Text('Text Share Detected'),
             content: Text(
-              'Received text content, but Snaplook analyzes images.\n\n'
-              'Content: ${content.length > 100 ? content.substring(0, 100) + '...' : content}\n\n'
-              'Please share an image file instead.'
-            ),
+                'Received text content, but Snaplook analyzes images.\n\n'
+                'Content: ${content.length > 100 ? content.substring(0, 100) + '...' : content}\n\n'
+                'Please share an image file instead.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -485,7 +499,3 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp> with TickerProviderSt
     );
   }
 }
-
-
-
-
