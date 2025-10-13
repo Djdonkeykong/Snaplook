@@ -229,7 +229,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           "[SHARE EXTENSION] Found pending media after resume: ${pendingMedia.length} files",
         );
         ReceiveSharingIntent.instance.reset();
-        await _handleSharedMedia(pendingMedia);
+        await await _handleSharedMedia(pendingMedia);
       }
     } catch (e) {
       print(
@@ -241,7 +241,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   Future<void> _handleSharedMedia(
     List<SharedMediaFile> sharedFiles, {
     bool isInitial = false,
-  }) {
+  }) async {
     print(
       "[SHARE EXTENSION] _handleSharedMedia called - isInitial: $isInitial, files: ${sharedFiles.length}",
     );
