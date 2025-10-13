@@ -95,6 +95,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   bool _isNavigatingToDetection = false;
   bool _hasHandledInitialShare = false;
   bool _shouldIgnoreNextStreamEmission = false;
+  bool _skipNextResumePendingCheck = false;
 
   @override
   void initState() {
@@ -173,6 +174,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       if (value.isNotEmpty) {
         print("[SHARE EXTENSION] Handling initial shared media immediately");
         _hasHandledInitialShare = true;
+        _skipNextResumePendingCheck = true;
         _shouldIgnoreNextStreamEmission = true;
         ReceiveSharingIntent.instance.reset();
         print("[SHARE EXTENSION] Reset sharing intent");
@@ -197,6 +199,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   }
 
   Future<void> _checkForPendingSharedMediaOnResume() async {
+    if (_skipNextResumePendingCheck) {
+      _skipNextResumePendingCheck = false;
+      return;
+    }
     if (_hasHandledInitialShare) {
       // Initial share already queued for HomePage; avoid double-handling before UI is ready.
       return;
@@ -244,6 +250,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       // Also set in pending share provider so HomePage can handle navigation
       if (isInitial) {
         print("[SHARE EXTENSION] Setting pending shared image for HomePage (initial share)");
+        _skipNextResumePendingCheck = true;
         ref.read(pendingSharedImageProvider.notifier).state = imageFile;
         _hasHandledInitialShare = true;
         _shouldIgnoreNextStreamEmission = true;
