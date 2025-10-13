@@ -90,13 +90,9 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         key: homeNavigatorKey,
         initialRoute: '/',
         onGenerateRoute: (settings) {
-          return PageRouteBuilder(
+          return MaterialPageRoute(
+            builder: (context) => const HomePage(),
             settings: settings,
-            pageBuilder: (context, animation, secondaryAnimation) {
-              return const HomePage();
-            },
-            transitionDuration: const Duration(milliseconds: 300),
-            reverseTransitionDuration: const Duration(milliseconds: 300),
           );
         },
       ),
@@ -276,14 +272,13 @@ class _NavigationItem extends StatelessWidget {
   }
 
   Widget _buildIcon() {
-    final color = isSelected
-        ? AppColors.secondary
-        : AppColors.onSurfaceVariant;
+    final color = isSelected ? AppColors.secondary : AppColors.onSurfaceVariant;
 
     // Use selectedIconSize if selected and available, otherwise use iconSize or default
     final size = isSelected && selectedIconSize != null
         ? selectedIconSize!
-        : (iconSize ?? 28.0); // Use custom size or default to 28px (4px bigger than standard)
+        : (iconSize ??
+            28.0); // Use custom size or default to 28px (4px bigger than standard)
 
     // Use SVG icons if provided
     if (svgIcon != null && selectedSvgIcon != null) {
@@ -345,29 +340,29 @@ class _FloatingActionBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-          _FloatingActionButtonSvg(
-            svgIcon: 'assets/icons/camera_filled.svg',
-            label: 'Snap',
-            onTap: onSnapTap,
-          ),
-          _FloatingActionButtonSvg(
-            svgIcon: 'assets/icons/upload_filled.svg',
-            label: 'Upload',
-            onTap: onUploadTap,
-          ),
-          _FloatingActionButtonSvg(
-            svgIcon: 'assets/icons/tutorials_filled.svg',
-            label: 'Tutorials',
-            onTap: () {
-              // TODO: Implement scan functionality
-            },
-          ),
-          _FloatingActionButtonSvg(
-            svgIcon: 'assets/icons/share_filled.svg',
-            label: 'Share',
-            onTap: onShareTap,
-          ),
-        ],
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/camera_filled.svg',
+              label: 'Snap',
+              onTap: onSnapTap,
+            ),
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/upload_filled.svg',
+              label: 'Upload',
+              onTap: onUploadTap,
+            ),
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/tutorials_filled.svg',
+              label: 'Tutorials',
+              onTap: () {
+                // TODO: Implement scan functionality
+              },
+            ),
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/share_filled.svg',
+              label: 'Share',
+              onTap: onShareTap,
+            ),
+          ],
         ),
       ),
     );
@@ -448,7 +443,8 @@ class _FloatingActionButtonSvg extends StatelessWidget {
                 svgIcon,
                 width: 24,
                 height: 24,
-                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
               const SizedBox(height: 4),
               Text(

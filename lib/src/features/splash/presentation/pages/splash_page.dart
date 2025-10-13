@@ -41,19 +41,11 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
     // Now check if user is authenticated
     final isAuthenticated = ref.read(isAuthenticatedProvider);
-    final nextPage = isAuthenticated ? const MainNavigation() : const LoginPage();
+    final nextPage =
+        isAuthenticated ? const MainNavigation() : const LoginPage();
 
     Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => nextPage,
-        transitionDuration: const Duration(milliseconds: 300),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
-        },
-      ),
+      MaterialPageRoute(builder: (context) => nextPage),
     );
   }
 
