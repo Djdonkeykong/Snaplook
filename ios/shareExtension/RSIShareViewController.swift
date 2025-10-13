@@ -87,7 +87,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var loadingHideWorkItem: DispatchWorkItem?
     private var currentProcessingSession: String?
     private var didCompleteRequest = false
-    private var statusLabel: UILabel?
     private var activityIndicator: UIActivityIndicatorView?
 
     open func shouldAutoRedirect() -> Bool { true }
@@ -296,13 +295,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         userDefaults?.set(sessionId, forKey: kProcessingSessionKey)
         userDefaults?.synchronize()
         shareLog("Saved \(sharedMedia.count) item(s) to UserDefaults - redirecting (session: \(sessionId))")
-        let containsTextShare = sharedMedia.contains { $0.type == .text || $0.type == .url }
-        let message = containsTextShare ? "Fetching link preview..." : "Importing..."
-        updateStatusMessage(message)
-        redirectToHostApp(sessionId: sessionId, deferUntilCompleted: containsTextShare)
+        redirectToHostApp(sessionId: sessionId)
     }
 
-    private func redirectToHostApp(sessionId: String, deferUntilCompleted: Bool) {
+    private func redirectToHostApp(sessionId: String) {
         loadIds()
         guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share") else {
             shareLog("ERROR: Failed to build redirect URL")
@@ -319,7 +315,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             self.loadingHideWorkItem = nil
-            self.updateStatusMessage("Opening Snaplook...")
             self.performRedirect(to: redirectURL)
             self.finishExtensionRequest()
         }
@@ -481,7 +476,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         label.textColor = UIColor.label
         label.textAlignment = .center
         label.numberOfLines = 2
-        statusLabel = label
         stack.addArrangedSubview(label)
 
         let cancelButton = UIButton(type: .system)
@@ -510,7 +504,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingHideWorkItem = nil
         loadingView?.removeFromSuperview()
         loadingView = nil
-        statusLabel = nil
         activityIndicator?.stopAnimating()
         activityIndicator = nil
     }
@@ -528,12 +521,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         )
         didCompleteRequest = true
         extensionContext?.cancelRequest(withError: error)
-    }
-
-    private func updateStatusMessage(_ message: String) {
-        DispatchQueue.main.async { [weak self] in
-            self?.statusLabel?.text = message
-        }
     }
 
     private func clearSharedData() {

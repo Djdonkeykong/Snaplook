@@ -250,7 +250,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       return;
     }
 
-    final sharedFile = sharedFiles.first;
+    final sharedFile = _selectSharedFile(sharedFiles);
     print("[SHARE EXTENSION] Processing first file: ${sharedFile.path}");
     print("[SHARE EXTENSION] File type: ${sharedFile.type}");
 
@@ -289,7 +289,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     } else if (sharedFile.type == SharedMediaType.text ||
         sharedFile.type == SharedMediaType.url) {
       print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
-      // Handle text sharing (like Instagram URLs)
       await _handleSharedText(sharedFile.path, fromShareExtension: true);
     } else {
       print("[SHARE EXTENSION] Unknown file type: ${sharedFile.type}");
@@ -339,15 +338,24 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   }) async {
     print("Handling shared text: $text");
 
-    // Check if it's an Instagram URL
-    if (InstagramService.isInstagramUrl(text)) {
-      await _downloadInstagramImage(text, showProgress: !fromShareExtension);
+    final extractedUrl = _extractFirstUrl(text);
+    final effectiveText = extractedUrl ?? text.trim();
+
+    if (extractedUrl != null) {
+      print("Extracted URL from text: $extractedUrl");
+    }
+
+    if (InstagramService.isInstagramUrl(effectiveText)) {
+      await _downloadInstagramImage(
+        effectiveText,
+        showProgress: !fromShareExtension,
+      );
     } else {
-      final parsed = Uri.tryParse(text.trim());
+      final parsed = Uri.tryParse(effectiveText.trim());
       if (parsed != null &&
           (parsed.scheme == 'http' || parsed.scheme == 'https')) {
         await _downloadGenericLink(
-          text.trim(),
+          effectiveText.trim(),
           showProgress: !fromShareExtension,
         );
       } else {
@@ -441,6 +449,22 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
       _showInstagramErrorMessage();
     }
+  }
+
+  String? _extractFirstUrl(String input) {
+    final match = RegExp(
+      r'https?://[^\s]+',
+      caseSensitive: false,
+    ).firstMatch(input);
+    if (match == null) {
+      return null;
+    }
+    var url = match.group(0)!;
+    // Trim trailing punctuation that commonly appears after links
+    while (url.isNotEmpty && '.!,)'.contains(url[url.length - 1])) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
   }
 
   Future<void> _downloadGenericLink(
