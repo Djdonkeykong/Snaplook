@@ -86,7 +86,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var loadingShownAt: Date?
     private var loadingHideWorkItem: DispatchWorkItem?
     private var currentProcessingSession: String?
-    private var didCompleteRequest = false\n    private var statusLabel: UILabel?\n    private var activityIndicator: UIActivityIndicatorView?
+    private var didCompleteRequest = false
+    private var statusLabel: UILabel?
+    private var activityIndicator: UIActivityIndicatorView?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -618,6 +620,10 @@ extension URL {
         return "application/octet-stream"
     }
 }
+
+
+
+
 
 
 
