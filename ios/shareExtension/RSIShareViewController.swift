@@ -327,6 +327,30 @@ open class RSIShareViewController: SLComposeServiceViewController {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
+
+    private func performRedirect(to url: URL) {
+        shareLog("Redirecting to host app with URL: \(url.absoluteString)")
+        var responder: UIResponder? = self
+        if #available(iOS 18.0, *) {
+            while let current = responder {
+                if let application = current as? UIApplication {
+                    application.open(url, options: [:], completionHandler: nil)
+                    break
+                }
+                responder = current.next
+            }
+        } else {
+            let selectorOpenURL = sel_registerName("openURL:")
+            while let current = responder {
+                if current.responds(to: selectorOpenURL) {
+                    _ = current.perform(selectorOpenURL, with: url)
+                    break
+                }
+                responder = current.next
+            }
+        }
+    }
+
     private func finishExtensionRequest() {
         guard !didCompleteRequest else { return }
         didCompleteRequest = true
