@@ -580,7 +580,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           builder: (context) => AlertDialog(
             title: const Text('Couldn\'t Fetch Shared Link'),
             content: Text(
-              'We weren\'t able to find any usable images on:\n\n\n\nTry sharing a page that includes photo content.',
+              'We weren\'t able to find any usable images on:\n\n$url\n\nTry sharing a page that includes photo content.',
             ),
             actions: [
               TextButton(
