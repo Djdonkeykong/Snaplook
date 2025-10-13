@@ -15,7 +15,8 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
-import '../../../../../shared/navigation/main_navigation.dart' show scrollToTopTriggerProvider, isAtHomeRootProvider;
+import '../../../../../shared/navigation/main_navigation.dart'
+    show scrollToTopTriggerProvider, isAtHomeRootProvider;
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -28,6 +29,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   final ImagePicker _picker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
   final Set<String> _preloadedImages = <String>{};
+  bool _isProcessingPendingNavigation = false;
 
   @override
   void initState() {
@@ -45,36 +47,53 @@ class _HomePageState extends ConsumerState<HomePage> {
       });
     });
 
+    ref.listen<XFile?>(pendingSharedImageProvider, (previous, next) {
+      if (next != null && mounted) {
+        print(
+            '[HOME PAGE] pendingSharedImageProvider changed -> navigating to detection');
+        _handlePendingSharedImage(next);
+      }
+    });
+
     // Setup infinite scrolling
     _scrollController.addListener(_onScroll);
   }
 
   void _checkPendingSharedImage() {
-    print("[HOME PAGE] Checking for pending shared image");
+    print('[HOME PAGE] Checking for pending shared image');
     final pendingImage = ref.read(pendingSharedImageProvider);
-    print("[HOME PAGE] Pending image: ${pendingImage?.path ?? 'null'}");
+    print('[HOME PAGE] Pending image: ${pendingImage?.path ?? 'null'}');
 
     if (pendingImage != null && mounted) {
-      print("[HOME PAGE] Found pending shared image - navigating to DetectionPage");
-      // Clear the pending image first
-      ref.read(pendingSharedImageProvider.notifier).state = null;
-
-      // Navigate to DetectionPage using the root navigator
-      Navigator.of(context, rootNavigator: true)
-          .push(
-            MaterialPageRoute(
-              builder: (context) {
-                print("[HOME PAGE] DetectionPage builder called for shared image");
-                return const DetectionPage();
-              },
-            ),
-          )
-          .then((value) {
-        print("[HOME PAGE] Returned from DetectionPage (shared image)");
-      });
+      _handlePendingSharedImage(pendingImage);
     } else {
-      print("[HOME PAGE] No pending shared image found");
+      print('[HOME PAGE] No pending shared image found');
     }
+  }
+
+  void _handlePendingSharedImage(XFile image) {
+    if (_isProcessingPendingNavigation || !mounted) {
+      print(
+          '[HOME PAGE] Ignoring pending share navigation because a navigation is already in progress');
+      return;
+    }
+
+    print('[HOME PAGE] Navigating to DetectionPage for shared image');
+    _isProcessingPendingNavigation = true;
+
+    ref.read(pendingSharedImageProvider.notifier).state = null;
+
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) {
+          print('[HOME PAGE] DetectionPage builder called for shared image');
+          return const DetectionPage();
+        },
+      ),
+    ).whenComplete(() {
+      print('[HOME PAGE] Returned from DetectionPage (shared image)');
+      _isProcessingPendingNavigation = false;
+    });
   }
 
   @override
@@ -140,8 +159,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
 
     return Scaffold(
-        backgroundColor: AppColors.background,
-        body: Stack(
+      backgroundColor: AppColors.background,
+      body: Stack(
         children: [
           // Main content - full screen
           RefreshIndicator(
@@ -206,20 +225,21 @@ class _HomePageState extends ConsumerState<HomePage> {
             Text(
               'Failed to load inspiration',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppColors.onSurface,
-              ),
+                    color: AppColors.onSurface,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               state.error!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.tertiary,
-              ),
+                    color: AppColors.tertiary,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => ref.read(inspirationProvider.notifier).loadImages(),
+              onPressed: () =>
+                  ref.read(inspirationProvider.notifier).loadImages(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.secondary,
                 foregroundColor: AppColors.primary,
@@ -262,7 +282,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _buildSimplePatternRow(int rowIndex, List<Map<String, dynamic>> images) {
+  Widget _buildSimplePatternRow(
+      int rowIndex, List<Map<String, dynamic>> images) {
     final isLargeRow = rowIndex.isEven;
 
     if (isLargeRow) {
@@ -285,7 +306,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  Widget _buildStrictPatternRow(int rowIndex, List<Map<String, dynamic>> premiumImages, List<Map<String, dynamic>> regularImages) {
+  Widget _buildStrictPatternRow(
+      int rowIndex,
+      List<Map<String, dynamic>> premiumImages,
+      List<Map<String, dynamic>> regularImages) {
     final isLargeRow = rowIndex.isEven;
 
     if (isLargeRow) {
@@ -307,7 +331,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  Widget _buildPremiumPatternRow(int rowIndex, List<Map<String, dynamic>> premiumImages, List<Map<String, dynamic>> regularImages) {
+  Widget _buildPremiumPatternRow(
+      int rowIndex,
+      List<Map<String, dynamic>> premiumImages,
+      List<Map<String, dynamic>> regularImages) {
     final isLargeRow = rowIndex.isEven;
 
     if (isLargeRow) {
@@ -335,7 +362,8 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     // Only H&M, Zara, PrincessPolly for large images
     final allowedBrands = ['h&m', 'zara', 'princesspolly'];
-    final hasPremiumBrand = allowedBrands.any((allowedBrand) => brand.contains(allowedBrand));
+    final hasPremiumBrand =
+        allowedBrands.any((allowedBrand) => brand.contains(allowedBrand));
 
     if (!hasPremiumBrand) {
       return false;
@@ -369,9 +397,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       },
     );
   }
-
-
-
 
   Widget _buildLargeImageRow(Map<String, dynamic> image, int imageIndex) {
     return Column(
@@ -434,19 +459,20 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-
   void _onImageTap(Map<String, dynamic> image, int index) {
     // Hide floating bar when navigating away
     ref.read(isAtHomeRootProvider.notifier).state = false;
 
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (context) => ProductDetailPage(
           product: image,
           heroTag: 'product_${image['id']}_$index',
         ),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       // Show floating bar again when coming back
       ref.read(isAtHomeRootProvider.notifier).state = true;
     });
@@ -481,9 +507,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             Text(
               'Choose Image Source',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
-              ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             SizedBox(height: spacing.l),
             Row(
@@ -513,7 +539,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    print("[IMAGE PICKER] Starting image picker - source: ${source == ImageSource.camera ? 'CAMERA' : 'GALLERY'}");
+    print(
+        "[IMAGE PICKER] Starting image picker - source: ${source == ImageSource.camera ? 'CAMERA' : 'GALLERY'}");
     try {
       print("[IMAGE PICKER] Calling ImagePicker.pickImage...");
       final XFile? image = await _picker.pickImage(
@@ -523,7 +550,8 @@ class _HomePageState extends ConsumerState<HomePage> {
         imageQuality: 85,
       );
 
-      print("[IMAGE PICKER] pickImage returned - image: ${image?.path ?? 'null'}");
+      print(
+          "[IMAGE PICKER] pickImage returned - image: ${image?.path ?? 'null'}");
 
       if (image != null) {
         print("[IMAGE PICKER] Image selected: ${image.path}");
@@ -532,17 +560,16 @@ class _HomePageState extends ConsumerState<HomePage> {
         print("[IMAGE PICKER] Image set in provider");
 
         if (mounted) {
-          print("[IMAGE PICKER] Widget is mounted - navigating to DetectionPage");
-          Navigator.of(context, rootNavigator: true)
-              .push(
-                MaterialPageRoute(
-                  builder: (context) {
-                    print("[IMAGE PICKER] DetectionPage builder called");
-                    return const DetectionPage();
-                  },
-                ),
-              )
-              .then((value) {
+          print(
+              "[IMAGE PICKER] Widget is mounted - navigating to DetectionPage");
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (context) {
+                print("[IMAGE PICKER] DetectionPage builder called");
+                return const DetectionPage();
+              },
+            ),
+          ).then((value) {
             print("[IMAGE PICKER] Returned from DetectionPage");
           });
         } else {
@@ -571,7 +598,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       subject: 'Discover Fashion with Snaplook',
     );
   }
-
 }
 
 class _SourceOption extends StatelessWidget {
@@ -624,9 +650,9 @@ class _SourceOption extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
             ],
           ),
@@ -649,7 +675,9 @@ class _InspirationImageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = image['image_url'] as String?;
     final category = (image['category'] as String?)?.toLowerCase() ?? '';
-    final isShoeCategory = category.contains('shoe') || category.contains('sneaker') || category.contains('boot');
+    final isShoeCategory = category.contains('shoe') ||
+        category.contains('sneaker') ||
+        category.contains('boot');
 
     return Material(
       color: Colors.transparent,
@@ -702,10 +730,12 @@ class _StaggeredInspirationImageCard extends StatefulWidget {
   });
 
   @override
-  State<_StaggeredInspirationImageCard> createState() => _StaggeredInspirationImageCardState();
+  State<_StaggeredInspirationImageCard> createState() =>
+      _StaggeredInspirationImageCardState();
 }
 
-class _StaggeredInspirationImageCardState extends State<_StaggeredInspirationImageCard> {
+class _StaggeredInspirationImageCardState
+    extends State<_StaggeredInspirationImageCard> {
   bool _isLiked = false;
 
   void _navigateToDetectionPage(String imageUrl) {
@@ -721,7 +751,9 @@ class _StaggeredInspirationImageCardState extends State<_StaggeredInspirationIma
   Widget build(BuildContext context) {
     final imageUrl = widget.image['image_url'] as String?;
     final category = (widget.image['category'] as String?)?.toLowerCase() ?? '';
-    final isShoeCategory = category.contains('shoe') || category.contains('sneaker') || category.contains('boot');
+    final isShoeCategory = category.contains('shoe') ||
+        category.contains('sneaker') ||
+        category.contains('boot');
 
     // Create varied heights for staggered effect - alternating between different sizes
     final screenWidth = MediaQuery.of(context).size.width;
@@ -787,7 +819,9 @@ class _StaggeredInspirationImageCardState extends State<_StaggeredInspirationIma
                   id: widget.image['id']?.toString() ?? '',
                   productName: widget.image['title'] ?? 'Unknown',
                   brand: widget.image['brand'] ?? 'Unknown',
-                  price: double.tryParse(widget.image['price']?.toString() ?? '0') ?? 0.0,
+                  price: double.tryParse(
+                          widget.image['price']?.toString() ?? '0') ??
+                      0.0,
                   imageUrl: widget.image['image_url'] ?? '',
                   purchaseUrl: null,
                   category: widget.image['category'] ?? 'Unknown',
@@ -861,7 +895,9 @@ class _MagazineStyleImageCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final imageUrl = image['image_url'] as String?;
     final category = (image['category'] as String?)?.toLowerCase() ?? '';
-    final isShoeCategory = category.contains('shoe') || category.contains('sneaker') || category.contains('boot');
+    final isShoeCategory = category.contains('shoe') ||
+        category.contains('sneaker') ||
+        category.contains('boot');
 
     return Material(
       color: Colors.transparent,
@@ -903,7 +939,8 @@ class _MagazineStyleImageCard extends ConsumerWidget {
                   id: image['id']?.toString() ?? '',
                   productName: image['title'] ?? 'Unknown',
                   brand: image['brand'] ?? 'Unknown',
-                  price: double.tryParse(image['price']?.toString() ?? '0') ?? 0.0,
+                  price:
+                      double.tryParse(image['price']?.toString() ?? '0') ?? 0.0,
                   imageUrl: image['image_url'] ?? '',
                   purchaseUrl: null,
                   category: image['category'] ?? 'Unknown',
@@ -1034,7 +1071,6 @@ class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
 
   @override
   Widget build(BuildContext context) {
-
     // Default fit based on category
     final defaultFit = widget.isShoeCategory ? BoxFit.contain : BoxFit.cover;
     final currentFit = _boxFit ?? defaultFit;
@@ -1126,7 +1162,8 @@ class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
 
         // If the image aspect ratio is close to container ratio, use cover
         // If it's very different (too wide or too tall), use contain
-        final aspectRatioDifference = (imageAspectRatio - containerAspectRatio).abs();
+        final aspectRatioDifference =
+            (imageAspectRatio - containerAspectRatio).abs();
 
         // If difference is small (< 0.3), the image should fit well with cover
         // If difference is large, keep using contain to show full product
@@ -1233,7 +1270,8 @@ class _FloatingActionButtonSvg extends StatelessWidget {
                 svgIcon,
                 width: 24,
                 height: 24,
-                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
               const SizedBox(height: 4),
               Text(
