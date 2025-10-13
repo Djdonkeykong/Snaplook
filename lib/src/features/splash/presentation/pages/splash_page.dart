@@ -69,7 +69,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         child: SizedBox(
           width: clampedWidth,
           child: Image.asset(
-            'assets/images/snaplook-logo-splash-text.png',
+            'assets/images/splash_logo.png',
             fit: BoxFit.contain,
           ),
         ),
