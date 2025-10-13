@@ -18,12 +18,8 @@ class DetectionPage extends ConsumerStatefulWidget {
   ConsumerState<DetectionPage> createState() => _DetectionPageState();
 }
 
-class _DetectionPageState extends ConsumerState<DetectionPage>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
-  PageController _pageController = PageController();
+class _DetectionPageState extends ConsumerState<DetectionPage> {
+  final PageController _pageController = PageController();
 
   // Crop selection state
   bool _isCropMode = false;
@@ -34,33 +30,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
     super.initState();
     print("[DETECTION PAGE] initState called");
     print("[DETECTION PAGE] imageUrl: ${widget.imageUrl}");
-    _animationController = AnimationController(
-      duration: AppConstants.mediumAnimation,
-      vsync: this,
-    );
-
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
-    ));
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    ));
-
-    _animationController.forward();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -74,7 +47,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
     print("[DETECTION PAGE] build called");
     print("[DETECTION PAGE] selectedImage: ${selectedImage?.path ?? 'null'}");
     print("[DETECTION PAGE] widget.imageUrl: ${widget.imageUrl ?? 'null'}");
-    print("[DETECTION PAGE] hasMultipleImages: ${imagesState.hasMultipleImages}");
+    print(
+        "[DETECTION PAGE] hasMultipleImages: ${imagesState.hasMultipleImages}");
     print("[DETECTION PAGE] totalImages: ${imagesState.totalImages}");
 
     return Scaffold(
@@ -155,97 +129,69 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
                 style: TextStyle(color: Colors.white),
               ),
             )
-          : AnimatedBuilder(
-              animation: _fadeAnimation,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _fadeAnimation.value,
-                  child: Stack(
-                    children: [
-                      // Background Images - Full Screen with PageView
-                      Positioned.fill(
-                        child: widget.imageUrl != null
-                            // Network image from scan button - no scale animation
-                            ? SizedBox.expand(
-                                child: Image.network(
-                                  widget.imageUrl!,
+          : Stack(
+              children: [
+                Positioned.fill(
+                  child: widget.imageUrl != null
+                      ? SizedBox.expand(
+                          child: Image.network(
+                            widget.imageUrl!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+                        )
+                      : imagesState.hasMultipleImages
+                          ? PageView.builder(
+                              controller: _pageController,
+                              onPageChanged: (index) {
+                                ref
+                                    .read(selectedImagesProvider.notifier)
+                                    .setCurrentIndex(index);
+                              },
+                              itemCount: imagesState.totalImages,
+                              itemBuilder: (context, index) {
+                                return Image.file(
+                                  File(imagesState.images[index].path),
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: double.infinity,
-                                ),
-                              )
-                            // Local images from camera/gallery - with scale animation
-                            : AnimatedBuilder(
-                                animation: _scaleAnimation,
-                                builder: (context, child) {
-                                  return Transform.scale(
-                                    scale: _scaleAnimation.value,
-                                    child: imagesState.hasMultipleImages
-                                        ? PageView.builder(
-                                            controller: _pageController,
-                                            onPageChanged: (index) {
-                                              ref.read(selectedImagesProvider.notifier).setCurrentIndex(index);
-                                            },
-                                            itemCount: imagesState.totalImages,
-                                            itemBuilder: (context, index) {
-                                              return Image.file(
-                                                File(imagesState.images[index].path),
-                                                fit: BoxFit.cover,
-                                                width: double.infinity,
-                                                height: double.infinity,
-                                              );
-                                            },
-                                          )
-                                        : Image.file(
-                                            File(selectedImage!.path),
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          ),
-                                  );
-                                },
-                              ),
-                      ),
-
-                      // Detection Overlay
-                      if (detectionState.isAnalyzing)
-                        _buildDetectionOverlay(),
-
-                      // Image dots indicator for multiple images
-                      if (imagesState.hasMultipleImages)
-                        Positioned(
-                          bottom: 40, // Below the search icon with more spacing
-                          left: 0,
-                          right: 0,
-                          child: _buildDotsIndicator(imagesState),
-                        ),
-
-                      // Crop Mode Overlay
-                      if (_isCropMode && !detectionState.isAnalyzing)
-                        _buildCropOverlay(),
-
-
-                      // Bottom Controls
-                      Positioned(
-                        bottom: 80,
-                        left: 0,
-                        right: 0,
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 16),
-                            // Main scan button
-                            Center(
-                              child: detectionState.isAnalyzing
-                                  ? _buildAnalyzingButton()
-                                  : _buildScanButton(),
+                                );
+                              },
+                            )
+                          : Image.file(
+                              File(selectedImage!.path),
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
                             ),
-                          ],
-                        ),
+                ),
+                if (detectionState.isAnalyzing) _buildDetectionOverlay(),
+                if (imagesState.hasMultipleImages)
+                  Positioned(
+                    bottom: 40,
+                    left: 0,
+                    right: 0,
+                    child: _buildDotsIndicator(imagesState),
+                  ),
+                if (_isCropMode && !detectionState.isAnalyzing)
+                  _buildCropOverlay(),
+                Positioned(
+                  bottom: 80,
+                  left: 0,
+                  right: 0,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      Center(
+                        child: detectionState.isAnalyzing
+                            ? _buildAnalyzingButton()
+                            : _buildScanButton(),
                       ),
                     ],
                   ),
-                );
-              },
+                ),
+              ],
             ),
     );
   }
@@ -276,7 +222,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
       ),
     );
   }
-
 
   Widget _buildScanButton() {
     return Container(
@@ -381,10 +326,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
     );
   }
 
-
-
-
-
   Widget _buildCropOverlay() {
     if (_cropRect == null) return const SizedBox.shrink();
 
@@ -404,8 +345,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
             onPanUpdate: (details) {
               setState(() {
                 _cropRect = Rect.fromLTWH(
-                  (_cropRect!.left + details.delta.dx).clamp(0, MediaQuery.of(context).size.width - _cropRect!.width),
-                  (_cropRect!.top + details.delta.dy).clamp(0, MediaQuery.of(context).size.height - _cropRect!.height),
+                  (_cropRect!.left + details.delta.dx).clamp(
+                      0, MediaQuery.of(context).size.width - _cropRect!.width),
+                  (_cropRect!.top + details.delta.dy).clamp(0,
+                      MediaQuery.of(context).size.height - _cropRect!.height),
                   _cropRect!.width,
                   _cropRect!.height,
                 );
@@ -497,9 +440,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
         child: GestureDetector(
           onPanUpdate: (details) {
             setState(() {
-              final newLeft = (_cropRect!.left + details.delta.dx).clamp(0.0, _cropRect!.right - 100);
-              final newTop = (_cropRect!.top + details.delta.dy).clamp(0.0, _cropRect!.bottom - 100);
-              _cropRect = Rect.fromLTRB(newLeft, newTop, _cropRect!.right, _cropRect!.bottom);
+              final newLeft = (_cropRect!.left + details.delta.dx)
+                  .clamp(0.0, _cropRect!.right - 100);
+              final newTop = (_cropRect!.top + details.delta.dy)
+                  .clamp(0.0, _cropRect!.bottom - 100);
+              _cropRect = Rect.fromLTRB(
+                  newLeft, newTop, _cropRect!.right, _cropRect!.bottom);
             });
           },
           child: Container(
@@ -516,9 +462,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
         child: GestureDetector(
           onPanUpdate: (details) {
             setState(() {
-              final newRight = (_cropRect!.right + details.delta.dx).clamp(_cropRect!.left + 100, MediaQuery.of(context).size.width);
-              final newTop = (_cropRect!.top + details.delta.dy).clamp(0.0, _cropRect!.bottom - 100);
-              _cropRect = Rect.fromLTRB(_cropRect!.left, newTop, newRight, _cropRect!.bottom);
+              final newRight = (_cropRect!.right + details.delta.dx).clamp(
+                  _cropRect!.left + 100, MediaQuery.of(context).size.width);
+              final newTop = (_cropRect!.top + details.delta.dy)
+                  .clamp(0.0, _cropRect!.bottom - 100);
+              _cropRect = Rect.fromLTRB(
+                  _cropRect!.left, newTop, newRight, _cropRect!.bottom);
             });
           },
           child: Container(
@@ -535,9 +484,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
         child: GestureDetector(
           onPanUpdate: (details) {
             setState(() {
-              final newLeft = (_cropRect!.left + details.delta.dx).clamp(0.0, _cropRect!.right - 100);
-              final newBottom = (_cropRect!.bottom + details.delta.dy).clamp(_cropRect!.top + 100, MediaQuery.of(context).size.height);
-              _cropRect = Rect.fromLTRB(newLeft, _cropRect!.top, _cropRect!.right, newBottom);
+              final newLeft = (_cropRect!.left + details.delta.dx)
+                  .clamp(0.0, _cropRect!.right - 100);
+              final newBottom = (_cropRect!.bottom + details.delta.dy).clamp(
+                  _cropRect!.top + 100, MediaQuery.of(context).size.height);
+              _cropRect = Rect.fromLTRB(
+                  newLeft, _cropRect!.top, _cropRect!.right, newBottom);
             });
           },
           child: Container(
@@ -554,9 +506,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
         child: GestureDetector(
           onPanUpdate: (details) {
             setState(() {
-              final newRight = (_cropRect!.right + details.delta.dx).clamp(_cropRect!.left + 100, MediaQuery.of(context).size.width);
-              final newBottom = (_cropRect!.bottom + details.delta.dy).clamp(_cropRect!.top + 100, MediaQuery.of(context).size.height);
-              _cropRect = Rect.fromLTRB(_cropRect!.left, _cropRect!.top, newRight, newBottom);
+              final newRight = (_cropRect!.right + details.delta.dx).clamp(
+                  _cropRect!.left + 100, MediaQuery.of(context).size.width);
+              final newBottom = (_cropRect!.bottom + details.delta.dy).clamp(
+                  _cropRect!.top + 100, MediaQuery.of(context).size.height);
+              _cropRect = Rect.fromLTRB(
+                  _cropRect!.left, _cropRect!.top, newRight, newBottom);
             });
           },
           child: Container(
@@ -626,8 +581,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage>
       }
     }
   }
-
-
 
   void _startDetection() async {
     print('Starting detection process...');
