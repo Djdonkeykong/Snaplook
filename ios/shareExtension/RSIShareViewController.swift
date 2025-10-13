@@ -19,6 +19,7 @@ let kUserDefaultsMessageKey = "ShareMessageKey"
 let kAppGroupIdKey = "AppGroupId"
 let kProcessingStatusKey = "ShareProcessingStatus"
 let kProcessingSessionKey = "ShareProcessingSession"
+let kScrapingBeeApiKey = "ScrapingBeeApiKey"
 
 @inline(__always)
 private func shareLog(_ message: String) {
@@ -90,6 +91,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var activityIndicator: UIActivityIndicatorView?
     private var statusLabel: UILabel?
     private var statusPollTimer: Timer?
+    private var pendingAttachmentCount = 0
+    private var hasQueuedRedirect = false
+    private var pendingPostMessage: String?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -113,7 +117,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open override func didSelectPost() {
         shareLog("didSelectPost invoked")
-        saveAndRedirect(message: contentText)
+        pendingPostMessage = contentText
+        maybeFinalizeShare()
     }
 
     open override func viewDidAppear(_ animated: Bool) {
@@ -125,49 +130,140 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        for (index, attachment) in attachments.enumerated() {
-            for type in SharedMediaType.allCases {
-                if attachment.hasItemConformingToTypeIdentifier(type.toUTTypeIdentifier) {
-                    shareLog("Loading attachment index \(index) as \(type)")
-                    attachment.loadItem(forTypeIdentifier: type.toUTTypeIdentifier) { [weak self] data, error in
-                        guard let self = self, error == nil else {
-                            shareLog("ERROR: loadItem failed for index \(index) - \(error?.localizedDescription ?? "unknown error")")
-                            DispatchQueue.main.async { self?.dismissWithError() }
-                            return
-                        }
+        pendingAttachmentCount = 0
+        hasQueuedRedirect = false
+        pendingPostMessage = nil
 
-                        DispatchQueue.main.async {
-                            switch type {
-                            case .text:
-                                if let text = data as? String {
-                                    shareLog("Attachment index \(index) is text")
-                                    self.handleMedia(forLiteral: text, type: type, index: index, content: content)
-                                }
-                            case .url:
-                                if let url = data as? URL {
-                                    shareLog("Attachment index \(index) is URL: \(url)")
-                                    self.handleMedia(forLiteral: url.absoluteString, type: type, index: index, content: content)
-                                }
-                            default:
-                                if let url = data as? URL {
-                                    shareLog("Attachment index \(index) is file URL: \(url)")
-                                    self.handleMedia(forFile: url, type: type, index: index, content: content)
-                                } else if let image = data as? UIImage {
-                                    shareLog("Attachment index \(index) is UIImage")
-                                    self.handleMedia(forUIImage: image, type: type, index: index, content: content)
-                                } else {
-                                    shareLog("Attachment index \(index) could not be handled for type \(type)")
-                                }
-                            }
-                        }
+        if attachments.isEmpty {
+            shareLog("No attachments to process")
+            maybeFinalizeShare()
+            return
+        }
+
+        for (index, attachment) in attachments.enumerated() {
+            guard let type = SharedMediaType.allCases.first(where: {
+                attachment.hasItemConformingToTypeIdentifier($0.toUTTypeIdentifier)
+            }) else {
+                shareLog("Attachment index \(index) has no supported type")
+                continue
+            }
+
+            beginAttachmentProcessing()
+            shareLog("Loading attachment index \(index) as \(type)")
+            attachment.loadItem(
+                forTypeIdentifier: type.toUTTypeIdentifier,
+                options: nil
+            ) { [weak self] data, error in
+                guard let self = self else { return }
+                if let error = error {
+                    shareLog("ERROR: loadItem failed for index \(index) - \(error.localizedDescription)")
+                    DispatchQueue.main.async {
+                        self.handleLoadFailure()
                     }
-                    break
+                    return
+                }
+
+                DispatchQueue.main.async {
+                    self.processLoadedAttachment(
+                        data: data,
+                        type: type,
+                        index: index,
+                        content: content
+                    )
                 }
             }
         }
+
+        maybeFinalizeShare()
     }
 
     open override func configurationItems() -> [Any]! { [] }
+
+    private func beginAttachmentProcessing() {
+        pendingAttachmentCount += 1
+    }
+
+    private func completeAttachmentProcessing() {
+        pendingAttachmentCount = max(pendingAttachmentCount - 1, 0)
+        maybeFinalizeShare()
+    }
+
+    private func maybeFinalizeShare() {
+        guard pendingAttachmentCount == 0, !hasQueuedRedirect else { return }
+        hasQueuedRedirect = true
+        let message = pendingPostMessage
+        saveAndRedirect(message: message)
+    }
+
+    private func handleLoadFailure() {
+        shareLog("Handling load failure for attachment")
+        completeAttachmentProcessing()
+    }
+
+    private func processLoadedAttachment(
+        data: NSSecureCoding?,
+        type: SharedMediaType,
+        index: Int,
+        content: NSExtensionItem
+    ) {
+        switch type {
+        case .text:
+            guard let text = data as? String else {
+                shareLog("Attachment index \(index) text payload missing")
+                completeAttachmentProcessing()
+                return
+            }
+            shareLog("Attachment index \(index) is text")
+            handleMedia(
+                forLiteral: text,
+                type: type,
+                index: index,
+                content: content
+            ) { [weak self] in
+                self?.completeAttachmentProcessing()
+            }
+        case .url:
+            if let url = data as? URL {
+                shareLog("Attachment index \(index) is URL: \(url)")
+                handleMedia(
+                    forLiteral: url.absoluteString,
+                    type: type,
+                    index: index,
+                    content: content
+                ) { [weak self] in
+                    self?.completeAttachmentProcessing()
+                }
+            } else {
+                shareLog("Attachment index \(index) URL payload missing")
+                completeAttachmentProcessing()
+            }
+        default:
+            if let url = data as? URL {
+                shareLog("Attachment index \(index) is file URL: \(url)")
+                handleMedia(
+                    forFile: url,
+                    type: type,
+                    index: index,
+                    content: content
+                ) { [weak self] in
+                    self?.completeAttachmentProcessing()
+                }
+            } else if let image = data as? UIImage {
+                shareLog("Attachment index \(index) is UIImage")
+                handleMedia(
+                    forUIImage: image,
+                    type: type,
+                    index: index,
+                    content: content
+                ) { [weak self] in
+                    self?.completeAttachmentProcessing()
+                }
+            } else {
+                shareLog("Attachment index \(index) could not be handled for type \(type)")
+                completeAttachmentProcessing()
+            }
+        }
+    }
 
     private func suppressKeyboard() {
         let isResponder = textView?.isFirstResponder ?? false
@@ -214,21 +310,55 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("using app group: \(appGroupId)")
     }
 
-    private func handleMedia(forLiteral item: String, type: SharedMediaType, index: Int, content: NSExtensionItem) {
-        sharedMedia.append(SharedMediaFile(
-            path: item,
-            mimeType: type == .text ? "text/plain" : nil,
-            type: type
-        ))
-        shareLog("Appended literal item (type \(type)) - count now \(sharedMedia.count)")
-        if index == (content.attachments?.count ?? 0) - 1, shouldAutoRedirect() {
-            saveAndRedirect()
+    private func handleMedia(
+        forLiteral item: String,
+        type: SharedMediaType,
+        index: Int,
+        content: NSExtensionItem,
+        completion: @escaping () -> Void
+    ) {
+        if type == .url, isInstagramShareCandidate(item) {
+            shareLog("Detected Instagram URL share - starting download pipeline")
+            updateProcessingStatus("processing")
+            downloadInstagramMedia(from: item) { [weak self] result in
+                guard let self = self else {
+                    completion()
+                    return
+                }
+
+                switch result {
+                case .success(let downloaded):
+                    if downloaded.isEmpty {
+                        shareLog("Instagram download succeeded but returned no files - falling back to literal URL")
+                        self.appendLiteralShare(item: item, type: type)
+                    } else {
+                        self.sharedMedia.append(contentsOf: downloaded)
+                        shareLog("Appended \(downloaded.count) downloaded Instagram file(s) - count now \(self.sharedMedia.count)")
+                    }
+                case .failure(let error):
+                    shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
+                    self.appendLiteralShare(item: item, type: type)
+                }
+
+                completion()
+            }
+            return
         }
+
+        appendLiteralShare(item: item, type: type)
+        completion()
     }
 
-    private func handleMedia(forUIImage image: UIImage, type: SharedMediaType, index: Int, content: NSExtensionItem) {
+    private func handleMedia(
+        forUIImage image: UIImage,
+        type: SharedMediaType,
+        index: Int,
+        content: NSExtensionItem,
+        completion: @escaping () -> Void
+    ) {
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
             shareLog("ERROR: containerURL was nil while handling UIImage")
+            completion()
             return
         }
         let tempPath = containerURL.appendingPathComponent("TempImage.png")
@@ -243,14 +373,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         } else {
             shareLog("ERROR: Failed to write UIImage for index \(index)")
         }
-        if index == (content.attachments?.count ?? 0) - 1, shouldAutoRedirect() {
-            saveAndRedirect()
-        }
+        completion()
     }
 
-    private func handleMedia(forFile url: URL, type: SharedMediaType, index: Int, content: NSExtensionItem) {
+    private func handleMedia(
+        forFile url: URL,
+        type: SharedMediaType,
+        index: Int,
+        content: NSExtensionItem,
+        completion: @escaping () -> Void
+    ) {
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
             shareLog("ERROR: containerURL was nil while handling file URL")
+            completion()
             return
         }
         let fileName = getFileName(from: url, type: type)
@@ -282,22 +417,329 @@ open class RSIShareViewController: SLComposeServiceViewController {
         } else {
             shareLog("ERROR: Failed to copy file \(url)")
         }
+        completion()
+    }
 
-        if index == (content.attachments?.count ?? 0) - 1, shouldAutoRedirect() {
-            saveAndRedirect()
+    private func appendLiteralShare(item: String, type: SharedMediaType) {
+        let mimeType: String?
+        if type == .text {
+            mimeType = "text/plain"
+        } else if type == .url {
+            mimeType = "text/plain"
+        } else {
+            mimeType = nil
+        }
+
+        sharedMedia.append(
+            SharedMediaFile(
+                path: item,
+                mimeType: mimeType,
+                message: type == .url ? item : nil,
+                type: type
+            )
+        )
+        shareLog("Appended literal item (type \(type)) - count now \(sharedMedia.count)")
+    }
+
+    private func isInstagramShareCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return trimmed.contains("instagram.com/p/") || trimmed.contains("instagram.com/reel/")
+    }
+
+    private func scrapingBeeApiKey() -> String? {
+        if let defaults = UserDefaults(suiteName: appGroupId) {
+            if let key = defaults.string(forKey: kScrapingBeeApiKey), !key.isEmpty {
+                return key
+            }
+        }
+
+        if let infoKey = Bundle.main.object(forInfoDictionaryKey: "ScrapingBeeApiKey") as? String,
+           !infoKey.isEmpty {
+            return infoKey
+        }
+
+        return nil
+    }
+
+    private func updateProcessingStatus(_ status: String) {
+        guard !appGroupId.isEmpty,
+              let defaults = UserDefaults(suiteName: appGroupId) else { return }
+        defaults.set(status, forKey: kProcessingStatusKey)
+        defaults.synchronize()
+        DispatchQueue.main.async { [weak self] in
+            self?.refreshStatusLabel()
         }
     }
 
+    private func makeInstagramError(_ message: String, code: Int = -1) -> NSError {
+        NSError(
+            domain: "com.snaplook.shareExtension.instagram",
+            code: code,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
+    }
+
+    private func downloadInstagramMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
+            shareLog("ScrapingBee API key missing - falling back to host app download")
+            completion(.success([]))
+            return
+        }
+
+        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
+            completion(.failure(makeInstagramError("Invalid ScrapingBee URL")))
+            return
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "api_key", value: apiKey),
+            URLQueryItem(name: "url", value: urlString),
+            URLQueryItem(name: "render_js", value: "true"),
+            URLQueryItem(name: "wait", value: "2000")
+        ]
+
+        guard let requestURL = components.url else {
+            completion(.failure(makeInstagramError("Failed to build ScrapingBee request URL")))
+            return
+        }
+
+        shareLog("Fetching Instagram HTML via ScrapingBee for \(urlString)")
+
+        var request = URLRequest(url: requestURL)
+        request.timeoutInterval = 20.0
+
+        let session = URLSession(configuration: .ephemeral)
+        let deliver: (Result<[SharedMediaFile], Error>) -> Void = { result in
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
+
+        session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                session.invalidateAndCancel()
+                deliver(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeInstagramError("Missing HTTP response")))
+                return
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeInstagramError("ScrapingBee returned status \(httpResponse.statusCode)", code: httpResponse.statusCode)))
+                return
+            }
+
+            guard let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeInstagramError("Unable to decode ScrapingBee response body")))
+                return
+            }
+
+            let imageUrls = self.extractInstagramImageUrls(from: html)
+            if imageUrls.isEmpty {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeInstagramError("No image URLs found in Instagram response")))
+                return
+            }
+
+            self.downloadInstagramImages(
+                imageUrls,
+                originalURL: urlString,
+                session: session,
+                completion: deliver
+            )
+        }.resume()
+    }
+
+    private func extractInstagramImageUrls(from html: String) -> [String] {
+        var results: [String] = []
+        let pattern = "\"display_url\"\\s*:\\s*\"([^\"]+)\""
+
+        if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+
+                var candidate = String(html[range])
+                candidate = sanitizeInstagramURLString(candidate)
+                if candidate.contains("150x150") || candidate.contains("profile") {
+                    return
+                }
+                if !results.contains(candidate) {
+                    results.append(candidate)
+                }
+            }
+        }
+
+        if !results.isEmpty {
+            return results
+        }
+
+        let ogPattern = "<meta property=\"og:image\" content=\"([^\"]+)\""
+        if let regex = try? NSRegularExpression(pattern: ogPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            if let match = regex.firstMatch(in: html, options: [], range: nsrange),
+               match.numberOfRanges > 1,
+               let range = Range(match.range(at: 1), in: html) {
+                let candidate = sanitizeInstagramURLString(String(html[range]))
+                if !candidate.isEmpty {
+                    results.append(candidate)
+                }
+            }
+        }
+
+        return results
+    }
+
+    private func sanitizeInstagramURLString(_ value: String) -> String {
+        var sanitized = value
+        sanitized = sanitized.replacingOccurrences(of: "\\u0026", with: "&")
+        sanitized = sanitized.replacingOccurrences(of: "\\/", with: "/")
+        sanitized = sanitized.replacingOccurrences(of: "&amp;", with: "&")
+        return sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func downloadInstagramImages(
+        _ urls: [String],
+        originalURL: String,
+        session: URLSession,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
+            completion(.failure(makeInstagramError("Unable to resolve shared container URL")))
+            return
+        }
+
+        var uniqueUrls: [String] = []
+        for url in urls {
+            let sanitized = sanitizeInstagramURLString(url)
+            if !sanitized.isEmpty && !uniqueUrls.contains(sanitized) {
+                uniqueUrls.append(sanitized)
+            }
+        }
+
+        guard !uniqueUrls.isEmpty else {
+            completion(.failure(makeInstagramError("No valid Instagram image URLs after sanitization")))
+            return
+        }
+
+        var collected: [SharedMediaFile] = []
+        let total = uniqueUrls.count
+
+        func downloadNext(index: Int) {
+            if index >= total {
+                session.finishTasksAndInvalidate()
+                completion(.success(collected))
+                return
+            }
+
+            let urlString = uniqueUrls[index]
+
+            downloadSingleImage(
+                urlString: urlString,
+                originalURL: originalURL,
+                containerURL: containerURL,
+                session: session,
+                index: index
+            ) { result in
+                switch result {
+                case .success(let file):
+                    if let file = file {
+                        collected.append(file)
+                    }
+                    downloadNext(index: index + 1)
+                case .failure(let error):
+                    session.invalidateAndCancel()
+                    completion(.failure(error))
+                }
+            }
+        }
+
+        downloadNext(index: 0)
+    }
+
+    private func downloadSingleImage(
+        urlString: String,
+        originalURL: String,
+        containerURL: URL,
+        session: URLSession,
+        index: Int,
+        completion: @escaping (Result<SharedMediaFile?, Error>) -> Void
+    ) {
+        guard let url = URL(string: urlString) else {
+            completion(.failure(makeInstagramError("Invalid image URL: \(urlString)")))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 20.0
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148", forHTTPHeaderField: "User-Agent")
+        request.setValue("https://www.instagram.com/", forHTTPHeaderField: "Referer")
+
+        session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+                completion(.failure(self.makeInstagramError("Image download failed with status \(status)", code: status)))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(self.makeInstagramError("Image download returned no data")))
+                return
+            }
+
+            let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+            let fileName = "instagram_image_\(timestamp)_\(index).jpg"
+            let fileURL = containerURL.appendingPathComponent(fileName)
+
+            do {
+                if FileManager.default.fileExists(atPath: fileURL.path) {
+                    try FileManager.default.removeItem(at: fileURL)
+                }
+                try data.write(to: fileURL, options: .atomic)
+                let sharedFile = SharedMediaFile(
+                    path: fileURL.absoluteString,
+                    mimeType: "image/jpeg",
+                    message: originalURL,
+                    type: .image
+                )
+                completion(.success(sharedFile))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
     private func saveAndRedirect(message: String? = nil) {
+        hasQueuedRedirect = true
         let userDefaults = UserDefaults(suiteName: appGroupId)
         userDefaults?.set(toData(data: sharedMedia), forKey: kUserDefaultsKey)
-        userDefaults?.set(message, forKey: kUserDefaultsMessageKey)
+        let resolvedMessage = (message?.isEmpty ?? true) ? nil : message
+        userDefaults?.set(resolvedMessage, forKey: kUserDefaultsMessageKey)
         let sessionId = UUID().uuidString
         currentProcessingSession = sessionId
         userDefaults?.set("pending", forKey: kProcessingStatusKey)
         userDefaults?.set(sessionId, forKey: kProcessingSessionKey)
         userDefaults?.synchronize()
         shareLog("Saved \(sharedMedia.count) item(s) to UserDefaults - redirecting (session: \(sessionId))")
+        pendingPostMessage = nil
         redirectToHostApp(sessionId: sessionId)
     }
 

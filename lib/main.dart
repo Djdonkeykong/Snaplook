@@ -76,6 +76,12 @@ void main() async {
   // Preload video immediately on app startup
   VideoPreloader.instance.preloadShareVideo();
 
+  unawaited(
+    ShareImportStatus.configure(
+      scrapingBeeApiKey: AppConstants.scrapingBeeApiKey,
+    ),
+  );
+
   runApp(const ProviderScope(child: SnaplookApp()));
 }
 

@@ -24,6 +24,32 @@ class ShareImportStatus {
     }
   }
 
+  static Future<void> configure({
+    String? scrapingBeeApiKey,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (scrapingBeeApiKey != null) {
+      payload['scrapingBeeApiKey'] = scrapingBeeApiKey;
+    }
+
+    if (payload.isEmpty) {
+      return;
+    }
+
+    try {
+      await _channel.invokeMethod(
+        'configureShareExtension',
+        payload,
+      );
+    } on MissingPluginException {
+      // Share extension not available on this platform.
+    } catch (error, stackTrace) {
+      debugPrint(
+        'ShareImportStatus configure failed: $error\n$stackTrace',
+      );
+    }
+  }
+
   static Future<bool> _updateStatus(String status) async {
     try {
       await _channel.invokeMethod(

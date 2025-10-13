@@ -7,6 +7,7 @@ import receive_sharing_intent
   private let shareStatusChannelName = "com.snaplook.snaplook/share_status"
   private let processingStatusKey = "ShareProcessingStatus"
   private let processingSessionKey = "ShareProcessingSession"
+  private let scrapingBeeApiKeyKey = "ScrapingBeeApiKey"
 
   override func application(
     _ application: UIApplication,
@@ -33,6 +34,21 @@ import receive_sharing_intent
         }
 
         switch call.method {
+        case "configureShareExtension":
+          guard let defaults = self.sharedUserDefaults() else {
+            result(nil)
+            return
+          }
+          if let args = call.arguments as? [String: Any],
+             let apiKey = args["scrapingBeeApiKey"] as? String {
+            if apiKey.isEmpty {
+              defaults.removeObject(forKey: self.scrapingBeeApiKeyKey)
+            } else {
+              defaults.set(apiKey, forKey: self.scrapingBeeApiKeyKey)
+            }
+            defaults.synchronize()
+          }
+          result(nil)
         case "updateShareProcessingStatus":
           guard
             let args = call.arguments as? [String: Any],
