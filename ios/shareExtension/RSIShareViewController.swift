@@ -659,40 +659,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        var collected: [SharedMediaFile] = []
-        let total = uniqueUrls.count
+        let targetUrl = uniqueUrls.first!
+        shareLog("Downloading first Instagram image only: \(targetUrl)")
 
-        func downloadNext(index: Int) {
-            if index >= total {
-                session.finishTasksAndInvalidate()
-                completion(.success(collected))
-                return
-            }
-
-            let urlString = uniqueUrls[index]
-            shareLog("Preparing download for Instagram image \(index + 1)/\(total): \(urlString)")
-
-            downloadSingleImage(
-                urlString: urlString,
-                originalURL: originalURL,
-                containerURL: containerURL,
-                session: session,
-                index: index
-            ) { result in
-                switch result {
-                case .success(let file):
-                    if let file = file {
-                        collected.append(file)
-                    }
-                    downloadNext(index: index + 1)
-                case .failure(let error):
-                    session.invalidateAndCancel()
-                    completion(.failure(error))
-                }
+        downloadSingleImage(
+            urlString: targetUrl,
+            originalURL: originalURL,
+            containerURL: containerURL,
+            session: session,
+            index: 0
+        ) { result in
+            session.finishTasksAndInvalidate()
+            switch result {
+            case .success(let file):
+                completion(.success(file.map { [$0] } ?? []))
+            case .failure(let error):
+                completion(.failure(error))
             }
         }
-
-        downloadNext(index: 0)
     }
 
     private func downloadSingleImage(
