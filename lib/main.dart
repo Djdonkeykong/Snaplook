@@ -197,6 +197,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   }
 
   Future<void> _checkForPendingSharedMediaOnResume() async {
+    if (_hasHandledInitialShare) {
+      // Initial share already queued for HomePage; avoid double-handling before UI is ready.
+      return;
+    }
     try {
       final pendingMedia =
           await ReceiveSharingIntent.instance.getInitialMedia();
