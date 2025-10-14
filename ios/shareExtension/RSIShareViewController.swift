@@ -1028,7 +1028,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stack.addArrangedSubview(activity)
 
         let status = UILabel()
-        status.text = "Preparing Snaplook..."
+        status.text = "Fetching your photo..."
         status.font = UIFont.preferredFont(forTextStyle: .body)
         status.textAlignment = .center
         status.textColor = UIColor.secondaryLabel
@@ -1077,19 +1077,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func refreshStatusLabel() {
-        guard let defaults = UserDefaults(suiteName: appGroupId) else { return }
-        let status = defaults.string(forKey: kProcessingStatusKey) ?? "pending"
         DispatchQueue.main.async { [weak self] in
-            switch status {
-            case "processing":
-                self?.statusLabel?.text = "Downloading in Snaplook..."
-            case "completed":
-                self?.statusLabel?.text = "Finishing up..."
-            case "pending":
-                self?.statusLabel?.text = "Opening Snaplook..."
-            default:
-                self?.statusLabel?.text = "Preparing Snaplook..."
-            }
+            self?.statusLabel?.text = "Fetching your photo..."
         }
     }
 
