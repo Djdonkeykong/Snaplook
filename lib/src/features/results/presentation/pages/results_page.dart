@@ -27,15 +27,18 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String selectedCategory = 'All';
+  late final SheetController _sheetController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _sheetController = SheetController();
   }
 
   @override
   void dispose() {
+    _sheetController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -55,7 +58,16 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
     final spacing = context.spacing;
     final radius = context.radius;
     final mediaQuery = MediaQuery.of(context);
-    final sheetHeight = mediaQuery.size.height;
+    final safeAreaTop = mediaQuery.padding.top;
+    final safeAreaBottom = mediaQuery.padding.bottom;
+    final sheetMaxExtent = mediaQuery.size.height - safeAreaTop;
+    final sheetMinExtent = sheetMaxExtent * 0.45;
+    final sheetInitialExtent = sheetMaxExtent * 0.55;
+    final sheetStops = <double>[
+      (sheetMinExtent / sheetMaxExtent).clamp(0.0, 1.0),
+      (sheetInitialExtent / sheetMaxExtent).clamp(0.0, 1.0),
+      1.0,
+    ];
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -105,131 +117,134 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
           // Results Bottom Sheet
           DefaultSheetController(
             child: Sheet(
-              initialExtent: sheetHeight * 0.5,
-              minExtent: sheetHeight * 0.5,
-              maxExtent: sheetHeight * 0.9,
-              minInteractionExtent: spacing.l,
-              physics: const SnapSheetPhysics(
-                stops: <double>[0.5, 0.9],
-                parent: BouncingSheetPhysics(),
+              controller: _sheetController,
+              initialExtent: sheetInitialExtent,
+              minExtent: sheetMinExtent,
+              maxExtent: sheetMaxExtent,
+              minResizableExtent: sheetMinExtent,
+              resizable: true,
+              fit: SheetFit.expand,
+              minInteractionExtent: 0,
+              padding: EdgeInsets.only(top: safeAreaTop),
+              clipBehavior: Clip.antiAlias,
+              physics: SnapSheetPhysics(
+                stops: sheetStops,
+                parent: const BouncingSheetPhysics(),
               ),
-              elevation: 8,
+              elevation: 12,
               backgroundColor: Theme.of(context).colorScheme.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(
                   top: Radius.circular(radius.large),
                 ),
               ),
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(
-                        vertical: spacing.l,
-                        horizontal: spacing.m,
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[400],
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          SizedBox(height: spacing.m),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text(
-                                      'Similar matches',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'PlusJakartaSans',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                '${widget.results.length} results',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.green[600],
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'PlusJakartaSans',
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: spacing.m),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: categories.map((category) {
-                                final isSelected = selectedCategory == category;
-                                return Container(
-                                  margin: EdgeInsets.only(right: spacing.sm),
-                                  child: FilterChip(
-                                    label: Text(
-                                      category,
-                                      style: TextStyle(
-                                        fontFamily: 'PlusJakartaSans',
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            isSelected ? Colors.white : Colors.black,
-                                      ),
-                                    ),
-                                    selected: isSelected,
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        selectedCategory = category;
-                                      });
-                                    },
-                                    backgroundColor: Colors.grey[100],
-                                    selectedColor: const Color(0xFFf2003c),
-                                    checkmarkColor: Colors.white,
-                                    side: BorderSide.none,
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ],
-                      ),
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      vertical: spacing.l,
+                      horizontal: spacing.m,
                     ),
-                    SizedBox(height: spacing.sm),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: EdgeInsets.fromLTRB(
-                          spacing.m,
-                          0,
-                          spacing.m,
-                          mediaQuery.padding.bottom + spacing.l,
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[400],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: _getFilteredResults().length,
-                        itemBuilder: (context, index) {
-                          final result = _getFilteredResults()[index];
-                          return _ProductCard(
-                            result: result,
-                            onTap: () => _openProduct(result),
-                          );
-                        },
-                      ),
+                        SizedBox(height: spacing.m),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  Text(
+                                    'Similar matches',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'PlusJakartaSans',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '${widget.results.length} results',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.green[600],
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: spacing.m),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: categories.map((category) {
+                              final isSelected = selectedCategory == category;
+                              return Container(
+                                margin: EdgeInsets.only(right: spacing.sm),
+                                child: FilterChip(
+                                  label: Text(
+                                    category,
+                                    style: TextStyle(
+                                      fontFamily: 'PlusJakartaSans',
+                                      fontWeight: FontWeight.bold,
+                                      color:
+                                          isSelected ? Colors.white : Colors.black,
+                                    ),
+                                  ),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      selectedCategory = category;
+                                    });
+                                  },
+                                  backgroundColor: Colors.grey[100],
+                                  selectedColor: const Color(0xFFf2003c),
+                                  checkmarkColor: Colors.white,
+                                  side: BorderSide.none,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(height: spacing.sm),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: EdgeInsets.fromLTRB(
+                        spacing.m,
+                        0,
+                        spacing.m,
+                        safeAreaBottom + spacing.l,
+                      ),
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _getFilteredResults().length,
+                      itemBuilder: (context, index) {
+                        final result = _getFilteredResults()[index];
+                        return _ProductCard(
+                          result: result,
+                          onTap: () => _openProduct(result),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
