@@ -29,6 +29,7 @@ const lightColorScheme = ColorScheme(
   inverseSurface: Color(0xFF1c1c25), // Dark for inverse
   onInverseSurface: Color(0xFFFFFFFF), // White on dark
   inversePrimary: Color(0xFF080808), // Black as inverse primary
+  surfaceVariant: Color(0xFFF3F4F6),
 );
 
 const darkColorScheme = ColorScheme(

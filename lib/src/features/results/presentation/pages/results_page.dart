@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:sheet/sheet.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../home/domain/providers/image_provider.dart';
@@ -27,18 +28,15 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String selectedCategory = 'All';
-  late final SheetController _sheetController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _sheetController = SheetController();
   }
 
   @override
   void dispose() {
-    _sheetController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -58,195 +56,175 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
     final spacing = context.spacing;
     final radius = context.radius;
     final mediaQuery = MediaQuery.of(context);
-    final safeAreaTop = mediaQuery.padding.top;
     final safeAreaBottom = mediaQuery.padding.bottom;
-    final sheetMaxExtent = mediaQuery.size.height - safeAreaTop;
-    final sheetMinExtent = sheetMaxExtent * 0.45;
-    final sheetInitialExtent = sheetMaxExtent * 0.55;
-    final sheetStops = <double>[
-      (sheetMinExtent / sheetMaxExtent).clamp(0.0, 1.0),
-      (sheetInitialExtent / sheetMaxExtent).clamp(0.0, 1.0),
-      1.0,
-    ];
+    final sheetMaxHeight = mediaQuery.size.height * 0.85;
+    final sheetInitialHeight = sheetMaxHeight * 0.55;
+    final sheetMinHeight = sheetInitialHeight;
 
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
+      extendBody: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: Colors.white,
-          ),
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        leading: _TopIconButton(
+          icon: Icons.arrow_back,
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.share,
-              color: Colors.white,
-            ),
+          _TopIconButton(
+            icon: Icons.share,
             onPressed: _shareResults,
           ),
         ],
       ),
       body: Stack(
         children: [
-          // Background Image (smaller, top portion)
-          if (selectedImage != null || widget.originalImageUrl != null)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: MediaQuery.of(context).size.height * 0.6,
-              child: widget.originalImageUrl != null
-                  // Network image from scan button
-                  ? Image.network(
-                      widget.originalImageUrl!,
-                      fit: BoxFit.cover,
-                    )
-                  // Local image from camera/gallery
-                  : Image.file(
-                      File(selectedImage!.path),
-                      fit: BoxFit.cover,
-                    ),
+          Positioned.fill(
+            child: _ResultsBackground(
+              selectedImage: selectedImage,
+              originalImageUrl: widget.originalImageUrl,
             ),
-
-          // Results Bottom Sheet
-          DefaultSheetController(
-            child: Sheet(
-              controller: _sheetController,
-              initialExtent: sheetInitialExtent,
-              minExtent: sheetMinExtent,
-              maxExtent: sheetMaxExtent,
-              minResizableExtent: sheetMinExtent,
-              resizable: true,
-              fit: SheetFit.expand,
-              minInteractionExtent: 0,
-              padding: EdgeInsets.only(top: safeAreaTop),
-              clipBehavior: Clip.antiAlias,
-              physics: SnapSheetPhysics(
-                stops: sheetStops,
-                parent: const BouncingSheetPhysics(),
+          ),
+          SlidingUpPanel(
+            minHeight: sheetMinHeight,
+            maxHeight: sheetMaxHeight,
+            parallaxEnabled: false,
+            panelSnapping: true,
+            snapPoint: (sheetInitialHeight / sheetMaxHeight).clamp(0.0, 1.0),
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(radius.large),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 12,
+                offset: const Offset(0, -4),
               ),
-              elevation: 12,
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(radius.large),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(
-                      vertical: spacing.l,
-                      horizontal: spacing.m,
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[400],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        SizedBox(height: spacing.m),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text(
-                                    'Similar matches',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'PlusJakartaSans',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              '${widget.results.length} results',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.green[600],
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'PlusJakartaSans',
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: spacing.m),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: categories.map((category) {
-                              final isSelected = selectedCategory == category;
-                              return Container(
-                                margin: EdgeInsets.only(right: spacing.sm),
-                                child: FilterChip(
-                                  label: Text(
-                                    category,
-                                    style: TextStyle(
-                                      fontFamily: 'PlusJakartaSans',
-                                      fontWeight: FontWeight.bold,
-                                      color:
-                                          isSelected ? Colors.white : Colors.black,
-                                    ),
-                                  ),
-                                  selected: isSelected,
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      selectedCategory = category;
-                                    });
-                                  },
-                                  backgroundColor: Colors.grey[100],
-                                  selectedColor: const Color(0xFFf2003c),
-                                  checkmarkColor: Colors.white,
-                                  side: BorderSide.none,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: spacing.sm),
-                  Expanded(
-                    child: ListView.builder(
-                      padding: EdgeInsets.fromLTRB(
-                        spacing.m,
-                        0,
-                        spacing.m,
-                        safeAreaBottom + spacing.l,
+            ],
+            body: const SizedBox.shrink(),
+            panelBuilder: (scrollController) {
+              return SafeArea(
+                top: false,
+                bottom: false,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: spacing.m,
+                        right: spacing.m,
+                        top: spacing.l,
                       ),
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: _getFilteredResults().length,
-                      itemBuilder: (context, index) {
-                        final result = _getFilteredResults()[index];
-                        return _ProductCard(
-                          result: result,
-                          onTap: () => _openProduct(result),
-                        );
-                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[400],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: spacing.m),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    Text(
+                                      'Similar matches',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'PlusJakartaSans',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${widget.results.length} results',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green[600],
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'PlusJakartaSans',
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: spacing.m),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: categories.map((category) {
+                                final isSelected = selectedCategory == category;
+                                return Container(
+                                  margin: EdgeInsets.only(right: spacing.sm),
+                                  child: FilterChip(
+                                    label: Text(
+                                      category,
+                                      style: TextStyle(
+                                        fontFamily: 'PlusJakartaSans',
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            isSelected ? Colors.white : Colors.black,
+                                      ),
+                                    ),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        selectedCategory = category;
+                                      });
+                                    },
+                                    backgroundColor: Colors.grey[100],
+                                    selectedColor: const Color(0xFFf2003c),
+                                    checkmarkColor: Colors.white,
+                                    side: BorderSide.none,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                    SizedBox(height: spacing.sm),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        physics: const ClampingScrollPhysics(),
+                        padding: EdgeInsets.fromLTRB(
+                          spacing.m,
+                          0,
+                          spacing.m,
+                          safeAreaBottom + spacing.l,
+                        ),
+                        itemCount: _getFilteredResults().length,
+                        itemBuilder: (context, index) {
+                          final result = _getFilteredResults()[index];
+                          return _ProductCard(
+                            result: result,
+                            onTap: () => _openProduct(result),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -442,5 +420,73 @@ class _ProductCard extends StatelessWidget {
     if (confidence >= 0.8) return Colors.green;
     if (confidence >= 0.6) return Colors.orange;
     return Colors.red;
+  }
+}
+
+class _ResultsBackground extends StatelessWidget {
+  const _ResultsBackground({
+    this.selectedImage,
+    this.originalImageUrl,
+  });
+
+  final XFile? selectedImage;
+  final String? originalImageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget child;
+    if (originalImageUrl != null) {
+      child = Image.network(
+        originalImageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, _, __) => Container(color: Colors.black),
+      );
+    } else if (selectedImage != null) {
+      child = Image.file(
+        File(selectedImage!.path),
+        fit: BoxFit.cover,
+      );
+    } else {
+      child = const ColoredBox(color: Colors.black);
+    }
+
+    return SizedBox.expand(child: child);
+  }
+}
+
+class _TopIconButton extends StatelessWidget {
+  const _TopIconButton({
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(8),
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: IconButton(
+        padding: icon == Icons.share
+            ? const EdgeInsets.fromLTRB(8, 8, 10, 8)
+            : const EdgeInsets.all(8),
+        onPressed: onPressed,
+        icon: Icon(icon, color: Colors.black, size: 18),
+      ),
+    );
   }
 }
