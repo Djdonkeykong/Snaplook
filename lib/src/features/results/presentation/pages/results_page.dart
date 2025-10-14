@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:sheet/sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../home/domain/providers/image_provider.dart';
-import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 
@@ -43,9 +43,19 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   @override
   Widget build(BuildContext context) {
     final selectedImage = ref.watch(selectedImageProvider);
-    final categories = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Headwear', 'Accessories'];
+    final categories = [
+      'All',
+      'Tops',
+      'Bottoms',
+      'Outerwear',
+      'Shoes',
+      'Headwear',
+      'Accessories'
+    ];
     final spacing = context.spacing;
     final radius = context.radius;
+    final mediaQuery = MediaQuery.of(context);
+    final sheetHeight = mediaQuery.size.height;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -93,149 +103,121 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
             ),
 
           // Results Bottom Sheet
-          DraggableScrollableSheet(
-            initialChildSize: 0.5,
-            minChildSize: 0.5,
-            maxChildSize: 0.9,
-            builder: (context, scrollController) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(radius.large),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
+          DefaultSheetController(
+            child: Sheet(
+              initialExtent: sheetHeight * 0.5,
+              minExtent: sheetHeight * 0.5,
+              maxExtent: sheetHeight * 0.9,
+              minInteractionExtent: spacing.l,
+              physics: const SnapSheetPhysics(
+                stops: <double>[0.5, 0.9],
+                parent: BouncingSheetPhysics(),
+              ),
+              elevation: 8,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(radius.large),
                 ),
+              ),
+              child: SafeArea(
+                top: false,
                 child: Column(
                   children: [
-                    // Enhanced Drag Handle Area
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onVerticalDragUpdate: (details) {
-                        if (!scrollController.hasClients) return;
-                        final position = scrollController.position;
-                        final min = position.minScrollExtent;
-                        final max = position.maxScrollExtent;
-                        final newOffset =
-                            (position.pixels - details.delta.dy).clamp(min, max);
-                        scrollController.jumpTo(newOffset);
-                      },
-                      onVerticalDragEnd: (details) {
-                        if (!scrollController.hasClients) return;
-                        final position = scrollController.position;
-                        if (position.pixels < position.minScrollExtent) {
-                          scrollController.animateTo(
-                            position.minScrollExtent,
-                            duration: AppConstants.mediumAnimation,
-                            curve: Curves.easeOut,
-                          );
-                        } else if (position.pixels > position.maxScrollExtent) {
-                          scrollController.animateTo(
-                            position.maxScrollExtent,
-                            duration: AppConstants.mediumAnimation,
-                            curve: Curves.easeOut,
-                          );
-                        }
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          vertical: spacing.l,
-                          horizontal: spacing.m,
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[400],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(
+                        vertical: spacing.l,
+                        horizontal: spacing.m,
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[400],
+                              borderRadius: BorderRadius.circular(2),
                             ),
-                            SizedBox(height: spacing.m),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: const [
-                                      Text(
-                                        'Similar matches',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'PlusJakartaSans',
-                                        ),
+                          ),
+                          SizedBox(height: spacing.m),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    Text(
+                                      'Similar matches',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'PlusJakartaSans',
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                Text(
-                                  '${widget.results.length} results',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.green[600],
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'PlusJakartaSans',
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: spacing.m),
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: categories.map((category) {
-                                  final isSelected = selectedCategory == category;
-                                  return Container(
-                                    margin: EdgeInsets.only(right: spacing.sm),
-                                    child: FilterChip(
-                                      label: Text(
-                                        category,
-                                        style: TextStyle(
-                                          fontFamily: 'PlusJakartaSans',
-                                          fontWeight: FontWeight.bold,
-                                          color: isSelected ? Colors.white : Colors.black,
-                                        ),
-                                      ),
-                                      selected: isSelected,
-                                      onSelected: (selected) {
-                                        setState(() {
-                                          selectedCategory = category;
-                                        });
-                                      },
-                                      backgroundColor: Colors.grey[100],
-                                      selectedColor: const Color(0xFFf2003c),
-                                      checkmarkColor: Colors.white,
-                                      side: BorderSide.none,
-                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      visualDensity: VisualDensity.compact,
                                     ),
-                                  );
-                                }).toList(),
+                                  ],
+                                ),
                               ),
+                              Text(
+                                '${widget.results.length} results',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green[600],
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'PlusJakartaSans',
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: spacing.m),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: categories.map((category) {
+                                final isSelected = selectedCategory == category;
+                                return Container(
+                                  margin: EdgeInsets.only(right: spacing.sm),
+                                  child: FilterChip(
+                                    label: Text(
+                                      category,
+                                      style: TextStyle(
+                                        fontFamily: 'PlusJakartaSans',
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            isSelected ? Colors.white : Colors.black,
+                                      ),
+                                    ),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        selectedCategory = category;
+                                      });
+                                    },
+                                    backgroundColor: Colors.grey[100],
+                                    selectedColor: const Color(0xFFf2003c),
+                                    checkmarkColor: Colors.white,
+                                    side: BorderSide.none,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                );
+                              }).toList(),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-
                     SizedBox(height: spacing.sm),
-
-                    // Results List
                     Expanded(
                       child: ListView.builder(
-                        controller: scrollController,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: spacing.m,
+                        padding: EdgeInsets.fromLTRB(
+                          spacing.m,
+                          0,
+                          spacing.m,
+                          mediaQuery.padding.bottom + spacing.l,
                         ),
+                        physics: const BouncingScrollPhysics(),
                         itemCount: _getFilteredResults().length,
                         itemBuilder: (context, index) {
                           final result = _getFilteredResults()[index];
@@ -248,8 +230,8 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ],
       ),
