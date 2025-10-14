@@ -550,12 +550,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func scrapingBeeApiKey() -> String? {
         if let defaults = UserDefaults(suiteName: appGroupId) {
             if let key = defaults.string(forKey: kScrapingBeeApiKey), !key.isEmpty {
+                shareLog("Using ScrapingBee key from shared defaults")
                 return key
             }
         }
 
         if let infoKey = Bundle.main.object(forInfoDictionaryKey: "ScrapingBeeApiKey") as? String,
            !infoKey.isEmpty {
+            shareLog("Using ScrapingBee key from Info.plist fallback")
             return infoKey
         }
 
