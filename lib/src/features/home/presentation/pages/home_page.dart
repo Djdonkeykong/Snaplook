@@ -82,6 +82,12 @@ class _HomePageState extends ConsumerState<HomePage> {
       return;
     }
 
+    if (ref.read(shareNavigationInProgressProvider)) {
+      print(
+          '[HOME PAGE] Share navigation already handled by native flow - skipping duplicate push');
+      return;
+    }
+
     print('[HOME PAGE] Navigating to DetectionPage for shared image');
     _isProcessingPendingNavigation = true;
 

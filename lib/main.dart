@@ -422,12 +422,34 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     // Ensure the main navigation is showing the home tab before pushing detection.
     ref.read(selectedIndexProvider.notifier).state = 0;
 
+    void pushRoute() {
+      final navigator = navigatorKey.currentState;
+      if (navigator == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
+        return;
+      }
+
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+
+      navigator
+          .push(
+            MaterialPageRoute(
+              builder: (_) => const DetectionPage(),
+              settings: const RouteSettings(name: 'detection-from-share'),
+            ),
+          )
+          .whenComplete(() {
+            _isNavigatingToDetection = false;
+            ref.read(shareNavigationInProgressProvider.notifier).state = false;
+          });
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final homeNavigator = homeNavigatorKey.currentState;
       if (homeNavigator?.canPop() ?? false) {
         homeNavigator!.popUntil((route) => route.isFirst);
       }
-      _isNavigatingToDetection = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
     });
   }
 
@@ -512,6 +534,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   Future<void> _downloadInstagramImage(String instagramUrl) async {
     _showFetchingOverlay(title: 'Fetching your photo...');
     try {
+      ref.read(shareNavigationInProgressProvider.notifier).state = true;
       final imageFiles = await InstagramService.downloadImageFromInstagramUrl(
         instagramUrl,
       );
@@ -532,6 +555,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
         _showInstagramErrorMessage();
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
       print('Error downloading Instagram image: $e');
@@ -539,6 +563,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showInstagramErrorMessage();
+      ref.read(shareNavigationInProgressProvider.notifier).state = false;
     } finally {
       _hideFetchingOverlay();
     }
@@ -547,6 +572,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   Future<void> _downloadGenericLink(String url) async {
     _showFetchingOverlay(title: 'Fetching shared link...');
     try {
+      ref.read(shareNavigationInProgressProvider.notifier).state = true;
       final imageFiles = await LinkScraperService.downloadImagesFromUrl(url);
 
       if (imageFiles.isNotEmpty) {
@@ -560,12 +586,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
         _showGenericLinkErrorMessage(url);
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
       print('Error downloading images from shared link: $e');
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showGenericLinkErrorMessage(url);
+      ref.read(shareNavigationInProgressProvider.notifier).state = false;
     } finally {
       _hideFetchingOverlay();
     }
