@@ -105,6 +105,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   bool _hasHandledInitialShare = false;
   bool _shouldIgnoreNextStreamEmission = false;
   bool _skipNextResumePendingCheck = false;
+  List<String>? _lastInitialSharePaths;
 
   @override
   void initState() {
@@ -141,11 +142,21 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen(
       (value) {
         if (_shouldIgnoreNextStreamEmission && value.isNotEmpty) {
+          final currentPaths = value.map((f) => f.path).toList(growable: false);
+          final shouldSkip = _lastInitialSharePaths != null &&
+              _arePathListsEqual(currentPaths, _lastInitialSharePaths!);
+          if (shouldSkip) {
+            print(
+              "[SHARE EXTENSION] Ignoring duplicate stream emission for initial share",
+            );
+            _lastInitialSharePaths = null;
+            _shouldIgnoreNextStreamEmission = false;
+            return;
+          }
           print(
-            "[SHARE EXTENSION] Ignoring first stream emission after initial share",
+            "[SHARE EXTENSION] Stream emission differs from initial share; processing normally",
           );
           _shouldIgnoreNextStreamEmission = false;
-          return;
         }
         print("===== MEDIA STREAM (App in Memory) =====");
         print("[SHARE EXTENSION] Received shared media: ${value.length} files");
@@ -196,6 +207,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
             _hasHandledInitialShare = true;
             _skipNextResumePendingCheck = true;
             _shouldIgnoreNextStreamEmission = true;
+            _lastInitialSharePaths =
+                value.map((f) => f.path).toList(growable: false);
             ReceiveSharingIntent.instance.reset();
             print("[SHARE EXTENSION] Reset sharing intent");
             unawaited(_handleSharedMedia(value, isInitial: true));
@@ -297,6 +310,17 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     );
 
     return selected;
+  }
+
+  bool _arePathListsEqual(List<String> a, List<String> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Future<void> _handleSharedMedia(
