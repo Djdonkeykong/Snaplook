@@ -97,6 +97,46 @@ void main() async {
   runApp(const ProviderScope(child: SnaplookApp()));
 }
 
+class _FetchingOverlay extends StatelessWidget {
+  const _FetchingOverlay({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      color: Colors.black.withOpacity(0.6),
+      child: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+              message,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class SnaplookApp extends ConsumerStatefulWidget {
   const SnaplookApp({super.key});
 
@@ -105,13 +145,9 @@ class SnaplookApp extends ConsumerStatefulWidget {
 }
 
 class _SnaplookAppState extends ConsumerState<SnaplookApp>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
+    with WidgetsBindingObserver {
   late StreamSubscription _intentSub;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-  // Progress tracking for Instagram downloads
-  late AnimationController _progressAnimationController;
-  late Animation<double> _progressAnimation;
 
   bool _isNavigatingToDetection = false;
   bool _hasHandledInitialShare = false;
@@ -119,31 +155,13 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   bool _skipNextResumePendingCheck = false;
   List<String>? _lastInitialSharePaths;
 
+  bool _isFetchingOverlayVisible = false;
+  String _fetchingOverlayMessage = 'Fetching your photo...';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    // Initialize progress animation controller
-    _progressAnimationController = AnimationController(
-      duration: const Duration(
-        milliseconds: 500,
-      ), // 500ms for smooth transitions
-      vsync: this,
-    );
-
-    _progressAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _progressAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    _progressAnimation.addListener(() {
-      setState(() {
-        // Update the visual progress with animated value
-      });
-    });
 
     // ShareHandlerService is NO LONGER NEEDED!
     // The receive_sharing_intent package's RSIShareViewController
@@ -397,7 +415,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   void _navigateToDetection() {
     if (_isNavigatingToDetection) {
       print("[SHARE EXTENSION] Navigation already in progress");
-      ref.read(pendingSharedImageProvider.notifier).state = null;
       return;
     }
     _isNavigatingToDetection = true;
@@ -405,29 +422,12 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     // Ensure the main navigation is showing the home tab before pushing detection.
     ref.read(selectedIndexProvider.notifier).state = 0;
 
-    void pushRoute() {
-      final navigator = navigatorKey.currentState;
-      if (navigator == null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
-        return;
-      }
-
-      // Clear the pending image so downstream listeners don't trigger a duplicate navigation.
-      ref.read(pendingSharedImageProvider.notifier).state = null;
-
-      navigator
-          .push(MaterialPageRoute(builder: (_) => const DetectionPage()))
-          .whenComplete(() {
-            _isNavigatingToDetection = false;
-          });
-    }
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final homeNavigator = homeNavigatorKey.currentState;
       if (homeNavigator?.canPop() ?? false) {
         homeNavigator!.popUntil((route) => route.isFirst);
       }
-      WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
+      _isNavigatingToDetection = false;
     });
   }
 
@@ -445,18 +445,12 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
 
     if (InstagramService.isInstagramUrl(effectiveText)) {
-      await _downloadInstagramImage(
-        effectiveText,
-        showProgress: !fromShareExtension,
-      );
+      await _downloadInstagramImage(effectiveText);
     } else {
       final parsed = Uri.tryParse(effectiveText.trim());
       if (parsed != null &&
           (parsed.scheme == 'http' || parsed.scheme == 'https')) {
-        await _downloadGenericLink(
-          effectiveText.trim(),
-          showProgress: !fromShareExtension,
-        );
+        await _downloadGenericLink(effectiveText.trim());
       } else {
         _showUnsupportedMessage(text);
         await ShareImportStatus.markComplete();
@@ -496,48 +490,31 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     return matchedUrl;
   }
 
-  Future<void> _downloadInstagramImage(
-    String instagramUrl, {
-    bool showProgress = true,
-  }) async {
-    if (showProgress) {
-      _progressAnimationController.reset();
-      _showProgressDialog(title: 'Instagram Image Download');
-      _updateProgress(0.1);
+  void _showFetchingOverlay({required String title}) {
+    if (!mounted) {
+      return;
     }
+    setState(() {
+      _fetchingOverlayMessage = title;
+      _isFetchingOverlayVisible = true;
+    });
+  }
 
+  void _hideFetchingOverlay() {
+    if (!mounted || !_isFetchingOverlayVisible) {
+      return;
+    }
+    setState(() {
+      _isFetchingOverlayVisible = false;
+    });
+  }
+
+  Future<void> _downloadInstagramImage(String instagramUrl) async {
+    _showFetchingOverlay(title: 'Fetching your photo...');
     try {
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      if (showProgress) {
-        _updateProgress(0.3);
-      }
-
-      final downloadFuture = InstagramService.downloadImageFromInstagramUrl(
+      final imageFiles = await InstagramService.downloadImageFromInstagramUrl(
         instagramUrl,
       );
-
-      if (showProgress) {
-        Future.delayed(const Duration(milliseconds: 800), () {
-          if (mounted) _updateProgress(0.5);
-        });
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted) _updateProgress(0.7);
-        });
-        Future.delayed(const Duration(milliseconds: 2500), () {
-          if (mounted) _updateProgress(0.9);
-        });
-      }
-
-      final imageFiles = await downloadFuture;
-
-      if (showProgress) {
-        _updateProgress(1.0);
-        await Future.delayed(const Duration(milliseconds: 200));
-        if (navigatorKey.currentContext != null) {
-          Navigator.of(navigatorKey.currentContext!).pop();
-        }
-      }
 
       if (imageFiles.isNotEmpty) {
         print('dY", Downloaded ${imageFiles.length} image(s) from Instagram');
@@ -550,13 +527,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         await ShareImportStatus.markComplete();
 
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _navigateToDetection();
-            }
-          });
-        }
+        _navigateToDetection();
       } else {
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
@@ -565,36 +536,18 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     } catch (e) {
       print('Error downloading Instagram image: $e');
 
-      if (showProgress && navigatorKey.currentContext != null) {
-        Navigator.of(navigatorKey.currentContext!).pop();
-      }
-
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showInstagramErrorMessage();
+    } finally {
+      _hideFetchingOverlay();
     }
   }
 
-  Future<void> _downloadGenericLink(
-    String url, {
-    bool showProgress = true,
-  }) async {
-    if (showProgress) {
-      _progressAnimationController.reset();
-      _showProgressDialog(title: 'Fetching Shared Link');
-      _updateProgress(0.2);
-    }
-
+  Future<void> _downloadGenericLink(String url) async {
+    _showFetchingOverlay(title: 'Fetching shared link...');
     try {
       final imageFiles = await LinkScraperService.downloadImagesFromUrl(url);
-
-      if (showProgress) {
-        _updateProgress(1.0);
-        await Future.delayed(const Duration(milliseconds: 200));
-        if (navigatorKey.currentContext != null) {
-          Navigator.of(navigatorKey.currentContext!).pop();
-        }
-      }
 
       if (imageFiles.isNotEmpty) {
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
@@ -602,13 +555,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         await ShareImportStatus.markComplete();
 
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _navigateToDetection();
-            }
-          });
-        }
+        _navigateToDetection();
       } else {
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
@@ -616,83 +563,12 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       }
     } catch (e) {
       print('Error downloading images from shared link: $e');
-      if (showProgress && navigatorKey.currentContext != null) {
-        Navigator.of(navigatorKey.currentContext!).pop();
-      }
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showGenericLinkErrorMessage(url);
+    } finally {
+      _hideFetchingOverlay();
     }
-  }
-
-  void _showProgressDialog({required String title}) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (navigatorKey.currentContext != null) {
-        showDialog(
-          context: navigatorKey.currentContext!,
-          barrierDismissible: false,
-          builder: (context) => StatefulBuilder(
-            builder: (context, setState) => AlertDialog(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: AnimatedBuilder(
-                      animation: _progressAnimation,
-                      builder: (context, child) => CircularProgressIndicator(
-                        value: _progressAnimation.value,
-                        strokeWidth: 6,
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(
-                            context,
-                          ).colorScheme.secondary, // Golden yellow
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
-    });
-  }
-
-  void _updateProgress(double progress) {
-    // Update the animation to smoothly transition to new progress value
-    final Animation<double> progressTween =
-        Tween<double>(begin: _progressAnimation.value, end: progress).animate(
-          CurvedAnimation(
-            parent: _progressAnimationController,
-            curve: Curves.easeInOut,
-          ),
-        );
-
-    // Reset and start animation from current position to new progress
-    _progressAnimationController.reset();
-    _progressAnimation = progressTween;
-
-    _progressAnimation.addListener(() {
-      setState(() {
-        // Trigger rebuild with new animated value
-      });
-    });
-
-    _progressAnimationController.forward();
   }
 
   void _showInstagramErrorMessage() {
@@ -704,9 +580,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
             title: const Text('Instagram Image Download Failed'),
             content: const Text(
               'Unable to download the image from Instagram. This can happen due to:\n\n'
-              'Ã¢â‚¬Â¢ Privacy settings on the post\n'
-              'Ã¢â‚¬Â¢ Network connectivity issues\n'
-              'Ã¢â‚¬Â¢ Instagram\'s anti-scraping measures\n\n'
+              '- Privacy settings on the post\n'
+              '- Network connectivity issues\n'
+              '- Instagram\'s anti-scraping measures\n\n'
               'Try taking a screenshot instead and use the "Upload" button to analyze it.',
             ),
             actions: [
@@ -771,7 +647,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _intentSub.cancel();
-    _progressAnimationController.dispose();
     super.dispose();
   }
 
@@ -779,6 +654,19 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) child,
+            if (_isFetchingOverlayVisible)
+              Positioned.fill(
+                child: _FetchingOverlay(
+                  message: _fetchingOverlayMessage,
+                ),
+              ),
+          ],
+        );
+      },
       title: 'Snaplook',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

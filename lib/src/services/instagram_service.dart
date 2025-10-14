@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:image_picker/image_picker.dart';
@@ -13,8 +12,8 @@ class InstagramService {
   static const String _scrapingBeeApiUrl =
       'https://app.scrapingbee.com/api/v1/';
 
-  /// ScrapingBee Instagram scraper with smart image quality detection
-  /// Returns a list of XFile objects for carousel posts, or single item list for single posts
+  /// ScrapingBee Instagram scraper with smart image quality detection.
+  /// Returns a single high-quality image to match the iOS share extension behaviour.
   static Future<List<XFile>> _scrapingBeeInstagramScraper(
     String instagramUrl,
   ) async {
@@ -51,8 +50,25 @@ class InstagramService {
       // Parse HTML to extract Instagram image
       final document = html_parser.parse(htmlContent);
 
-      // PRIORITY 1: Look for carousel images using comprehensive approach
-      List<String> carouselImageUrls = [];
+      // PRIORITY 1: Collect all promising candidates (carousel-first ordering).
+      final candidateUrls = <String>[];
+      final seenCandidates = <String>{};
+
+      void enqueueCandidate(String? rawUrl, String reason) {
+        if (rawUrl == null || rawUrl.isEmpty) {
+          return;
+        }
+        final sanitized = _sanitizeInstagramUrl(rawUrl);
+        if (sanitized.isEmpty) {
+          return;
+        }
+        if (seenCandidates.add(sanitized)) {
+          candidateUrls.add(sanitized);
+          print(
+            'Queueing Instagram image candidate ($reason): ${_previewUrl(sanitized)}',
+          );
+        }
+      }
 
       // Method 1: Find all li elements with translateX transform (more comprehensive)
       final allListItems = document.querySelectorAll('li');
@@ -85,17 +101,14 @@ class InstagramService {
                 src.contains('.jpg') &&
                 !src.contains('150x150') &&
                 !src.contains('profile')) {
-              carouselImageUrls.add(src);
-              print(
-                'Carousel image ${carouselImageUrls.length}: ${src.substring(0, 80)}...',
-              );
+              enqueueCandidate(src, 'carousel translateX item ${i + 1}');
             }
           }
         }
       }
 
       // Fallback: If no carousel found with translateX, try original li._acaz method
-      if (carouselImageUrls.isEmpty) {
+      if (candidateUrls.isEmpty) {
         print('No translateX carousel found, trying li._acaz fallback');
         final acazItems = document.querySelectorAll('li._acaz');
         print('Found ${acazItems.length} li._acaz items');
@@ -110,17 +123,14 @@ class InstagramService {
                 src.contains('.jpg') &&
                 !src.contains('150x150') &&
                 !src.contains('profile')) {
-              carouselImageUrls.add(src);
-              print(
-                'Fallback carousel image ${i + 1}: ${src.substring(0, 80)}...',
-              );
+              enqueueCandidate(src, 'carousel _acaz item ${i + 1}');
             }
           }
         }
       }
 
       // If no carousel found, fall back to single image detection
-      if (carouselImageUrls.isEmpty) {
+      if (candidateUrls.isEmpty) {
         print('No carousel detected, looking for single image');
 
         final imgElements = document.querySelectorAll('img');
@@ -166,34 +176,35 @@ class InstagramService {
         }
 
         if (bestImageUrl != null) {
-          carouselImageUrls.add(bestImageUrl);
           print(
             'ScrapingBee found single high-quality img (score $bestQualityScore)',
+          );
+          enqueueCandidate(
+            bestImageUrl,
+            'single image (score $bestQualityScore)',
           );
         }
       }
 
-      // Download all found images
-      if (carouselImageUrls.isNotEmpty) {
-        List<XFile> downloadedImages = [];
-
-        for (int i = 0; i < carouselImageUrls.length; i++) {
-          final imageUrl = carouselImageUrls[i];
+      // Download candidates sequentially until one succeeds.
+      if (candidateUrls.isNotEmpty) {
+        for (int i = 0; i < candidateUrls.length; i++) {
+          final imageUrl = candidateUrls[i];
           print(
-            'Downloading image ${i + 1}/${carouselImageUrls.length}: ${imageUrl.substring(0, 80)}...',
+            'Downloading Instagram candidate ${i + 1}/${candidateUrls.length}: ${_previewUrl(imageUrl)}',
           );
 
           final downloadedImage = await _downloadImage(imageUrl);
           if (downloadedImage != null) {
-            downloadedImages.add(downloadedImage);
+            print(
+              'ScrapingBee selected candidate ${i + 1}/${candidateUrls.length}',
+            );
+            return [downloadedImage];
           }
-        }
 
-        if (downloadedImages.isNotEmpty) {
           print(
-            'ScrapingBee successfully downloaded ${downloadedImages.length} images',
+            'Candidate ${i + 1}/${candidateUrls.length} failed - trying next',
           );
-          return downloadedImages;
         }
       }
 
@@ -209,9 +220,17 @@ class InstagramService {
           if (displayUrlMatch != null) {
             var imageUrl = displayUrlMatch.group(1);
             if (imageUrl != null) {
-              imageUrl = imageUrl.replaceAll(r'\u0026', '&');
+              imageUrl = _sanitizeInstagramUrl(
+                imageUrl.replaceAll(r'\u0026', '&'),
+              );
+              if (imageUrl.isEmpty) {
+                continue;
+              }
+              if (!seenCandidates.add(imageUrl)) {
+                continue;
+              }
               print(
-                'ScrapingBee found display_url in script (fallback): $imageUrl',
+                'ScrapingBee found display_url in script (fallback): ${_previewUrl(imageUrl)}',
               );
               final fallbackImage = await _downloadImage(imageUrl);
               if (fallbackImage != null) {
@@ -229,10 +248,19 @@ class InstagramService {
       if (ogImageElement != null) {
         final imageUrl = ogImageElement.attributes['content'];
         if (imageUrl != null) {
-          print('ScrapingBee found og:image (last resort): $imageUrl');
-          final lastResortImage = await _downloadImage(imageUrl);
-          if (lastResortImage != null) {
-            return [lastResortImage];
+          final sanitized = _sanitizeInstagramUrl(imageUrl);
+          if (sanitized.isEmpty) {
+            print('ScrapingBee og:image content was empty after sanitizing');
+          } else if (!seenCandidates.add(sanitized)) {
+            print('ScrapingBee og:image matched previously attempted URL');
+          } else {
+            print(
+              'ScrapingBee found og:image (last resort): ${_previewUrl(sanitized)}',
+            );
+            final lastResortImage = await _downloadImage(sanitized);
+            if (lastResortImage != null) {
+              return [lastResortImage];
+            }
           }
         }
       }
@@ -243,6 +271,35 @@ class InstagramService {
       print('ScrapingBee Instagram scraper error: $e');
       return [];
     }
+  }
+
+  static String _previewUrl(String url) {
+    return url.length <= 80 ? url : '${url.substring(0, 80)}...';
+  }
+
+  static String _sanitizeInstagramUrl(String value) {
+    var sanitized = value
+        .replaceAll('\\u0026', '&')
+        .replaceAll('\\/', '/')
+        .replaceAll('&amp;', '&')
+        .trim();
+    if (sanitized.isEmpty) {
+      return '';
+    }
+
+    if (sanitized.contains('ig_cache_key')) {
+      return sanitized;
+    }
+
+    return _normalizeInstagramCdnUrl(sanitized);
+  }
+
+  static String _normalizeInstagramCdnUrl(String url) {
+    var normalized = url;
+    normalized = normalized.replaceAll('c288.0.864.864a_', '');
+    normalized = normalized.replaceAll('s640x640_', '');
+    normalized = normalized.replaceAll(RegExp(r'_s\d+x\d+'), '');
+    return normalized;
   }
 
   /// Download image from URL and return as XFile

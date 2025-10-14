@@ -34,6 +34,42 @@ class AppConstants {
     dotenv.env['REPLICATE_MODEL_VERSION'] ?? 'default-model-version';
 
   // ScrapingBee API for Instagram downloads
-  static String get scrapingBeeApiKey =>
-    dotenv.env['SCRAPINGBEE_API_KEY'] ?? '';
+  static const List<String> _scrapingBeeKeyPriority = [
+    '66DHI1P6O02ODFE3EZCHWKCFUTAYM3JAK4LITASV0OMDW6MIVXUON5944IHBJ2M57G9VRVFUWDXZV6U1',
+    'MBVJU10S1A0YUDAMPSUBIVSPGPA6MIJ5R1HNXZBSRQSDD06JH6K8UK74XZF9N8AISFWXTOLQH3U37NZF',
+  ];
+
+  static List<String> _parseScrapingBeeEnv(String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return const [];
+    }
+    return raw
+        .split(RegExp(r'[,\s;]+'))
+        .map((candidate) => candidate.trim())
+        .where((candidate) => candidate.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  static String get scrapingBeeApiKey {
+    final envValue = dotenv.env['SCRAPINGBEE_API_KEY'];
+    final envCandidates = _parseScrapingBeeEnv(envValue);
+
+    for (final preferred in _scrapingBeeKeyPriority) {
+      if (envCandidates.contains(preferred)) {
+        return preferred;
+      }
+    }
+
+    if (envCandidates.isNotEmpty) {
+      return envCandidates.first;
+    }
+
+    for (final preferred in _scrapingBeeKeyPriority) {
+      if (preferred.isNotEmpty) {
+        return preferred;
+      }
+    }
+
+    return '';
+  }
 }
