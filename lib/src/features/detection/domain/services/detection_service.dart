@@ -356,12 +356,29 @@ class DetectionService {
 
   String _categorize(String title) {
     final lower = title.toLowerCase();
+
+    // ✅ Special-case rules before keyword lookup
+    if (lower.contains('dress pants') || lower.contains('trousers') || lower.contains('chinos')) {
+      debugPrint('🧩 Categorized "$title" as bottoms (override)');
+      return 'bottoms';
+    }
+
+    if (lower.contains('one piece') || lower.contains('jumpsuit') || lower.contains('romper')) {
+      debugPrint('🧩 Categorized "$title" as dresses (one-piece override)');
+      return 'dresses';
+    }
+
+    // 🔤 Normal keyword-based matching
     for (final entry in _categoryKeywords.entries) {
-      if (entry.value.any((k) => lower.contains(k))) {
-        debugPrint('🧩 Categorized "$title" as ${entry.key}');
-        return entry.key;
+      for (final keyword in entry.value) {
+        final pattern = RegExp('\\b$keyword\\b', caseSensitive: false);
+        if (pattern.hasMatch(lower)) {
+          debugPrint('🧩 Categorized "$title" as ${entry.key}');
+          return entry.key;
+        }
       }
     }
+
     debugPrint('❔ No match for "$title", defaulted to accessories');
     return 'accessories';
   }
