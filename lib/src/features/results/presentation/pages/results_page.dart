@@ -9,10 +9,11 @@ import '../../../detection/domain/models/detection_result.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
+import '../../../detection/application/detection_provider.dart';
 
 class ResultsPage extends ConsumerStatefulWidget {
   final List<DetectionResult> results;
-  final String? originalImageUrl; // For network images from scan button
+  final String? originalImageUrl;
 
   const ResultsPage({
     super.key,
@@ -27,7 +28,6 @@ class ResultsPage extends ConsumerStatefulWidget {
 class _ResultsPageState extends ConsumerState<ResultsPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String selectedCategory = 'All';
 
   @override
   void initState() {
@@ -44,15 +44,13 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   @override
   Widget build(BuildContext context) {
     final selectedImage = ref.watch(selectedImageProvider);
-    final categories = [
-      'All',
-      'Tops',
-      'Bottoms',
-      'Outerwear',
-      'Shoes',
-      'Headwear',
-      'Accessories'
-    ];
+    final detectionState = ref.watch(detectionProvider);
+    final notifier = ref.read(detectionProvider.notifier);
+
+    final categories = notifier.availableCategories;
+    final selectedCategory = detectionState.selectedCategory;
+    final results = notifier.filteredResults;
+
     final spacing = context.spacing;
     final radius = context.radius;
     final mediaQuery = MediaQuery.of(context);
@@ -135,23 +133,18 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                           SizedBox(height: spacing.m),
                           Row(
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text(
-                                      'Similar matches',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'PlusJakartaSans',
-                                      ),
-                                    ),
-                                  ],
+                              const Expanded(
+                                child: Text(
+                                  'Similar matches',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'PlusJakartaSans',
+                                  ),
                                 ),
                               ),
                               Text(
-                                '${widget.results.length} results',
+                                '${results.length} results',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey[600],
@@ -162,28 +155,30 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                             ],
                           ),
                           SizedBox(height: spacing.m),
+                          // 🧩 Dynamic category chips
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
                               children: categories.map((category) {
-                                final isSelected = selectedCategory == category;
+                                final isSelected =
+                                    selectedCategory == category.toLowerCase();
                                 return Container(
                                   margin: EdgeInsets.only(right: spacing.sm),
                                   child: FilterChip(
                                     label: Text(
-                                      category,
+                                      category[0].toUpperCase() +
+                                          category.substring(1),
                                       style: TextStyle(
                                         fontFamily: 'PlusJakartaSans',
                                         fontWeight: FontWeight.bold,
-                                        color:
-                                            isSelected ? Colors.white : Colors.black,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : Colors.black,
                                       ),
                                     ),
                                     selected: isSelected,
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        selectedCategory = category;
-                                      });
+                                    onSelected: (_) {
+                                      notifier.setSelectedCategory(category);
                                     },
                                     backgroundColor: Colors.grey[100],
                                     selectedColor: const Color(0xFFf2003c),
@@ -211,9 +206,9 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                           spacing.m,
                           safeAreaBottom + spacing.l,
                         ),
-                        itemCount: _getFilteredResults().length,
+                        itemCount: results.length,
                         itemBuilder: (context, index) {
-                          final result = _getFilteredResults()[index];
+                          final result = results[index];
                           return _ProductCard(
                             result: result,
                             onTap: () => _openProduct(result),
@@ -231,40 +226,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
     );
   }
 
-  List<DetectionResult> _getFilteredResults() {
-    List<DetectionResult> filtered;
-    if (selectedCategory == 'All') {
-      filtered = List.from(widget.results);
-    } else {
-      filtered = widget.results
-          .where((result) => result.category.toLowerCase().contains(selectedCategory.toLowerCase()))
-          .toList();
-    }
-
-    // Sort by confidence score (highest first) to show best matches first
-    filtered.sort((a, b) => b.confidence.compareTo(a.confidence));
-    return filtered;
-  }
-
-  bool _hasHighQualityMatches() {
-    return widget.results.any((result) => result.confidence >= 0.85);
-  }
-
-  String _getSearchInsightText() {
-    final highQualityCount = widget.results.where((r) => r.confidence >= 0.85).length;
-    final mediumQualityCount = widget.results.where((r) => r.confidence >= 0.75 && r.confidence < 0.85).length;
-
-    if (highQualityCount > 0) {
-      return 'Found ${highQualityCount} precise color matches using smart matching';
-    } else if (mediumQualityCount > 0) {
-      return 'Found ${mediumQualityCount} good matches using enhanced color database';
-    } else {
-      return 'Smart search analyzed ${widget.results.length} potential matches';
-    }
-  }
-
   void _shareResults() {
-    // TODO: Implement share functionality
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Share functionality coming soon!'),
@@ -324,28 +286,18 @@ class _ProductCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Product Image + Favorite Button
+              // Image
               Stack(
-                alignment: Alignment.center,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(radius.small),
-                    child: SizedBox(
-                      width: 80,
-                      height: 80,
-                      child: CachedNetworkImage(
-                        imageUrl: result.imageUrl,
-                        fit: BoxFit.cover, // ensures full coverage
-                        placeholder: (context, url) => Container(
-                          color: Colors.grey[200],
-                          child: const Center(
-                            child: CircularProgressIndicator(strokeWidth: 1.5),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.image_not_supported),
-                        ),
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(radius.small),
+                      color: Colors.grey[200],
+                      image: DecorationImage(
+                        image: CachedNetworkImageProvider(result.imageUrl),
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
@@ -359,29 +311,22 @@ class _ProductCard extends StatelessWidget {
                   ),
                 ],
               ),
-
               SizedBox(width: spacing.m),
-
-              // Product Details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Brand / Store — larger and colored like price
                     Text(
                       result.brand.toUpperCase(),
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Colors.black,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: 0.2,
                       ),
                     ),
-
                     SizedBox(height: spacing.xs),
-
-                    // Product Title — smaller and cleaner
                     Text(
                       result.productName,
                       style: const TextStyle(
@@ -392,20 +337,17 @@ class _ProductCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-
                     SizedBox(height: spacing.sm),
-
-                    // Price — slightly smaller than brand
                     Text(
                       result.price > 0
                           ? '\$${result.price.toStringAsFixed(2)}'
                           : (result.purchaseUrl != null
                               ? 'See store'
                               : 'Price unavailable'),
-                      style: TextStyle(
-                        fontSize: 14, // 4px smaller than brand
+                      style: const TextStyle(
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87, // matches brand color
+                        color: Colors.black,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: 0.2,
                       ),
@@ -413,8 +355,6 @@ class _ProductCard extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // Arrow indicator
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
@@ -425,12 +365,6 @@ class _ProductCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _getConfidenceColor(double confidence) {
-    if (confidence >= 0.8) return Colors.green;
-    if (confidence >= 0.6) return Colors.orange;
-    return Colors.red;
   }
 }
 
