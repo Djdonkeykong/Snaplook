@@ -36,20 +36,25 @@ class AppConstants {
 
   // === 🧠 Smart Detector Endpoint ===
   static String get serpDetectorEndpoint {
-    // Use local backend if running debug/dev mode
-    const bool useLocal =
-        bool.fromEnvironment('USE_LOCAL_API', defaultValue: false);
+    // Check if a tunnel (like ngrok) or local URL is set in the .env
+    final envUrl = dotenv.env['SERP_DETECTOR_ENDPOINT'];
 
-    if (useLocal) {
-      return 'http://10.0.0.25:8000/detect'; // 👈 your local PC IP
+    if (envUrl != null && envUrl.isNotEmpty) {
+      return envUrl; // ✅ use ngrok or custom endpoint from .env
     }
 
-    // Otherwise, default to deployed Render server
-    return dotenv.env['SERP_DETECTOR_ENDPOINT'] ??
-        'https://snaplook-fastapi-detector.onrender.com/detect';
+    // Use LAN IP (for local testing on the same Wi-Fi)
+    const localIP = 'http://10.0.0.25:8000/detect';
+
+    // Fallback to deployed Render URL
+    const renderUrl = 'https://snaplook-fastapi-detector.onrender.com/detect';
+
+    // If running in debug mode, prefer local API
+    const bool isLocal = bool.fromEnvironment('USE_LOCAL_API', defaultValue: false);
+    return isLocal ? localIP : renderUrl;
   }
 
-  // === 🐝 ScrapingBee Keys (for Instagram / backup scraping) ===
+  // === 🐝 ScrapingBee Keys ===
   static const List<String> _scrapingBeeKeyPriority = [
     '66DHI1P6O02ODFE3EZCHWKCFUTAYM3JAK4LITASV0OMDW6MIVXUON5944IHBJ2M57G9VRVFUWDXZV6U1',
     'MBVJU10S1A0YUDAMPSUBIVSPGPA6MIJ5R1HNXZBSRQSDD06JH6K8UK74XZF9N8AISFWXTOLQH3U37NZF',
