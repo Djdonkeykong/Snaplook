@@ -357,8 +357,12 @@ class DetectionService {
   String _categorize(String title) {
     final lower = title.toLowerCase();
     for (final entry in _categoryKeywords.entries) {
-      if (entry.value.any((k) => lower.contains(k))) return entry.key;
+      if (entry.value.any((k) => lower.contains(k))) {
+        debugPrint('🧩 Categorized "$title" as ${entry.key}');
+        return entry.key;
+      }
     }
+    debugPrint('❔ No match for "$title", defaulted to accessories');
     return 'accessories';
   }
 
