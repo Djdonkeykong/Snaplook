@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../domain/models/detection_result.dart';
 import '../../domain/services/detection_service.dart';
 
+/// === State model ===
 class DetectionState {
   final bool isAnalyzing;
   final String? error;
@@ -13,7 +14,7 @@ class DetectionState {
     this.isAnalyzing = false,
     this.error,
     this.results = const [],
-    this.selectedCategory = 'all',
+    this.selectedCategory = 'all', // ✅ default "All"
   });
 
   DetectionState copyWith({
@@ -31,6 +32,7 @@ class DetectionState {
   }
 }
 
+/// === Notifier ===
 class DetectionNotifier extends StateNotifier<DetectionState> {
   final DetectionService _detectionService;
 
@@ -46,10 +48,13 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
       final results = await _detectionService.analyzeImage(image);
       print('DetectionProvider: Analysis completed, ${results.length} results');
 
+      // ✅ Ensure category resets to "All" on each new detection
       state = state.copyWith(
         isAnalyzing: false,
         results: results,
+        selectedCategory: 'all',
       );
+
       return results;
     } catch (e) {
       print('DetectionProvider: Analysis failed - $e');
@@ -68,7 +73,8 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
 
   // === Clear ===
   void clearResults() {
-    state = const DetectionState();
+    // ✅ Reset everything including selectedCategory = "all"
+    state = const DetectionState(selectedCategory: 'all');
   }
 
   // === Derived getters ===
@@ -89,7 +95,9 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
     ];
 
     final found = state.results.map((r) => r.category.toLowerCase()).toSet();
-    final filtered = preferredOrder.where((c) => c == 'all' || found.contains(c)).toList();
+    final filtered = preferredOrder
+        .where((c) => c == 'all' || found.contains(c))
+        .toList();
     return filtered;
   }
 
@@ -102,10 +110,12 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
   }
 }
 
+/// === Providers ===
 final detectionServiceProvider = Provider<DetectionService>((ref) {
   return DetectionService();
 });
 
-final detectionProvider = StateNotifierProvider<DetectionNotifier, DetectionState>((ref) {
+final detectionProvider =
+    StateNotifierProvider<DetectionNotifier, DetectionState>((ref) {
   return DetectionNotifier(ref.watch(detectionServiceProvider));
 });
