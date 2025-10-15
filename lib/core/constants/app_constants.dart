@@ -3,60 +3,64 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppConstants {
   AppConstants._();
 
-  // Supabase Configuration - reads from .env file at runtime
+  // === 🔐 Supabase Configuration ===
   static String get supabaseUrl =>
-    dotenv.env['SUPABASE_URL'] ?? 'https://your-project.supabase.co';
+      dotenv.env['SUPABASE_URL'] ??
+      'https://tlqpkoknwfptfzejpchy.supabase.co';
 
   static String get supabaseAnonKey =>
-    dotenv.env['SUPABASE_ANON_KEY'] ?? 'your-anon-key-here';
+      dotenv.env['SUPABASE_ANON_KEY'] ??
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
+      'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscXBrb2tud2ZwdGZ6ZWpwY2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwMzMzNzEsImV4cCI6MjA2OTYwOTM3MX0.'
+      'oHT9O_Aak8sUiAKX7P1J036ZSYIBDNveZqS1EMCLcJA';
 
-  // Spacing
+  // === 🎨 UI constants ===
   static const double defaultPadding = 16.0;
   static const double smallPadding = 8.0;
   static const double largePadding = 24.0;
 
-  // Border Radius
   static const double borderRadius = 12.0;
   static const double largeBorderRadius = 16.0;
   static const double smallBorderRadius = 8.0;
 
-  // Animation
   static const Duration mediumAnimation = Duration(milliseconds: 300);
 
-  // API - reads from .env file at runtime
-  static String get baseApiUrl =>
-    dotenv.env['REPLICATE_BASE_URL'] ?? 'https://api.replicate.com/v1';
-
-  static String get replicateApiKey =>
-    dotenv.env['REPLICATE_API_KEY'] ?? 'your-replicate-api-key-here';
-
-  static String get replicateModelVersion =>
-    dotenv.env['REPLICATE_MODEL_VERSION'] ?? 'default-model-version';
-
+  // === 🌐 API Keys ===
   static String get serpApiKey =>
-    dotenv.env['SERPAPI_API_KEY'] ??
-    'e65af8658648b412e968ab84fe28e44c98867bc7e1667de031837e5acf356fd6';
+      dotenv.env['SERPAPI_API_KEY'] ??
+      'e65af8658648b412e968ab84fe28e44c98867bc7e1667de031837e5acf356fd6';
 
   static String get imgbbApiKey =>
-    dotenv.env['IMGBB_API_KEY'] ?? 'd7e1d857e4498c2e28acaa8d943ccea8';
+      dotenv.env['IMGBB_API_KEY'] ??
+      'd7e1d857e4498c2e28acaa8d943ccea8';
 
-  static String get serpDetectorEndpoint =>
-    dotenv.env['SERP_DETECTOR_ENDPOINT'] ?? 'http://127.0.0.1:8000/detect';
+  // === 🧠 Smart Detector Endpoint ===
+  static String get serpDetectorEndpoint {
+    // Use local backend if running debug/dev mode
+    const bool useLocal =
+        bool.fromEnvironment('USE_LOCAL_API', defaultValue: false);
 
-// ScrapingBee API for Instagram downloads
+    if (useLocal) {
+      return 'http://10.0.0.25:8000/detect'; // 👈 your local PC IP
+    }
+
+    // Otherwise, default to deployed Render server
+    return dotenv.env['SERP_DETECTOR_ENDPOINT'] ??
+        'https://snaplook-fastapi-detector.onrender.com/detect';
+  }
+
+  // === 🐝 ScrapingBee Keys (for Instagram / backup scraping) ===
   static const List<String> _scrapingBeeKeyPriority = [
     '66DHI1P6O02ODFE3EZCHWKCFUTAYM3JAK4LITASV0OMDW6MIVXUON5944IHBJ2M57G9VRVFUWDXZV6U1',
     'MBVJU10S1A0YUDAMPSUBIVSPGPA6MIJ5R1HNXZBSRQSDD06JH6K8UK74XZF9N8AISFWXTOLQH3U37NZF',
   ];
 
   static List<String> _parseScrapingBeeEnv(String? raw) {
-    if (raw == null || raw.trim().isEmpty) {
-      return const [];
-    }
+    if (raw == null || raw.trim().isEmpty) return const [];
     return raw
         .split(RegExp(r'[,\s;]+'))
-        .map((candidate) => candidate.trim())
-        .where((candidate) => candidate.isNotEmpty)
+        .map((v) => v.trim())
+        .where((v) => v.isNotEmpty)
         .toList(growable: false);
   }
 
@@ -65,19 +69,12 @@ class AppConstants {
     final envCandidates = _parseScrapingBeeEnv(envValue);
 
     for (final preferred in _scrapingBeeKeyPriority) {
-      if (envCandidates.contains(preferred)) {
-        return preferred;
-      }
+      if (envCandidates.contains(preferred)) return preferred;
     }
 
-    if (envCandidates.isNotEmpty) {
-      return envCandidates.first;
-    }
-
+    if (envCandidates.isNotEmpty) return envCandidates.first;
     for (final preferred in _scrapingBeeKeyPriority) {
-      if (preferred.isNotEmpty) {
-        return preferred;
-      }
+      if (preferred.isNotEmpty) return preferred;
     }
 
     return '';
