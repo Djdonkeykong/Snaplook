@@ -476,12 +476,15 @@ class DetectionService {
       return 'bottoms';
     }
 
-    // 7️⃣ Tops
+    // 7️⃣ Tops (guard against "high top" / "low top" sneaker terms)
     if (lower.contains('t-shirt') ||
         lower.contains('tee') ||
         lower.contains('shirt') ||
         lower.contains('blouse') ||
-        lower.contains('top') ||
+        (lower.contains('top') &&
+            !lower.contains('high top') &&
+            !lower.contains('low top')) || // ✅ prevents shoe false positives
+            !lower.contains('mid top')
         lower.contains('tank') ||
         lower.contains('hoodie') ||
         lower.contains('sweatshirt') ||
