@@ -204,8 +204,12 @@ class DetectionService {
   }
 
   /// === Convert SerpAPI JSON → DetectionResult ===
-  List<DetectionResult> _mapToDetectionResults(List<Map<String, dynamic>> matches, String fallbackImageUrl) {
+  List<DetectionResult> _mapToDetectionResults(
+    List<Map<String, dynamic>> matches,
+    String fallbackImageUrl,
+  ) {
     final results = <DetectionResult>[];
+
     for (var i = 0; i < matches.length; i++) {
       final match = matches[i];
       final title = (match['title'] as String?) ?? 'Unknown item';
@@ -216,9 +220,9 @@ class DetectionService {
 
       // ✅ Updated price extraction logic
       final priceObj = match['price'];
-      final price = (priceObj?['extracted_value'] as num?)?.toDouble()
-          ?? _extractPrice(snippet)
-          ?? 0.0;
+      final price = (priceObj?['extracted_value'] as num?)?.toDouble() ??
+          _extractPrice(snippet) ??
+          0.0;
       final currency = (priceObj?['currency'] as String?) ?? '\$';
 
       final brand = _extractBrand(title, source);
@@ -238,10 +242,33 @@ class DetectionService {
           description: snippet.isNotEmpty ? snippet : null,
           tags: tags,
           purchaseUrl: link.isNotEmpty ? link : null,
-          // Optionally, extend DetectionResult to include currency if desired
         ),
       );
     }
+
+    // 🧠 Optional: category consistency filter — removes outliers like “shorts” among sunglasses
+    if (results.isNotEmpty) {
+      final categoryCounts = <String, int>{};
+      for (final r in results) {
+        categoryCounts[r.category] = (categoryCounts[r.category] ?? 0) + 1;
+      }
+
+      // Find the dominant category
+      final dominant = categoryCounts.entries.reduce(
+        (a, b) => a.value >= b.value ? a : b,
+      ).key;
+
+      // Drop outliers if dominant is clear (≥70% of results share one category)
+      final dominantRatio = categoryCounts[dominant]! / results.length;
+      if (dominantRatio >= 0.7) {
+        results.removeWhere((r) => r.category != dominant);
+        debugPrint(
+          '🧩 Filtered inconsistent categories, kept dominant "$dominant" '
+          '(${(dominantRatio * 100).toStringAsFixed(0)}%)',
+        );
+      }
+    }
+
     return results;
   }
 
