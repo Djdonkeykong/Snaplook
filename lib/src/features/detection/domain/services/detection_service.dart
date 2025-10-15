@@ -185,6 +185,9 @@ class DetectionService {
       'texture', 'pattern', 'drawing', 'illustration', 'clipart', 'mockup', 'template',
       'icon', 'logo', 'vector', 'stock photo', 'fabric', 'shoelace', 'lace',
       'hanger', 'material', 'cloth', 'silhouette', 'outline', 'art', 'design',
+      'preset', 'filter', 'lightroom', 'photoshop', 'template', 'digital download',
+      'tutorial', 'guide', 'lesson', 'manual', 'holder', 'stand', 'tripod', 'mount',
+      'case', 'charger', 'adapter', 'cable', 'keyboard', 'mouse', 'phone', 'tablet',
     ];
     if (banned.any((term) => lower.contains(term))) return false;
 
@@ -372,7 +375,9 @@ class DetectionService {
         lower.contains('earring') ||
         lower.contains('ring') ||
         lower.contains('watch') ||
-        lower.contains('tie') ||
+        (RegExp(r'\bnecktie\b').hasMatch(lower) ||
+        RegExp(r'\btie clip\b').hasMatch(lower) ||
+        RegExp(r'\btie bar\b').hasMatch(lower)) ||
         lower.contains('scarf') ||
         lower.contains('beanie') ||
         lower.contains('hat') ||
