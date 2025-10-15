@@ -324,32 +324,42 @@ class _ProductCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Product Image with Favorite Button
-                Stack(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(radius.small),
-                        color: Colors.grey[200],
-                        image: DecorationImage(
-                          image: CachedNetworkImageProvider(result.imageUrl),
-                          fit: BoxFit.cover, // ensures full coverage
+              // Product Image + Favorite Button
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(radius.small),
+                    child: AspectRatio(
+                      aspectRatio: 1, // always square
+                      child: CachedNetworkImage(
+                        imageUrl: result.imageUrl,
+                        fit: BoxFit.cover, // fully covers container
+                        width: double.infinity,
+                        height: double.infinity,
+                        placeholder: (context, url) => Container(
+                          color: Colors.grey[200],
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 1.5),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.image_not_supported),
                         ),
                       ),
                     ),
-                    // Favorite button in top-right corner
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: FavoriteButton(
-                        product: result,
-                        size: 18,
-                      ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: FavoriteButton(
+                      product: result,
+                      size: 18,
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
 
               SizedBox(width: spacing.m),
 
@@ -358,13 +368,13 @@ class _ProductCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Brand / Store — larger, colored same as price
+                    // Brand / Store — larger and colored like price
                     Text(
                       result.brand.toUpperCase(),
                       style: TextStyle(
-                        fontSize: 16, // increased
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: Colors.black87,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: 0.2,
                       ),
@@ -372,11 +382,11 @@ class _ProductCard extends StatelessWidget {
 
                     SizedBox(height: spacing.xs),
 
-                    // Product Title — smaller for cleaner look
+                    // Product Title — smaller and cleaner
                     Text(
                       result.productName,
                       style: const TextStyle(
-                        fontSize: 12, // reduced
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         fontFamily: 'PlusJakartaSans',
                       ),
@@ -386,15 +396,17 @@ class _ProductCard extends StatelessWidget {
 
                     SizedBox(height: spacing.sm),
 
-                    // Price — slightly smaller (brand is 16, so price = 12)
+                    // Price — slightly smaller than brand
                     Text(
                       result.price > 0
                           ? '\$${result.price.toStringAsFixed(2)}'
-                          : (result.purchaseUrl != null ? 'See store' : 'Price unavailable'),
+                          : (result.purchaseUrl != null
+                              ? 'See store'
+                              : 'Price unavailable'),
                       style: TextStyle(
                         fontSize: 14, // 4px smaller than brand
                         fontWeight: FontWeight.bold,
-                        color: Colors.black, // matches brand
+                        color: Colors.black87, // matches brand color
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: 0.2,
                       ),
