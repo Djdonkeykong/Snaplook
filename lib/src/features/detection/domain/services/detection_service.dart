@@ -306,8 +306,43 @@ class DetectionService {
   String _normalizeTitle(String title) =>
       title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
 
-  String _formatTitle(String title) =>
-      title.isEmpty ? 'Unknown item' : title.length > 80 ? '${title.substring(0, 77)}...' : title;
+  String _formatTitle(String title) {
+    if (title.isEmpty) return 'Unknown item';
+
+    var clean = title;
+
+    // Remove marketing / store fluff
+    clean = clean.replaceAll(RegExp(
+      r'(buy\s+now|official\s+store|free\s+shipping|online\s+shop|sale|discount|deal|brand\s+new|shop\s+now)',
+      caseSensitive: false,
+    ), '');
+
+    // Split on common separators and keep the most informative part
+    final parts = clean.split(RegExp(r'[\|\-:–—]+'));
+    if (parts.isNotEmpty) {
+      // Pick the first part that looks like a real product name (has letters)
+      final good = parts.firstWhere(
+        (p) => RegExp(r'[a-zA-Z]').hasMatch(p.trim()),
+        orElse: () => parts.first,
+      );
+      clean = good.trim();
+    }
+
+    // Normalize whitespace
+    clean = clean.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    // Capitalize first letter
+    if (clean.isNotEmpty) {
+      clean = clean[0].toUpperCase() + clean.substring(1);
+    }
+
+    // Limit length
+    if (clean.length > 60) {
+      clean = '${clean.substring(0, 57)}...';
+    }
+
+    return clean;
+  }
 
   double? _extractPrice(String snippet) {
     final match = RegExp(
