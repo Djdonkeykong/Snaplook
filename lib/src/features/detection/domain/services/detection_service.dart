@@ -483,8 +483,8 @@ class DetectionService {
         lower.contains('blouse') ||
         (lower.contains('top') &&
             !lower.contains('high top') &&
-            !lower.contains('low top')) || // ✅ prevents shoe false positives
-            !lower.contains('mid top')
+            !lower.contains('low top') &&
+            !lower.contains('mid top')) || // ✅ proper closing parenthesis
         lower.contains('tank') ||
         lower.contains('hoodie') ||
         lower.contains('sweatshirt') ||
