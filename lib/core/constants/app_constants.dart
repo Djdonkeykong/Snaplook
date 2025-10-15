@@ -33,7 +33,17 @@ class AppConstants {
   static String get replicateModelVersion =>
     dotenv.env['REPLICATE_MODEL_VERSION'] ?? 'default-model-version';
 
-  // ScrapingBee API for Instagram downloads
+  static String get serpApiKey =>
+    dotenv.env['SERPAPI_API_KEY'] ??
+    'e65af8658648b412e968ab84fe28e44c98867bc7e1667de031837e5acf356fd6';
+
+  static String get imgbbApiKey =>
+    dotenv.env['IMGBB_API_KEY'] ?? 'd7e1d857e4498c2e28acaa8d943ccea8';
+
+  static String get serpDetectorEndpoint =>
+    dotenv.env['SERP_DETECTOR_ENDPOINT'] ?? 'http://127.0.0.1:8000/detect';
+
+// ScrapingBee API for Instagram downloads
   static const List<String> _scrapingBeeKeyPriority = [
     '66DHI1P6O02ODFE3EZCHWKCFUTAYM3JAK4LITASV0OMDW6MIVXUON5944IHBJ2M57G9VRVFUWDXZV6U1',
     'MBVJU10S1A0YUDAMPSUBIVSPGPA6MIJ5R1HNXZBSRQSDD06JH6K8UK74XZF9N8AISFWXTOLQH3U37NZF',

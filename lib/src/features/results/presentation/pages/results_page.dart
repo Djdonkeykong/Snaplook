@@ -482,7 +482,7 @@ class _TopIconButton extends StatelessWidget {
       ),
       child: IconButton(
         padding: icon == Icons.share
-            ? const EdgeInsets.fromLTRB(8, 8, 10, 8)
+            ? const EdgeInsets.fromLTRB(12, 8, 4, 8)
             : const EdgeInsets.all(8),
         onPressed: onPressed,
         icon: Icon(icon, color: Colors.black, size: 18),

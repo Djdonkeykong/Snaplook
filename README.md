@@ -137,3 +137,16 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support
 
 For support and questions, please open an issue on GitHub or contact the development team.
+
+## Garment Detection Service (local)
+
+The SerpAPI pipeline now expects a local detector that crops up to four dominant garments before running Google Lens searches. Start it with:
+
+```bash
+pip install -r server/requirements.txt
+uvicorn server.fashion_detector_server:app --host 0.0.0.0 --port 8000
+```
+
+Each run is archived under `D:/SerpAPI Google Lens/Crops/<timestamp>` with the original image, an overlay showing bounding boxes + labels, and the individual crop JPEGs. The service also uploads the original image and crops to ImgBB when an API key is provided. Set `CROP_OUTPUT_DIR` if you prefer a different folder and define `IMGBB_API_KEY` in the shell (or `server/.env`) so the Flutter app still receives public URLs.
+
+When testing on the Android emulator point `SERP_DETECTOR_ENDPOINT` at `http://10.0.2.2:8000/detect`. For other devices use your host machine's reachable address.

@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+gunicorn
+pillow
+torch
+torchvision
+transformers
+requests
+safetensors
+python-multipart
+pydantic
+concurrent-log-handler
+tqdm
