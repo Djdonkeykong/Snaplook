@@ -356,10 +356,19 @@ class DetectionService {
     return double.tryParse(amount);
   }
 
-  String _categorize(String title) {
+  String _categorize(String title, {String? brand}) {
     final lower = title.toLowerCase();
+    final brandLower = brand?.toLowerCase() ?? '';
 
-    // 🧠 Check overrides first
+    // 1️⃣ Brand-based hints first
+    for (final entry in kBrandCategoryHints.entries) {
+      if (brandLower.contains(entry.key) || lower.contains(entry.key)) {
+        debugPrint('🧩 Categorized "$title" as ${entry.value} (brand hint)');
+        return entry.value;
+      }
+    }
+
+    // 2️⃣ Contextual overrides
     for (final entry in kCategoryOverrides.entries) {
       if (lower.contains(entry.key)) {
         debugPrint('🧩 Categorized "$title" as ${entry.value} (override)');
@@ -367,7 +376,7 @@ class DetectionService {
       }
     }
 
-    // 🔤 Keyword-based fallback
+    // 3️⃣ Keyword-based matching
     for (final entry in kCategoryKeywords.entries) {
       for (final keyword in entry.value) {
         final pattern = RegExp(r'\b' + RegExp.escape(keyword) + r'\b');

@@ -1,5 +1,17 @@
-/// 🔠 Category rules and overrides for garment classification.
-/// Used in DetectionService._categorize() to map product titles to standard categories.
+/// 🧩 Category classification intelligence for Snaplook
+/// ----------------------------------------------------
+/// Centralized rule set used by DetectionService._categorize()
+/// and related garment recognition logic.
+/// 
+/// This combines:
+///   - Keyword mappings
+///   - Context-aware overrides
+///   - Brand/category hints
+///   - Stopword filtering
+
+// =====================================================
+// 🧠 CATEGORY KEYWORDS (broad coverage)
+// =====================================================
 
 const Map<String, List<String>> kCategoryKeywords = {
   'dresses': [
@@ -31,6 +43,7 @@ const Map<String, List<String>> kCategoryKeywords = {
     'camisole',
     'cardigan',
     'tunic',
+    'long sleeve',
   ],
   'bottoms': [
     'jeans',
@@ -75,6 +88,11 @@ const Map<String, List<String>> kCategoryKeywords = {
     'clog',
     'oxford',
     'derby',
+    'running shoe',
+    'tennis shoe',
+    'high top',
+    'low top',
+    'slide',
   ],
   'bags': [
     'bag',
@@ -114,26 +132,30 @@ const Map<String, List<String>> kCategoryKeywords = {
     'brooch',
     'glove',
     'keychain',
+    'wallet',
   ],
 };
 
-/// 🧠 Context-aware overrides for ambiguous terms.
-/// These are matched as lowercase substrings in titles before keyword detection.
+// =====================================================
+// 🧩 CONTEXTUAL OVERRIDES (fixes ambiguous terms)
+// =====================================================
+
 const Map<String, String> kCategoryOverrides = {
-  // --- Bottoms overrides ---
+  // --- Bottoms ---
   'dress pants': 'bottoms',
   'trousers': 'bottoms',
   'chinos': 'bottoms',
   'cargo pants': 'bottoms',
   'sweatpants': 'bottoms',
+  'slacks': 'bottoms',
 
-  // --- Dresses overrides ---
+  // --- Dresses ---
   'jumpsuit': 'dresses',
   'romper': 'dresses',
   'one piece': 'dresses',
   'bodysuit': 'dresses',
 
-  // --- Shoes overrides ---
+  // --- Shoes ---
   'high top': 'shoes',
   'low top': 'shoes',
   'running shoe': 'shoes',
@@ -142,14 +164,16 @@ const Map<String, String> kCategoryOverrides = {
   'slides': 'shoes',
   'flip flop': 'shoes',
   'crocs': 'shoes',
+  'cleats': 'shoes',
 
-  // --- Outerwear overrides ---
+  // --- Outerwear ---
   'denim jacket': 'outerwear',
   'leather jacket': 'outerwear',
   'bomber jacket': 'outerwear',
   'varsity jacket': 'outerwear',
+  'puffer jacket': 'outerwear',
 
-  // --- Accessories overrides ---
+  // --- Accessories ---
   'eyewear': 'accessories',
   'sunglass': 'accessories',
   'handkerchief': 'accessories',
@@ -159,7 +183,72 @@ const Map<String, String> kCategoryOverrides = {
   'cap': 'headwear',
 };
 
-/// 🚫 Stopwords ignored when extracting brand or title tokens.
+// =====================================================
+// 🏷️ BRAND-BASED CATEGORY HINTS
+// =====================================================
+/// Certain brands heavily imply a specific product type.
+/// These help when the title text is vague or missing keywords.
+const Map<String, String> kBrandCategoryHints = {
+  // --- Footwear brands ---
+  'nike': 'shoes',
+  'adidas': 'shoes',
+  'puma': 'shoes',
+  'vans': 'shoes',
+  'converse': 'shoes',
+  'new balance': 'shoes',
+  'reebok': 'shoes',
+  'asics': 'shoes',
+  'salomon': 'shoes',
+  'hoka': 'shoes',
+  'crocs': 'shoes',
+  'dr martens': 'shoes',
+  'timberland': 'shoes',
+
+  // --- Bags & accessories ---
+  'coach': 'bags',
+  'michael kors': 'bags',
+  'kate spade': 'bags',
+  'tory burch': 'bags',
+  'longchamp': 'bags',
+  'rimowa': 'bags',
+  'samsonite': 'bags',
+  'away': 'bags',
+  'herschel': 'bags',
+
+  // --- Apparel-heavy brands ---
+  'zara': 'tops',
+  'h&m': 'tops',
+  'uniqlo': 'tops',
+  'asos': 'tops',
+  'shein': 'tops',
+  'fashion nova': 'tops',
+  'boohoo': 'tops',
+  'revolve': 'dresses',
+  'princess polly': 'dresses',
+  'lulus': 'dresses',
+  'prettylittlething': 'dresses',
+
+  // --- Outerwear specialists ---
+  'north face': 'outerwear',
+  'columbia': 'outerwear',
+  'patagonia': 'outerwear',
+  'canada goose': 'outerwear',
+  'moncler': 'outerwear',
+
+  // --- Eyewear & jewelry ---
+  'ray-ban': 'accessories',
+  'oakley': 'accessories',
+  'warby parker': 'accessories',
+  'pandora': 'accessories',
+  'tiffany': 'accessories',
+  'cartier': 'accessories',
+  'swarovski': 'accessories',
+};
+
+// =====================================================
+// 🚫 STOP WORDS
+// =====================================================
+
 const Set<String> kCategoryStopWords = {
   'the',
   'and',
@@ -182,4 +271,6 @@ const Set<String> kCategoryStopWords = {
   'new',
   'sale',
   'discount',
+  'collection',
+  'edition',
 };
