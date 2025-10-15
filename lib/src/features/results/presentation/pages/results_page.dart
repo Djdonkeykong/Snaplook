@@ -153,8 +153,8 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                               Text(
                                 '${widget.results.length} results',
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.green[600],
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
                                   fontWeight: FontWeight.w600,
                                   fontFamily: 'PlusJakartaSans',
                                 ),
@@ -325,42 +325,31 @@ class _ProductCard extends StatelessWidget {
           child: Row(
             children: [
               // Product Image with Favorite Button
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(radius.small),
-                    child: CachedNetworkImage(
-                      imageUrl: result.imageUrl,
+                Stack(
+                  children: [
+                    Container(
                       width: 80,
                       height: 80,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        width: 80,
-                        height: 80,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(radius.small),
                         color: Colors.grey[200],
-                        child: const Center(
-                          child: CircularProgressIndicator(),
+                        image: DecorationImage(
+                          image: CachedNetworkImageProvider(result.imageUrl),
+                          fit: BoxFit.cover, // ensures full coverage
                         ),
                       ),
-                      errorWidget: (context, url, error) => Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.image_not_supported),
+                    ),
+                    // Favorite button in top-right corner
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: FavoriteButton(
+                        product: result,
+                        size: 18,
                       ),
                     ),
-                  ),
-                  // Favorite button in top-right corner
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: FavoriteButton(
-                      product: result,
-                      size: 18,
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
 
               SizedBox(width: spacing.m),
 
@@ -375,9 +364,9 @@ class _ProductCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16, // increased
                         fontWeight: FontWeight.bold,
-                        color: Colors.green[600], // same color as price
+                        color: Colors.black[600],
                         fontFamily: 'PlusJakartaSans',
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.2,
                       ),
                     ),
 
@@ -403,10 +392,11 @@ class _ProductCard extends StatelessWidget {
                           ? '\$${result.price.toStringAsFixed(2)}'
                           : (result.purchaseUrl != null ? 'See store' : 'Price unavailable'),
                       style: TextStyle(
-                        fontSize: 12, // 4px smaller than brand
+                        fontSize: 14, // 4px smaller than brand
                         fontWeight: FontWeight.bold,
-                        color: Colors.green[600], // matches brand
+                        color: Colors.black[600], // matches brand
                         fontFamily: 'PlusJakartaSans',
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ],
