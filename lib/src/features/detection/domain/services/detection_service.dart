@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/trusted_domains.dart';
 import '../models/detection_result.dart';
+import '../../../../core/constants/category_rules.dart';
+
 
 /// Detection pipeline powered by local YOLOS + SerpAPI Google Lens.
 class DetectionService {
@@ -357,21 +359,18 @@ class DetectionService {
   String _categorize(String title) {
     final lower = title.toLowerCase();
 
-    // ✅ Special-case rules before keyword lookup
-    if (lower.contains('dress pants') || lower.contains('trousers') || lower.contains('chinos')) {
-      debugPrint('🧩 Categorized "$title" as bottoms (override)');
-      return 'bottoms';
+    // 🧠 Check overrides first
+    for (final entry in kCategoryOverrides.entries) {
+      if (lower.contains(entry.key)) {
+        debugPrint('🧩 Categorized "$title" as ${entry.value} (override)');
+        return entry.value;
+      }
     }
 
-    if (lower.contains('one piece') || lower.contains('jumpsuit') || lower.contains('romper')) {
-      debugPrint('🧩 Categorized "$title" as dresses (one-piece override)');
-      return 'dresses';
-    }
-
-    // 🔤 Normal keyword-based matching
-    for (final entry in _categoryKeywords.entries) {
+    // 🔤 Keyword-based fallback
+    for (final entry in kCategoryKeywords.entries) {
       for (final keyword in entry.value) {
-        final pattern = RegExp('\\b$keyword\\b', caseSensitive: false);
+        final pattern = RegExp(r'\b' + RegExp.escape(keyword) + r'\b');
         if (pattern.hasMatch(lower)) {
           debugPrint('🧩 Categorized "$title" as ${entry.key}');
           return entry.key;
