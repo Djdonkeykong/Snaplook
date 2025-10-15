@@ -9,7 +9,7 @@ import '../../../detection/domain/models/detection_result.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
-import '../../../detection/application/detection_provider.dart';
+import '../../../detection/presentation/providers/detection_provider.dart';
 
 class ResultsPage extends ConsumerStatefulWidget {
   final List<DetectionResult> results;
