@@ -36,21 +36,27 @@ class AppConstants {
 
   // === 🧠 Smart Detector Endpoint ===
   static String get serpDetectorEndpoint {
-    // Check if a tunnel (like ngrok) or local URL is set in the .env
+    // 🧩 Priority 1: dart-define (used in Codemagic)
+    const defineUrl = String.fromEnvironment(
+      'SERP_DETECTOR_ENDPOINT',
+      defaultValue: '',
+    );
+    if (defineUrl.isNotEmpty) return defineUrl;
+
+    // 🧩 Priority 2: .env file (used in local dev)
     final envUrl = dotenv.env['SERP_DETECTOR_ENDPOINT'];
+    if (envUrl != null && envUrl.isNotEmpty) return envUrl;
 
-    if (envUrl != null && envUrl.isNotEmpty) {
-      return envUrl; // ✅ use ngrok or custom endpoint from .env
-    }
-
-    // Use LAN IP (for local testing on the same Wi-Fi)
+    // 🧩 Priority 3: Local LAN (for debugging)
     const localIP = 'http://10.0.0.25:8000/detect';
 
-    // Fallback to deployed Render URL
+    // 🧩 Priority 4: Production fallback
     const renderUrl = 'https://snaplook-fastapi-detector.onrender.com/detect';
 
-    // If running in debug mode, prefer local API
-    const bool isLocal = bool.fromEnvironment('USE_LOCAL_API', defaultValue: false);
+    // Optional override flag for dev
+    const bool isLocal =
+        bool.fromEnvironment('USE_LOCAL_API', defaultValue: false);
+
     return isLocal ? localIP : renderUrl;
   }
 
