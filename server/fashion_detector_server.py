@@ -1,5 +1,6 @@
 import io
 import sys
+import os  # ✅ needed for environment variables
 import json
 import base64
 import time
@@ -17,10 +18,9 @@ from transformers import AutoImageProcessor, YolosForObjectDetection
 
 # === CONFIG ===
 MODEL_ID = "valentinafeve/yolos-fashionpedia"
-BASE_OUT_DIR = Path(r"D:\SerpAPI Google Lens\Crops")
-CONF_THRESHOLD = 0.25
-MAX_GARMENTS = 4
-EXPAND_RATIO = 0.1
+CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", 0.3))
+EXPAND_RATIO = float(os.getenv("EXPAND_RATIO", 0.1))
+MAX_GARMENTS = int(os.getenv("MAX_GARMENTS", 4))
 UPLOAD_TO_IMGBB = True
 
 # Tiny/irrelevant crop guard (pixels)
@@ -455,9 +455,8 @@ def debug_detect(req: DetectRequest):
     image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    out_dir = BASE_OUT_DIR / f"debug_{timestamp}"
+    out_dir = Path(f"./debug_{timestamp}")
     out_dir.mkdir(parents=True, exist_ok=True)
-    print(f"🧪 Debug output folder: {out_dir}")
 
     filtered = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
 
