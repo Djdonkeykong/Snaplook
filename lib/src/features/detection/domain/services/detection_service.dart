@@ -360,7 +360,116 @@ class DetectionService {
     final lower = title.toLowerCase();
     final brandLower = brand?.toLowerCase() ?? '';
 
-    // 1️⃣ Brand-based hints
+    // 1️⃣ Always Accessories – prioritized early to avoid false dress/bag matches
+    if (lower.contains('sunglass') ||
+        lower.contains('eyeglass') ||
+        lower.contains('spectacle') ||
+        (lower.contains('frame') && lower.contains('lens')) ||
+        lower.contains('belt') ||
+        lower.contains('waist chain') ||
+        lower.contains('necklace') ||
+        lower.contains('bracelet') ||
+        lower.contains('earring') ||
+        lower.contains('ring') ||
+        lower.contains('watch') ||
+        lower.contains('tie') ||
+        lower.contains('scarf') ||
+        lower.contains('beanie') ||
+        lower.contains('hat') ||
+        lower.contains('cap') ||
+        lower.contains('hair clip') ||
+        lower.contains('hairpin') ||
+        lower.contains('headband')) {
+      debugPrint('🧩 Categorized "$title" as accessories (explicit match)');
+      return 'accessories';
+    }
+
+    // 2️⃣ Bags
+    if (lower.contains('bag') ||
+        lower.contains('purse') ||
+        lower.contains('tote') ||
+        lower.contains('backpack') ||
+        lower.contains('duffle') ||
+        lower.contains('handbag') ||
+        lower.contains('satchel') ||
+        lower.contains('clutch') ||
+        lower.contains('wallet')) {
+      debugPrint('🧩 Categorized "$title" as bags');
+      return 'bags';
+    }
+
+    // 3️⃣ Shoes
+    if (lower.contains('shoe') ||
+        lower.contains('boot') ||
+        lower.contains('heel') ||
+        lower.contains('pump') ||
+        lower.contains('loafer') ||
+        lower.contains('sandal') ||
+        lower.contains('sneaker') ||
+        lower.contains('trainer') ||
+        lower.contains('moccasin') ||
+        lower.contains('flip flop')) {
+      debugPrint('🧩 Categorized "$title" as shoes');
+      return 'shoes';
+    }
+
+    // 4️⃣ Outerwear
+    if (lower.contains('jacket') ||
+        lower.contains('coat') ||
+        lower.contains('blazer') ||
+        lower.contains('parka') ||
+        lower.contains('windbreaker') ||
+        lower.contains('trench')) {
+      debugPrint('🧩 Categorized "$title" as outerwear');
+      return 'outerwear';
+    }
+
+    // 5️⃣ Dresses
+    if (lower.contains('dress') ||
+        lower.contains('jumpsuit') ||
+        lower.contains('romper') ||
+        lower.contains('gown')) {
+      debugPrint('🧩 Categorized "$title" as dresses');
+      return 'dresses';
+    }
+
+    // 6️⃣ Bottoms
+    if (lower.contains('pants') ||
+        lower.contains('trouser') ||
+        lower.contains('jean') ||
+        lower.contains('shorts') ||
+        lower.contains('skirt') ||
+        lower.contains('leggings')) {
+      debugPrint('🧩 Categorized "$title" as bottoms');
+      return 'bottoms';
+    }
+
+    // 7️⃣ Tops
+    if (lower.contains('t-shirt') ||
+        lower.contains('tee') ||
+        lower.contains('shirt') ||
+        lower.contains('blouse') ||
+        lower.contains('top') ||
+        lower.contains('tank') ||
+        lower.contains('hoodie') ||
+        lower.contains('sweatshirt') ||
+        lower.contains('sweater') ||
+        lower.contains('cardigan')) {
+      debugPrint('🧩 Categorized "$title" as tops');
+      return 'tops';
+    }
+
+    // 8️⃣ Headwear (in case missed above)
+    if (lower.contains('cap') ||
+        lower.contains('hat') ||
+        lower.contains('beanie') ||
+        lower.contains('headband') ||
+        lower.contains('beret')) {
+      debugPrint('🧩 Categorized "$title" as headwear');
+      return 'headwear';
+    }
+
+    // 9️⃣ Brand-based hints (your existing brand/category map)
     for (final entry in kBrandCategoryHints.entries) {
       if (brandLower.contains(entry.key) || lower.contains(entry.key)) {
         debugPrint('🧩 Categorized "$title" as ${entry.value} (brand hint)');
@@ -368,44 +477,7 @@ class DetectionService {
       }
     }
 
-    // 2️⃣ Contextual overrides
-    for (final entry in kCategoryOverrides.entries) {
-      if (lower.contains(entry.key)) {
-        debugPrint('🧩 Categorized "$title" as ${entry.value} (override)');
-        return entry.value;
-      }
-    }
-
-    // 3️⃣ Meta-context: "X | Shoes | Y" style titles
-    if (lower.contains('| shoes |') ||
-        lower.contains(' boots ') ||
-        lower.contains('booties') ||
-        lower.contains('heels ') ||
-        lower.contains('sneaker')) {
-      debugPrint('🧩 Categorized "$title" as shoes (context)');
-      return 'shoes';
-    }
-    if (lower.contains('| bags |') || lower.contains(' handbag ') || lower.contains(' purse ')) {
-      debugPrint('🧩 Categorized "$title" as bags (context)');
-      return 'bags';
-    }
-    if (lower.contains('| accessories |') || lower.contains(' jewelry ')) {
-      debugPrint('🧩 Categorized "$title" as accessories (context)');
-      return 'accessories';
-    }
-
-    // 4️⃣ Keyword-based fallback (with word boundaries)
-    for (final entry in kCategoryKeywords.entries) {
-      for (final keyword in entry.value) {
-        final pattern = RegExp(r'\b' + RegExp.escape(keyword) + r'\b');
-        if (pattern.hasMatch(lower)) {
-          debugPrint('🧩 Categorized "$title" as ${entry.key}');
-          return entry.key;
-        }
-      }
-    }
-
-    // 5️⃣ Fallback: if brand is a fashion house (like Gucci, Prada, etc.)
+    // 🔟 Luxury brand fallback
     if (RegExp(r'gucci|prada|balenciaga|ysl|saint laurent|fendi|valentino|versace')
         .hasMatch(brandLower)) {
       debugPrint('🧩 Categorized "$title" as accessories (luxury fallback)');
