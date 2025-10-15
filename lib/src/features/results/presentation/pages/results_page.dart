@@ -369,35 +369,43 @@ class _ProductCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Brand / Store — larger, colored same as price
                     Text(
                       result.brand.toUpperCase(),
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[600],
-                        letterSpacing: 0.5,
+                        fontSize: 16, // increased
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[600], // same color as price
                         fontFamily: 'PlusJakartaSans',
+                        letterSpacing: 0.5,
                       ),
                     ),
+
                     SizedBox(height: spacing.xs),
+
+                    // Product Title — smaller for cleaner look
                     Text(
                       result.productName,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 12, // reduced
                         fontWeight: FontWeight.w500,
                         fontFamily: 'PlusJakartaSans',
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+
                     SizedBox(height: spacing.sm),
+
+                    // Price — slightly smaller (brand is 16, so price = 12)
                     Text(
                       result.price > 0
                           ? '\$${result.price.toStringAsFixed(2)}'
                           : (result.purchaseUrl != null ? 'See store' : 'Price unavailable'),
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontSize: 12, // 4px smaller than brand
                         fontWeight: FontWeight.bold,
+                        color: Colors.green[600], // matches brand
                         fontFamily: 'PlusJakartaSans',
                       ),
                     ),
