@@ -360,7 +360,7 @@ class DetectionService {
     final lower = title.toLowerCase();
     final brandLower = brand?.toLowerCase() ?? '';
 
-    // 1️⃣ Brand-based hints first
+    // 1️⃣ Brand-based hints
     for (final entry in kBrandCategoryHints.entries) {
       if (brandLower.contains(entry.key) || lower.contains(entry.key)) {
         debugPrint('🧩 Categorized "$title" as ${entry.value} (brand hint)');
@@ -376,7 +376,25 @@ class DetectionService {
       }
     }
 
-    // 3️⃣ Keyword-based matching
+    // 3️⃣ Meta-context: "X | Shoes | Y" style titles
+    if (lower.contains('| shoes |') ||
+        lower.contains(' boots ') ||
+        lower.contains('booties') ||
+        lower.contains('heels ') ||
+        lower.contains('sneaker')) {
+      debugPrint('🧩 Categorized "$title" as shoes (context)');
+      return 'shoes';
+    }
+    if (lower.contains('| bags |') || lower.contains(' handbag ') || lower.contains(' purse ')) {
+      debugPrint('🧩 Categorized "$title" as bags (context)');
+      return 'bags';
+    }
+    if (lower.contains('| accessories |') || lower.contains(' jewelry ')) {
+      debugPrint('🧩 Categorized "$title" as accessories (context)');
+      return 'accessories';
+    }
+
+    // 4️⃣ Keyword-based fallback (with word boundaries)
     for (final entry in kCategoryKeywords.entries) {
       for (final keyword in entry.value) {
         final pattern = RegExp(r'\b' + RegExp.escape(keyword) + r'\b');
@@ -385,6 +403,13 @@ class DetectionService {
           return entry.key;
         }
       }
+    }
+
+    // 5️⃣ Fallback: if brand is a fashion house (like Gucci, Prada, etc.)
+    if (RegExp(r'gucci|prada|balenciaga|ysl|saint laurent|fendi|valentino|versace')
+        .hasMatch(brandLower)) {
+      debugPrint('🧩 Categorized "$title" as accessories (luxury fallback)');
+      return 'accessories';
     }
 
     debugPrint('❔ No match for "$title", defaulted to accessories');

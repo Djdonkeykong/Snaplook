@@ -41,171 +41,173 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final selectedImage = ref.watch(selectedImageProvider);
-    final detectionState = ref.watch(detectionProvider);
-    final notifier = ref.read(detectionProvider.notifier);
+@override
+Widget build(BuildContext context) {
+  final selectedImage = ref.watch(selectedImageProvider);
+  final detectionState = ref.watch(detectionProvider);
+  final notifier = ref.read(detectionProvider.notifier);
 
-    final categories = notifier.availableCategories;
-    final selectedCategory = detectionState.selectedCategory;
-    final results = notifier.filteredResults;
+  final categories = notifier.availableCategories;
+  final selectedCategory = detectionState.selectedCategory;
+  final results = notifier.filteredResults;
 
-    final spacing = context.spacing;
-    final radius = context.radius;
-    final mediaQuery = MediaQuery.of(context);
-    final safeAreaBottom = mediaQuery.padding.bottom;
-    final sheetMaxHeight = mediaQuery.size.height * 0.85;
-    final sheetInitialHeight = sheetMaxHeight * 0.55;
-    final sheetMinHeight = sheetInitialHeight;
+  final spacing = context.spacing;
+  final radius = context.radius;
+  final mediaQuery = MediaQuery.of(context);
+  final safeAreaBottom = mediaQuery.padding.bottom;
+  final sheetMaxHeight = mediaQuery.size.height * 0.85;
+  final sheetInitialHeight = sheetMaxHeight * 0.55;
+  final sheetMinHeight = sheetInitialHeight;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      extendBodyBehindAppBar: true,
-      extendBody: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
-        leading: _TopIconButton(
-          icon: Icons.arrow_back,
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          _TopIconButton(
-            icon: Icons.share,
-            onPressed: _shareResults,
-          ),
-        ],
+  return Scaffold(
+    backgroundColor: Colors.black,
+    extendBodyBehindAppBar: true,
+    extendBody: true,
+    appBar: AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+      scrolledUnderElevation: 0,
+      leading: _TopIconButton(
+        icon: Icons.arrow_back,
+        onPressed: () => Navigator.of(context).pop(),
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: _ResultsBackground(
-              selectedImage: selectedImage,
-              originalImageUrl: widget.originalImageUrl,
-            ),
+      actions: [
+        _TopIconButton(
+          icon: Icons.share,
+          onPressed: _shareResults,
+        ),
+      ],
+    ),
+    body: Stack(
+      children: [
+        Positioned.fill(
+          child: _ResultsBackground(
+            selectedImage: selectedImage,
+            originalImageUrl: widget.originalImageUrl,
           ),
-          SlidingUpPanel(
-            minHeight: sheetMinHeight,
-            maxHeight: sheetMaxHeight,
-            parallaxEnabled: false,
-            panelSnapping: true,
-            snapPoint: (sheetInitialHeight / sheetMaxHeight).clamp(0.0, 1.0),
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(radius.large),
+        ),
+        SlidingUpPanel(
+          minHeight: sheetMinHeight,
+          maxHeight: sheetMaxHeight,
+          parallaxEnabled: false,
+          panelSnapping: true,
+          snapPoint: (sheetInitialHeight / sheetMaxHeight).clamp(0.0, 1.0),
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(radius.large),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 12,
+              offset: const Offset(0, -4),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 12,
-                offset: const Offset(0, -4),
-              ),
-            ],
-            body: const SizedBox.shrink(),
-            panelBuilder: (scrollController) {
-              return SafeArea(
-                top: false,
-                bottom: false,
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: spacing.m,
-                        right: spacing.m,
-                        top: spacing.l,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[400],
-                                borderRadius: BorderRadius.circular(2),
+          ],
+          body: const SizedBox.shrink(),
+          panelBuilder: (scrollController) {
+            return SafeArea(
+              top: false,
+              bottom: false,
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: safeAreaBottom + spacing.l),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: spacing.m,
+                          right: spacing.m,
+                          top: spacing.l,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[400],
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
                             ),
-                          ),
-                          SizedBox(height: spacing.m),
-                          Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Similar matches',
+                            SizedBox(height: spacing.m),
+                            Row(
+                              children: [
+                                const Expanded(
+                                  child: Text(
+                                    'Similar matches',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'PlusJakartaSans',
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '${results.length} results',
                                   style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w600,
                                     fontFamily: 'PlusJakartaSans',
                                   ),
                                 ),
-                              ),
-                              Text(
-                                '${results.length} results',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'PlusJakartaSans',
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: spacing.m),
-                          // 🧩 Dynamic category chips
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: categories.map((category) {
-                                final isSelected =
-                                    selectedCategory == category.toLowerCase();
-                                return Container(
-                                  margin: EdgeInsets.only(right: spacing.sm),
-                                  child: FilterChip(
-                                    label: Text(
-                                      category[0].toUpperCase() +
-                                          category.substring(1),
-                                      style: TextStyle(
-                                        fontFamily: 'PlusJakartaSans',
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : Colors.black,
-                                      ),
-                                    ),
-                                    selected: isSelected,
-                                    onSelected: (_) {
-                                      notifier.setSelectedCategory(category);
-                                    },
-                                    backgroundColor: Colors.grey[100],
-                                    selectedColor: const Color(0xFFf2003c),
-                                    checkmarkColor: Colors.white,
-                                    side: BorderSide.none,
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                );
-                              }).toList(),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: spacing.sm),
-                    Expanded(
-                      child: ListView.builder(
-                        controller: scrollController,
-                        physics: const ClampingScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(
-                          spacing.m,
-                          0,
-                          spacing.m,
-                          safeAreaBottom + spacing.l,
+                            SizedBox(height: spacing.m),
+                            // 🧩 Dynamic category chips
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: categories.map((category) {
+                                  final isSelected =
+                                      selectedCategory == category.toLowerCase();
+                                  return Container(
+                                    margin: EdgeInsets.only(right: spacing.sm),
+                                    child: FilterChip(
+                                      label: Text(
+                                        category[0].toUpperCase() +
+                                            category.substring(1),
+                                        style: TextStyle(
+                                          fontFamily: 'PlusJakartaSans',
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : Colors.black,
+                                        ),
+                                      ),
+                                      selected: isSelected,
+                                      onSelected: (_) {
+                                        notifier.setSelectedCategory(category);
+                                      },
+                                      backgroundColor: Colors.grey[100],
+                                      selectedColor:
+                                          const Color(0xFFf2003c),
+                                      checkmarkColor: Colors.white,
+                                      side: BorderSide.none,
+                                      materialTapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+                      SizedBox(height: spacing.sm),
+
+                      // ✅ Fixed ListView (non-scrollable inside scrollable)
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: EdgeInsets.symmetric(horizontal: spacing.m),
                         itemCount: results.length,
                         itemBuilder: (context, index) {
                           final result = results[index];
@@ -215,16 +217,17 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                           );
                         },
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+              ),
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}
 
   void _shareResults() {
     ScaffoldMessenger.of(context).showSnackBar(
