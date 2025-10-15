@@ -65,6 +65,9 @@ void main() async {
     );
   }
 
+  // 🧠 Log which endpoint is active
+  debugPrint('🔍 SERP_DETECTOR_ENDPOINT = ${AppConstants.serpDetectorEndpoint}');
+
   await Supabase.initialize(
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
