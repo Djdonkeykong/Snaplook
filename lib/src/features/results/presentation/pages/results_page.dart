@@ -330,13 +330,12 @@ class _ProductCard extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(radius.small),
-                    child: AspectRatio(
-                      aspectRatio: 1, // always square
+                    child: SizedBox(
+                      width: 80,
+                      height: 80,
                       child: CachedNetworkImage(
                         imageUrl: result.imageUrl,
-                        fit: BoxFit.cover, // fully covers container
-                        width: double.infinity,
-                        height: double.infinity,
+                        fit: BoxFit.cover, // ensures full coverage
                         placeholder: (context, url) => Container(
                           color: Colors.grey[200],
                           child: const Center(
