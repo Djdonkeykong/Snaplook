@@ -392,7 +392,9 @@ class _ProductCard extends StatelessWidget {
                     ),
                     SizedBox(height: spacing.sm),
                     Text(
-                      '\$${result.price.toStringAsFixed(2)}',
+                      result.price > 0
+                          ? '\$${result.price.toStringAsFixed(2)}'
+                          : (result.purchaseUrl != null ? 'See store' : 'Price unavailable'),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
