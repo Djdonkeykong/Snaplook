@@ -233,7 +233,7 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
                 continue
 
         # === Smart Pants Filter ===
-        if label == "pants" and rel_h < 0.25:
+        if label == "pants" and rel_h < 0.20:
             print(f"👖 Skipping too-small pants (height {rel_h:.2f}) — likely false positive.")
             continue
 
