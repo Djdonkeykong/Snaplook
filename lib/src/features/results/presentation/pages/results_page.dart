@@ -364,7 +364,7 @@ class _ProductCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16, // increased
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87[600],
+                        color: Colors.black,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: 0.2,
                       ),
@@ -394,7 +394,7 @@ class _ProductCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14, // 4px smaller than brand
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87[600], // matches brand
+                        color: Colors.black, // matches brand
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: 0.2,
                       ),
