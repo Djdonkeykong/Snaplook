@@ -7,7 +7,7 @@ with open(image_path, "rb") as f:
         "image_base64": base64.b64encode(f.read()).decode("utf-8"),
         "imbb_api_key": "d7e1d857e4498c2e28acaa8d943ccea8",  # or leave out if env var set
         "max_crops": 4,
-        "threshold": 0.2,
+        "threshold": 0.275,
         "expand_ratio": 0.1,
     }
 

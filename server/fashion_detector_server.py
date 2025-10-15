@@ -18,7 +18,7 @@ from transformers import AutoImageProcessor, YolosForObjectDetection
 
 # === CONFIG ===
 MODEL_ID = "valentinafeve/yolos-fashionpedia"
-CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", 0.3))
+CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", 0.275))
 EXPAND_RATIO = float(os.getenv("EXPAND_RATIO", 0.1))
 MAX_GARMENTS = int(os.getenv("MAX_GARMENTS", 4))
 UPLOAD_TO_IMGBB = True
