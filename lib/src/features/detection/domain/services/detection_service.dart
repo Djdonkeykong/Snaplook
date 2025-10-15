@@ -209,8 +209,14 @@ class DetectionService {
       final snippet = (match['snippet'] as String?) ?? '';
       final thumbnail = (match['thumbnail'] as String?) ?? '';
 
+      // ✅ Updated price extraction logic
+      final priceObj = match['price'];
+      final price = (priceObj?['extracted_value'] as num?)?.toDouble()
+          ?? _extractPrice(snippet)
+          ?? 0.0;
+      final currency = (priceObj?['currency'] as String?) ?? '\$';
+
       final brand = _extractBrand(title, source);
-      final price = _extractPrice(snippet) ?? 0.0;
       final category = _categorize(title);
       final confidence = _estimateConfidence(i, price);
       final tags = _generateTags(title, source);
@@ -227,6 +233,7 @@ class DetectionService {
           description: snippet.isNotEmpty ? snippet : null,
           tags: tags,
           purchaseUrl: link.isNotEmpty ? link : null,
+          // Optionally, extend DetectionResult to include currency if desired
         ),
       );
     }
@@ -303,9 +310,12 @@ class DetectionService {
       title.isEmpty ? 'Unknown item' : title.length > 80 ? '${title.substring(0, 77)}...' : title;
 
   double? _extractPrice(String snippet) {
-    final match = RegExp(r'(\$|£|€|¥)\s?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)').firstMatch(snippet);
+    final match = RegExp(
+      r'(\$|£|€|¥|USD|CAD|AUD|Rs\.?|₹)\s?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)',
+      caseSensitive: false,
+    ).firstMatch(snippet);
     if (match == null) return null;
-    final amount = match.group(2)!.replaceAll(RegExp(r'[,€£$¥]'), '');
+    final amount = match.group(2)!.replaceAll(RegExp(r'[,€£$¥₹]'), '');
     return double.tryParse(amount);
   }
 
