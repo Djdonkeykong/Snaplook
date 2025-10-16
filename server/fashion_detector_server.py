@@ -102,6 +102,14 @@ class DetectRequest(BaseModel):
     expand_ratio: Optional[float] = Field(default=EXPAND_RATIO)
     max_crops: Optional[int] = Field(default=MAX_GARMENTS)
 
+class DetectAndSearchRequest(BaseModel):
+    image_url: str
+    serp_api_key: str
+    threshold: Optional[float] = Field(default_factory=lambda: CONF_THRESHOLD)
+    expand_ratio: Optional[float] = Field(default=EXPAND_RATIO)
+    max_crops: Optional[int] = Field(default=MAX_GARMENTS)
+    max_results_per_garment: Optional[int] = Field(default=10)
+
 # === HELPERS ===
 def expand_bbox(bbox, img_width, img_height, ratio=0.1):
     x1, y1, x2, y2 = bbox
@@ -410,6 +418,93 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
     print(f"🧹 After hierarchical filtering: {len(filtered)} garments kept.")
     return filtered
 
+# === SERP API SEARCH HELPERS ===
+def download_image_from_url(image_url: str) -> Image.Image:
+    """Download image from URL and return PIL Image."""
+    print(f"📥 Downloading image from: {image_url}")
+    response = requests.get(image_url, timeout=15)
+    if response.status_code != 200:
+        raise Exception(f"Failed to download image: {response.status_code}")
+    return Image.open(io.BytesIO(response.content)).convert("RGB")
+
+def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List[dict]:
+    """Search Google Lens via SerpAPI and return top results."""
+    print(f"🔍 Searching SerpAPI for image: {image_url[:80]}...")
+
+    results = []
+    for rail in ['products', 'visual_matches']:
+        params = {
+            'engine': 'google_lens',
+            'api_key': api_key,
+            'url': image_url,
+            'type': rail,
+        }
+
+        try:
+            response = requests.get('https://serpapi.com/search', params=params, timeout=15)
+            if response.status_code != 200:
+                print(f"⚠️ SerpAPI {rail} failed: {response.status_code}")
+                continue
+
+            data = response.json()
+            if 'error' in data:
+                print(f"⚠️ SerpAPI {rail} error: {data['error']}")
+                continue
+
+            matches = data.get('visual_matches', [])
+            for match in matches:
+                link = match.get('link', '')
+                title = match.get('title', '')
+                source = match.get('source', '')
+                thumbnail = match.get('thumbnail', '')
+                snippet = match.get('snippet', '')
+
+                # Basic filtering
+                if not link or not title:
+                    continue
+
+                # Extract price if available
+                price = 0.0
+                price_obj = match.get('price', {})
+                if isinstance(price_obj, dict):
+                    price = price_obj.get('extracted_value', 0.0)
+
+                results.append({
+                    'title': title,
+                    'link': link,
+                    'source': source,
+                    'thumbnail': thumbnail,
+                    'snippet': snippet,
+                    'price': price,
+                })
+
+                if len(results) >= max_results:
+                    break
+
+            if len(results) >= max_results:
+                break
+
+        except Exception as e:
+            print(f"❌ SerpAPI {rail} error: {e}")
+            continue
+
+    print(f"✅ Found {len(results)} results from SerpAPI")
+    return results[:max_results]
+
+def format_detection_result(serp_result: dict, garment_label: str, index: int) -> dict:
+    """Format a SerpAPI result into DetectionResult-like structure."""
+    return {
+        'id': f'serp_{int(time.time() * 1000)}_{index}',
+        'product_name': serp_result['title'][:100],
+        'brand': serp_result['source'] or 'Unknown',
+        'price': serp_result.get('price', 0.0),
+        'image_url': serp_result.get('thumbnail', ''),
+        'category': garment_label,
+        'confidence': 0.75,
+        'description': serp_result.get('snippet', '')[:200] if serp_result.get('snippet') else None,
+        'purchase_url': serp_result['link'],
+    }
+
 # === MAIN ENDPOINT (Optimized for Speed) ===
 @app.post("/detect")
 def detect(req: DetectRequest):
@@ -474,6 +569,67 @@ def detect(req: DetectRequest):
         }
 
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# === DETECT AND SEARCH ENDPOINT (For Share Extension) ===
+@app.post("/detect-and-search")
+def detect_and_search(req: DetectAndSearchRequest):
+    """
+    Full pipeline: Download image -> Detect garments -> Search SerpAPI -> Return results.
+    Designed for iOS share extension to show results in modal.
+    """
+    try:
+        print(f"🚀 Starting detect-and-search pipeline for: {req.image_url[:80]}...")
+
+        # Step 1: Download image from URL
+        image = download_image_from_url(req.image_url)
+        print(f"✅ Image downloaded: {image.width}x{image.height}")
+
+        # Step 2: Run YOLOS detection
+        filtered = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
+
+        if not filtered:
+            return {
+                'success': False,
+                'message': 'No garments detected in image',
+                'results': []
+            }
+
+        # Step 3: Take the best garment (highest priority/score) and search
+        best_garment = filtered[0]
+        garment_label = best_garment['label']
+        print(f"🎯 Searching for best garment: {garment_label} (score: {best_garment['score']:.3f})")
+
+        # Search SerpAPI with the original image URL
+        serp_results = search_serp_api(
+            req.image_url,
+            req.serp_api_key,
+            max_results=req.max_results_per_garment
+        )
+
+        # Step 4: Format results
+        formatted_results = []
+        for i, serp_result in enumerate(serp_results):
+            formatted = format_detection_result(serp_result, garment_label, i)
+            formatted_results.append(formatted)
+
+        print(f"✅ Pipeline complete. Returning {len(formatted_results)} results for {garment_label}")
+
+        return {
+            'success': True,
+            'detected_garment': {
+                'label': garment_label,
+                'score': round(best_garment['score'], 3),
+                'bbox': best_garment['bbox']
+            },
+            'total_results': len(formatted_results),
+            'results': formatted_results
+        }
+
+    except Exception as e:
+        print(f"❌ detect-and-search failed: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 # === DEBUG ENDPOINT ===

@@ -18,6 +18,7 @@ import 'src/services/instagram_service.dart';
 import 'src/shared/services/video_preloader.dart';
 import 'src/shared/services/share_import_status.dart';
 import 'src/services/link_scraper_service.dart';
+import 'src/services/share_extension_config_service.dart';
 import 'dart:io';
 
 // Custom LocalStorage implementation using SharedPreferences
@@ -96,6 +97,9 @@ void main() async {
       scrapingBeeApiKey: AppConstants.scrapingBeeApiKey,
     ),
   );
+
+  // Initialize shared config for iOS share extension
+  unawaited(ShareExtensionConfigService.initializeSharedConfig());
 
   runApp(const ProviderScope(child: SnaplookApp()));
 }

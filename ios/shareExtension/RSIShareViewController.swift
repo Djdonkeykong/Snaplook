@@ -20,6 +20,8 @@ let kAppGroupIdKey = "AppGroupId"
 let kProcessingStatusKey = "ShareProcessingStatus"
 let kProcessingSessionKey = "ShareProcessingSession"
 let kScrapingBeeApiKey = "ScrapingBeeApiKey"
+let kSerpApiKey = "SerpApiKey"
+let kDetectorEndpoint = "DetectorEndpoint"
 
 @inline(__always)
 private func shareLog(_ message: String) {
@@ -78,6 +80,33 @@ public enum SharedMediaType: String, Codable, CaseIterable {
     }
 }
 
+// Detection result model
+struct DetectionResultItem: Codable {
+    let id: String
+    let product_name: String
+    let brand: String
+    let price: Double
+    let image_url: String
+    let category: String
+    let confidence: Double
+    let description: String?
+    let purchase_url: String
+}
+
+struct DetectionResponse: Codable {
+    let success: Bool
+    let detected_garment: DetectedGarment?
+    let total_results: Int
+    let results: [DetectionResultItem]
+    let message: String?
+
+    struct DetectedGarment: Codable {
+        let label: String
+        let score: Double
+        let bbox: [Int]
+    }
+}
+
 @available(swift, introduced: 5.0)
 open class RSIShareViewController: SLComposeServiceViewController {
     var hostAppBundleIdentifier = ""
@@ -95,6 +124,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var hasQueuedRedirect = false
     private var pendingPostMessage: String?
     private let maxInstagramScrapeAttempts = 2
+    private var detectionResults: [DetectionResultItem] = []
+    private var resultsTableView: UITableView?
+    private var downloadedImageUrl: String?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -600,6 +632,173 @@ open class RSIShareViewController: SLComposeServiceViewController {
         )
     }
 
+    // Get detector endpoint from UserDefaults or fallback
+    private func detectorEndpoint() -> String? {
+        if let defaults = UserDefaults(suiteName: appGroupId),
+           let endpoint = defaults.string(forKey: kDetectorEndpoint),
+           !endpoint.isEmpty {
+            return endpoint
+        }
+        // Fallback to production endpoint
+        return "https://snaplook-fastapi-detector.onrender.com/detect-and-search"
+    }
+
+    // Get SerpAPI key from UserDefaults
+    private func serpApiKey() -> String? {
+        if let defaults = UserDefaults(suiteName: appGroupId),
+           let key = defaults.string(forKey: kSerpApiKey),
+           !key.isEmpty {
+            return key
+        }
+        return nil
+    }
+
+    // Call detection API with image URL
+    private func runDetectionAnalysis(imageUrl: String) {
+        guard let endpoint = detectorEndpoint(),
+              let serpKey = serpApiKey() else {
+            shareLog("Detection endpoint or SerpAPI key not configured")
+            return
+        }
+
+        shareLog("Starting detection analysis for: \(imageUrl)")
+        updateStatusLabel("Analyzing your photo...")
+
+        let requestBody: [String: Any] = [
+            "image_url": imageUrl,
+            "serp_api_key": serpKey,
+            "max_results_per_garment": 10
+        ]
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody),
+              let url = URL(string: endpoint) else {
+            shareLog("Failed to prepare detection request")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
+        request.timeoutInterval = 30.0
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("Detection API error: \(error.localizedDescription)")
+                return
+            }
+
+            guard let data = data,
+                  let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                shareLog("Detection API failed with status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                return
+            }
+
+            do {
+                let decoder = JSONDecoder()
+                let detectionResponse = try decoder.decode(DetectionResponse.self, from: data)
+
+                if detectionResponse.success {
+                    shareLog("Detection successful: \(detectionResponse.total_results) results")
+                    DispatchQueue.main.async {
+                        self.detectionResults = detectionResponse.results
+                        self.showDetectionResults()
+                    }
+                } else {
+                    shareLog("Detection failed: \(detectionResponse.message ?? "Unknown error")")
+                }
+            } catch {
+                shareLog("Failed to parse detection response: \(error.localizedDescription)")
+            }
+        }
+
+        task.resume()
+    }
+
+    // Upload image to ImgBB and trigger detection
+    private func uploadAndDetect(imageData: Data) {
+        shareLog("Uploading image to ImgBB for detection...")
+        updateStatusLabel("Uploading photo...")
+
+        let base64Image = imageData.base64EncodedString()
+        let params = [
+            "key": "d7e1d857e4498c2e28acaa8d943ccea8",
+            "image": base64Image
+        ]
+
+        guard let url = URL(string: "https://api.imgbb.com/1/upload") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        var components = URLComponents()
+        components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
+        request.httpBody = components.query?.data(using: .utf8)
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("ImgBB upload error: \(error.localizedDescription)")
+                return
+            }
+
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let dataDict = json["data"] as? [String: Any],
+                  let imageUrl = dataDict["url"] as? String else {
+                shareLog("Failed to parse ImgBB response")
+                return
+            }
+
+            shareLog("ImgBB upload successful: \(imageUrl)")
+            self.downloadedImageUrl = imageUrl
+
+            // Trigger detection
+            self.runDetectionAnalysis(imageUrl: imageUrl)
+        }
+
+        task.resume()
+    }
+
+    // Update status label helper
+    private func updateStatusLabel(_ text: String) {
+        DispatchQueue.main.async { [weak self] in
+            self?.statusLabel?.text = text
+        }
+    }
+
+    // Show detection results in table view
+    private func showDetectionResults() {
+        guard !detectionResults.isEmpty else { return }
+
+        shareLog("Showing \(detectionResults.count) detection results")
+
+        // Hide loading indicator
+        activityIndicator?.stopAnimating()
+        activityIndicator?.isHidden = true
+        statusLabel?.isHidden = true
+
+        // Create table view if not exists
+        if resultsTableView == nil {
+            let tableView = UITableView(frame: view.bounds, style: .plain)
+            tableView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            tableView.delegate = self
+            tableView.dataSource = self
+            tableView.register(ResultCell.self, forCellReuseIdentifier: "ResultCell")
+            tableView.rowHeight = UITableView.automaticDimension
+            tableView.estimatedRowHeight = 100
+            tableView.backgroundColor = .systemBackground
+            loadingView?.addSubview(tableView)
+            resultsTableView = tableView
+        }
+
+        resultsTableView?.reloadData()
+    }
+
     private func extractInstagramImageUrls(from html: String) -> [String] {
         var priorityResults: [String] = []
         var results: [String] = []
@@ -828,6 +1027,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
                 try data.write(to: fileURL, options: .atomic)
                 shareLog("Saved Instagram image to shared container: \(fileURL.path)")
+
+                // Upload to ImgBB and trigger detection
+                self.uploadAndDetect(imageData: data)
+
                 let sharedFile = SharedMediaFile(
                     path: fileURL.absoluteString,
                     mimeType: "image/jpeg",
@@ -1118,6 +1321,154 @@ open class RSIShareViewController: SLComposeServiceViewController {
             defaults.removeObject(forKey: kProcessingStatusKey)
             defaults.removeObject(forKey: kProcessingSessionKey)
             defaults.synchronize()
+        }
+    }
+}
+
+// MARK: - Table View Delegate & DataSource
+extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
+    public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return detectionResults.count
+    }
+
+    public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "ResultCell", for: indexPath) as! ResultCell
+        let result = detectionResults[indexPath.row]
+        cell.configure(with: result)
+        return cell
+    }
+
+    public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        let selectedResult = detectionResults[indexPath.row]
+        shareLog("User selected result: \(selectedResult.product_name)")
+
+        // Save selected result and redirect to app
+        saveSelectedResultAndRedirect(selectedResult)
+    }
+
+    private func saveSelectedResultAndRedirect(_ result: DetectionResultItem) {
+        // Save the selected result to UserDefaults to be picked up by the main app
+        if let defaults = UserDefaults(suiteName: appGroupId) {
+            let resultData: [String: Any] = [
+                "product_name": result.product_name,
+                "brand": result.brand,
+                "price": result.price,
+                "image_url": result.image_url,
+                "purchase_url": result.purchase_url,
+                "category": result.category
+            ]
+
+            if let jsonData = try? JSONSerialization.data(withJSONObject: resultData),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                defaults.set(jsonString, forKey: "SelectedDetectionResult")
+                defaults.synchronize()
+            }
+        }
+
+        // Redirect to app
+        loadIds()
+        guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):detection") else {
+            shareLog("ERROR: Failed to build redirect URL")
+            return
+        }
+
+        shareLog("Redirecting to app with selected result")
+        performRedirect(to: redirectURL)
+        finishExtensionRequest()
+    }
+}
+
+// MARK: - Result Cell
+class ResultCell: UITableViewCell {
+    private let productImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFill
+        iv.clipsToBounds = true
+        iv.layer.cornerRadius = 8
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.numberOfLines = 2
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    private let brandLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 14)
+        label.textColor = .secondaryLabel
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    private let priceLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 16, weight: .bold)
+        label.textColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        setupUI()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func setupUI() {
+        contentView.addSubview(productImageView)
+        contentView.addSubview(titleLabel)
+        contentView.addSubview(brandLabel)
+        contentView.addSubview(priceLabel)
+
+        NSLayoutConstraint.activate([
+            productImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
+            productImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            productImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
+            productImageView.widthAnchor.constraint(equalToConstant: 80),
+            productImageView.heightAnchor.constraint(equalToConstant: 80),
+
+            titleLabel.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+
+            brandLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            brandLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+            brandLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
+
+            priceLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            priceLabel.topAnchor.constraint(equalTo: brandLabel.bottomAnchor, constant: 4)
+        ])
+    }
+
+    func configure(with result: DetectionResultItem) {
+        titleLabel.text = result.product_name
+        brandLabel.text = result.brand
+
+        if result.price > 0 {
+            priceLabel.text = String(format: "$%.2f", result.price)
+        } else {
+            priceLabel.text = "View Product"
+        }
+
+        // Load image asynchronously
+        productImageView.image = nil
+        if let url = URL(string: result.image_url) {
+            URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+                if let data = data, let image = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        self?.productImageView.image = image
+                    }
+                }
+            }.resume()
         }
     }
 }
