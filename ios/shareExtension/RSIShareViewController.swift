@@ -1298,45 +1298,64 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
             }
 
-        let imgPattern = "<img[^>]+src=\"([^\"]+)\""
-        if let regex = try? NSRegularExpression(pattern: imgPattern, options: [.caseInsensitive]) {
-            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
-                guard let match = match,
+            let pattern = "\"display_url\"\\s*:\\s*\"([^\"]+)\""
+            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+                let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+                regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                    guard let match = match,
+                        match.numberOfRanges > 1,
+                        let range = Range(match.range(at: 1), in: html) else { return }
+
+                    var candidate = String(html[range])
+                    candidate = sanitizeInstagramURLString(candidate)
+                    if candidate.contains("150x150") || candidate.contains("profile") {
+                        return
+                    }
+                    if !results.contains(candidate) {
+                        results.append(candidate)
+                    }
+                }
+            }
+
+            let imgPattern = "<img[^>]+src=\"([^\"]+)\""
+            if let regex = try? NSRegularExpression(pattern: imgPattern, options: [.caseInsensitive]) {
+                let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+                regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                    guard let match = match,
+                        match.numberOfRanges > 1,
+                        let range = Range(match.range(at: 1), in: html) else { return }
+                    let candidate = sanitizeInstagramURLString(String(html[range]))
+                    if candidate.contains("ig_cache_key") && !priorityResults.contains(candidate) {
+                        priorityResults.append(candidate)
+                    } else if !candidate.contains("ig_cache_key"),
+                            !results.contains(candidate) {
+                        results.append(candidate)
+                    }
+                }
+            }
+
+            if !priorityResults.isEmpty {
+                urls = priorityResults
+            } else if !results.isEmpty {
+                urls = results
+            } else {
+                let ogPattern = "<meta property=\"og:image\" content=\"([^\"]+)\""
+                if let regex = try? NSRegularExpression(pattern: ogPattern, options: [.caseInsensitive]) {
+                    let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+                    if let match = regex.firstMatch(in: html, options: [], range: nsrange),
                     match.numberOfRanges > 1,
-                    let range = Range(match.range(at: 1), in: html) else { return }
-                let candidate = sanitizeInstagramURLString(String(html[range]))
-                if candidate.contains("ig_cache_key") && !priorityResults.contains(candidate) {
-                    priorityResults.append(candidate)
-                } else if !candidate.contains("ig_cache_key"),
-                        !results.contains(candidate) {
-                    results.append(candidate)
+                    let range = Range(match.range(at: 1), in: html) {
+                        let candidate = sanitizeInstagramURLString(String(html[range]))
+                        if !candidate.isEmpty {
+                            urls.append(candidate)
+                        }
+                    }
                 }
             }
         }
 
-        if !priorityResults.isEmpty {
-            return priorityResults
-        }
-
-        if !results.isEmpty {
-            return results
-        }
-
-        let ogPattern = "<meta property=\"og:image\" content=\"([^\"]+)\""
-        if let regex = try? NSRegularExpression(pattern: ogPattern, options: [.caseInsensitive]) {
-            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-            if let match = regex.firstMatch(in: html, options: [], range: nsrange),
-            match.numberOfRanges > 1,
-            let range = Range(match.range(at: 1), in: html) {
-                let candidate = sanitizeInstagramURLString(String(html[range]))
-                if !candidate.isEmpty {
-                    results.append(candidate)
-                }
-            }
-        }
-
-        return results
+        shareLog("✅ Extracted \(urls.count) Instagram image URLs")
+        return urls
     }
 
     private func sanitizeInstagramURLString(_ value: String) -> String {
@@ -1505,7 +1524,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 shareLog("⚠️ Detection NOT configured - proceeding with normal flow")
 
                 do {
-                    // Write file to shared container (normal flow)
                     if FileManager.default.fileExists(atPath: fileURL.path) {
                         try FileManager.default.removeItem(at: fileURL)
                     }
@@ -1519,7 +1537,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         type: .image
                     )
 
-                    // No detection - complete normally
                     completion(.success(sharedFile))
                 } catch {
                     completion(.failure(error))
