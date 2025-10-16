@@ -1254,8 +1254,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
             regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
                 guard let match = match,
-                      match.numberOfRanges > 1,
-                      let range = Range(match.range(at: 1), in: html) else { return }
+                    match.numberOfRanges > 1,
+                    let range = Range(match.range(at: 1), in: html) else { return }
                 let candidate = sanitizeInstagramURLString(String(html[range]))
                 if !candidate.isEmpty && !priorityResults.contains(candidate) {
                     priorityResults.append(candidate)
@@ -1269,8 +1269,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
             regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
                 guard let match = match,
-                      match.numberOfRanges > 1,
-                      let range = Range(match.range(at: 1), in: html) else { return }
+                    match.numberOfRanges > 1,
+                    let range = Range(match.range(at: 1), in: html) else { return }
 
                 var candidate = String(html[range])
                 candidate = sanitizeInstagramURLString(candidate)
@@ -1288,13 +1288,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
             regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
                 guard let match = match,
-                      match.numberOfRanges > 1,
-                      let range = Range(match.range(at: 1), in: html) else { return }
+                    match.numberOfRanges > 1,
+                    let range = Range(match.range(at: 1), in: html) else { return }
                 let candidate = sanitizeInstagramURLString(String(html[range]))
                 if candidate.contains("ig_cache_key") && !priorityResults.contains(candidate) {
                     priorityResults.append(candidate)
                 } else if !candidate.contains("ig_cache_key"),
-                          !results.contains(candidate) {
+                        !results.contains(candidate) {
                     results.append(candidate)
                 }
             }
@@ -1312,8 +1312,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if let regex = try? NSRegularExpression(pattern: ogPattern, options: [.caseInsensitive]) {
             let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
             if let match = regex.firstMatch(in: html, options: [], range: nsrange),
-               match.numberOfRanges > 1,
-               let range = Range(match.range(at: 1), in: html) {
+            match.numberOfRanges > 1,
+            let range = Range(match.range(at: 1), in: html) {
                 let candidate = sanitizeInstagramURLString(String(html[range]))
                 if !candidate.isEmpty {
                     results.append(candidate)
@@ -1344,8 +1344,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if var queryItems = components.percentEncodedQueryItems {
             for index in 0..<queryItems.count {
                 if queryItems[index].name == "stp",
-                   let value = queryItems[index].value,
-                   value.contains("c") || value.contains("s640x640") {
+                let value = queryItems[index].value,
+                value.contains("c") || value.contains("s640x640") {
                     queryItems[index].value = value
                         .replacingOccurrences(of: "c288.0.864.864a_", with: "")
                         .replacingOccurrences(of: "s640x640_", with: "")
@@ -1392,39 +1392,33 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        func attempt(index: Int) {
-            if index >= uniqueUrls.count {
-                session.invalidateAndCancel()
-                completion(.failure(makeInstagramError("All Instagram image downloads failed")))
-                return
-            }
+        // 🆕 Only pick one image by index
+        let userSelectedIndex = UserDefaults.standard.integer(forKey: "InstagramImageIndex") // default 0
+        let safeIndex = min(max(userSelectedIndex, 0), uniqueUrls.count - 1)
+        let selectedUrl = uniqueUrls[safeIndex]
+        shareLog("✅ Selected Instagram image index \(safeIndex) of \(uniqueUrls.count): \(selectedUrl)")
 
-            let targetUrl = uniqueUrls[index]
-            shareLog("Attempting Instagram image download \(index + 1)/\(uniqueUrls.count): \(targetUrl)")
-
-            downloadSingleImage(
-                urlString: targetUrl,
-                originalURL: originalURL,
-                containerURL: containerURL,
-                session: session,
-                index: index
-            ) { result in
-                switch result {
-                case .success(let file):
-                    session.finishTasksAndInvalidate()
-                    if let file = file {
-                        completion(.success([file]))
-                    } else {
-                        completion(.success([]))
-                    }
-                case .failure(let error):
-                    shareLog("WARNING: Instagram download candidate failed (\(error.localizedDescription)) - trying next")
-                    attempt(index: index + 1)
+        // 🆕 Download just that one image
+        downloadSingleImage(
+            urlString: selectedUrl,
+            originalURL: originalURL,
+            containerURL: containerURL,
+            session: session,
+            index: safeIndex
+        ) { result in
+            switch result {
+            case .success(let file):
+                session.finishTasksAndInvalidate()
+                if let file = file {
+                    completion(.success([file]))
+                } else {
+                    completion(.success([]))
                 }
+            case .failure(let error):
+                session.invalidateAndCancel()
+                completion(.failure(error))
             }
         }
-
-        attempt(index: 0)
     }
 
     private func downloadSingleImage(
@@ -1453,7 +1447,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
+                httpResponse.statusCode == 200 else {
                 let status = (response as? HTTPURLResponse)?.statusCode ?? -1
                 completion(.failure(self.makeInstagramError("Image download failed with status \(status)", code: status)))
                 return
