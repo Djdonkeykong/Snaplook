@@ -1040,8 +1040,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
             logoImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            logoImageView.heightAnchor.constraint(equalToConstant: 24),
-            logoImageView.widthAnchor.constraint(equalToConstant: 96),
+            logoImageView.heightAnchor.constraint(equalToConstant: 28),
+            logoImageView.widthAnchor.constraint(equalToConstant: 102),
 
             cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
             cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
@@ -1818,8 +1818,32 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
         let selectedResult = filteredResults[indexPath.row]
         shareLog("User selected result: \(selectedResult.product_name)")
 
-        // Save selected result and redirect to app
-        saveSelectedResultAndRedirect(selectedResult)
+        // Open product URL in Safari
+        if let url = URL(string: selectedResult.purchase_url) {
+            shareLog("Opening product URL: \(selectedResult.purchase_url)")
+
+            var responder: UIResponder? = self
+            if #available(iOS 18.0, *) {
+                while let current = responder {
+                    if let application = current as? UIApplication {
+                        application.open(url, options: [:], completionHandler: nil)
+                        break
+                    }
+                    responder = current.next
+                }
+            } else {
+                let selectorOpenURL = sel_registerName("openURL:")
+                while let current = responder {
+                    if current.responds(to: selectorOpenURL) {
+                        _ = current.perform(selectorOpenURL, with: url)
+                        break
+                    }
+                    responder = current.next
+                }
+            }
+        } else {
+            shareLog("ERROR: Invalid product URL: \(selectedResult.purchase_url)")
+        }
     }
 
     private func saveSelectedResultAndRedirect(_ result: DetectionResultItem) {
@@ -1965,7 +1989,7 @@ class ResultCell: UITableViewCell {
         if result.price > 0 {
             priceLabel.text = String(format: "$%.2f", result.price)
         } else {
-            priceLabel.text = "View Product"
+            priceLabel.text = "See store"
         }
 
         // Load image asynchronously
