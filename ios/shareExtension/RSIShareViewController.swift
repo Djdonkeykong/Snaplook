@@ -672,14 +672,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     // Call detection API with image URL
     private func runDetectionAnalysis(imageUrl: String) {
+        shareLog("START runDetectionAnalysis - imageUrl: \(imageUrl)")
+
         guard let endpoint = detectorEndpoint(),
               let serpKey = serpApiKey() else {
-            shareLog("Detection endpoint or SerpAPI key not configured - proceeding with normal flow")
-            proceedWithNormalFlow()
+            shareLog("ERROR: Detection endpoint or SerpAPI key not configured")
+            DispatchQueue.main.async {
+                self.proceedWithNormalFlow()
+            }
             return
         }
 
-        shareLog("Starting detection analysis for: \(imageUrl)")
+        shareLog("Detection endpoint: \(endpoint)")
+        shareLog("SerpAPI key: \(serpKey.prefix(8))...")
         updateStatusLabel("Analyzing your photo...")
 
         let requestBody: [String: Any] = [
@@ -688,9 +693,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
             "max_results_per_garment": 10
         ]
 
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody),
-              let url = URL(string: endpoint) else {
-            shareLog("Failed to prepare detection request")
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            shareLog("ERROR: Failed to serialize detection request JSON")
+            DispatchQueue.main.async {
+                self.proceedWithNormalFlow()
+            }
+            return
+        }
+
+        shareLog("Request body size: \(jsonData.count) bytes")
+
+        guard let url = URL(string: endpoint) else {
+            shareLog("ERROR: Invalid detection endpoint URL: \(endpoint)")
+            DispatchQueue.main.async {
+                self.proceedWithNormalFlow()
+            }
             return
         }
 
@@ -700,24 +717,41 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.httpBody = jsonData
         request.timeoutInterval = 30.0
 
+        shareLog("Sending detection API request to: \(endpoint)")
+
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
             if let error = error {
-                shareLog("❌ Detection API error: \(error.localizedDescription)")
+                shareLog("ERROR: Detection API network error: \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    shareLog("🔄 API error - proceeding with normal flow")
                     self.proceedWithNormalFlow()
                 }
                 return
             }
 
-            guard let data = data,
-                  let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
-                shareLog("❌ Detection API failed with status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            shareLog("Detection API response - status code: \(statusCode)")
+
+            guard let data = data else {
+                shareLog("ERROR: Detection API response has no data")
                 DispatchQueue.main.async {
-                    shareLog("🔄 API status error - proceeding with normal flow")
+                    self.proceedWithNormalFlow()
+                }
+                return
+            }
+
+            shareLog("Detection API response data size: \(data.count) bytes")
+
+            // Log response preview for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                let preview = responseString.prefix(500)
+                shareLog("Detection API response preview: \(preview)")
+            }
+
+            guard statusCode == 200 else {
+                shareLog("ERROR: Detection API returned non-200 status: \(statusCode)")
+                DispatchQueue.main.async {
                     self.proceedWithNormalFlow()
                 }
                 return
@@ -727,78 +761,145 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 let decoder = JSONDecoder()
                 let detectionResponse = try decoder.decode(DetectionResponse.self, from: data)
 
+                shareLog("Detection response parsed - success: \(detectionResponse.success)")
+
                 if detectionResponse.success {
-                    shareLog("✅ Detection successful: \(detectionResponse.total_results) results")
+                    shareLog("SUCCESS: Detection found \(detectionResponse.total_results) results")
                     DispatchQueue.main.async {
                         self.detectionResults = detectionResponse.results
                         self.isShowingDetectionResults = true
-                        shareLog("🎉 Showing \(self.detectionResults.count) results in modal")
+                        shareLog("Calling showDetectionResults with \(self.detectionResults.count) items")
                         self.showDetectionResults()
                     }
                 } else {
-                    shareLog("❌ Detection failed: \(detectionResponse.message ?? "Unknown error")")
-                    // If detection fails, allow normal redirect
+                    shareLog("ERROR: Detection failed - \(detectionResponse.message ?? "Unknown error")")
                     DispatchQueue.main.async {
-                        shareLog("🔄 Detection failed - proceeding with normal flow")
                         self.proceedWithNormalFlow()
                     }
                 }
             } catch {
-                shareLog("❌ Failed to parse detection response: \(error.localizedDescription)")
+                shareLog("ERROR: Failed to parse detection response: \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    shareLog("🔄 Parse error - proceeding with normal flow")
                     self.proceedWithNormalFlow()
                 }
             }
         }
 
         task.resume()
+        shareLog("Detection API task started")
     }
 
     // Upload image to ImgBB and trigger detection
     private func uploadAndDetect(imageData: Data) {
-        shareLog("Uploading image to ImgBB for detection...")
+        shareLog("START uploadAndDetect - image size: \(imageData.count) bytes")
         updateStatusLabel("Uploading photo...")
 
         let base64Image = imageData.base64EncodedString()
+        shareLog("Base64 encoded - length: \(base64Image.count) chars")
+
         let params = [
             "key": "d7e1d857e4498c2e28acaa8d943ccea8",
             "image": base64Image
         ]
 
-        guard let url = URL(string: "https://api.imgbb.com/1/upload") else { return }
+        guard let url = URL(string: "https://api.imgbb.com/1/upload") else {
+            shareLog("ERROR: Failed to create ImgBB URL")
+            DispatchQueue.main.async {
+                self.proceedWithNormalFlow()
+            }
+            return
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 30.0
 
         var components = URLComponents()
         components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
         request.httpBody = components.query?.data(using: .utf8)
 
+        shareLog("Sending ImgBB upload request...")
+
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
             if let error = error {
-                shareLog("ImgBB upload error: \(error.localizedDescription)")
+                shareLog("ERROR: ImgBB upload network error: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    self.proceedWithNormalFlow()
+                }
                 return
             }
 
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let dataDict = json["data"] as? [String: Any],
-                  let imageUrl = dataDict["url"] as? String else {
-                shareLog("Failed to parse ImgBB response")
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            shareLog("ImgBB response - status code: \(statusCode)")
+
+            guard let data = data else {
+                shareLog("ERROR: ImgBB response has no data")
+                DispatchQueue.main.async {
+                    self.proceedWithNormalFlow()
+                }
                 return
             }
 
-            shareLog("ImgBB upload successful: \(imageUrl)")
+            shareLog("ImgBB response data size: \(data.count) bytes")
+
+            // Log the raw response for debugging
+            if let responseString = String(data: data, encoding: .utf8) {
+                let preview = responseString.prefix(500)
+                shareLog("ImgBB response preview: \(preview)")
+            }
+
+            guard statusCode == 200 else {
+                shareLog("ERROR: ImgBB returned non-200 status: \(statusCode)")
+                DispatchQueue.main.async {
+                    self.proceedWithNormalFlow()
+                }
+                return
+            }
+
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                shareLog("ERROR: Failed to parse ImgBB JSON")
+                DispatchQueue.main.async {
+                    self.proceedWithNormalFlow()
+                }
+                return
+            }
+
+            shareLog("ImgBB JSON parsed successfully")
+
+            guard let dataDict = json["data"] as? [String: Any] else {
+                shareLog("ERROR: ImgBB response missing 'data' key")
+                if let success = json["success"] as? Bool, !success {
+                    if let errorDict = json["error"] as? [String: Any],
+                       let message = errorDict["message"] as? String {
+                        shareLog("ERROR: ImgBB API error: \(message)")
+                    }
+                }
+                DispatchQueue.main.async {
+                    self.proceedWithNormalFlow()
+                }
+                return
+            }
+
+            guard let imageUrl = dataDict["url"] as? String else {
+                shareLog("ERROR: ImgBB data dict missing 'url' key")
+                DispatchQueue.main.async {
+                    self.proceedWithNormalFlow()
+                }
+                return
+            }
+
+            shareLog("SUCCESS: ImgBB upload complete: \(imageUrl)")
             self.downloadedImageUrl = imageUrl
 
             // Trigger detection
+            shareLog("Calling runDetectionAnalysis...")
             self.runDetectionAnalysis(imageUrl: imageUrl)
         }
 
         task.resume()
+        shareLog("ImgBB upload task started")
     }
 
     // Update status label helper
@@ -1109,7 +1210,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let hasDetectionConfig = self.detectorEndpoint() != nil && self.serpApiKey() != nil
 
             if hasDetectionConfig {
-                shareLog("🔍 DETECTION CONFIGURED - Holding file in memory, NOT writing to shared container yet")
+                shareLog("DETECTION CONFIGURED - Holding file in memory, NOT writing to shared container yet")
                 self.shouldAttemptDetection = true
                 self.pendingImageData = data
                 self.pendingImageUrl = originalURL
@@ -1123,11 +1224,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 )
                 self.pendingSharedFile = sharedFile
 
+                shareLog("Calling uploadAndDetect with \(data.count) bytes of image data")
                 // Upload to ImgBB and trigger detection (async - don't complete yet)
                 self.uploadAndDetect(imageData: data)
 
                 // DON'T call completion and DON'T write file - wait for detection results or failure
-                shareLog("🔍 File held in memory. Completion held. Detection starting...")
+                shareLog("File held in memory. Completion held. uploadAndDetect called.")
             } else {
                 shareLog("⚠️ Detection NOT configured - proceeding with normal flow")
 
