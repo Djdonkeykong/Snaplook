@@ -135,13 +135,33 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingImageUrl: String?
     private var selectedCategory: String = "All"
     private var categoryFilterView: UIView?
+    private var hasProcessedAttachments = false
 
     open func shouldAutoRedirect() -> Bool { true }
 
     open override func isContentValid() -> Bool { true }
 
     open override func viewDidLoad() {
+        // Hide the default share sheet UI immediately BEFORE calling super
+        view.isHidden = true
+
         super.viewDidLoad()
+
+        // Immediately hide and disable all default SLComposeServiceViewController UI
+        textView?.isHidden = true
+        textView?.isEditable = false
+        textView?.isSelectable = false
+        textView?.alpha = 0
+        placeholder = ""
+
+        // Hide navigation bar items (Post button, Cancel button)
+        navigationController?.navigationBar.isHidden = true
+        navigationItem.leftBarButtonItem = nil
+        navigationItem.rightBarButtonItem = nil
+
+        // Show our custom view
+        view.isHidden = false
+
         loadIds()
         sharedMedia.removeAll()
         shareLog("View did load - cleared sharedMedia array")
@@ -165,11 +185,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
     open override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         suppressKeyboard()
+
+        // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
+        if hasProcessedAttachments {
+            shareLog("⏸️ viewDidAppear called again - attachments already processed, skipping")
+            return
+        }
+
         guard let content = extensionContext?.inputItems.first as? NSExtensionItem,
               let attachments = content.attachments else {
             shareLog("No attachments found on extension context")
             return
         }
+
+        // Mark as processed to prevent re-runs
+        hasProcessedAttachments = true
 
         pendingAttachmentCount = 0
         hasQueuedRedirect = false
@@ -937,6 +967,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func showDetectionResults() {
         guard !detectionResults.isEmpty else { return }
 
+        // Prevent re-creating UI if already showing results
+        if resultsTableView != nil {
+            shareLog("⏸️ showDetectionResults called again - results already displayed, skipping UI creation")
+            return
+        }
+
         shareLog("Showing \(detectionResults.count) detection results")
 
         // Hide loading indicator
@@ -1114,8 +1150,31 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     @objc private func cancelDetectionTapped() {
-        shareLog("Cancel button tapped - proceeding with normal flow")
-        proceedWithNormalFlow()
+        shareLog("Cancel button tapped - dismissing extension")
+
+        // Clean up state
+        loadingHideWorkItem?.cancel()
+        loadingHideWorkItem = nil
+        isShowingDetectionResults = false
+        shouldAttemptDetection = false
+        detectionResults.removeAll()
+        filteredResults.removeAll()
+        pendingImageData = nil
+        pendingSharedFile = nil
+        pendingImageUrl = nil
+
+        clearSharedData()
+        hideLoadingUI()
+
+        // Cancel the extension request - this dismisses the share sheet and returns to source app
+        let error = NSError(
+            domain: "com.snaplook.shareExtension",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: "User cancelled"]
+        )
+        didCompleteRequest = true
+        extensionContext?.cancelRequest(withError: error)
+        shareLog("Extension cancelled - user returned to source app")
     }
 
     // Proceed with normal flow (save and redirect to app)
