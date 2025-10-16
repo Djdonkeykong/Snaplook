@@ -818,16 +818,28 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
+        // Create multipart/form-data request
+        let boundary = "Boundary-\(UUID().uuidString)"
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 30.0
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
-        // Properly encode the image parameter for form data
-        let formData = "image=\(base64Image.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
-        request.httpBody = formData.data(using: .utf8)
+        // Build multipart body
+        var body = Data()
 
-        shareLog("Sending ImgBB upload request with \(request.httpBody?.count ?? 0) bytes body...")
+        // Add image field
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"\r\n\r\n".data(using: .utf8)!)
+        body.append(base64Image.data(using: .utf8)!)
+        body.append("\r\n".data(using: .utf8)!)
+
+        // Add closing boundary
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        shareLog("Sending ImgBB multipart upload request with \(body.count) bytes body...")
 
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
