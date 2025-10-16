@@ -130,6 +130,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var isShowingDetectionResults = false
     private var shouldAttemptDetection = false
     private var pendingSharedFile: SharedMediaFile?
+    private var pendingImageData: Data?
+    private var pendingImageUrl: String?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -325,14 +327,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func maybeFinalizeShare() {
-        guard pendingAttachmentCount == 0, !hasQueuedRedirect else { return }
-
-        // Don't auto-redirect if we're attempting or showing detection results
-        if shouldAttemptDetection || isShowingDetectionResults {
-            shareLog("Skipping auto-redirect - detection in progress or showing results")
+        guard pendingAttachmentCount == 0, !hasQueuedRedirect else {
+            shareLog("⏸️ maybeFinalizeShare: waiting (pending=\(pendingAttachmentCount), hasQueued=\(hasQueuedRedirect))")
             return
         }
 
+        // Don't auto-redirect if we're attempting or showing detection results
+        if shouldAttemptDetection || isShowingDetectionResults {
+            shareLog("⏸️ maybeFinalizeShare: BLOCKED - detection in progress (attempt=\(shouldAttemptDetection), showing=\(isShowingDetectionResults))")
+            return
+        }
+
+        shareLog("✅ maybeFinalizeShare: proceeding with normal redirect")
         hasQueuedRedirect = true
         let message = pendingPostMessage
         saveAndRedirect(message: message)
@@ -698,8 +704,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard let self = self else { return }
 
             if let error = error {
-                shareLog("Detection API error: \(error.localizedDescription)")
+                shareLog("❌ Detection API error: \(error.localizedDescription)")
                 DispatchQueue.main.async {
+                    shareLog("🔄 API error - proceeding with normal flow")
                     self.proceedWithNormalFlow()
                 }
                 return
@@ -708,8 +715,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard let data = data,
                   let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
-                shareLog("Detection API failed with status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                shareLog("❌ Detection API failed with status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
                 DispatchQueue.main.async {
+                    shareLog("🔄 API status error - proceeding with normal flow")
                     self.proceedWithNormalFlow()
                 }
                 return
@@ -720,22 +728,25 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 let detectionResponse = try decoder.decode(DetectionResponse.self, from: data)
 
                 if detectionResponse.success {
-                    shareLog("Detection successful: \(detectionResponse.total_results) results")
+                    shareLog("✅ Detection successful: \(detectionResponse.total_results) results")
                     DispatchQueue.main.async {
                         self.detectionResults = detectionResponse.results
                         self.isShowingDetectionResults = true
+                        shareLog("🎉 Showing \(self.detectionResults.count) results in modal")
                         self.showDetectionResults()
                     }
                 } else {
-                    shareLog("Detection failed: \(detectionResponse.message ?? "Unknown error")")
+                    shareLog("❌ Detection failed: \(detectionResponse.message ?? "Unknown error")")
                     // If detection fails, allow normal redirect
                     DispatchQueue.main.async {
+                        shareLog("🔄 Detection failed - proceeding with normal flow")
                         self.proceedWithNormalFlow()
                     }
                 }
             } catch {
-                shareLog("Failed to parse detection response: \(error.localizedDescription)")
+                shareLog("❌ Failed to parse detection response: \(error.localizedDescription)")
                 DispatchQueue.main.async {
+                    shareLog("🔄 Parse error - proceeding with normal flow")
                     self.proceedWithNormalFlow()
                 }
             }
@@ -827,18 +838,46 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     // Proceed with normal flow (save and redirect to app)
     private func proceedWithNormalFlow() {
-        guard !hasQueuedRedirect else { return }
-        shareLog("Proceeding with normal flow (no detection results)")
+        guard !hasQueuedRedirect else {
+            shareLog("⚠️ proceedWithNormalFlow called but redirect already queued")
+            return
+        }
+        shareLog("🔄 Proceeding with normal flow (detection failed or no results)")
         isShowingDetectionResults = false
         shouldAttemptDetection = false
         hasQueuedRedirect = true
 
-        // Save shared media to UserDefaults so Flutter app can pick it up
-        if let file = pendingSharedFile {
-            let userDefaults = UserDefaults(suiteName: appGroupId)
-            userDefaults?.set(toData(data: [file]), forKey: kUserDefaultsKey)
-            userDefaults?.synchronize()
-            shareLog("Saved pending file to UserDefaults for normal flow")
+        // NOW write the file to shared container so Flutter can pick it up
+        if let data = pendingImageData, let file = pendingSharedFile {
+            guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
+                shareLog("❌ ERROR: Cannot get container URL for normal flow")
+                saveAndRedirect()
+                return
+            }
+
+            let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+            let fileName = "instagram_image_\(timestamp)_fallback.jpg"
+            let fileURL = containerURL.appendingPathComponent(fileName)
+
+            do {
+                if FileManager.default.fileExists(atPath: fileURL.path) {
+                    try FileManager.default.removeItem(at: fileURL)
+                }
+                try data.write(to: fileURL, options: .atomic)
+                shareLog("💾 NORMAL FLOW: Wrote file to shared container: \(fileURL.path)")
+
+                // Update the shared file path
+                var updatedFile = file
+                updatedFile.path = fileURL.absoluteString
+
+                // Save to UserDefaults
+                let userDefaults = UserDefaults(suiteName: appGroupId)
+                userDefaults?.set(toData(data: [updatedFile]), forKey: kUserDefaultsKey)
+                userDefaults?.synchronize()
+                shareLog("💾 NORMAL FLOW: Saved file to UserDefaults")
+            } catch {
+                shareLog("❌ ERROR writing file in normal flow: \(error.localizedDescription)")
+            }
         }
 
         saveAndRedirect()
@@ -1066,40 +1105,52 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let fileName = "instagram_image_\(timestamp)_\(index).jpg"
             let fileURL = containerURL.appendingPathComponent(fileName)
 
-            do {
-                if FileManager.default.fileExists(atPath: fileURL.path) {
-                    try FileManager.default.removeItem(at: fileURL)
-                }
-                try data.write(to: fileURL, options: .atomic)
-                shareLog("Saved Instagram image to shared container: \(fileURL.path)")
+            // Check if we should attempt detection BEFORE writing file
+            let hasDetectionConfig = self.detectorEndpoint() != nil && self.serpApiKey() != nil
 
+            if hasDetectionConfig {
+                shareLog("🔍 DETECTION CONFIGURED - Holding file in memory, NOT writing to shared container yet")
+                self.shouldAttemptDetection = true
+                self.pendingImageData = data
+                self.pendingImageUrl = originalURL
+
+                // Create shared file reference but DON'T write to disk yet
                 let sharedFile = SharedMediaFile(
                     path: fileURL.absoluteString,
                     mimeType: "image/jpeg",
                     message: originalURL,
                     type: .image
                 )
+                self.pendingSharedFile = sharedFile
 
-                // Check if we should attempt detection
-                let hasDetectionConfig = self.detectorEndpoint() != nil && self.serpApiKey() != nil
+                // Upload to ImgBB and trigger detection (async - don't complete yet)
+                self.uploadAndDetect(imageData: data)
 
-                if hasDetectionConfig {
-                    shareLog("Detection configured - attempting in-modal detection")
-                    self.shouldAttemptDetection = true
-                    self.pendingSharedFile = sharedFile
+                // DON'T call completion and DON'T write file - wait for detection results or failure
+                shareLog("🔍 File held in memory. Completion held. Detection starting...")
+            } else {
+                shareLog("⚠️ Detection NOT configured - proceeding with normal flow")
 
-                    // Upload to ImgBB and trigger detection (async - don't complete yet)
-                    self.uploadAndDetect(imageData: data)
+                do {
+                    // Write file to shared container (normal flow)
+                    if FileManager.default.fileExists(atPath: fileURL.path) {
+                        try FileManager.default.removeItem(at: fileURL)
+                    }
+                    try data.write(to: fileURL, options: .atomic)
+                    shareLog("💾 Saved Instagram image to shared container: \(fileURL.path)")
 
-                    // DON'T call completion yet - wait for detection results or failure
-                    shareLog("Holding completion until detection finishes")
-                } else {
-                    shareLog("Detection not configured - proceeding with normal flow")
+                    let sharedFile = SharedMediaFile(
+                        path: fileURL.absoluteString,
+                        mimeType: "image/jpeg",
+                        message: originalURL,
+                        type: .image
+                    )
+
                     // No detection - complete normally
                     completion(.success(sharedFile))
+                } catch {
+                    completion(.failure(error))
                 }
-            } catch {
-                completion(.failure(error))
             }
         }.resume()
     }
@@ -1408,42 +1459,67 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
     }
 
     private func saveSelectedResultAndRedirect(_ result: DetectionResultItem) {
-        shareLog("User selected result - saving and redirecting")
+        shareLog("✅ USER SELECTED RESULT - saving and redirecting")
 
-        // Save the selected result to UserDefaults to be picked up by the main app
-        if let defaults = UserDefaults(suiteName: appGroupId) {
-            let resultData: [String: Any] = [
-                "product_name": result.product_name,
-                "brand": result.brand,
-                "price": result.price,
-                "image_url": result.image_url,
-                "purchase_url": result.purchase_url,
-                "category": result.category
-            ]
-
-            if let jsonData = try? JSONSerialization.data(withJSONObject: resultData),
-               let jsonString = String(data: jsonData, encoding: .utf8) {
-                defaults.set(jsonString, forKey: "SelectedDetectionResult")
-                defaults.synchronize()
+        // NOW write the file to shared container
+        if let data = pendingImageData, let file = pendingSharedFile {
+            guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
+                shareLog("❌ ERROR: Cannot get container URL")
+                return
             }
 
-            // Also save the original shared file so app can use it
-            if let file = pendingSharedFile {
-                defaults.set(toData(data: [file]), forKey: kUserDefaultsKey)
-                defaults.synchronize()
-                shareLog("Saved shared file along with selected result")
+            let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+            let fileName = "instagram_image_\(timestamp)_selected.jpg"
+            let fileURL = containerURL.appendingPathComponent(fileName)
+
+            do {
+                if FileManager.default.fileExists(atPath: fileURL.path) {
+                    try FileManager.default.removeItem(at: fileURL)
+                }
+                try data.write(to: fileURL, options: .atomic)
+                shareLog("💾 SELECTED RESULT: Wrote file to shared container: \(fileURL.path)")
+
+                // Update the shared file path
+                var updatedFile = file
+                updatedFile.path = fileURL.absoluteString
+
+                // Save the selected result to UserDefaults
+                if let defaults = UserDefaults(suiteName: appGroupId) {
+                    let resultData: [String: Any] = [
+                        "product_name": result.product_name,
+                        "brand": result.brand,
+                        "price": result.price,
+                        "image_url": result.image_url,
+                        "purchase_url": result.purchase_url,
+                        "category": result.category
+                    ]
+
+                    if let jsonData = try? JSONSerialization.data(withJSONObject: resultData),
+                       let jsonString = String(data: jsonData, encoding: .utf8) {
+                        defaults.set(jsonString, forKey: "SelectedDetectionResult")
+                        defaults.synchronize()
+                        shareLog("💾 SELECTED RESULT: Saved result metadata to UserDefaults")
+                    }
+
+                    // Save the file
+                    defaults.set(toData(data: [updatedFile]), forKey: kUserDefaultsKey)
+                    defaults.synchronize()
+                    shareLog("💾 SELECTED RESULT: Saved file to UserDefaults")
+                }
+            } catch {
+                shareLog("❌ ERROR writing file with selected result: \(error.localizedDescription)")
             }
         }
 
         // Redirect to app
         loadIds()
         guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):detection") else {
-            shareLog("ERROR: Failed to build redirect URL")
+            shareLog("❌ ERROR: Failed to build redirect URL")
             return
         }
 
         hasQueuedRedirect = true
-        shareLog("Redirecting to app with selected result")
+        shareLog("🚀 Redirecting to app with selected result")
         performRedirect(to: redirectURL)
         finishExtensionRequest()
     }
