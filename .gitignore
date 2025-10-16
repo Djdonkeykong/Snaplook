@@ -69,4 +69,10 @@ ios/Runner/GoogleService-Info.plist
 
 # Firebase
 firebase_options.dart
-prebuild_script.sh
+
+# Scripts
+scripts/prebuild_script.sh
+scripts/.env
+
+# Storage and local data
+storage/
