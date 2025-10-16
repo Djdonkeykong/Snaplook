@@ -157,8 +157,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                   index: 0,
                   isSelected: selectedIndex == 0,
                   onTap: () => _handleTabTap(0),
-                  iconSize: 28.0,
-                  selectedIconSize: 29.0,
+                  iconSize: 25.0,
+                  selectedIconSize: 26.0,
                 ),
                 const Spacer(flex: 8),
                 _NavigationItem(
@@ -168,8 +168,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                   index: 1,
                   isSelected: selectedIndex == 1,
                   onTap: () => _handleTabTap(1),
-                  iconSize: 28.0,
-                  selectedIconSize: 29.0,
+                  iconSize: 25.0,
+                  selectedIconSize: 26.0,
                 ),
                 const Spacer(flex: 8),
                 _NavigationItem(
