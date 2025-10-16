@@ -1262,7 +1262,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             match.numberOfRanges > 1,
             let range = Range(match.range(at: 1), in: html) {
 
-                shareLog("✅ Found JSON block in HTML (\(pattern.contains(\"_sharedData\") ? \"_sharedData\" : \"__additionalDataLoaded\"))")
+                // ✅ fixed string interpolation
+                shareLog("✅ Found JSON block in HTML (\(pattern.contains("_sharedData") ? "_sharedData" : "__additionalDataLoaded"))")
 
                 let jsonString = String(html[range])
                 if let data = jsonString.data(using: .utf8) {
