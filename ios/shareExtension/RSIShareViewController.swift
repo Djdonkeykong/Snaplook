@@ -1075,7 +1075,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stackView.spacing = 8
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
-        let categories = ["All", "Tops", "Bottoms", "Dresses", "Shoes", "Bags", "Accessories"]
+        // Extract unique categories from results and map to display names
+        var uniqueCategories = Set<String>()
+        for result in detectionResults {
+            let displayCategory = categoryDisplayName(for: result.category)
+            uniqueCategories.insert(displayCategory)
+        }
+
+        // Sort categories in a logical order
+        let categoryOrder = ["Tops", "Bottoms", "Dresses", "Outerwear", "Shoes", "Bags", "Accessories", "Headwear"]
+        let sortedCategories = categoryOrder.filter { uniqueCategories.contains($0) }
+
+        // Always start with "All"
+        var categories = ["All"]
+        categories.append(contentsOf: sortedCategories)
+
         for category in categories {
             let button = UIButton(type: .system)
             button.setTitle(category, for: .normal)
@@ -1109,6 +1123,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return containerView
     }
 
+    // Convert server category to display name
+    private func categoryDisplayName(for category: String) -> String {
+        let lower = category.lowercased()
+        switch lower {
+        case "tops": return "Tops"
+        case "bottoms": return "Bottoms"
+        case "dresses": return "Dresses"
+        case "outerwear": return "Outerwear"
+        case "shoes": return "Shoes"
+        case "bags": return "Bags"
+        case "accessories": return "Accessories"
+        case "headwear": return "Headwear"
+        default: return category.capitalized
+        }
+    }
+
     @objc private func categoryFilterTapped(_ sender: UIButton) {
         guard let category = sender.titleLabel?.text else { return }
 
@@ -1131,19 +1161,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if selectedCategory == "All" {
             filteredResults = detectionResults
         } else {
-            let categoryMap: [String: Set<String>] = [
-                "Tops": ["shirt, blouse", "top, t-shirt, sweatshirt", "sweater", "cardigan", "jacket", "coat", "vest"],
-                "Bottoms": ["pants", "shorts", "skirt"],
-                "Dresses": ["dress", "jumpsuit"],
-                "Shoes": ["shoe"],
-                "Bags": ["bag, wallet"],
-                "Accessories": ["glasses", "hat", "headband, head covering, hair accessory", "scarf"]
-            ]
-
-            if let allowedCategories = categoryMap[selectedCategory] {
-                filteredResults = detectionResults.filter { allowedCategories.contains($0.category) }
-            } else {
-                filteredResults = detectionResults
+            // Filter by matching the display name with the result's category
+            filteredResults = detectionResults.filter { result in
+                categoryDisplayName(for: result.category) == selectedCategory
             }
         }
 
@@ -1882,7 +1902,7 @@ class ResultCell: UITableViewCell {
 
     private let brandLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 17, weight: .semibold)
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
         label.numberOfLines = 2
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -1915,28 +1935,26 @@ class ResultCell: UITableViewCell {
     }
 
     private func setupUI() {
+        // Create a vertical stack for the text labels
+        let textStackView = UIStackView(arrangedSubviews: [brandLabel, productNameLabel, priceLabel])
+        textStackView.axis = .vertical
+        textStackView.spacing = 4
+        textStackView.translatesAutoresizingMaskIntoConstraints = false
+
         contentView.addSubview(productImageView)
-        contentView.addSubview(brandLabel)
-        contentView.addSubview(productNameLabel)
-        contentView.addSubview(priceLabel)
+        contentView.addSubview(textStackView)
 
         NSLayoutConstraint.activate([
             productImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            productImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
-            productImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
+            productImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             productImageView.widthAnchor.constraint(equalToConstant: 80),
             productImageView.heightAnchor.constraint(equalToConstant: 80),
 
-            brandLabel.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
-            brandLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
-            brandLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            textStackView.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
+            textStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            textStackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
-            productNameLabel.leadingAnchor.constraint(equalTo: brandLabel.leadingAnchor),
-            productNameLabel.trailingAnchor.constraint(equalTo: brandLabel.trailingAnchor),
-            productNameLabel.topAnchor.constraint(equalTo: brandLabel.bottomAnchor, constant: 4),
-
-            priceLabel.leadingAnchor.constraint(equalTo: brandLabel.leadingAnchor),
-            priceLabel.topAnchor.constraint(equalTo: productNameLabel.bottomAnchor, constant: 4)
+            contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 104)
         ])
     }
 
