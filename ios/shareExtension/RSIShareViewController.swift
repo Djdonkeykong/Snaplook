@@ -128,6 +128,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var resultsTableView: UITableView?
     private var downloadedImageUrl: String?
     private var isShowingDetectionResults = false
+    private var shouldAttemptDetection = false
+    private var pendingSharedFile: SharedMediaFile?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -325,9 +327,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func maybeFinalizeShare() {
         guard pendingAttachmentCount == 0, !hasQueuedRedirect else { return }
 
-        // Don't auto-redirect if we're showing detection results
-        if isShowingDetectionResults {
-            shareLog("Skipping auto-redirect - showing detection results")
+        // Don't auto-redirect if we're attempting or showing detection results
+        if shouldAttemptDetection || isShowingDetectionResults {
+            shareLog("Skipping auto-redirect - detection in progress or showing results")
             return
         }
 
@@ -828,7 +830,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
         guard !hasQueuedRedirect else { return }
         shareLog("Proceeding with normal flow (no detection results)")
         isShowingDetectionResults = false
+        shouldAttemptDetection = false
         hasQueuedRedirect = true
+
+        // Save shared media to UserDefaults so Flutter app can pick it up
+        if let file = pendingSharedFile {
+            let userDefaults = UserDefaults(suiteName: appGroupId)
+            userDefaults?.set(toData(data: [file]), forKey: kUserDefaultsKey)
+            userDefaults?.synchronize()
+            shareLog("Saved pending file to UserDefaults for normal flow")
+        }
+
         saveAndRedirect()
     }
 
@@ -1068,12 +1080,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     type: .image
                 )
 
-                // Upload to ImgBB and trigger detection (async - don't complete yet)
-                self.uploadAndDetect(imageData: data)
+                // Check if we should attempt detection
+                let hasDetectionConfig = self.detectorEndpoint() != nil && self.serpApiKey() != nil
 
-                // Return success but don't trigger redirect yet
-                // The redirect will happen when user selects a result OR if detection fails
-                completion(.success(sharedFile))
+                if hasDetectionConfig {
+                    shareLog("Detection configured - attempting in-modal detection")
+                    self.shouldAttemptDetection = true
+                    self.pendingSharedFile = sharedFile
+
+                    // Upload to ImgBB and trigger detection (async - don't complete yet)
+                    self.uploadAndDetect(imageData: data)
+
+                    // DON'T call completion yet - wait for detection results or failure
+                    shareLog("Holding completion until detection finishes")
+                } else {
+                    shareLog("Detection not configured - proceeding with normal flow")
+                    // No detection - complete normally
+                    completion(.success(sharedFile))
+                }
             } catch {
                 completion(.failure(error))
             }
@@ -1384,6 +1408,8 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
     }
 
     private func saveSelectedResultAndRedirect(_ result: DetectionResultItem) {
+        shareLog("User selected result - saving and redirecting")
+
         // Save the selected result to UserDefaults to be picked up by the main app
         if let defaults = UserDefaults(suiteName: appGroupId) {
             let resultData: [String: Any] = [
@@ -1400,6 +1426,13 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
                 defaults.set(jsonString, forKey: "SelectedDetectionResult")
                 defaults.synchronize()
             }
+
+            // Also save the original shared file so app can use it
+            if let file = pendingSharedFile {
+                defaults.set(toData(data: [file]), forKey: kUserDefaultsKey)
+                defaults.synchronize()
+                shareLog("Saved shared file along with selected result")
+            }
         }
 
         // Redirect to app
@@ -1409,6 +1442,7 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
             return
         }
 
+        hasQueuedRedirect = true
         shareLog("Redirecting to app with selected result")
         performRedirect(to: redirectURL)
         finishExtensionRequest()
