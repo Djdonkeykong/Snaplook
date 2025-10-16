@@ -105,3 +105,15 @@ flutter:
           weight: 400
         - asset: assets/fonts/PlusJakartaSans-Bold.ttf
           weight: 700
+    - family: HomeyIconSets
+      fonts:
+        - asset: assets/fonts/homey_icon_sets.ttf
+    - family: HomeyNewNew
+      fonts:
+        - asset: assets/fonts/homey_new_new.ttf
+    - family: HeartyIconSNewest
+      fonts:
+        - asset: assets/fonts/hearty_icon_s_newest.ttf
+    - family: NewHeartUnfilled
+      fonts:
+        - asset: assets/fonts/new-heart-unfilled.ttf

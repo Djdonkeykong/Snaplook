@@ -13,6 +13,7 @@ import '../../src/features/home/domain/providers/image_provider.dart';
 import '../../src/features/detection/presentation/pages/detection_page.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extensions.dart';
+import '../../core/theme/snaplook_icons.dart';
 
 final selectedIndexProvider = StateProvider<int>((ref) => 0);
 
@@ -150,25 +151,25 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               children: [
                 const Spacer(flex: 3),
                 _NavigationItem(
-                  svgIcon: 'assets/icons/solar--home-2-outline.svg',
-                  selectedSvgIcon: 'assets/icons/solar--home-2-bold.svg',
+                  icon: SnaplookIcons.homeOutline,
+                  selectedIcon: SnaplookIcons.homeFilled,
                   label: 'Home',
                   index: 0,
                   isSelected: selectedIndex == 0,
                   onTap: () => _handleTabTap(0),
-                  iconSize: 26.0,
+                  iconSize: 28.0,
                   selectedIconSize: 29.0,
                 ),
                 const Spacer(flex: 8),
                 _NavigationItem(
-                  svgIcon: 'assets/icons/solar--heart-linear.svg',
-                  selectedSvgIcon: 'assets/icons/solar--heart-bold.svg',
+                  icon: SnaplookIcons.heartOutline,
+                  selectedIcon: SnaplookIcons.heartFilled,
                   label: 'Wardrobe',
                   index: 1,
                   isSelected: selectedIndex == 1,
                   onTap: () => _handleTabTap(1),
                   iconSize: 28.0,
-                  selectedIconSize: 31.0,
+                  selectedIconSize: 29.0,
                 ),
                 const Spacer(flex: 8),
                 _NavigationItem(
@@ -178,8 +179,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                   index: 2,
                   isSelected: selectedIndex == 2,
                   onTap: () => _handleTabTap(2),
-                  iconSize: 26.0,
-                  selectedIconSize: 29.0,
+                  iconSize: 28.0,
+                  selectedIconSize: 30.0,
                 ),
                 const Spacer(flex: 3),
               ],
