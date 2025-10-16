@@ -40,12 +40,24 @@ MAJOR_GARMENTS = {
 OUTERWEAR = {"coat", "jacket", "dress", "cape", "vest"}
 ACCESSORIES = {"shoe", "bag, wallet", "glasses"}
 
+# NEW: treat overlapping uppers as the same garment when they collide
+UPPER_GARMENTS = {
+    "shirt, blouse",
+    "top, t-shirt, sweatshirt",
+    "sweater",
+    "cardigan",
+}
+UPPER_IOU_MERGE = 0.35          # area IoU to consider same
+UPPER_OVERLAP_MERGE = 0.60      # inner-overlap fraction to consider same
+UPPER_CENTER_DIST_FRAC = 0.30   # centers closer than ~30% of avg width → same region
+
+# Slightly promote bottoms so we keep 1 upper + 1 lower when ties happen
 CATEGORY_PRIORITY = {
     "coat": 5, "jacket": 5, "dress": 5,
     "vest": 4, "cardigan": 4, "sweater": 4,
     "shirt, blouse": 4, "top, t-shirt, sweatshirt": 4,
-    "pants": 3, "skirt": 3, "shorts": 3,
-    "shoe": 2, "bag, wallet": 2, "glasses": 1, "hat": 1, "headband, head covering, hair accessory": 1,
+    "pants": 4, "skirt": 4, "shorts": 4,  # ⬅ raised from 3
+    "shoe": 3, "bag, wallet": 3, "glasses": 2, "hat": 2, "headband, head covering, hair accessory": 1,
     "scarf": 1,
 }
 
@@ -228,7 +240,7 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
             if not has_upper_garment:
                 print("🧢 Skipping headwear (no upper garment context).")
                 continue
-            if det["score"] < 0.55:
+            if det["score"] < 0.515:
                 print(f"🧢 Skipping weak headwear (score {det['score']:.3f}).")
                 continue
 
@@ -253,7 +265,7 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
         x1, y1, x2, y2 = d["bbox"]
         print(f"   - {d['label']} ({d['score']:.3f}) bbox=({x1},{y1},{x2},{y2})")
 
-    # === Smart Containment Filtering (v4) ===
+    # === Smart Containment Filtering (v5) ===
     filtered = []
     for det in detections:
         keep = True
@@ -272,6 +284,22 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
                 else:
                     keep = False
                     break
+
+            # NEW: Merge overlapping UPPER garments (e.g., shirt/blouse vs top/tee/sweatshirt vs sweater/cardigan)
+            if det["label"] in UPPER_GARMENTS and kept["label"] in UPPER_GARMENTS:
+                cdist = center_distance(det["bbox"], kept["bbox"])
+                avg_w = ((det["bbox"][2] - det["bbox"][0]) + (kept["bbox"][2] - kept["bbox"][0])) / 2
+                centers_close = cdist < UPPER_CENTER_DIST_FRAC * max(1.0, avg_w)
+                if centers_close or iou > UPPER_IOU_MERGE or overlap_inner > UPPER_OVERLAP_MERGE:
+                    stronger = det if det["score"] >= kept["score"] else kept
+                    weaker = kept if stronger is det else det
+                    print(f"👕 Merging uppers: keeping '{stronger['label']}' ({stronger['score']:.3f}), dropping '{weaker['label']}'")
+                    if stronger is det:
+                        filtered.remove(kept)
+                        break  # re-evaluate det against remaining
+                    else:
+                        keep = False
+                        break
 
             # Suppress inner garments under long outerwear
             if kept["label"] in OUTERWEAR and det["label"] not in OUTERWEAR:
@@ -349,7 +377,7 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
             filtered.append(best)
             print(f"🎒 Added accessory '{best['label']}' to ensure coverage.")
 
-    # Deduplication
+    # Deduplication by label (keep strongest), but preserve best shoe
     deduped = {}
     for det in filtered:
         label = det["label"]
@@ -478,7 +506,7 @@ def debug_detect(req: DetectRequest):
             "score": round(score, 3),
             "bbox": [x1, y1, x2, y2]
         })
-        print(f"✅ Saved crop: {crop_path.name}")
+        print(f"✅ Saved crop: {str(crop_path.name)}")
 
     debug_img_path = out_dir / "debug_boxes.jpg"
     debug_image.save(debug_img_path)

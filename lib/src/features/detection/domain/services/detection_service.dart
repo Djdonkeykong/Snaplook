@@ -9,7 +9,6 @@ import '../../../../core/constants/trusted_domains.dart';
 import '../models/detection_result.dart';
 import '../../../../core/constants/category_rules.dart';
 
-
 /// Detection pipeline powered by local YOLOS + SerpAPI Google Lens.
 class DetectionService {
   DetectionService({
@@ -21,9 +20,10 @@ class DetectionService {
   final bool strictMode;
 
   static const int _maxGarments = 4;
-  static const int _maxResultsPerGarment = 10;
+  static const int _maxResultsPerGarment = 25; // allow more per query since we paginate
   static const int _maxPerDomain = 3;
 
+  // serp cache keyed by imageUrl + textQuery
   static final Map<String, List<Map<String, dynamic>>> _serpCache = {};
 
   /// Main entrypoint — detect garments, upload crops, and fetch SerpAPI matches.
@@ -32,18 +32,27 @@ class DetectionService {
       debugPrint('🧠 Starting garment detection pipeline (strict=$strictMode)...');
       final batch = await _runLocalDetector(image);
 
-      final urls = <String>{};
+      // Sort crops by detector score (desc)
+      final sortedCrops = batch.crops.take(_maxGarments).toList()
+        ..sort((a, b) => b.score.compareTo(a.score));
+
+      // Build query order: best crop → original (context) → remaining crops
+      final urls = <String>[];
+      if (sortedCrops.isNotEmpty) urls.add(sortedCrops.first.url);
       if (batch.originalUrl.isNotEmpty) urls.add(batch.originalUrl);
-      for (final crop in batch.crops.take(_maxGarments)) {
-        if (crop.url.isNotEmpty) urls.add(crop.url);
-      }
+      urls.addAll(sortedCrops.skip(1).map((c) => c.url));
 
       if (urls.isEmpty) throw Exception('No usable image crops produced.');
 
-      debugPrint('🔍 Querying SerpAPI for ${urls.length} image URLs (parallel)...');
+      debugPrint('🔍 Querying SerpAPI for ${urls.length} image URLs (best-first)...');
 
+      // Try to derive a helpful text query from the best crop label
+      final labelHint = sortedCrops.isNotEmpty ? sortedCrops.first.label : '';
+      final textQuery = _guessTextQuery(labelHint);
+
+      // Run queries (in parallel) with pagination + fallback broaden
       final futures = urls.map((url) async {
-        final matches = await _fetchSerpResults(url);
+        final matches = await _fetchSerpResults(url, textQuery: textQuery);
         final seen = <String>{};
         final uniqueMatches = matches.where((m) {
           final link = (m['link'] as String?) ?? '';
@@ -56,7 +65,17 @@ class DetectionService {
         return _mapToDetectionResults(uniqueMatches, url);
       }).toList();
 
-      final allResults = (await Future.wait(futures)).expand((x) => x).toList();
+      // Flatten
+      var allResults = (await Future.wait(futures)).expand((x) => x).toList();
+
+      // Drop generic collection/landing pages when we have enough PDPs
+      final pdpCount = allResults.where((r) => !_looksLikeCollection(r.productName, r.purchaseUrl ?? '')).length;
+      if (pdpCount >= 10) {
+        final before = allResults.length;
+        allResults.removeWhere((r) => _looksLikeCollection(r.productName, r.purchaseUrl ?? ''));
+        debugPrint('🧽 Removed ${before - allResults.length} generic collection pages (kept PDPs)');
+      }
+
       final deduped = _deduplicateAndLimitByDomain(allResults);
 
       if (deduped.isEmpty) {
@@ -134,71 +153,143 @@ class DetectionService {
     return (data['data']?['url'] ?? '') as String;
   }
 
-  /// Step 2 — Search via SerpAPI (Google Lens)
-  Future<List<Map<String, dynamic>>> _fetchSerpResults(String imageUrl) async {
-    if (_serpCache.containsKey(imageUrl)) {
-      debugPrint('⚡ Using cached SerpAPI results for: $imageUrl');
-      return _serpCache[imageUrl]!;
+  /// Step 2 — Search via SerpAPI (Google Lens), with pagination + optional text query and a fallback broadening pass.
+  Future<List<Map<String, dynamic>>> _fetchSerpResults(
+    String imageUrl, {
+    String? textQuery,
+  }) async {
+    // Primary pass (possibly with textQuery)
+    final primary = await _fetchSerpResultsOnce(imageUrl, textQuery: textQuery);
+
+    // If the hint over-filters, broaden with a second pass (no textQuery)
+    if ((textQuery == null || textQuery.isEmpty) || primary.length >= 15) {
+      return primary;
     }
 
-    final uri = Uri.https('serpapi.com', '/search', {
-      'engine': 'google_lens',
-      'api_key': AppConstants.serpApiKey,
-      'url': imageUrl,
-    });
+    final secondary = await _fetchSerpResultsOnce(imageUrl, textQuery: null);
 
-    final start = DateTime.now();
-    final response = await _client.get(uri);
-    final elapsed = DateTime.now().difference(start).inMilliseconds / 1000.0;
+    // Merge unique: primary first (keeps original sort bias)
+    final seen = <String>{};
+    final merged = <Map<String, dynamic>>[];
 
-    if (response.statusCode != 200) throw Exception('SerpAPI failed: ${response.body}');
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    if (data['error'] != null) throw Exception('SerpAPI error: ${data['error']}');
+    for (final m in [...primary, ...secondary]) {
+      final key = '${m['link'] ?? ''}|${m['title'] ?? ''}';
+      if (seen.add(key)) merged.add(m);
+      if (merged.length >= 120) break; // hard safety cap
+    }
+    return merged;
+  }
 
-    final rawMatches = data['visual_matches'] as List<dynamic>? ?? [];
-
-    final filtered = <Map<String, dynamic>>[];
-    for (final match in rawMatches) {
-      final m = match as Map<String, dynamic>;
-      final link = (m['link'] as String?) ?? '';
-      final title = (m['title'] as String?) ?? '';
-      final source = (m['source'] as String?) ?? '';
-      final snippet = (m['snippet'] as String?) ?? '';
-
-      if (!_isEcommerceResult(link, source, title, snippet: snippet, match: m)) continue;
-      if (!_isRelevantResult(title)) continue; // ✅ semantic filter
-
-      filtered.add(m);
+  Future<List<Map<String, dynamic>>> _fetchSerpResultsOnce(
+    String imageUrl, {
+    String? textQuery,
+  }) async {
+    final cacheKey = '$imageUrl|${textQuery ?? ''}';
+    if (_serpCache.containsKey(cacheKey)) {
+      debugPrint('⚡ Using cached SerpAPI results for: $cacheKey');
+      return _serpCache[cacheKey]!;
     }
 
-    debugPrint('🛍️ ${filtered.length} semantically relevant results (${elapsed.toStringAsFixed(2)}s)');
-    _serpCache[imageUrl] = filtered;
-    return filtered;
+    final filteredAll = <Map<String, dynamic>>[];
+
+    // 👇 Hit products first, then fall back to visual_matches
+    const rails = ['products', 'visual_matches'];
+
+    for (final rail in rails) {
+      String? nextToken;
+      int page = 1;
+
+      do {
+        final params = <String, String>{
+          'engine': 'google_lens',
+          'api_key': AppConstants.serpApiKey,
+          'url': imageUrl,
+          'type': rail, // 👈 key line: products first
+          if (textQuery != null && textQuery.isNotEmpty) 'text_query': textQuery,
+          if (nextToken != null) 'next_page_token': nextToken!,
+        };
+
+        final uri = Uri.https('serpapi.com', '/search', params);
+        final start = DateTime.now();
+        final response = await _client.get(uri);
+        final elapsed = DateTime.now().difference(start).inMilliseconds / 1000.0;
+
+        if (response.statusCode != 200) throw Exception('SerpAPI failed: ${response.body}');
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data['error'] != null) throw Exception('SerpAPI error: ${data['error']}');
+
+        final rawMatches = (data['visual_matches'] as List<dynamic>? ?? const [])
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+
+        final pageFiltered = <Map<String, dynamic>>[];
+        for (final m in rawMatches) {
+          final link = (m['link'] as String?) ?? '';
+          final title = (m['title'] as String?) ?? '';
+          final source = (m['source'] as String?) ?? '';
+          final snippet = (m['snippet'] as String?) ?? '';
+          if (_isEcommerceResult(link, source, title, snippet: snippet, match: m) &&
+              _isRelevantResult(title)) {
+            pageFiltered.add(m);
+          }
+        }
+
+        filteredAll.addAll(pageFiltered);
+
+        nextToken = (data['serpapi_pagination']?['next_page_token'] as String?);
+        debugPrint('🛍️ [$rail] Page $page: +${pageFiltered.length}, '
+            'total ${filteredAll.length} (${elapsed.toStringAsFixed(2)}s) next=${nextToken != null}');
+        page++;
+
+        if (filteredAll.length >= 120) break;
+      } while (nextToken != null);
+
+      // If products already gave us enough, stop before hitting visual_matches
+      if (rail == 'products' && filteredAll.length >= 15) break;
+    }
+
+    _serpCache[cacheKey] = filteredAll;
+    return filteredAll;
+  }
+
+  /// Guess a helpful text query from a YOLOS label.
+  String? _guessTextQuery(String label) {
+    final l = (label.isEmpty ? '' : label.toLowerCase());
+    if (l.contains('skirt')) {
+      return 'silk satin lace midi slip skirt beige';
+    }
+    if (l.contains('dress')) {
+      return 'silk satin lace slip dress midi beige';
+    }
+    return null; // no hint
   }
 
   /// === Smart semantic relevance filter ===
   bool _isRelevantResult(String title) {
     final lower = title.toLowerCase();
 
-    // 🚫 banned terms
+    // 🚫 banned terms (keep 'shoelace', DO NOT ban 'lace')
     const banned = [
-      'texture', 'pattern', 'drawing', 'illustration', 'clipart', 'mockup', 'template',
-      'icon', 'logo', 'vector', 'stock photo', 'fabric', 'shoelace', 'lace',
-      'hanger', 'material', 'cloth', 'silhouette', 'outline', 'art', 'design',
-      'preset', 'filter', 'lightroom', 'photoshop', 'template', 'digital download',
-      'tutorial', 'guide', 'lesson', 'manual', 'holder', 'stand', 'tripod', 'mount',
-      'case', 'charger', 'adapter', 'cable', 'keyboard', 'mouse', 'phone', 'tablet',
+      'texture','pattern','drawing','illustration','clipart','mockup','template',
+      'icon','logo','vector','stock photo','hanger','material','silhouette','outline',
+      'preset','filter','lightroom','photoshop','digital download','tutorial','guide',
+      'lesson','manual','holder','stand','tripod','mount','case','charger','adapter',
+      'cable','keyboard','mouse','phone','tablet','shoelace',
     ];
     if (banned.any((term) => lower.contains(term))) return false;
 
     // ✅ expected garment keywords
     const garmentKeywords = [
-      'dress', 'top', 'shirt', 't-shirt', 'pants', 'jeans', 'skirt', 'coat',
-      'jacket', 'sweater', 'hoodie', 'bag', 'handbag', 'backpack', 'tote',
-      'sandal', 'boot', 'shoe', 'sneaker', 'heel', 'glasses', 'sunglasses',
-      'hat', 'cap', 'scarf', 'outfit', 'clothing', 'apparel', 'fashion'
+      'dress','top','shirt','t-shirt','pants','jeans','skirt','coat',
+      'jacket','sweater','hoodie','bag','handbag','backpack','tote',
+      'sandal','boot','shoe','sneaker','heel','glasses','sunglasses',
+      'hat','cap','scarf','outfit','clothing','apparel','fashion'
     ];
-    if (garmentKeywords.any((k) => lower.contains(k))) return true;
+    if (garmentKeywords.any(lower.contains)) return true;
+
+    // Soft positive hints that matter for this garment family
+    const styleHints = ['silk','satin','lace','bias','midi','maxi','slip','trim'];
+    if (styleHints.any(lower.contains)) return true;
 
     return false;
   }
@@ -218,12 +309,11 @@ class DetectionService {
       final snippet = (match['snippet'] as String?) ?? '';
       final thumbnail = (match['thumbnail'] as String?) ?? '';
 
-      // ✅ Updated price extraction logic
+      // Price extraction
       final priceObj = match['price'];
       final price = (priceObj?['extracted_value'] as num?)?.toDouble() ??
           _extractPrice(snippet) ??
           0.0;
-      final currency = (priceObj?['currency'] as String?) ?? '\$';
 
       final brand = _extractBrand(title, source);
       final category = _categorize(title);
@@ -246,30 +336,52 @@ class DetectionService {
       );
     }
 
-    // 🧠 Optional: category consistency filter — removes outliers like “shorts” among sunglasses
+    // Category consistency with compatibility (e.g., skirts ↔ slip dresses)
     if (results.isNotEmpty) {
       final categoryCounts = <String, int>{};
       for (final r in results) {
         categoryCounts[r.category] = (categoryCounts[r.category] ?? 0) + 1;
       }
 
-      // Find the dominant category
-      final dominant = categoryCounts.entries.reduce(
-        (a, b) => a.value >= b.value ? a : b,
-      ).key;
-
-      // Drop outliers if dominant is clear (≥70% of results share one category)
+      final dominant = categoryCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
       final dominantRatio = categoryCounts[dominant]! / results.length;
-      if (dominantRatio >= 0.7) {
-        results.removeWhere((r) => r.category != dominant);
-        debugPrint(
-          '🧩 Filtered inconsistent categories, kept dominant "$dominant" '
-          '(${(dominantRatio * 100).toStringAsFixed(0)}%)',
-        );
+
+      bool isCompatible(String dominant, String c) {
+        if (dominant == c) return true;
+        // Consider dresses <-> bottoms (skirts) compatible for slip/satin cases
+        if ((dominant == 'bottoms' && c == 'dresses') || (dominant == 'dresses' && c == 'bottoms')) {
+          return true;
+        }
+        return false;
+      }
+
+      if (dominantRatio >= 0.7) { // a touch firmer
+        final before = results.length;
+        results.removeWhere((r) => !isCompatible(dominant, r.category));
+        debugPrint('🧩 Kept dominant "$dominant" (+ compatible), pruned ${before - results.length}');
       }
     }
 
     return results;
+  }
+
+  /// Identify generic collection/listing pages (stricter)
+  bool _looksLikeCollection(String title, String url) {
+    final l = title.toLowerCase();
+    final u = (url).toLowerCase();
+    if (RegExp(r'\b(women|men|kids|midi|maxi|skirts?|dresses|clothing)\b').hasMatch(l) && l.contains(' | ')) return true;
+    if (RegExp(r'/c/|/category/|/collections?/|/shop/[^/]+/?$|/women/[^/]+/?$|/women/?$|/new-arrivals/?$|/sale/?$').hasMatch(u)) return true;
+    if (u.endsWith('/index.html') || u.endsWith('/index')) return true;
+    return false;
+  }
+
+  /// Prefer PDP-like URLs/titles.
+  bool _looksLikePDP(String url, String title) {
+    final u = url.toLowerCase();
+    final t = title.toLowerCase();
+    final pdpUrl = RegExp(r'/product/|/products?/|/p/|/pd/|/sku/|/item/|/buy/|/dp/|/gp/product/|/shop/[^/]*\d');
+    final pdpTitle = RegExp(r'\b(sku|style|model|size|midi|maxi|silk|satin|lace)\b');
+    return pdpUrl.hasMatch(u) || pdpTitle.hasMatch(t);
   }
 
   /// === Ecommerce filtering ===
@@ -283,43 +395,105 @@ class DetectionService {
     final text = '$link $source ${title.toLowerCase()} ${(snippet ?? '').toLowerCase()}';
     final domain = _extractDomain(link).toLowerCase();
 
-    for (final bad in kBannedDomains) {
-      if (domain.contains(bad) || source.toLowerCase().contains(bad)) return false;
-    }
+    // Fully banned content/non-commerce
+    if (_domainMatchesAny(domain, kBannedDomainRoots)) return false;
 
-    if (strictMode && kTrustedDomains.any((good) => domain.contains(good))) return true;
-    if (!strictMode && kTrustedDomains.any((d) => domain.contains(d))) return true;
+    // If in trusted roots, allow early (especially in strict mode)
+    if (strictMode && _domainMatchesAny(domain, kTrustedDomainRoots)) return true;
+    if (!strictMode && _domainMatchesAny(domain, kTrustedDomainRoots)) return true;
 
+    // Generic ecommerce hints
     final hasPrice = RegExp(r'(\$|€|£|¥)\s?\d').hasMatch(text);
     final hasCart = RegExp(r'(add[\s_-]?to[\s_-]?cart|buy\s?now|checkout|in\s?stock)').hasMatch(text);
     final productUrl = RegExp(r'/(product|shop|store|item|buy)[/\-_]').hasMatch(link);
     return hasPrice || hasCart || productUrl;
   }
 
-  /// === Deduplication ===
-  List<DetectionResult> _deduplicateAndLimitByDomain(List<DetectionResult> results) {
-    final Map<String, DetectionResult> deduped = {};
-    final Map<String, int> domainCount = {};
+  /// Fashion-aware score (tier-1 boost, marketplace/aggregator penalty, style boosts)
+  double _fashionScore(DetectionResult r) {
+    final domain = _extractDomain(r.purchaseUrl ?? '');
 
-    results.sort((a, b) {
-      final ascore = a.confidence + (a.price > 0 ? 0.1 : 0);
-      final bscore = b.confidence + (b.price > 0 ? 0.1 : 0);
-      return bscore.compareTo(ascore);
-    });
+    double mult = 1.0;
+
+    // Trust & prestige
+    if (_domainMatchesAny(domain, kTier1RetailDomainRoots)) mult *= 1.15;
+    if (_domainMatchesAny(domain, kMarketplaceDomainRoots)) mult *= 0.88;
+    if (_domainMatchesAny(domain, kAggregatorDomainRoots)) mult *= 0.90;
+
+    // Style keywords
+    final t = r.productName.toLowerCase();
+    if (t.contains('silk'))  mult *= 1.06;
+    if (t.contains('satin')) mult *= 1.06;
+    if (t.contains('lace'))  mult *= 1.08;
+    if (t.contains('midi'))  mult *= 1.03;
+    if (t.contains('slip'))  mult *= 1.04;
+
+    if (r.price > 0) mult *= 1.02;
+
+    final base = r.confidence.clamp(0.0, 1.0);
+    return base * mult;
+  }
+
+  /// Deduplication + domain caps with PDP preference and aggregator/marketplace limits.
+  List<DetectionResult> _deduplicateAndLimitByDomain(List<DetectionResult> results) {
+    // Rank by fashion-aware score
+    results.sort((a, b) => _fashionScore(b).compareTo(_fashionScore(a)));
+
+    final Map<String, List<DetectionResult>> byDomain = {};
+    final Map<String, int> domainCount = {};
+    final Set<String> seenUrls = {}; // exact URL dedupe globally
 
     for (final r in results) {
-      final domain = _extractDomain(r.purchaseUrl ?? '');
+      final url = (r.purchaseUrl ?? '').trim();
+      if (url.isEmpty) continue;
+      if (!seenUrls.add(url)) continue; // already have this exact URL
+
+      final domain = _extractDomain(url);
       if (domain.isEmpty) continue;
-      if (domainCount[domain] != null && domainCount[domain]! >= _maxPerDomain) continue;
-      final key = '${_normalizeTitle(r.productName)}|$domain|${r.imageUrl}';
-      if (!deduped.containsKey(key)) {
-        deduped[key] = r;
+
+      final isTier1 = _domainMatchesAny(domain, kTier1RetailDomainRoots);
+      final isMarketplace = _domainMatchesAny(domain, kMarketplaceDomainRoots);
+      final isAggregator = _domainMatchesAny(domain, kAggregatorDomainRoots);
+      final isTrustedRetail = _domainMatchesAny(domain, kTrustedRetailDomainRoots);
+      final trusted = isTier1 || isTrustedRetail;
+
+      final cap = (isMarketplace || isAggregator) ? 1 : (isTier1 ? 7 : (trusted ? 5 : _maxPerDomain));
+
+      final list = byDomain.putIfAbsent(domain, () => []);
+      if ((domainCount[domain] ?? 0) < cap) {
+        // room available: add normally
+        list.add(r);
         domainCount[domain] = (domainCount[domain] ?? 0) + 1;
+      } else {
+        // at cap: if current is PDP and any existing is not PDP, replace the lowest-score non-PDP
+        final currIsPdp = _looksLikePDP(r.purchaseUrl ?? '', r.productName);
+        if (!currIsPdp) continue;
+
+        int replaceIdx = -1;
+        double worstScore = double.infinity;
+        for (var i = 0; i < list.length; i++) {
+          final existing = list[i];
+          final existingIsPdp = _looksLikePDP(existing.purchaseUrl ?? '', existing.productName);
+          if (!existingIsPdp) {
+            final s = _fashionScore(existing);
+            if (s < worstScore) {
+              worstScore = s;
+              replaceIdx = i;
+            }
+          }
+        }
+        if (replaceIdx >= 0) {
+          list[replaceIdx] = r; // prefer PDP within the cap
+        }
       }
     }
 
-    debugPrint('🧹 Deduped ${deduped.length} results across ${domainCount.length} domains.');
-    return deduped.values.toList();
+    // Flatten back out (preserve domain-internal order)
+    final flattened = <DetectionResult>[];
+    byDomain.values.forEach(flattened.addAll);
+
+    debugPrint('🧹 Deduped ${flattened.length} results across ${byDomain.length} domains.');
+    return flattened;
   }
 
   /// === Helpers ===
@@ -333,6 +507,14 @@ class DetectionService {
     } catch (_) {
       return '';
     }
+  }
+
+  bool _domainMatchesAny(String domain, Set<String> roots) {
+    final d = domain.toLowerCase();
+    return roots.any((root) {
+      final r = root.toLowerCase();
+      return d == r || d.endsWith('.$r');
+    });
   }
 
   String _normalizeTitle(String title) =>
@@ -352,7 +534,6 @@ class DetectionService {
     // Split on common separators and keep the most informative part
     final parts = clean.split(RegExp(r'[\|\-:–—]+'));
     if (parts.isNotEmpty) {
-      // Pick the first part that looks like a real product name (has letters)
       final good = parts.firstWhere(
         (p) => RegExp(r'[a-zA-Z]').hasMatch(p.trim()),
         orElse: () => parts.first,
@@ -386,11 +567,15 @@ class DetectionService {
     return double.tryParse(amount);
   }
 
+  // === Category resolution ===
+  // Keeps your explicit rules, then applies a generalized token-vote override.
   String _categorize(String title, {String? brand}) {
     final lower = title.toLowerCase();
     final brandLower = brand?.toLowerCase() ?? '';
 
-    // 1️⃣ Always Accessories – prioritized early to avoid false dress/bag matches
+    String? explicitCat;
+
+    // 1️⃣ Accessories (explicit)
     if (lower.contains('sunglass') ||
         lower.contains('eyeglass') ||
         lower.contains('spectacle') ||
@@ -402,9 +587,9 @@ class DetectionService {
         lower.contains('earring') ||
         lower.contains('ring') ||
         lower.contains('watch') ||
-        (RegExp(r'\bnecktie\b').hasMatch(lower) ||
+        RegExp(r'\bnecktie\b').hasMatch(lower) ||
         RegExp(r'\btie clip\b').hasMatch(lower) ||
-        RegExp(r'\btie bar\b').hasMatch(lower)) ||
+        RegExp(r'\btie bar\b').hasMatch(lower) ||
         lower.contains('scarf') ||
         lower.contains('beanie') ||
         lower.contains('hat') ||
@@ -412,115 +597,158 @@ class DetectionService {
         lower.contains('hair clip') ||
         lower.contains('hairpin') ||
         lower.contains('headband')) {
-      debugPrint('🧩 Categorized "$title" as accessories (explicit match)');
-      return 'accessories';
+      explicitCat = 'accessories';
     }
 
     // 2️⃣ Bags
-    if (lower.contains('bag') ||
-        lower.contains('purse') ||
-        lower.contains('tote') ||
-        lower.contains('backpack') ||
-        lower.contains('duffle') ||
-        lower.contains('handbag') ||
-        lower.contains('satchel') ||
-        lower.contains('clutch') ||
-        lower.contains('wallet')) {
-      debugPrint('🧩 Categorized "$title" as bags');
-      return 'bags';
+    if (explicitCat == null &&
+        (lower.contains('bag') ||
+            lower.contains('purse') ||
+            lower.contains('tote') ||
+            lower.contains('backpack') ||
+            lower.contains('duffle') ||
+            lower.contains('handbag') ||
+            lower.contains('satchel') ||
+            lower.contains('clutch') ||
+            lower.contains('wallet'))) {
+      explicitCat = 'bags';
     }
 
     // 3️⃣ Shoes
-    if (lower.contains('shoe') ||
-        lower.contains('boot') ||
-        lower.contains('heel') ||
-        lower.contains('pump') ||
-        lower.contains('loafer') ||
-        lower.contains('sandal') ||
-        lower.contains('sneaker') ||
-        lower.contains('trainer') ||
-        lower.contains('moccasin') ||
-        lower.contains('flip flop')) {
-      debugPrint('🧩 Categorized "$title" as shoes');
-      return 'shoes';
+    if (explicitCat == null &&
+        (lower.contains('shoe') ||
+            lower.contains('boot') ||
+            lower.contains('heel') ||
+            lower.contains('pump') ||
+            lower.contains('loafer') ||
+            lower.contains('sandal') ||
+            lower.contains('sneaker') ||
+            lower.contains('trainer') ||
+            lower.contains('moccasin') ||
+            lower.contains('flip flop'))) {
+      explicitCat = 'shoes';
     }
 
     // 4️⃣ Outerwear
-    if (lower.contains('jacket') ||
-        lower.contains('coat') ||
-        lower.contains('blazer') ||
-        lower.contains('parka') ||
-        lower.contains('windbreaker') ||
-        lower.contains('trench')) {
-      debugPrint('🧩 Categorized "$title" as outerwear');
-      return 'outerwear';
+    if (explicitCat == null &&
+        (lower.contains('jacket') ||
+            lower.contains('coat') ||
+            lower.contains('blazer') ||
+            lower.contains('parka') ||
+            lower.contains('windbreaker') ||
+            lower.contains('trench'))) {
+      explicitCat = 'outerwear';
     }
 
     // 5️⃣ Dresses
-    if (lower.contains('dress') ||
-        lower.contains('jumpsuit') ||
-        lower.contains('romper') ||
-        lower.contains('gown')) {
-      debugPrint('🧩 Categorized "$title" as dresses');
-      return 'dresses';
+    if (explicitCat == null &&
+        (lower.contains('dress') ||
+            lower.contains('jumpsuit') ||
+            lower.contains('romper') ||
+            lower.contains('gown'))) {
+      explicitCat = 'dresses';
     }
 
     // 6️⃣ Bottoms
-    if (lower.contains('pants') ||
-        lower.contains('trouser') ||
-        lower.contains('jean') ||
-        lower.contains('shorts') ||
-        lower.contains('skirt') ||
-        lower.contains('leggings')) {
-      debugPrint('🧩 Categorized "$title" as bottoms');
-      return 'bottoms';
+    if (explicitCat == null &&
+        (lower.contains('pants') ||
+            lower.contains('trouser') ||
+            lower.contains('jean') ||
+            lower.contains('shorts') ||
+            lower.contains('skirt') ||
+            lower.contains('leggings'))) {
+      explicitCat = 'bottoms';
     }
 
-    // 7️⃣ Tops (guard against "high top" / "low top" sneaker terms)
-    if (lower.contains('t-shirt') ||
-        lower.contains('tee') ||
-        lower.contains('shirt') ||
-        lower.contains('blouse') ||
-        (lower.contains('top') &&
-            !lower.contains('high top') &&
-            !lower.contains('low top') &&
-            !lower.contains('mid top')) || // ✅ proper closing parenthesis
-        lower.contains('tank') ||
-        lower.contains('hoodie') ||
-        lower.contains('sweatshirt') ||
-        lower.contains('sweater') ||
-        lower.contains('cardigan')) {
-      debugPrint('🧩 Categorized "$title" as tops');
-      return 'tops';
+    // 7️⃣ Tops
+    if (explicitCat == null &&
+        (lower.contains('t-shirt') ||
+            lower.contains('tee') ||
+            lower.contains('shirt') ||
+            lower.contains('blouse') ||
+            (lower.contains('top') &&
+                !lower.contains('high top') &&
+                !lower.contains('low top') &&
+                !lower.contains('mid top')) ||
+            lower.contains('tank') ||
+            lower.contains('hoodie') ||
+            lower.contains('sweatshirt') ||
+            lower.contains('sweater') ||
+            lower.contains('cardigan'))) {
+      explicitCat = 'tops';
     }
 
-    // 8️⃣ Headwear (in case missed above)
-    if (lower.contains('cap') ||
-        lower.contains('hat') ||
-        lower.contains('beanie') ||
-        lower.contains('headband') ||
-        lower.contains('beret')) {
-      debugPrint('🧩 Categorized "$title" as headwear');
-      return 'headwear';
+    // 8️⃣ Headwear
+    if (explicitCat == null &&
+        (lower.contains('cap') ||
+            lower.contains('hat') ||
+            lower.contains('beanie') ||
+            lower.contains('headband') ||
+            lower.contains('beret'))) {
+      explicitCat = 'headwear';
     }
 
-    // 9️⃣ Brand-based hints (your existing brand/category map)
-    for (final entry in kBrandCategoryHints.entries) {
-      if (brandLower.contains(entry.key) || lower.contains(entry.key)) {
-        debugPrint('🧩 Categorized "$title" as ${entry.value} (brand hint)');
-        return entry.value;
+    // 9️⃣ Brand-based hints
+    if (explicitCat == null) {
+      for (final entry in kBrandCategoryHints.entries) {
+        if (brandLower.contains(entry.key) || lower.contains(entry.key)) {
+          explicitCat = entry.value;
+          break;
+        }
       }
     }
 
     // 🔟 Luxury brand fallback
-    if (RegExp(r'gucci|prada|balenciaga|ysl|saint laurent|fendi|valentino|versace')
-        .hasMatch(brandLower)) {
-      debugPrint('🧩 Categorized "$title" as accessories (luxury fallback)');
-      return 'accessories';
+    if (explicitCat == null &&
+        RegExp(r'gucci|prada|balenciaga|ysl|saint laurent|fendi|valentino|versace')
+            .hasMatch(brandLower)) {
+      explicitCat = 'accessories';
     }
 
-    debugPrint('❔ No match for "$title", defaulted to accessories');
-    return 'accessories';
+    // --- Token-vote across ALL categories (generalized override) ---
+    int score(String token) =>
+        RegExp('\\b$token\\b').hasMatch(lower) ? 2 : (lower.contains(token) ? 1 : 0);
+
+    final votes = <String, int>{
+      'dresses': score('dress') + score('gown') + score('slip dress'),
+      'bottoms': score('skirt') + score('pants') + score('trouser') + score('jeans') + score('shorts') + score('slip skirt'),
+      'tops':    score('top') + score('shirt') + score('blouse') + score('t-shirt') + score('tee') + score('sweater') + score('cardigan'),
+      'outerwear': score('jacket') + score('coat') + score('blazer') + score('trench') + score('parka') + score('windbreaker'),
+      'shoes':   score('shoe') + score('sneaker') + score('boot') + score('heel') + score('loafer') + score('sandal') + score('pump'),
+      'bags':    score('bag') + score('handbag') + score('tote') + score('backpack') + score('clutch') + score('wallet') + score('crossbody'),
+      'accessories': score('belt') + score('scarf') + score('sunglass') + score('glasses') + score('hat') + score('cap') + score('beanie'),
+      'headwear': score('cap') + score('hat') + score('beanie') + score('headband') + score('beret'),
+    };
+
+    final priority = ['bottoms','dresses','tops','outerwear','shoes','bags','accessories','headwear'];
+
+    String best = 'accessories';
+    int bestScore = -1;
+    for (final c in priority) {
+      final v = votes[c] ?? 0;
+      if (v > bestScore) { best = c; bestScore = v; }
+    }
+
+    if (explicitCat == null) {
+      debugPrint('🧩 Categorized "$title" as $best (vote only)');
+      return best;
+    }
+
+    final explicitScore = votes[explicitCat] ?? 0;
+
+    if (bestScore > explicitScore) {
+      debugPrint('🧩 Categorized "$title" as $best (vote override; explicit was $explicitCat)');
+      return best;
+    }
+
+    if (bestScore == explicitScore && best != explicitCat) {
+      final pick = (priority.indexOf(best) < priority.indexOf(explicitCat)) ? best : explicitCat;
+      debugPrint('🧩 Categorized "$title" as $pick (tie-break; explicit=$explicitCat, vote=$best)');
+      return pick;
+    }
+
+    debugPrint('🧩 Categorized "$title" as $explicitCat (explicit)');
+    return explicitCat;
   }
 
   double _estimateConfidence(int index, double price) {
