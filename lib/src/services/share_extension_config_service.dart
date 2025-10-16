@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import '../../core/constants/app_constants.dart';
 
 class ShareExtensionConfigService {
   static const String _appGroupId = 'group.com.snaplook.snaplook';
+  static const MethodChannel _channel = MethodChannel('snaplook/share_config');
 
   static Future<void> initializeSharedConfig() async {
     if (!Platform.isIOS) {
@@ -13,21 +14,21 @@ class ShareExtensionConfigService {
     }
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Save SerpAPI key
+      // Use method channel to write to app group UserDefaults (iOS native)
       final serpKey = AppConstants.serpApiKey;
-      await prefs.setString('flutter.SerpApiKey', serpKey);
-      debugPrint('ShareExtensionConfig: Saved SerpApiKey');
-
-      // Save detector endpoint
       final endpoint = AppConstants.serpDetectorEndpoint;
-      await prefs.setString('flutter.DetectorEndpoint', endpoint);
-      debugPrint('ShareExtensionConfig: Saved DetectorEndpoint: $endpoint');
 
+      await _channel.invokeMethod('saveSharedConfig', {
+        'appGroupId': _appGroupId,
+        'serpApiKey': serpKey,
+        'detectorEndpoint': endpoint,
+      });
+
+      debugPrint('ShareExtensionConfig: ✅ Saved SerpApiKey to app group');
+      debugPrint('ShareExtensionConfig: ✅ Saved DetectorEndpoint: $endpoint');
       debugPrint('ShareExtensionConfig: Configuration saved successfully');
     } catch (e) {
-      debugPrint('ShareExtensionConfig: Failed to save config: $e');
+      debugPrint('ShareExtensionConfig: ❌ Failed to save config: $e');
     }
   }
 }

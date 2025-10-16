@@ -5,9 +5,12 @@ import receive_sharing_intent
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   private let shareStatusChannelName = "com.snaplook.snaplook/share_status"
+  private let shareConfigChannelName = "snaplook/share_config"
   private let processingStatusKey = "ShareProcessingStatus"
   private let processingSessionKey = "ShareProcessingSession"
   private let scrapingBeeApiKeyKey = "ScrapingBeeApiKey"
+  private let serpApiKeyKey = "SerpApiKey"
+  private let detectorEndpointKey = "DetectorEndpoint"
 
   override func application(
     _ application: UIApplication,
@@ -16,10 +19,49 @@ import receive_sharing_intent
     GeneratedPluginRegistrant.register(with: self)
 
     if let controller = window?.rootViewController as? FlutterViewController {
+      // Share status channel
       let shareStatusChannel = FlutterMethodChannel(
         name: shareStatusChannelName,
         binaryMessenger: controller.binaryMessenger
       )
+
+      // Share config channel
+      let shareConfigChannel = FlutterMethodChannel(
+        name: shareConfigChannelName,
+        binaryMessenger: controller.binaryMessenger
+      )
+
+      // Handle share config method calls
+      shareConfigChannel.setMethodCallHandler { [weak self] call, result in
+        guard let self = self else {
+          result(FlutterError(code: "UNAVAILABLE", message: "AppDelegate released", details: nil))
+          return
+        }
+
+        switch call.method {
+        case "saveSharedConfig":
+          guard let args = call.arguments as? [String: Any],
+                let appGroupId = args["appGroupId"] as? String,
+                let serpKey = args["serpApiKey"] as? String,
+                let endpoint = args["detectorEndpoint"] as? String,
+                let defaults = UserDefaults(suiteName: appGroupId) else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
+            return
+          }
+
+          defaults.set(serpKey, forKey: self.serpApiKeyKey)
+          defaults.set(endpoint, forKey: self.detectorEndpointKey)
+          defaults.synchronize()
+
+          NSLog("[ShareConfig] ✅ Saved to app group \(appGroupId)")
+          NSLog("[ShareConfig] ✅ SerpApiKey: \(serpKey.prefix(8))...")
+          NSLog("[ShareConfig] ✅ DetectorEndpoint: \(endpoint)")
+
+          result(nil)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
 
       shareStatusChannel.setMethodCallHandler { [weak self] call, result in
         guard let self = self else {
