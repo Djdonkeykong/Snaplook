@@ -127,6 +127,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var detectionResults: [DetectionResultItem] = []
     private var resultsTableView: UITableView?
     private var downloadedImageUrl: String?
+    private var isShowingDetectionResults = false
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -323,6 +324,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func maybeFinalizeShare() {
         guard pendingAttachmentCount == 0, !hasQueuedRedirect else { return }
+
+        // Don't auto-redirect if we're showing detection results
+        if isShowingDetectionResults {
+            shareLog("Skipping auto-redirect - showing detection results")
+            return
+        }
+
         hasQueuedRedirect = true
         let message = pendingPostMessage
         saveAndRedirect(message: message)
@@ -639,8 +647,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
            !endpoint.isEmpty {
             return endpoint
         }
-        // Fallback to production endpoint
-        return "https://snaplook-fastapi-detector.onrender.com/detect-and-search"
+        // Fallback to local/ngrok for development (will be set by Flutter app)
+        shareLog("Warning: DetectorEndpoint not found in UserDefaults - run Flutter app first")
+        return nil
     }
 
     // Get SerpAPI key from UserDefaults
@@ -657,7 +666,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func runDetectionAnalysis(imageUrl: String) {
         guard let endpoint = detectorEndpoint(),
               let serpKey = serpApiKey() else {
-            shareLog("Detection endpoint or SerpAPI key not configured")
+            shareLog("Detection endpoint or SerpAPI key not configured - proceeding with normal flow")
+            proceedWithNormalFlow()
             return
         }
 
@@ -687,6 +697,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             if let error = error {
                 shareLog("Detection API error: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    self.proceedWithNormalFlow()
+                }
                 return
             }
 
@@ -694,6 +707,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
                   let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
                 shareLog("Detection API failed with status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                DispatchQueue.main.async {
+                    self.proceedWithNormalFlow()
+                }
                 return
             }
 
@@ -705,13 +721,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     shareLog("Detection successful: \(detectionResponse.total_results) results")
                     DispatchQueue.main.async {
                         self.detectionResults = detectionResponse.results
+                        self.isShowingDetectionResults = true
                         self.showDetectionResults()
                     }
                 } else {
                     shareLog("Detection failed: \(detectionResponse.message ?? "Unknown error")")
+                    // If detection fails, allow normal redirect
+                    DispatchQueue.main.async {
+                        self.proceedWithNormalFlow()
+                    }
                 }
             } catch {
                 shareLog("Failed to parse detection response: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    self.proceedWithNormalFlow()
+                }
             }
         }
 
@@ -797,6 +821,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         resultsTableView?.reloadData()
+    }
+
+    // Proceed with normal flow (save and redirect to app)
+    private func proceedWithNormalFlow() {
+        guard !hasQueuedRedirect else { return }
+        shareLog("Proceeding with normal flow (no detection results)")
+        isShowingDetectionResults = false
+        hasQueuedRedirect = true
+        saveAndRedirect()
     }
 
     private func extractInstagramImageUrls(from html: String) -> [String] {
@@ -1028,15 +1061,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 try data.write(to: fileURL, options: .atomic)
                 shareLog("Saved Instagram image to shared container: \(fileURL.path)")
 
-                // Upload to ImgBB and trigger detection
-                self.uploadAndDetect(imageData: data)
-
                 let sharedFile = SharedMediaFile(
                     path: fileURL.absoluteString,
                     mimeType: "image/jpeg",
                     message: originalURL,
                     type: .image
                 )
+
+                // Upload to ImgBB and trigger detection (async - don't complete yet)
+                self.uploadAndDetect(imageData: data)
+
+                // Return success but don't trigger redirect yet
+                // The redirect will happen when user selects a result OR if detection fails
                 completion(.success(sharedFile))
             } catch {
                 completion(.failure(error))
