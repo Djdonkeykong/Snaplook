@@ -1067,6 +1067,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let scrollView = UIScrollView()
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.contentInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
 
         let stackView = UIStackView()
         stackView.axis = .horizontal
@@ -1093,8 +1094,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
-            scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12),
 
             stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
