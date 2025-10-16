@@ -1247,41 +1247,56 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func extractInstagramImageUrls(from html: String) -> [String] {
-        var priorityResults: [String] = []
-        var results: [String] = []
-        let cacheKeyPattern = "\"src\":\"(https:\\\\/\\\\/scontent[^\"]+?ig_cache_key[^\"]*)\""
-        if let regex = try? NSRegularExpression(pattern: cacheKeyPattern, options: []) {
-            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
-                guard let match = match,
-                    match.numberOfRanges > 1,
-                    let range = Range(match.range(at: 1), in: html) else { return }
-                let candidate = sanitizeInstagramURLString(String(html[range]))
-                if !candidate.isEmpty && !priorityResults.contains(candidate) {
-                    priorityResults.append(candidate)
+        var urls: [String] = []
+
+        // 🆕 Try to extract from edge_sidecar_to_children JSON (ordered, correct order)
+        if let sidecarRange = html.range(of: "\"edge_sidecar_to_children\":") {
+            let substring = String(html[sidecarRange.lowerBound...])
+            if let jsonEnd = substring.range(of: "]}}") {
+                let jsonFragment = String(substring.prefix(upTo: jsonEnd.upperBound))
+                let wrapped = "{" + jsonFragment + "}" // wrap to make valid JSON
+
+                if let data = wrapped.data(using: .utf8) {
+                    do {
+                        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                        let sidecar = json["edge_sidecar_to_children"] as? [String: Any],
+                        let edges = sidecar["edges"] as? [[String: Any]] {
+                            for edge in edges {
+                                if let node = edge["node"] as? [String: Any],
+                                let displayUrl = node["display_url"] as? String {
+                                    let sanitized = sanitizeInstagramURLString(displayUrl)
+                                    if !sanitized.isEmpty {
+                                        urls.append(sanitized)
+                                    }
+                                }
+                            }
+                        }
+                    } catch {
+                        shareLog("⚠️ JSON parse error in sidecar extraction: \(error.localizedDescription)")
+                    }
                 }
             }
         }
 
-        let pattern = "\"display_url\"\\s*:\\s*\"([^\"]+)\""
+        // 🧩 Fallback to regex-based extraction (legacy)
+        if urls.isEmpty {
+            shareLog("⚠️ Falling back to regex-based Instagram URL extraction")
+            var priorityResults: [String] = []
+            var results: [String] = []
 
-        if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
-            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
-                guard let match = match,
-                    match.numberOfRanges > 1,
-                    let range = Range(match.range(at: 1), in: html) else { return }
-
-                var candidate = String(html[range])
-                candidate = sanitizeInstagramURLString(candidate)
-                if candidate.contains("150x150") || candidate.contains("profile") {
-                    return
-                }
-                if !results.contains(candidate) {
-                    results.append(candidate)
+            let cacheKeyPattern = "\"src\":\"(https:\\\\/\\\\/scontent[^\"]+?ig_cache_key[^\"]*)\""
+            if let regex = try? NSRegularExpression(pattern: cacheKeyPattern, options: []) {
+                let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+                regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                    guard let match = match,
+                        match.numberOfRanges > 1,
+                        let range = Range(match.range(at: 1), in: html) else { return }
+                    let candidate = sanitizeInstagramURLString(String(html[range]))
+                    if !candidate.isEmpty && !priorityResults.contains(candidate) {
+                        priorityResults.append(candidate)
+                    }
                 }
             }
-        }
 
         let imgPattern = "<img[^>]+src=\"([^\"]+)\""
         if let regex = try? NSRegularExpression(pattern: imgPattern, options: [.caseInsensitive]) {
