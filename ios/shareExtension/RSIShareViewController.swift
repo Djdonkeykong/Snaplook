@@ -989,12 +989,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         headerView.backgroundColor = .systemBackground
         headerView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Logo label
-        let logoLabel = UILabel()
-        logoLabel.text = "Snaplook"
-        logoLabel.font = .systemFont(ofSize: 20, weight: .bold)
-        logoLabel.textColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-        logoLabel.translatesAutoresizingMaskIntoConstraints = false
+        // Logo image
+        let logoImageView = UIImageView()
+        logoImageView.image = UIImage(named: "logo")
+        logoImageView.contentMode = .scaleAspectFit
+        logoImageView.translatesAutoresizingMaskIntoConstraints = false
 
         // Cancel button
         let cancelButton = UIButton(type: .system)
@@ -1003,7 +1002,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cancelButton.addTarget(self, action: #selector(cancelDetectionTapped), for: .touchUpInside)
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
 
-        headerView.addSubview(logoLabel)
+        headerView.addSubview(logoImageView)
         headerView.addSubview(cancelButton)
 
         // Create category filter chips
@@ -1039,8 +1038,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             headerView.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
             headerView.heightAnchor.constraint(equalToConstant: 60),
 
-            logoLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
-            logoLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
+            logoImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            logoImageView.heightAnchor.constraint(equalToConstant: 32),
+            logoImageView.widthAnchor.constraint(equalToConstant: 120),
 
             cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
             cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
