@@ -1040,8 +1040,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
             logoImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            logoImageView.heightAnchor.constraint(equalToConstant: 28),
-            logoImageView.widthAnchor.constraint(equalToConstant: 102),
+            logoImageView.heightAnchor.constraint(equalToConstant: 30),
+            logoImageView.widthAnchor.constraint(equalToConstant: 114),
 
             cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
             cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
@@ -1246,115 +1246,149 @@ open class RSIShareViewController: SLComposeServiceViewController {
         saveAndRedirect()
     }
 
-    private func extractInstagramImageUrls(from html: String) -> [String] {
-        var urls: [String] = []
+    // MARK: - Instagram Downloader (Hybrid: JSON first, ScrapingBee fallback)
 
-        // 🆕 Try to extract from edge_sidecar_to_children JSON (ordered, correct order)
-        if let sidecarRange = html.range(of: "\"edge_sidecar_to_children\":") {
-            let substring = String(html[sidecarRange.lowerBound...])
-            if let jsonEnd = substring.range(of: "]}}") {
-                let jsonFragment = String(substring.prefix(upTo: jsonEnd.upperBound))
-                let wrapped = "{" + jsonFragment + "}" // wrap to make valid JSON
+    private func extractInstagramShortcode(from url: String) -> String? {
+        let components = url.split(separator: "/")
+        for (i, part) in components.enumerated() {
+            if part == "p", i + 1 < components.count {
+                return String(components[i + 1])
+            }
+        }
+        return nil
+    }
 
-                if let data = wrapped.data(using: .utf8) {
-                    do {
-                        if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                        let sidecar = json["edge_sidecar_to_children"] as? [String: Any],
+    private func fetchInstagramPostJSON(shortcode: String, completion: @escaping (Result<[String], Error>) -> Void) {
+        let jsonUrl = "https://www.instagram.com/p/\(shortcode)/?__a=1&__d=dis"
+        shareLog("📡 Fetching Instagram JSON endpoint: \(jsonUrl)")
+
+        guard let url = URL(string: jsonUrl) else {
+            completion(.failure(makeInstagramError("Invalid Instagram shortcode URL")))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15.0
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148", forHTTPHeaderField: "User-Agent")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                shareLog("❌ JSON fetch failed: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                httpResponse.statusCode == 200,
+                let data = data else {
+                completion(.failure(makeInstagramError("Invalid response or no data")))
+                return
+            }
+
+            do {
+                if let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if let message = root["message"] as? String, message.lowercased().contains("login") {
+                        shareLog("🔒 JSON endpoint requires login — likely private post")
+                        completion(.failure(makeInstagramError("Private or login required")))
+                        return
+                    }
+
+                    var urls: [String] = []
+                    if let graphql = (root["graphql"] as? [String: Any])?["shortcode_media"] as? [String: Any] {
+                        if let displayUrl = graphql["display_url"] as? String {
+                            urls.append(displayUrl)
+                            shareLog("🖼️ Found main image: \(displayUrl)")
+                        }
+
+                        if let sidecar = graphql["edge_sidecar_to_children"] as? [String: Any],
                         let edges = sidecar["edges"] as? [[String: Any]] {
-                            for edge in edges {
+                            for (i, edge) in edges.enumerated() {
                                 if let node = edge["node"] as? [String: Any],
                                 let displayUrl = node["display_url"] as? String {
-                                    let sanitized = sanitizeInstagramURLString(displayUrl)
-                                    if !sanitized.isEmpty {
-                                        urls.append(sanitized)
-                                    }
+                                    urls.append(displayUrl)
+                                    shareLog("📸 Found carousel image [\(i)]: \(displayUrl)")
                                 }
                             }
                         }
-                    } catch {
-                        shareLog("⚠️ JSON parse error in sidecar extraction: \(error.localizedDescription)")
                     }
+
+                    if urls.isEmpty {
+                        shareLog("⚠️ JSON returned but no image URLs found — maybe private or malformed")
+                        completion(.failure(makeInstagramError("No image URLs in JSON")))
+                    } else {
+                        completion(.success(urls))
+                    }
+
+                } else {
+                    shareLog("⚠️ Invalid JSON root structure")
+                    completion(.failure(makeInstagramError("Invalid JSON format")))
                 }
+            } catch {
+                shareLog("⚠️ JSON parse error: \(error.localizedDescription)")
+                completion(.failure(error))
             }
+        }.resume()
+    }
+
+    private func fetchInstagramViaScrapingBee(_ url: String, apiKey: String, completion: @escaping (Result<[String], Error>) -> Void) {
+        shareLog("🐝 Fetching Instagram via ScrapingBee (render_js=true) for fallback...")
+
+        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1") else {
+            completion(.failure(makeInstagramError("Invalid ScrapingBee URL")))
+            return
         }
 
-        // 🧩 Fallback to regex-based extraction (legacy)
-        if urls.isEmpty {
-            shareLog("⚠️ Falling back to regex-based Instagram URL extraction")
-            var priorityResults: [String] = []
-            var results: [String] = []
+        components.queryItems = [
+            URLQueryItem(name: "api_key", value: apiKey),
+            URLQueryItem(name: "url", value: url),
+            URLQueryItem(name: "render_js", value: "true")
+        ]
 
-            let cacheKeyPattern = "\"src\":\"(https:\\\\/\\\\/scontent[^\"]+?ig_cache_key[^\"]*)\""
-            if let regex = try? NSRegularExpression(pattern: cacheKeyPattern, options: []) {
-                let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-                regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
-                    guard let match = match,
-                        match.numberOfRanges > 1,
-                        let range = Range(match.range(at: 1), in: html) else { return }
-                    let candidate = sanitizeInstagramURLString(String(html[range]))
-                    if !candidate.isEmpty && !priorityResults.contains(candidate) {
-                        priorityResults.append(candidate)
-                    }
-                }
+        guard let apiURL = components.url else {
+            completion(.failure(makeInstagramError("Failed to construct ScrapingBee URL")))
+            return
+        }
+
+        URLSession.shared.dataTask(with: apiURL) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
             }
 
-            let pattern = "\"display_url\"\\s*:\\s*\"([^\"]+)\""
-            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
-                let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-                regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
-                    guard let match = match,
-                        match.numberOfRanges > 1,
-                        let range = Range(match.range(at: 1), in: html) else { return }
-
-                    var candidate = String(html[range])
-                    candidate = sanitizeInstagramURLString(candidate)
-                    if candidate.contains("150x150") || candidate.contains("profile") {
-                        return
-                    }
-                    if !results.contains(candidate) {
-                        results.append(candidate)
-                    }
-                }
+            guard let data = data, let html = String(data: data, encoding: .utf8) else {
+                completion(.failure(makeInstagramError("Empty ScrapingBee response")))
+                return
             }
 
-            let imgPattern = "<img[^>]+src=\"([^\"]+)\""
-            if let regex = try? NSRegularExpression(pattern: imgPattern, options: [.caseInsensitive]) {
-                let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-                regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
-                    guard let match = match,
-                        match.numberOfRanges > 1,
-                        let range = Range(match.range(at: 1), in: html) else { return }
-                    let candidate = sanitizeInstagramURLString(String(html[range]))
-                    if candidate.contains("ig_cache_key") && !priorityResults.contains(candidate) {
-                        priorityResults.append(candidate)
-                    } else if !candidate.contains("ig_cache_key"),
-                            !results.contains(candidate) {
-                        results.append(candidate)
-                    }
-                }
-            }
-
-            if !priorityResults.isEmpty {
-                urls = priorityResults
-            } else if !results.isEmpty {
-                urls = results
+            let urls = self.extractInstagramImageUrls(from: html)
+            if urls.isEmpty {
+                shareLog("⚠️ ScrapingBee returned HTML but no images extracted")
+                completion(.failure(makeInstagramError("No images from ScrapingBee")))
             } else {
-                let ogPattern = "<meta property=\"og:image\" content=\"([^\"]+)\""
-                if let regex = try? NSRegularExpression(pattern: ogPattern, options: [.caseInsensitive]) {
-                    let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-                    if let match = regex.firstMatch(in: html, options: [], range: nsrange),
+                shareLog("✅ Extracted \(urls.count) image URLs via ScrapingBee")
+                completion(.success(urls))
+            }
+        }.resume()
+    }
+
+    private func extractInstagramImageUrls(from html: String) -> [String] {
+        var urls: [String] = []
+
+        let pattern = "\"display_url\"\\s*:\\s*\"([^\"]+)\""
+        if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
                     match.numberOfRanges > 1,
-                    let range = Range(match.range(at: 1), in: html) {
-                        let candidate = sanitizeInstagramURLString(String(html[range]))
-                        if !candidate.isEmpty {
-                            urls.append(candidate)
-                        }
-                    }
+                    let range = Range(match.range(at: 1), in: html) else { return }
+                let candidate = sanitizeInstagramURLString(String(html[range]))
+                if !candidate.contains("profile") {
+                    urls.append(candidate)
                 }
             }
         }
 
-        shareLog("✅ Extracted \(urls.count) Instagram image URLs")
+        shareLog("✅ Extracted \(urls.count) Instagram image URLs (fallback regex)")
         return urls
     }
 
@@ -1363,31 +1397,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         sanitized = sanitized.replacingOccurrences(of: "\\u0026", with: "&")
         sanitized = sanitized.replacingOccurrences(of: "\\/", with: "/")
         sanitized = sanitized.replacingOccurrences(of: "&amp;", with: "&")
-        sanitized = sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
-        if sanitized.contains("ig_cache_key") {
-            return sanitized
-        }
-        return normalizeInstagramCdnUrl(sanitized)
+        return sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func normalizeInstagramCdnUrl(_ urlString: String) -> String {
-        guard var components = URLComponents(string: urlString) else {
-            return urlString
-        }
-
-        if var queryItems = components.percentEncodedQueryItems {
-            for index in 0..<queryItems.count {
-                if queryItems[index].name == "stp",
-                let value = queryItems[index].value,
-                value.contains("c") || value.contains("s640x640") {
-                    queryItems[index].value = value
-                        .replacingOccurrences(of: "c288.0.864.864a_", with: "")
-                        .replacingOccurrences(of: "s640x640_", with: "")
-                }
-            }
-            components.percentEncodedQueryItems = queryItems
-        }
-
+        guard var components = URLComponents(string: urlString) else { return urlString }
         let path = components.percentEncodedPath
         if let regex = try? NSRegularExpression(pattern: "_s\\d+x\\d+", options: []) {
             let range = NSRange(location: 0, length: path.count)
@@ -1397,7 +1411,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 components.percentEncodedPath = mutablePath as String
             }
         }
-
         return components.string ?? urlString
     }
 
@@ -1426,13 +1439,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        // 🆕 Only pick one image by index
-        let userSelectedIndex = UserDefaults.standard.integer(forKey: "InstagramImageIndex") // default 0
+        // 🧩 Only pick one image based on user index
+        let userSelectedIndex = UserDefaults.standard.integer(forKey: "InstagramImageIndex") // defaults to 0
         let safeIndex = min(max(userSelectedIndex, 0), uniqueUrls.count - 1)
         let selectedUrl = uniqueUrls[safeIndex]
         shareLog("✅ Selected Instagram image index \(safeIndex) of \(uniqueUrls.count): \(selectedUrl)")
 
-        // 🆕 Download just that one image
         downloadSingleImage(
             urlString: selectedUrl,
             originalURL: originalURL,
@@ -1473,7 +1485,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148", forHTTPHeaderField: "User-Agent")
         request.setValue("https://www.instagram.com/", forHTTPHeaderField: "Referer")
 
-        shareLog("Downloading Instagram CDN image: \(urlString)")
+        shareLog("⬇️ Downloading Instagram CDN image: \(urlString)")
         session.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
@@ -1481,14 +1493,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             guard let httpResponse = response as? HTTPURLResponse,
-                httpResponse.statusCode == 200 else {
-                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-                completion(.failure(self.makeInstagramError("Image download failed with status \(status)", code: status)))
-                return
-            }
-
-            guard let data = data else {
-                completion(.failure(self.makeInstagramError("Image download returned no data")))
+                httpResponse.statusCode == 200,
+                let data = data else {
+                completion(.failure(makeInstagramError("Image download failed or empty data")))
                 return
             }
 
@@ -1496,16 +1503,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let fileName = "instagram_image_\(timestamp)_\(index).jpg"
             let fileURL = containerURL.appendingPathComponent(fileName)
 
-            // Check if we should attempt detection BEFORE writing file
             let hasDetectionConfig = self.detectorEndpoint() != nil && self.serpApiKey() != nil
-
             if hasDetectionConfig {
-                shareLog("DETECTION CONFIGURED - Holding file in memory, NOT writing to shared container yet")
+                shareLog("🧠 Detection configured — holding file in memory")
                 self.shouldAttemptDetection = true
                 self.pendingImageData = data
                 self.pendingImageUrl = originalURL
 
-                // Create shared file reference but DON'T write to disk yet
                 let sharedFile = SharedMediaFile(
                     path: fileURL.absoluteString,
                     mimeType: "image/jpeg",
@@ -1513,22 +1517,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     type: .image
                 )
                 self.pendingSharedFile = sharedFile
-
-                shareLog("Calling uploadAndDetect with \(data.count) bytes of image data")
-                // Upload to ImgBB and trigger detection (async - don't complete yet)
                 self.uploadAndDetect(imageData: data)
-
-                // DON'T call completion and DON'T write file - wait for detection results or failure
-                shareLog("File held in memory. Completion held. uploadAndDetect called.")
+                shareLog("📤 uploadAndDetect started (holding completion)")
             } else {
-                shareLog("⚠️ Detection NOT configured - proceeding with normal flow")
-
+                shareLog("💾 Writing image to shared container: \(fileURL.path)")
                 do {
                     if FileManager.default.fileExists(atPath: fileURL.path) {
                         try FileManager.default.removeItem(at: fileURL)
                     }
                     try data.write(to: fileURL, options: .atomic)
-                    shareLog("💾 Saved Instagram image to shared container: \(fileURL.path)")
 
                     let sharedFile = SharedMediaFile(
                         path: fileURL.absoluteString,
@@ -1536,7 +1533,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         message: originalURL,
                         type: .image
                     )
-
                     completion(.success(sharedFile))
                 } catch {
                     completion(.failure(error))
