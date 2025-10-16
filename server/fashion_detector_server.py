@@ -1,15 +1,17 @@
 import io
 import sys
-import os  # ✅ needed for environment variables
+import os  # needed for environment variables
 import json
 import base64
 import time
 import torch
 import requests
+import re
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, List
-from concurrent.futures import ThreadPoolExecutor, as_completed  # ✅ parallel uploads
+from typing import Optional, List, Set
+from urllib.parse import urlparse
+from concurrent.futures import ThreadPoolExecutor, as_completed  # parallel uploads
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -84,6 +86,222 @@ CATEGORY_KEYWORDS = {
     "glasses": {"glasses", "sunglasses", "eyewear"},
     "hat": {"hat", "beanie", "cap", "beret", "bucket hat"},
 }
+
+# === DOMAIN FILTERING (Ported from Flutter trusted_domains.dart) ===
+
+# Tier-1 retailers / luxury stores to boost
+TIER1_RETAIL_DOMAINS = {
+    'nordstrom.com', 'selfridges.com', 'net-a-porter.com', 'mrporter.com',
+    'theoutnet.com', 'harrods.com', 'harveynichols.com', 'brownsfashion.com',
+    'bergdorfgoodman.com', 'saksfifthavenue.com', 'neimanmarcus.com',
+    'bloomingdales.com', 'macys.com', 'matchesfashion.com', 'mytheresa.com',
+    'shopbop.com', 'fwrd.com', 'endclothing.com', 'reformation.com',
+    'ssense.com', 'farfetch.com', 'luisaviaroma.com', '24s.com',
+}
+
+# Marketplaces / peer-to-peer: penalize and cap at 1
+MARKETPLACE_DOMAINS = {
+    'amazon.com', 'amazon.co.uk', 'amazon.de', 'amazon.fr', 'amazon.it', 'amazon.es',
+    'ebay.com', 'ebay.co.uk', 'etsy.com', 'aliexpress.com', 'alibaba.com',
+    'dhgate.com', 'depop.com', 'poshmark.com', 'vestiairecollective.com',
+    'therealreal.com', 'vinted.com', 'vinted.co.uk', 'stockx.com', 'goat.com',
+    'zalando.com', 'zalando.de', 'zalando.no', 'zalando.co.uk',
+    'shopee.com', 'lazada.com', 'rakuten.co.jp', 'walmart.com', 'target.com',
+    'flipkart.com', 'noon.com', 'bol.com',
+}
+
+# Trusted mainstream fashion/apparel retail
+TRUSTED_RETAIL_DOMAINS = {
+    'asos.com', 'zara.com', 'hm.com', 'mango.com', 'uniqlo.com', 'cos.com',
+    'weekday.com', 'monki.com', 'bershka.com', 'pullandbear.com',
+    'stradivarius.com', 'massimodutti.com', 'primark.com', 'aritzia.com',
+    'urbanoutfitters.com', 'anthropologie.com', 'freepeople.com', 'everlane.com',
+    'madewell.com', 'revolve.com', 'boozt.com', 'only.com', 'jackjones.com',
+    'na-kd.com', 'cottonon.com', 'showpo.com', 'beginningboutique.com',
+    'tobi.com', 'windsorstore.com', 'garageclothing.com', 'lulus.com',
+    'nike.com', 'adidas.com', 'puma.com', 'reebok.com', 'newbalance.com',
+    'asics.com', 'vans.com', 'converse.com', 'underarmour.com', 'lululemon.com',
+    'gymshark.com', 'fabletics.com', 'aloyoga.com', 'outdoorvoices.com',
+    'patagonia.com', 'thenorthface.com', 'columbia.com', 'on-running.com',
+    'salomon.com', 'merrell.com', 'teva.com', 'hoka.com', 'crocs.com',
+    'birkenstock.com', 'drmartens.com', 'footlocker.com', 'finishline.com',
+    'snipes.com', 'jdsports.com', 'jdsports.co.uk', 'champssports.com',
+    'pandora.net', 'tiffany.com', 'cartier.com', 'rolex.com', 'tagheuer.com',
+    'omegawatches.com', 'bulgari.com', 'breitling.com', 'longines.com',
+    'fossil.com', 'danielwellington.com', 'mvmt.com', 'swarovski.com',
+    'skagen.com', 'citizenwatch.com', 'seikowatches.com', 'cluse.com',
+    'apm.mc', 'ray-ban.com', 'warbyparker.com', 'zennioptical.com',
+    'eyebuydirect.com', 'oakley.com', 'persol.com', 'mauijim.com',
+    'glassesusa.com', 'sunglasshut.com', 'smartbuyglasses.com',
+    'samsonite.com', 'tumi.com', 'awaytravel.com', 'rimowa.com',
+    'kipling.com', 'longchamp.com', 'coach.com', 'michaelkors.com',
+    'katespade.com', 'guess.com', 'dooney.com', 'toryburch.com',
+    'herschel.com', 'eastpak.com', 'jansport.com', 'pactwear.com',
+    'tentree.com', 'girlfriend.com', 'organicbasics.com', 'kotn.com',
+    'matethelabel.com', 'theslowlabel.com', 'cuyana.com', 'allbirds.com',
+    'marksandspencer.com', 'houseoffraser.co.uk', 'johnlewis.com',
+    'debenhams.com', 'myer.com.au', 'davidjones.com', 'century21stores.com',
+    'lordandtaylor.com', 'boscovs.com', 'argos.co.uk', 'boots.com',
+    'very.co.uk', 'next.co.uk', 'next.com', 'peek-cloppenburg.de',
+    'galerieslafayette.com', 'otto.de', 'aboutyou.de', 'aboutyou.com',
+    'bonprix.de',
+}
+
+# Aggregators / meta-shopping (penalize and cap at 1)
+AGGREGATOR_DOMAINS = {
+    'lyst.com', 'modesens.com', 'shopstyle.com', 'lyst.co.uk',
+}
+
+# Completely banned content/non-commerce domains
+BANNED_DOMAINS = {
+    # Social
+    'facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'pinterest.com',
+    'tiktok.com', 'linkedin.com', 'reddit.com', 'youtube.com', 'snapchat.com',
+    'threads.net', 'discord.com', 'wechat.com', 'weibo.com', 'line.me', 'vk.com',
+    # Blogging
+    'blogspot.com', 'wordpress.com', 'tumblr.com', 'medium.com', 'substack.com',
+    'weebly.com', 'wixsite.com', 'squarespace.com', 'ghost.io', 'notion.site',
+    'livejournal.com', 'typepad.com',
+    # Reference
+    'quora.com', 'fandom.com', 'wikipedia.org', 'wikihow.com', 'britannica.com',
+    'stackexchange.com', 'stackoverflow.com', 'ask.com', 'answers.com',
+    # News / Media
+    'bbc.com', 'cnn.com', 'nytimes.com', 'washingtonpost.com', 'forbes.com',
+    'bloomberg.com', 'reuters.com', 'huffpost.com', 'usatoday.com',
+    'abcnews.go.com', 'cbsnews.com', 'npr.org', 'time.com', 'theguardian.com',
+    'independent.co.uk', 'theatlantic.com', 'vox.com', 'buzzfeed.com',
+    'vice.com', 'msn.com', 'dailymail.co.uk', 'mirror.co.uk', 'nbcnews.com',
+    'latimes.com', 'insider.com',
+    # Creative
+    'soundcloud.com', 'deviantart.com', 'dribbble.com', 'artstation.com',
+    'behance.net', 'vimeo.com', 'bandcamp.com', 'mixcloud.com', 'last.fm',
+    'spotify.com', 'goodreads.com',
+    # Editorial fashion (non-shoppable)
+    'vogue.com', 'elle.com', 'harpersbazaar.com', 'cosmopolitan.com',
+    'glamour.com', 'refinery29.com', 'whowhatwear.com', 'instyle.com',
+    'graziamagazine.com', 'vanityfair.com', 'marieclaire.com', 'teenvogue.com',
+    'stylecaster.com', 'popsugar.com', 'nylon.com', 'lifestyleasia.com',
+    'thezoereport.com', 'allure.com', 'coveteur.com', 'thecut.com',
+    'dazeddigital.com', 'highsnobiety.com', 'hypebeast.com', 'complex.com',
+    'gq.com', 'esquire.com', 'menshealth.com', 'wmagazine.com', 'people.com',
+    'today.com', 'observer.com', 'standard.co.uk', 'eveningstandard.co.uk',
+    'nssmag.com', 'grazia.fr', 'grazia.it',
+    # Tech
+    'techcrunch.com', 'wired.com', 'theverge.com', 'engadget.com',
+    'gsmarena.com', 'cnet.com', 'zdnet.com', 'mashable.com', 'makeuseof.com',
+    'arstechnica.com', 'androidauthority.com', 'macrumors.com', '9to5mac.com',
+    'digitaltrends.com', 'imore.com', 'tomsguide.com', 'pocket-lint.com',
+    # Travel
+    'tripadvisor.com', 'expedia.com', 'lonelyplanet.com', 'booking.com',
+    'airbnb.com', 'travelandleisure.com', 'kayak.com', 'skyscanner.com',
+    # Aggregators / spammy
+    'dealmoon.com', 'pricegrabber.com', 'shopmania.com', 'trustpilot.com',
+    'reviewcentre.com', 'mouthshut.com', 'sitejabber.com', 'lookbook.nu',
+    'stylebistro.com', 'redbubble.com', 'society6.com', 'teepublic.com',
+    'zazzle.com', 'spreadshirt.com', 'cafepress.com', 'archive.org',
+    # Forums
+    '4chan.org', '8kun.top', 'thefashionspot.com', 'styleforum.net',
+    'superfuture.com',
+    # Misc
+    'patreon.com', 'onlyfans.com', 'ko-fi.com', 'buymeacoffee.com',
+    'pixiv.net', 'tumgir.com',
+}
+
+# Combined trusted domains for general filtering
+TRUSTED_DOMAINS = TIER1_RETAIL_DOMAINS | MARKETPLACE_DOMAINS | TRUSTED_RETAIL_DOMAINS | AGGREGATOR_DOMAINS
+
+# === CATEGORY RULES (Ported from Flutter category_rules.dart) ===
+
+CATEGORY_KEYWORDS_DETAILED = {
+    'dresses': [
+        'dress', 'gown', 'jumpsuit', 'romper', 'one-piece', 'one piece',
+        'bodysuit', 'maxi dress', 'midi dress', 'mini dress', 'evening dress',
+        'cocktail dress', 'slip dress',
+    ],
+    'tops': [
+        'top', 'shirt', 't-shirt', 'tee', 'tank', 'blouse', 'polo', 'sweater',
+        'hoodie', 'crewneck', 'jumper', 'camisole', 'cardigan', 'tunic',
+        'long sleeve',
+    ],
+    'bottoms': [
+        'jeans', 'pants', 'trouser', 'shorts', 'skirt', 'leggings', 'cargo',
+        'chino', 'culotte', 'sweatpants', 'jogger', 'denim', 'slip skirt',
+    ],
+    'outerwear': [
+        'coat', 'jacket', 'blazer', 'vest', 'trench', 'puffer', 'windbreaker',
+        'parka', 'anorak', 'raincoat',
+    ],
+    'shoes': [
+        'shoe', 'sneaker', 'boot', 'heel', 'loafer', 'flat', 'sandal',
+        'slipper', 'moccasin', 'trainer', 'wedge', 'platform', 'flip-flop',
+        'clog', 'oxford', 'derby', 'running shoe', 'tennis shoe', 'high top',
+        'low top', 'slide',
+    ],
+    'bags': [
+        'bag', 'handbag', 'tote', 'crossbody', 'backpack', 'satchel', 'clutch',
+        'duffel', 'wallet', 'purse', 'briefcase',
+    ],
+    'headwear': [
+        'hat', 'cap', 'beanie', 'beret', 'visor', 'bucket hat', 'headband',
+    ],
+    'accessories': [
+        'scarf', 'belt', 'glasses', 'sunglasses', 'watch', 'earring',
+        'necklace', 'bracelet', 'ring', 'tie', 'bowtie', 'pin', 'brooch',
+        'glove', 'keychain', 'wallet',
+    ],
+}
+
+BRAND_CATEGORY_HINTS = {
+    # Footwear
+    'nike': 'shoes', 'adidas': 'shoes', 'puma': 'shoes', 'vans': 'shoes',
+    'converse': 'shoes', 'new balance': 'shoes', 'reebok': 'shoes',
+    'asics': 'shoes', 'salomon': 'shoes', 'hoka': 'shoes', 'crocs': 'shoes',
+    'dr martens': 'shoes', 'timberland': 'shoes',
+    # Bags
+    'coach': 'bags', 'michael kors': 'bags', 'kate spade': 'bags',
+    'tory burch': 'bags', 'longchamp': 'bags', 'rimowa': 'bags',
+    'samsonite': 'bags', 'away': 'bags', 'herschel': 'bags',
+    # Apparel
+    'zara': 'tops', 'h&m': 'tops', 'uniqlo': 'tops', 'asos': 'tops',
+    'shein': 'tops', 'fashion nova': 'tops', 'boohoo': 'tops',
+    'revolve': 'dresses', 'princess polly': 'dresses', 'lulus': 'dresses',
+    'prettylittlething': 'dresses',
+    # Outerwear
+    'north face': 'outerwear', 'columbia': 'outerwear', 'patagonia': 'outerwear',
+    'canada goose': 'outerwear', 'moncler': 'outerwear',
+    # Eyewear & jewelry
+    'ray-ban': 'accessories', 'oakley': 'accessories', 'warby parker': 'accessories',
+    'pandora': 'accessories', 'tiffany': 'accessories', 'cartier': 'accessories',
+    'swarovski': 'accessories',
+}
+
+STOP_WORDS = {
+    'the', 'and', 'with', 'from', 'shop', 'buy', 'store', 'official',
+    'for', 'by', 'men', 'women', 'kids', 'unisex', 'fashion', 'style',
+    'clothing', 'apparel', 'brand', 'new', 'sale', 'discount', 'collection',
+    'edition',
+}
+
+# Relevance filter - banned terms for non-fashion content
+RELEVANCE_BANNED_TERMS = [
+    'texture', 'pattern', 'drawing', 'illustration', 'clipart', 'mockup',
+    'template', 'icon', 'logo', 'vector', 'stock photo', 'hanger', 'material',
+    'silhouette', 'outline', 'preset', 'filter', 'lightroom', 'photoshop',
+    'digital download', 'tutorial', 'guide', 'lesson', 'manual', 'holder',
+    'stand', 'tripod', 'mount', 'case', 'charger', 'adapter', 'cable',
+    'keyboard', 'mouse', 'phone', 'tablet', 'shoelace',
+]
+
+# Fashion keywords for relevance detection
+GARMENT_KEYWORDS = [
+    'dress', 'top', 'shirt', 't-shirt', 'pants', 'jeans', 'skirt', 'coat',
+    'jacket', 'sweater', 'hoodie', 'bag', 'handbag', 'backpack', 'tote',
+    'sandal', 'boot', 'shoe', 'sneaker', 'heel', 'glasses', 'sunglasses',
+    'hat', 'cap', 'scarf', 'outfit', 'clothing', 'apparel', 'fashion',
+]
+
+# Style hint keywords for relevance boost
+STYLE_HINT_KEYWORDS = ['silk', 'satin', 'lace', 'bias', 'midi', 'maxi', 'slip', 'trim']
 
 # === FASTAPI SETUP ===
 app = FastAPI(title="Fashion Detector API")
@@ -196,6 +414,309 @@ def upload_to_imgbb(image: Image.Image, api_key: str) -> Optional[str]:
 
     print("🚫 All ImgBB upload attempts failed.")
     return None
+
+# === SOPHISTICATED FILTERING HELPERS (Ported from Flutter) ===
+
+def extract_domain(url: str) -> str:
+    """Extract root domain from URL (e.g., 'www.example.com' -> 'example.com')"""
+    try:
+        parsed = urlparse(url)
+        host = parsed.netloc.replace('www.', '')
+        parts = host.split('.')
+        if len(parts) >= 2:
+            return f"{parts[-2]}.{parts[-1]}"
+        return host
+    except:
+        return ''
+
+def domain_matches_any(domain: str, domain_set: Set[str]) -> bool:
+    """Check if domain matches any domain in the set"""
+    domain_lower = domain.lower()
+    return any(domain_lower == root.lower() or domain_lower.endswith(f'.{root.lower()}')
+               for root in domain_set)
+
+def is_ecommerce_result(link: str, source: str, title: str, snippet: str = '') -> bool:
+    """Filter to only ecommerce results using domain lists"""
+    text = f"{link} {source} {title.lower()} {snippet.lower()}"
+    domain = extract_domain(link).lower()
+
+    # Fully banned content/non-commerce
+    if domain_matches_any(domain, BANNED_DOMAINS):
+        return False
+
+    # If in trusted roots, allow early (strict mode)
+    if domain_matches_any(domain, TRUSTED_DOMAINS):
+        return True
+
+    # Generic ecommerce hints
+    has_price = bool(re.search(r'(\$|€|£|¥)\s?\d', text))
+    has_cart = bool(re.search(r'(add[\s_-]?to[\s_-]?cart|buy\s?now|checkout|in\s?stock)', text, re.I))
+    product_url = bool(re.search(r'/(product|shop|store|item|buy)[/\-_]', link, re.I))
+
+    return has_price or has_cart or product_url
+
+def is_relevant_result(title: str) -> bool:
+    """Semantic relevance filter - blocks textures, patterns, tutorials, etc."""
+    lower = title.lower()
+
+    # Banned terms
+    if any(term in lower for term in RELEVANCE_BANNED_TERMS):
+        return False
+
+    # Expected garment keywords
+    if any(keyword in lower for keyword in GARMENT_KEYWORDS):
+        return True
+
+    # Style hints
+    if any(hint in lower for hint in STYLE_HINT_KEYWORDS):
+        return True
+
+    return False
+
+def format_title(title: str) -> str:
+    """Format title by removing marketing fluff and cleaning up"""
+    if not title:
+        return 'Unknown item'
+
+    clean = title
+
+    # Remove marketing / store fluff
+    clean = re.sub(
+        r'(buy\s+now|official\s+store|free\s+shipping|online\s+shop|sale|discount|deal|brand\s+new|shop\s+now)',
+        '',
+        clean,
+        flags=re.I
+    )
+
+    # Split on common separators and keep the most informative part
+    parts = re.split(r'[\|\-:–—]+', clean)
+    if parts:
+        good_parts = [p.strip() for p in parts if re.search(r'[a-zA-Z]', p.strip())]
+        if good_parts:
+            clean = good_parts[0]
+
+    # Normalize whitespace
+    clean = re.sub(r'\s+', ' ', clean).strip()
+
+    # Capitalize first letter
+    if clean:
+        clean = clean[0].upper() + clean[1:]
+
+    # Limit length
+    if len(clean) > 60:
+        clean = clean[:57] + '...'
+
+    return clean if clean else 'Unknown item'
+
+def extract_brand(title: str, source: str) -> str:
+    """Extract brand from source or title"""
+    if source:
+        return title_case(source)
+
+    # Try to extract first few words from title
+    match = re.match(r"^[A-Za-z0-9'& ]{2,20}", title)
+    if match:
+        candidate = match.group(0).strip()
+        if candidate and candidate.lower() not in STOP_WORDS:
+            return title_case(candidate)
+
+    return 'Unknown'
+
+def title_case(value: str) -> str:
+    """Convert string to title case"""
+    return ' '.join(word[0].upper() + word[1:].lower()
+                   for word in value.split() if word)
+
+def categorize_garment(title: str, brand: str = '') -> str:
+    """
+    Sophisticated categorization using keyword matching and brand hints.
+    Ported from Flutter detection_service.dart
+    """
+    lower = title.lower()
+    brand_lower = brand.lower() if brand else ''
+
+    # Token-vote scoring across all categories
+    def score_token(token: str) -> int:
+        pattern = r'\b' + re.escape(token) + r'\b'
+        if re.search(pattern, lower):
+            return 2
+        return 1 if token in lower else 0
+
+    votes = {}
+    for category, keywords in CATEGORY_KEYWORDS_DETAILED.items():
+        votes[category] = sum(score_token(kw) for kw in keywords)
+
+    # Priority order for tie-breaking
+    priority = ['bottoms', 'dresses', 'tops', 'outerwear', 'shoes', 'bags', 'accessories', 'headwear']
+
+    # Find best category by vote
+    best_category = 'accessories'
+    best_score = -1
+    for cat in priority:
+        if votes.get(cat, 0) > best_score:
+            best_score = votes.get(cat, 0)
+            best_category = cat
+
+    # Check brand hints
+    for brand_key, hint_category in BRAND_CATEGORY_HINTS.items():
+        if brand_key in brand_lower or brand_key in lower:
+            # If brand hint has equal or better vote, use it
+            if votes.get(hint_category, 0) >= best_score * 0.8:
+                return hint_category
+
+    return best_category
+
+def looks_like_pdp(url: str, title: str) -> bool:
+    """Check if URL/title looks like a Product Detail Page"""
+    url_lower = url.lower()
+    title_lower = title.lower()
+
+    pdp_url_pattern = r'/product/|/products?/|/p/|/pd/|/sku/|/item/|/buy/|/dp/|/gp/product/|/shop/[^/]*\d'
+    pdp_title_pattern = r'\b(sku|style|model|size|midi|maxi|silk|satin|lace)\b'
+
+    return bool(re.search(pdp_url_pattern, url_lower)) or bool(re.search(pdp_title_pattern, title_lower))
+
+def looks_like_collection(url: str, title: str) -> bool:
+    """Check if URL/title looks like a generic collection/landing page"""
+    url_lower = url.lower()
+    title_lower = title.lower()
+
+    # Title pattern: "Category | Store"
+    if re.search(r'\b(women|men|kids|midi|maxi|skirts?|dresses|clothing)\b', title_lower) and ' | ' in title_lower:
+        return True
+
+    # Collection/category URLs
+    collection_pattern = r'/c/|/category/|/collections?/|/shop/[^/]+/?$|/women/[^/]+/?$|/women/?$|/new-arrivals/?$|/sale/?$'
+    if re.search(collection_pattern, url_lower):
+        return True
+
+    # Index pages
+    if url_lower.endswith('/index.html') or url_lower.endswith('/index'):
+        return True
+
+    return False
+
+def fashion_score(result: dict, price: float) -> float:
+    """
+    Fashion-aware scoring with tier-1 boost, marketplace penalty, style keywords.
+    Ported from Flutter detection_service.dart
+    """
+    purchase_url = result.get('purchase_url', '')
+    product_name = result.get('product_name', '')
+    domain = extract_domain(purchase_url)
+
+    mult = 1.0
+
+    # Trust & prestige
+    if domain_matches_any(domain, TIER1_RETAIL_DOMAINS):
+        mult *= 1.15
+    if domain_matches_any(domain, MARKETPLACE_DOMAINS):
+        mult *= 0.88
+    if domain_matches_any(domain, AGGREGATOR_DOMAINS):
+        mult *= 0.90
+
+    # Style keywords
+    title_lower = product_name.lower()
+    if 'silk' in title_lower:
+        mult *= 1.06
+    if 'satin' in title_lower:
+        mult *= 1.06
+    if 'lace' in title_lower:
+        mult *= 1.08
+    if 'midi' in title_lower:
+        mult *= 1.03
+    if 'slip' in title_lower:
+        mult *= 1.04
+
+    if price > 0:
+        mult *= 1.02
+
+    base = 0.75  # Base confidence for serp results
+    return base * mult
+
+def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
+    """
+    Deduplicate results by domain with caps:
+    - Marketplaces/aggregators: max 1
+    - Tier-1: max 7
+    - Trusted retail: max 5
+    - Others: max 3
+
+    Prefer PDPs over collection pages within each domain.
+    Ported from Flutter detection_service.dart
+    """
+    # Sort by fashion score
+    results.sort(key=lambda r: fashion_score(r, r.get('price', 0.0)), reverse=True)
+
+    by_domain = {}
+    domain_count = {}
+    seen_urls = set()
+
+    for result in results:
+        url = result.get('purchase_url', '').strip()
+        if not url or url in seen_urls:
+            continue
+
+        seen_urls.add(url)
+        domain = extract_domain(url)
+        if not domain:
+            continue
+
+        is_tier1 = domain_matches_any(domain, TIER1_RETAIL_DOMAINS)
+        is_marketplace = domain_matches_any(domain, MARKETPLACE_DOMAINS)
+        is_aggregator = domain_matches_any(domain, AGGREGATOR_DOMAINS)
+        is_trusted_retail = domain_matches_any(domain, TRUSTED_RETAIL_DOMAINS)
+
+        # Determine cap
+        if is_marketplace or is_aggregator:
+            cap = 1
+        elif is_tier1:
+            cap = 7
+        elif is_trusted_retail:
+            cap = 5
+        else:
+            cap = 3
+
+        if domain not in by_domain:
+            by_domain[domain] = []
+            domain_count[domain] = 0
+
+        domain_list = by_domain[domain]
+
+        if domain_count[domain] < cap:
+            # Room available
+            domain_list.append(result)
+            domain_count[domain] += 1
+        else:
+            # At cap: if current is PDP and any existing is not PDP, replace lowest-score non-PDP
+            curr_is_pdp = looks_like_pdp(url, result.get('product_name', ''))
+            if not curr_is_pdp:
+                continue
+
+            # Find lowest-score non-PDP in this domain
+            replace_idx = -1
+            worst_score = float('inf')
+            for i, existing in enumerate(domain_list):
+                existing_is_pdp = looks_like_pdp(
+                    existing.get('purchase_url', ''),
+                    existing.get('product_name', '')
+                )
+                if not existing_is_pdp:
+                    score = fashion_score(existing, existing.get('price', 0.0))
+                    if score < worst_score:
+                        worst_score = score
+                        replace_idx = i
+
+            if replace_idx >= 0:
+                domain_list[replace_idx] = result
+
+    # Flatten results
+    flattened = []
+    for domain_list in by_domain.values():
+        flattened.extend(domain_list)
+
+    print(f"Deduped {len(flattened)} results across {len(by_domain)} domains")
+    return flattened
 
 # === DETECTION CORE ===
 def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max_crops: int):
@@ -428,7 +949,10 @@ def download_image_from_url(image_url: str) -> Image.Image:
     return Image.open(io.BytesIO(response.content)).convert("RGB")
 
 def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List[dict]:
-    """Search Google Lens via SerpAPI and return top results."""
+    """
+    Search Google Lens via SerpAPI and return top filtered results.
+    Now applies sophisticated ecommerce and relevance filtering.
+    """
     print(f"🔍 Searching SerpAPI for image: {image_url[:80]}...")
 
     results = []
@@ -459,8 +983,15 @@ def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List
                 thumbnail = match.get('thumbnail', '')
                 snippet = match.get('snippet', '')
 
-                # Basic filtering
+                # Basic validation
                 if not link or not title:
+                    continue
+
+                # Apply sophisticated filtering (ported from Flutter)
+                if not is_ecommerce_result(link, source, title, snippet):
+                    continue
+
+                if not is_relevant_result(title):
                     continue
 
                 # Extract price if available
@@ -478,31 +1009,44 @@ def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List
                     'price': price,
                 })
 
-                if len(results) >= max_results:
+                if len(results) >= max_results * 2:  # Fetch extra before dedup
                     break
 
-            if len(results) >= max_results:
+            if len(results) >= max_results * 2:
                 break
 
         except Exception as e:
             print(f"❌ SerpAPI {rail} error: {e}")
             continue
 
-    print(f"✅ Found {len(results)} results from SerpAPI")
-    return results[:max_results]
+    print(f"✅ Found {len(results)} filtered results from SerpAPI")
+    return results
 
 def format_detection_result(serp_result: dict, garment_label: str, index: int) -> dict:
-    """Format a SerpAPI result into DetectionResult-like structure."""
+    """
+    Format a SerpAPI result into DetectionResult-like structure.
+    Now uses sophisticated title formatting, brand extraction, and categorization.
+    """
+    raw_title = serp_result['title']
+    raw_source = serp_result.get('source', '')
+    purchase_url = serp_result['link']
+    price = serp_result.get('price', 0.0)
+
+    # Apply sophisticated helpers
+    formatted_title = format_title(raw_title)
+    brand = extract_brand(raw_title, raw_source)
+    category = categorize_garment(formatted_title, brand)
+
     return {
         'id': f'serp_{int(time.time() * 1000)}_{index}',
-        'product_name': serp_result['title'][:100],
-        'brand': serp_result['source'] or 'Unknown',
-        'price': serp_result.get('price', 0.0),
+        'product_name': formatted_title,
+        'brand': brand,
+        'price': price,
         'image_url': serp_result.get('thumbnail', ''),
-        'category': garment_label,
+        'category': category,
         'confidence': 0.75,
         'description': serp_result.get('snippet', '')[:200] if serp_result.get('snippet') else None,
-        'purchase_url': serp_result['link'],
+        'purchase_url': purchase_url,
     }
 
 # === MAIN ENDPOINT (Optimized for Speed) ===
@@ -595,35 +1139,79 @@ def detect_and_search(req: DetectAndSearchRequest):
                 'results': []
             }
 
-        # Step 3: Take the best garment (highest priority/score) and search
-        best_garment = filtered[0]
-        garment_label = best_garment['label']
-        print(f"🎯 Searching for best garment: {garment_label} (score: {best_garment['score']:.3f})")
+        # Step 3: Crop all garments and upload to ImgBB
+        imgbb_api_key = "d7e1d857e4498c2e28acaa8d943ccea8"
+        crops_with_urls = []
 
-        # Search SerpAPI with the original image URL
-        serp_results = search_serp_api(
-            req.image_url,
-            req.serp_api_key,
-            max_results=req.max_results_per_garment
-        )
+        print(f"🔍 Processing {len(filtered)} detected garments...")
+        for det in filtered:
+            x1, y1, x2, y2 = expand_bbox(det["bbox"], image.width, image.height, req.expand_ratio)
+            crop = image.crop((x1, y1, x2, y2))
 
-        # Step 4: Format results
-        formatted_results = []
-        for i, serp_result in enumerate(serp_results):
-            formatted = format_detection_result(serp_result, garment_label, i)
-            formatted_results.append(formatted)
+            # Upload crop to ImgBB
+            crop_url = upload_to_imgbb(crop, imgbb_api_key)
+            if crop_url:
+                crops_with_urls.append({
+                    'garment': det,
+                    'crop_url': crop_url
+                })
+                print(f"✅ Uploaded {det['label']} crop: {crop_url}")
 
-        print(f"✅ Pipeline complete. Returning {len(formatted_results)} results for {garment_label}")
+        if not crops_with_urls:
+            return {
+                'success': False,
+                'message': 'Failed to upload garment crops',
+                'results': []
+            }
+
+        # Step 4: Search SerpAPI for each garment crop
+        all_results = []
+        for item in crops_with_urls:
+            garment = item['garment']
+            crop_url = item['crop_url']
+
+            print(f"🔍 Searching SerpAPI for {garment['label']} (score: {garment['score']:.3f})...")
+
+            serp_results = search_serp_api(
+                crop_url,
+                req.serp_api_key,
+                max_results=req.max_results_per_garment
+            )
+
+            # Format and add to results
+            for i, serp_result in enumerate(serp_results):
+                formatted = format_detection_result(serp_result, garment['label'], len(all_results) + i)
+                all_results.append(formatted)
+
+        print(f"📊 Total raw results before filtering: {len(all_results)}")
+
+        # Step 5: Apply sophisticated filtering
+        # Remove collection pages if we have enough PDPs
+        pdp_count = sum(1 for r in all_results if not looks_like_collection(
+            r.get('purchase_url', ''), r.get('product_name', '')
+        ))
+
+        if pdp_count >= 10:
+            before = len(all_results)
+            all_results = [r for r in all_results if not looks_like_collection(
+                r.get('purchase_url', ''), r.get('product_name', '')
+            )]
+            print(f"🧹 Removed {before - len(all_results)} collection pages (kept PDPs)")
+
+        # Step 6: Deduplicate and limit by domain with fashion scoring
+        deduped_results = deduplicate_and_limit_by_domain(all_results)
+
+        print(f"✅ Pipeline complete. Returning {len(deduped_results)} high-quality results from {len(crops_with_urls)} garments")
 
         return {
             'success': True,
             'detected_garment': {
-                'label': garment_label,
-                'score': round(best_garment['score'], 3),
-                'bbox': best_garment['bbox']
+                'label': filtered[0]['label'],
+                'score': round(filtered[0]['score'], 3),
+                'bbox': filtered[0]['bbox']
             },
-            'total_results': len(formatted_results),
-            'results': formatted_results
+            'total_results': len(deduped_results),
+            'results': deduped_results
         }
 
     except Exception as e:

@@ -125,6 +125,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingPostMessage: String?
     private let maxInstagramScrapeAttempts = 2
     private var detectionResults: [DetectionResultItem] = []
+    private var filteredResults: [DetectionResultItem] = []
     private var resultsTableView: UITableView?
     private var downloadedImageUrl: String?
     private var isShowingDetectionResults = false
@@ -132,6 +133,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingSharedFile: SharedMediaFile?
     private var pendingImageData: Data?
     private var pendingImageUrl: String?
+    private var selectedCategory: String = "All"
+    private var categoryFilterView: UIView?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -941,21 +944,178 @@ open class RSIShareViewController: SLComposeServiceViewController {
         activityIndicator?.isHidden = true
         statusLabel?.isHidden = true
 
+        // Initialize filtered results
+        filteredResults = detectionResults
+        selectedCategory = "All"
+
+        // Create header with logo and cancel button
+        let headerView = UIView()
+        headerView.backgroundColor = .systemBackground
+        headerView.translatesAutoresizingMaskIntoConstraints = false
+
+        // Logo label
+        let logoLabel = UILabel()
+        logoLabel.text = "Snaplook"
+        logoLabel.font = .systemFont(ofSize: 20, weight: .bold)
+        logoLabel.textColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        logoLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        // Cancel button
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 17)
+        cancelButton.addTarget(self, action: #selector(cancelDetectionTapped), for: .touchUpInside)
+        cancelButton.translatesAutoresizingMaskIntoConstraints = false
+
+        headerView.addSubview(logoLabel)
+        headerView.addSubview(cancelButton)
+
+        // Create category filter chips
+        let filterView = createCategoryFilters()
+        categoryFilterView = filterView
+
         // Create table view if not exists
         if resultsTableView == nil {
-            let tableView = UITableView(frame: view.bounds, style: .plain)
-            tableView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            let tableView = UITableView(frame: .zero, style: .plain)
+            tableView.translatesAutoresizingMaskIntoConstraints = false
             tableView.delegate = self
             tableView.dataSource = self
             tableView.register(ResultCell.self, forCellReuseIdentifier: "ResultCell")
             tableView.rowHeight = UITableView.automaticDimension
             tableView.estimatedRowHeight = 100
             tableView.backgroundColor = .systemBackground
-            loadingView?.addSubview(tableView)
+            tableView.separatorStyle = .singleLine
+            tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
             resultsTableView = tableView
         }
 
+        // Add all views to loadingView
+        loadingView?.addSubview(headerView)
+        loadingView?.addSubview(filterView)
+        if let tableView = resultsTableView {
+            loadingView?.addSubview(tableView)
+        }
+
+        // Layout constraints
+        NSLayoutConstraint.activate([
+            headerView.topAnchor.constraint(equalTo: loadingView!.safeAreaLayoutGuide.topAnchor),
+            headerView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
+            headerView.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
+            headerView.heightAnchor.constraint(equalToConstant: 60),
+
+            logoLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
+            logoLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+
+            cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
+            cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+
+            filterView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
+            filterView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
+            filterView.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
+            filterView.heightAnchor.constraint(equalToConstant: 60),
+
+            resultsTableView!.topAnchor.constraint(equalTo: filterView.bottomAnchor),
+            resultsTableView!.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
+            resultsTableView!.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
+            resultsTableView!.bottomAnchor.constraint(equalTo: loadingView!.bottomAnchor)
+        ])
+
         resultsTableView?.reloadData()
+    }
+
+    private func createCategoryFilters() -> UIView {
+        let containerView = UIView()
+        containerView.backgroundColor = .systemBackground
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+
+        let scrollView = UIScrollView()
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+
+        let stackView = UIStackView()
+        stackView.axis = .horizontal
+        stackView.spacing = 8
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+
+        let categories = ["All", "Tops", "Bottoms", "Dresses", "Shoes", "Bags", "Accessories"]
+        for category in categories {
+            let button = UIButton(type: .system)
+            button.setTitle(category, for: .normal)
+            button.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+            button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+            button.layer.cornerRadius = 16
+            button.layer.borderWidth = 1
+            button.layer.borderColor = UIColor.systemGray4.cgColor
+            button.backgroundColor = category == "All" ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
+            button.setTitleColor(category == "All" ? .white : .label, for: .normal)
+            button.addTarget(self, action: #selector(categoryFilterTapped(_:)), for: .touchUpInside)
+            stackView.addArrangedSubview(button)
+        }
+
+        scrollView.addSubview(stackView)
+        containerView.addSubview(scrollView)
+
+        NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
+            scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12),
+
+            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            stackView.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
+        ])
+
+        return containerView
+    }
+
+    @objc private func categoryFilterTapped(_ sender: UIButton) {
+        guard let category = sender.titleLabel?.text else { return }
+
+        selectedCategory = category
+
+        // Update button styles
+        if let stackView = categoryFilterView?.subviews.first?.subviews.first as? UIStackView {
+            for case let button as UIButton in stackView.arrangedSubviews {
+                let isSelected = button.titleLabel?.text == category
+                button.backgroundColor = isSelected ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
+                button.setTitleColor(isSelected ? .white : .label, for: .normal)
+            }
+        }
+
+        // Filter results
+        filterResultsByCategory()
+    }
+
+    private func filterResultsByCategory() {
+        if selectedCategory == "All" {
+            filteredResults = detectionResults
+        } else {
+            let categoryMap: [String: Set<String>] = [
+                "Tops": ["shirt, blouse", "top, t-shirt, sweatshirt", "sweater", "cardigan", "jacket", "coat", "vest"],
+                "Bottoms": ["pants", "shorts", "skirt"],
+                "Dresses": ["dress", "jumpsuit"],
+                "Shoes": ["shoe"],
+                "Bags": ["bag, wallet"],
+                "Accessories": ["glasses", "hat", "headband, head covering, hair accessory", "scarf"]
+            ]
+
+            if let allowedCategories = categoryMap[selectedCategory] {
+                filteredResults = detectionResults.filter { allowedCategories.contains($0.category) }
+            } else {
+                filteredResults = detectionResults
+            }
+        }
+
+        resultsTableView?.reloadData()
+        shareLog("Filtered to \(filteredResults.count) results for category: \(selectedCategory)")
+    }
+
+    @objc private func cancelDetectionTapped() {
+        shareLog("Cancel button tapped - proceeding with normal flow")
+        proceedWithNormalFlow()
     }
 
     // Proceed with normal flow (save and redirect to app)
@@ -1562,19 +1722,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
 // MARK: - Table View Delegate & DataSource
 extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return detectionResults.count
+        return filteredResults.count
     }
 
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "ResultCell", for: indexPath) as! ResultCell
-        let result = detectionResults[indexPath.row]
+        let result = filteredResults[indexPath.row]
         cell.configure(with: result)
         return cell
     }
 
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        let selectedResult = detectionResults[indexPath.row]
+        let selectedResult = filteredResults[indexPath.row]
         shareLog("User selected result: \(selectedResult.product_name)")
 
         // Save selected result and redirect to app
@@ -1659,18 +1819,19 @@ class ResultCell: UITableViewCell {
         return iv
     }()
 
-    private let titleLabel: UILabel = {
+    private let brandLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.font = .systemFont(ofSize: 17, weight: .semibold)
         label.numberOfLines = 2
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
-    private let brandLabel: UILabel = {
+    private let productNameLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14)
         label.textColor = .secondaryLabel
+        label.numberOfLines = 2
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -1694,33 +1855,33 @@ class ResultCell: UITableViewCell {
 
     private func setupUI() {
         contentView.addSubview(productImageView)
-        contentView.addSubview(titleLabel)
         contentView.addSubview(brandLabel)
+        contentView.addSubview(productNameLabel)
         contentView.addSubview(priceLabel)
 
         NSLayoutConstraint.activate([
-            productImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
+            productImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             productImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
             productImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
             productImageView.widthAnchor.constraint(equalToConstant: 80),
             productImageView.heightAnchor.constraint(equalToConstant: 80),
 
-            titleLabel.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
-            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            brandLabel.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
+            brandLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            brandLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
 
-            brandLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            brandLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
-            brandLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
+            productNameLabel.leadingAnchor.constraint(equalTo: brandLabel.leadingAnchor),
+            productNameLabel.trailingAnchor.constraint(equalTo: brandLabel.trailingAnchor),
+            productNameLabel.topAnchor.constraint(equalTo: brandLabel.bottomAnchor, constant: 4),
 
-            priceLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            priceLabel.topAnchor.constraint(equalTo: brandLabel.bottomAnchor, constant: 4)
+            priceLabel.leadingAnchor.constraint(equalTo: brandLabel.leadingAnchor),
+            priceLabel.topAnchor.constraint(equalTo: productNameLabel.bottomAnchor, constant: 4)
         ])
     }
 
     func configure(with result: DetectionResultItem) {
-        titleLabel.text = result.product_name
         brandLabel.text = result.brand
+        productNameLabel.text = result.product_name
 
         if result.price > 0 {
             priceLabel.text = String(format: "$%.2f", result.price)
