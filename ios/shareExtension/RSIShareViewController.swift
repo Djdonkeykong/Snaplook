@@ -797,13 +797,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let base64Image = imageData.base64EncodedString()
         shareLog("Base64 encoded - length: \(base64Image.count) chars")
 
-        let params = [
-            "key": "d7e1d857e4498c2e28acaa8d943ccea8",
-            "image": base64Image
-        ]
+        let apiKey = "d7e1d857e4498c2e28acaa8d943ccea8"
 
-        guard let url = URL(string: "https://api.imgbb.com/1/upload") else {
-            shareLog("ERROR: Failed to create ImgBB URL")
+        // Build URL with API key as query parameter
+        guard var components = URLComponents(string: "https://api.imgbb.com/1/upload") else {
+            shareLog("ERROR: Failed to create ImgBB URL components")
+            DispatchQueue.main.async {
+                self.proceedWithNormalFlow()
+            }
+            return
+        }
+
+        components.queryItems = [URLQueryItem(name: "key", value: apiKey)]
+
+        guard let url = components.url else {
+            shareLog("ERROR: Failed to build ImgBB URL")
             DispatchQueue.main.async {
                 self.proceedWithNormalFlow()
             }
@@ -813,12 +821,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 30.0
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        var components = URLComponents()
-        components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
-        request.httpBody = components.query?.data(using: .utf8)
+        // Properly encode the image parameter for form data
+        let formData = "image=\(base64Image.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+        request.httpBody = formData.data(using: .utf8)
 
-        shareLog("Sending ImgBB upload request...")
+        shareLog("Sending ImgBB upload request with \(request.httpBody?.count ?? 0) bytes body...")
 
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
