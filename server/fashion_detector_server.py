@@ -1139,23 +1139,38 @@ def detect_and_search(req: DetectAndSearchRequest):
                 'results': []
             }
 
-        # Step 3: Crop all garments and upload to ImgBB
+        # Step 3: Crop all garments and upload to ImgBB (in parallel)
         imgbb_api_key = "d7e1d857e4498c2e28acaa8d943ccea8"
-        crops_with_urls = []
 
         print(f"🔍 Processing {len(filtered)} detected garments...")
+
+        # Prepare all crops
+        crop_data = []
         for det in filtered:
             x1, y1, x2, y2 = expand_bbox(det["bbox"], image.width, image.height, req.expand_ratio)
             crop = image.crop((x1, y1, x2, y2))
+            crop_data.append((det, crop))
 
-            # Upload crop to ImgBB
-            crop_url = upload_to_imgbb(crop, imgbb_api_key)
-            if crop_url:
-                crops_with_urls.append({
-                    'garment': det,
-                    'crop_url': crop_url
-                })
-                print(f"✅ Uploaded {det['label']} crop: {crop_url}")
+        # Upload all crops in parallel
+        crops_with_urls = []
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            future_to_det = {
+                executor.submit(upload_to_imgbb, crop, imgbb_api_key): det
+                for det, crop in crop_data
+            }
+
+            for future in as_completed(future_to_det):
+                det = future_to_det[future]
+                try:
+                    crop_url = future.result(timeout=30)
+                    if crop_url:
+                        crops_with_urls.append({
+                            'garment': det,
+                            'crop_url': crop_url
+                        })
+                        print(f"✅ Uploaded {det['label']} crop: {crop_url}")
+                except Exception as e:
+                    print(f"⚠️ ImgBB upload failed for {det['label']}: {e}")
 
         if not crops_with_urls:
             return {
@@ -1164,12 +1179,12 @@ def detect_and_search(req: DetectAndSearchRequest):
                 'results': []
             }
 
-        # Step 4: Search SerpAPI for each garment crop
-        all_results = []
-        for item in crops_with_urls:
+        # Step 4: Search SerpAPI for each garment crop (in parallel for speed)
+        print(f"🔍 Searching SerpAPI for {len(crops_with_urls)} garments in parallel...")
+
+        def search_single_garment(item):
             garment = item['garment']
             crop_url = item['crop_url']
-
             print(f"🔍 Searching SerpAPI for {garment['label']} (score: {garment['score']:.3f})...")
 
             serp_results = search_serp_api(
@@ -1178,10 +1193,26 @@ def detect_and_search(req: DetectAndSearchRequest):
                 max_results=req.max_results_per_garment
             )
 
-            # Format and add to results
+            # Format results for this garment
+            formatted_results = []
             for i, serp_result in enumerate(serp_results):
-                formatted = format_detection_result(serp_result, garment['label'], len(all_results) + i)
-                all_results.append(formatted)
+                formatted = format_detection_result(serp_result, garment['label'], i)
+                formatted_results.append(formatted)
+
+            return formatted_results
+
+        # Execute searches in parallel
+        all_results = []
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(search_single_garment, item) for item in crops_with_urls]
+
+            for future in as_completed(futures):
+                try:
+                    results = future.result(timeout=60)
+                    all_results.extend(results)
+                except Exception as e:
+                    print(f"⚠️ SerpAPI search failed for a garment: {e}")
+                    continue
 
         print(f"📊 Total raw results before filtering: {len(all_results)}")
 

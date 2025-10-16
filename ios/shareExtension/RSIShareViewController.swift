@@ -748,7 +748,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = jsonData
-        request.timeoutInterval = 30.0
+        request.timeoutInterval = 90.0  // Increased from 30s to 90s for multi-garment detection + SerpAPI searches
 
         shareLog("Sending detection API request to: \(endpoint)")
 
@@ -855,7 +855,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let boundary = "Boundary-\(UUID().uuidString)"
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 30.0
+        request.timeoutInterval = 45.0  // Increased from 30s for larger images
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         // Build multipart body
