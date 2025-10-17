@@ -1045,18 +1045,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         filteredResults = detectionResults
         selectedCategory = "All"
 
-        // Show navigation bar and add Done button
-        navigationController?.navigationBar.isHidden = false
-        navigationController?.navigationBar.prefersLargeTitles = false
-
-        let doneButton = UIBarButtonItem(
-            title: "Done",
-            style: .done,
-            target: self,
-            action: #selector(doneButtonTapped)
-        )
-        navigationItem.rightBarButtonItem = doneButton
-        navigationItem.title = "Results"
+        // Keep navigation bar hidden - we'll use custom header
+        navigationController?.navigationBar.isHidden = true
 
         // Create header with logo and cancel button
         let headerView = UIView()
@@ -1069,7 +1059,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         logoImageView.contentMode = .scaleAspectFit
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
 
+        // Cancel button
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
+        cancelButton.addTarget(self, action: #selector(cancelDetectionTapped), for: .touchUpInside)
+        cancelButton.translatesAutoresizingMaskIntoConstraints = false
+
         headerView.addSubview(logoImageView)
+        headerView.addSubview(cancelButton)
 
         // Create category filter chips
         let filterView = createCategoryFilters()
@@ -1122,15 +1120,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Layout constraints
         NSLayoutConstraint.activate([
-            headerView.topAnchor.constraint(equalTo: loadingView!.topAnchor),
+            headerView.topAnchor.constraint(equalTo: loadingView!.safeAreaLayoutGuide.topAnchor),
             headerView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
             headerView.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
             headerView.heightAnchor.constraint(equalToConstant: 60),
 
-            logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
+            logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 8),
             logoImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
             logoImageView.heightAnchor.constraint(equalToConstant: 26),
             logoImageView.widthAnchor.constraint(equalToConstant: 97),
+
+            cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
 
             filterView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
             filterView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
@@ -2121,10 +2122,17 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
             return
         }
 
-        // Push WebViewController onto navigation stack
+        // Create WebViewController
         let webVC = WebViewController(url: url, shareViewController: self)
-        navigationController?.pushViewController(webVC, animated: true)
-        shareLog("Pushed WebViewController for URL: \(url.absoluteString)")
+
+        // Embed in a navigation controller for the back button
+        let navController = UINavigationController(rootViewController: webVC)
+        navController.modalPresentationStyle = .fullScreen
+
+        // Present modally so it appears on top of the loadingView overlay
+        present(navController, animated: true) {
+            NSLog("[ShareExtension] Presented WebViewController for URL: \(url.absoluteString)")
+        }
     }
 
     private func saveSelectedResultAndRedirect(_ result: DetectionResultItem) {

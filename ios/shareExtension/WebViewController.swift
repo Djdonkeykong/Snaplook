@@ -102,8 +102,12 @@ class WebViewController: UIViewController, WKNavigationDelegate {
     @objc private func doneTapped() {
         NSLog("[ShareExtension] Done button tapped in WebViewController - closing extension")
 
-        // Close the entire share extension
-        shareViewController?.closeExtension()
+        // Dismiss the web view modal first, then close the extension
+        dismiss(animated: true) { [weak self] in
+            NSLog("[ShareExtension] WebViewController dismissed")
+            // Close the entire share extension
+            self?.shareViewController?.closeExtension()
+        }
     }
 
     // MARK: - WKNavigationDelegate
