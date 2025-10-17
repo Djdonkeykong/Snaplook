@@ -998,7 +998,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Cancel button
         let cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.titleLabel?.font = .systemFont(ofSize: 17)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
         cancelButton.addTarget(self, action: #selector(cancelDetectionTapped), for: .touchUpInside)
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
 
