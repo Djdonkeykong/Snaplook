@@ -169,12 +169,13 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                   isSelected: selectedIndex == 1,
                   onTap: () => _handleTabTap(1),
                   iconSize: 25.0,
-                  selectedIconSize: 26.0,
+                  selectedIconSize: 29.0,
+                  selectedIconOffset: const Offset(2, 0),
                 ),
                 const Spacer(flex: 8),
                 _NavigationItem(
-                  svgIcon: 'assets/icons/solar--user-outline.svg',
-                  selectedSvgIcon: 'assets/icons/solar--user-bold.svg',
+                  icon: SnaplookIcons.profileOutline,
+                  selectedIcon: SnaplookIcons.profileFilled,
                   label: 'Profile',
                   index: 2,
                   isSelected: selectedIndex == 2,
@@ -243,6 +244,7 @@ class _NavigationItem extends StatelessWidget {
   final double? iconSize; // Optional custom icon size
   final double? selectedIconSize; // Optional custom selected icon size
   final double? topPadding; // Optional top padding adjustment
+  final Offset? selectedIconOffset; // Optional offset for selected icon
 
   const _NavigationItem({
     this.icon,
@@ -256,6 +258,7 @@ class _NavigationItem extends StatelessWidget {
     this.iconSize, // Default will be 28.0
     this.selectedIconSize, // Optional larger size for selected state
     this.topPadding, // Optional top padding for positioning
+    this.selectedIconOffset, // Optional offset for selected icon
   });
 
   @override
@@ -286,27 +289,39 @@ class _NavigationItem extends StatelessWidget {
         ? selectedIconSize!
         : (iconSize ?? 28.0); // Use custom size or default to 28px (4px bigger than standard)
 
+    Widget iconWidget;
+
     // Use SVG icons if provided
     if (svgIcon != null && selectedSvgIcon != null) {
-      return SvgPicture.asset(
+      iconWidget = SvgPicture.asset(
         isSelected ? selectedSvgIcon! : svgIcon!,
         width: size,
         height: size,
         colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
       );
     }
-
     // Fallback to regular icons
-    if (icon != null && selectedIcon != null) {
-      return Icon(
+    else if (icon != null && selectedIcon != null) {
+      iconWidget = Icon(
         isSelected ? selectedIcon! : icon!,
         color: color,
         size: size,
       );
     }
-
     // Default fallback
-    return Container();
+    else {
+      iconWidget = Container();
+    }
+
+    // Apply offset if selected and offset is provided
+    if (isSelected && selectedIconOffset != null) {
+      return Transform.translate(
+        offset: selectedIconOffset!,
+        child: iconWidget,
+      );
+    }
+
+    return iconWidget;
   }
 }
 

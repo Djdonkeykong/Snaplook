@@ -554,6 +554,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // If detection is configured, start smooth progress animation early
             if hasDetectionConfig {
                 DispatchQueue.main.async { [weak self] in
+                    // Stop the default status polling since we're now managing status ourselves
+                    self?.stopStatusPolling()
+
                     self?.startSmoothProgress()
                     self?.targetProgress = 0.05
 

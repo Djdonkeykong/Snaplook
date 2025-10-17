@@ -957,7 +957,7 @@ class _MagazineStyleImageCard extends ConsumerWidget {
                   category: image['category'] ?? 'Unknown',
                   confidence: 1.0,
                 ),
-                size: isLarge ? 20 : 18,
+                size: 20,
               ),
             ),
             // Scan button - positioned at bottom left
@@ -965,7 +965,7 @@ class _MagazineStyleImageCard extends ConsumerWidget {
               bottom: isLarge ? 16 : 12,
               left: isLarge ? 16 : 12,
               child: _ScanIcon(
-                size: isLarge ? 36 : 32,
+                size: 36,
                 onTap: () {
                   _navigateToDetectionPage(context, imageUrl!);
                 },
@@ -1054,10 +1054,19 @@ class _ScanIcon extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(
-          Icons.crop_free,
-          size: size * 0.5,
-          color: Colors.black54,
+        child: Center(
+          child: Transform.translate(
+            offset: const Offset(0, -1),
+            child: SvgPicture.asset(
+              'assets/icons/search-icon-sparkle.svg',
+              width: size * 0.55,
+              height: size * 0.55,
+              colorFilter: const ColorFilter.mode(
+                Colors.black54,
+                BlendMode.srcIn,
+              ),
+            ),
+          ),
         ),
       ),
     );

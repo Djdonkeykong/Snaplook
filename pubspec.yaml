@@ -2,7 +2,7 @@ name: snaplook
 description: "A Flutter app for fashion detection and styling recommendations"
 publish_to: 'none'
 
-version: 1.0.0+46
+version: 1.0.0+47
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -105,15 +105,6 @@ flutter:
           weight: 400
         - asset: assets/fonts/PlusJakartaSans-Bold.ttf
           weight: 700
-    - family: HomeyIconSets
+    - family: snaplook-icons
       fonts:
-        - asset: assets/fonts/homey_icon_sets.ttf
-    - family: HomeyNewNew
-      fonts:
-        - asset: assets/fonts/homey_new_new.ttf
-    - family: HeartyIconSNewest
-      fonts:
-        - asset: assets/fonts/hearty_icon_s_newest.ttf
-    - family: NewHeartUnfilled
-      fonts:
-        - asset: assets/fonts/new-heart-unfilled.ttf
+        - asset: assets/fonts/snaplook-icons.ttf
