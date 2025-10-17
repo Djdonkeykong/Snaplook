@@ -560,8 +560,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     // Start rotating status messages for the fetch phase
                     let fetchMessages = [
                         "Fetching your photo...",
-                        "Downloading image...",
-                        "Getting ready..."
+                        "Downloading image..."
                     ]
                     self?.startStatusRotation(messages: fetchMessages, interval: 2.5)
                 }
@@ -803,9 +802,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
             "Finding similar items...",
             "Analyzing style...",
             "Checking retailers...",
-            "Almost there..."
+            "Almost there...",
+            "Finalizing results...",
+            "Preparing your matches..."
         ]
-        startStatusRotation(messages: searchMessages, interval: 2.5)
+        startStatusRotation(messages: searchMessages, interval: 2.5, stopAtLast: true)
 
         let requestBody: [String: Any] = [
             "image_url": imageUrl,
@@ -2075,7 +2076,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     // Start rotating through multiple status messages
-    private func startStatusRotation(messages: [String], interval: TimeInterval = 2.5) {
+    private func startStatusRotation(messages: [String], interval: TimeInterval = 2.5, stopAtLast: Bool = false) {
         guard !messages.isEmpty else { return }
 
         stopStatusRotation()
@@ -2098,7 +2099,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 guard let self = self else { return }
 
                 // Move to next message
-                self.currentStatusIndex = (self.currentStatusIndex + 1) % self.currentStatusMessages.count
+                if stopAtLast && self.currentStatusIndex >= self.currentStatusMessages.count - 1 {
+                    // Already at last message, stop rotation
+                    self.stopStatusRotation()
+                    return
+                }
+
+                self.currentStatusIndex = stopAtLast
+                    ? self.currentStatusIndex + 1
+                    : (self.currentStatusIndex + 1) % self.currentStatusMessages.count
                 let message = self.currentStatusMessages[self.currentStatusIndex]
 
                 // Animate the text change

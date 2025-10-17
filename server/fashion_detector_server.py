@@ -950,20 +950,26 @@ def download_image_from_url(image_url: str) -> Image.Image:
 
 def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List[dict]:
     """
-    Search Google Lens via SerpAPI and return top filtered results.
-    Now applies sophisticated ecommerce and relevance filtering with intelligent early termination.
+    Search Google Lens via SerpAPI with fallback strategy:
+    1. Try 'products' first (shopping results with prices)
+    2. Only try 'visual_matches' if products fails/times out
+    This saves API credits and reduces latency.
     """
     print(f"🔍 Searching SerpAPI for image: {image_url[:80]}...")
 
     results = []
-    no_results_error = False
+    products_succeeded = False
 
     for rail in ['products', 'visual_matches']:
-        # Skip visual_matches if products had no results
-        if rail == 'visual_matches' and no_results_error:
-            print(f"⏭️ Skipping {rail} (no results from products)")
-            break
+        # Skip visual_matches if products succeeded
+        if rail == 'visual_matches':
+            if products_succeeded:
+                print(f"✅ Skipping visual_matches (products already succeeded with {len(results)} results)")
+                break
+            else:
+                print(f"⚠️ Falling back to visual_matches (products failed or timed out)")
 
+        print(f"🔎 Trying {rail} engine...")
         params = {
             'engine': 'google_lens',
             'api_key': api_key,
@@ -972,8 +978,8 @@ def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List
         }
 
         try:
-            # Reduced timeout for faster failure
-            response = requests.get('https://serpapi.com/search', params=params, timeout=8)
+            # Increased timeout to 15s to match SerpAPI's actual response time
+            response = requests.get('https://serpapi.com/search', params=params, timeout=15)
             if response.status_code != 200:
                 print(f"⚠️ SerpAPI {rail} failed: {response.status_code}")
                 continue
@@ -996,11 +1002,13 @@ def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List
 
             # Early exit if no matches
             if not matches:
-                print(f"⚠️ No matches in {rail}")
-                if rail == 'products':
-                    no_results_error = True
-                    break
+                print(f"⚠️ No matches found in {rail} response")
                 continue
+
+            # Mark products as successful if we got results
+            if rail == 'products' and matches:
+                products_succeeded = True
+                print(f"✅ Products engine returned {len(matches)} matches")
 
             for match in matches:
                 link = match.get('link', '')
@@ -1042,10 +1050,7 @@ def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List
                 break
 
         except requests.exceptions.Timeout:
-            print(f"⏱️ SerpAPI {rail} timeout after 8s - moving on")
-            if rail == 'products':
-                no_results_error = True
-                break
+            print(f"⏱️ SerpAPI {rail} timeout after 15s - moving on")
             continue
         except Exception as e:
             print(f"❌ SerpAPI {rail} error: {e}")
