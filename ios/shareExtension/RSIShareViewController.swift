@@ -137,6 +137,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
     private var progressView: UIProgressView?
+    private var progressTimer: Timer?
+    private var currentProgress: Float = 0.0
+    private var targetProgress: Float = 0.0
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -719,7 +722,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Detection endpoint: \(endpoint)")
         shareLog("SerpAPI key: \(serpKey.prefix(8))...")
-        updateProgress(0.5, status: "Searching for products...")
+        updateProgress(0.60, status: "Searching for products...")
 
         let requestBody: [String: Any] = [
             "image_url": imageUrl,
@@ -800,7 +803,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 if detectionResponse.success {
                     shareLog("SUCCESS: Detection found \(detectionResponse.total_results) results")
                     self.updateProgress(1.0, status: "Analysis complete")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.stopSmoothProgress()
                         self.detectionResults = detectionResponse.results
                         self.isShowingDetectionResults = true
                         shareLog("Calling showDetectionResults with \(self.detectionResults.count) items")
@@ -831,7 +835,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Stop status polling since we're now in detection mode
         stopStatusPolling()
 
-        updateProgress(0.1, status: "Uploading photo...")
+        // Start smooth progress animation
+        startSmoothProgress()
+
+        updateProgress(0.05, status: "Uploading photo...")
 
         let base64Image = imageData.base64EncodedString()
         shareLog("Base64 encoded - length: \(base64Image.count) chars")
@@ -954,7 +961,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self.downloadedImageUrl = imageUrl
 
             // Trigger detection
-            self.updateProgress(0.3, status: "Detecting garments...")
+            self.updateProgress(0.25, status: "Detecting garments...")
             shareLog("Calling runDetectionAnalysis...")
             self.runDetectionAnalysis(imageUrl: imageUrl)
         }
@@ -1818,15 +1825,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         progress.translatesAutoresizingMaskIntoConstraints = false
         progress.progressTintColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         progress.trackTintColor = UIColor.systemGray5
-        progress.layer.cornerRadius = 4
+        progress.layer.cornerRadius = 3
         progress.clipsToBounds = true
         progress.setProgress(0.0, animated: false)
         progressView = progress
         stack.addArrangedSubview(progress)
 
         NSLayoutConstraint.activate([
-            progress.widthAnchor.constraint(equalToConstant: 250),
-            progress.heightAnchor.constraint(equalToConstant: 8)
+            progress.widthAnchor.constraint(equalToConstant: 180),
+            progress.heightAnchor.constraint(equalToConstant: 6)
         ])
 
         let cancelButton = UIButton(type: .system)
@@ -1850,9 +1857,42 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingShownAt = Date()
     }
 
-    private func updateProgress(_ progress: Float, status: String) {
+    private func startSmoothProgress() {
+        stopSmoothProgress()
+
+        currentProgress = 0.0
+        targetProgress = 0.0
+
         DispatchQueue.main.async { [weak self] in
-            self?.progressView?.setProgress(progress, animated: true)
+            self?.progressView?.setProgress(0.0, animated: false)
+
+            self?.progressTimer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] _ in
+                guard let self = self else { return }
+
+                // Smoothly increment toward target
+                if self.currentProgress < self.targetProgress {
+                    let increment: Float = 0.008 // Smooth increments
+                    self.currentProgress = min(self.currentProgress + increment, self.targetProgress)
+                    self.progressView?.setProgress(self.currentProgress, animated: true)
+                } else if self.currentProgress < 0.95 {
+                    // Slow automatic progress even when waiting (but never reach 100%)
+                    let slowIncrement: Float = 0.001
+                    self.currentProgress = min(self.currentProgress + slowIncrement, self.targetProgress + 0.05, 0.95)
+                    self.progressView?.setProgress(self.currentProgress, animated: true)
+                }
+            }
+        }
+    }
+
+    private func stopSmoothProgress() {
+        progressTimer?.invalidate()
+        progressTimer = nil
+    }
+
+    private func updateProgress(_ progress: Float, status: String) {
+        targetProgress = progress
+
+        DispatchQueue.main.async { [weak self] in
             self?.statusLabel?.text = status
             shareLog("Progress: \(Int(progress * 100))% - \(status)")
         }
@@ -1886,12 +1926,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func hideLoadingUI() {
         loadingHideWorkItem?.cancel()
         loadingHideWorkItem = nil
+        stopSmoothProgress()
         loadingView?.removeFromSuperview()
         loadingView = nil
         activityIndicator?.stopAnimating()
         activityIndicator = nil
         stopStatusPolling()
         statusLabel = nil
+        progressView = nil
     }
 
     @objc private func cancelImportTapped() {
