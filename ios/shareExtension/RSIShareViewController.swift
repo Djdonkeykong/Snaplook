@@ -145,26 +145,40 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open override func isContentValid() -> Bool { true }
 
-    open override func viewDidLoad() {
-        // Hide the default share sheet UI immediately BEFORE calling super
-        view.isHidden = true
-
-        super.viewDidLoad()
-
-        // Immediately hide and disable all default SLComposeServiceViewController UI
+    private func hideDefaultUI() {
+        // Hide and disable the default text view
         textView?.isHidden = true
         textView?.isEditable = false
         textView?.isSelectable = false
         textView?.alpha = 0
+        textView?.text = ""
         placeholder = ""
+
+        // Ensure content view is not visible
+        if let contentView = textView?.superview {
+            contentView.isHidden = true
+            contentView.alpha = 0
+        }
+
+        // Hide any other default subviews
+        view.subviews.forEach { subview in
+            if subview !== loadingView && subview.tag != 9999 {
+                subview.isHidden = true
+                subview.alpha = 0
+            }
+        }
+    }
+
+    open override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // Immediately hide and disable all default SLComposeServiceViewController UI
+        hideDefaultUI()
 
         // Hide navigation bar items (Post button, Cancel button)
         navigationController?.navigationBar.isHidden = true
         navigationItem.leftBarButtonItem = nil
         navigationItem.rightBarButtonItem = nil
-
-        // Show our custom view
-        view.isHidden = false
 
         loadIds()
         sharedMedia.removeAll()
@@ -186,9 +200,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         maybeFinalizeShare()
     }
 
+    open override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        hideDefaultUI()
+    }
+
     open override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         suppressKeyboard()
+        hideDefaultUI()
 
         // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
         if hasProcessedAttachments {
@@ -350,6 +370,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 completion: deliver
             )
         }.resume()
+    }
+
+    open override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        hideDefaultUI()
     }
 
     open override func configurationItems() -> [Any]! { [] }
@@ -1309,6 +1334,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     @objc private func cancelDetectionTapped() {
         shareLog("Cancel button tapped - dismissing extension")
 
+        // Immediately hide default UI to prevent flash
+        hideDefaultUI()
+
         // Clean up state
         loadingHideWorkItem?.cancel()
         loadingHideWorkItem = nil
@@ -1902,9 +1930,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             cancelButton.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16)
         ])
 
+        overlay.tag = 9999 // Tag to identify our custom view
         view.addSubview(overlay)
         loadingView = overlay
         loadingShownAt = Date()
+
+        // Ensure default UI stays hidden
+        hideDefaultUI()
     }
 
     private func startSmoothProgress() {
@@ -1988,6 +2020,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     @objc private func cancelImportTapped() {
         shareLog("Cancel tapped")
+
+        // Immediately hide default UI to prevent flash
+        hideDefaultUI()
+
         loadingHideWorkItem?.cancel()
         loadingHideWorkItem = nil
         clearSharedData()
