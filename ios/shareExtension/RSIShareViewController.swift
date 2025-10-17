@@ -23,11 +23,6 @@ let kScrapingBeeApiKey = "ScrapingBeeApiKey"
 let kSerpApiKey = "SerpApiKey"
 let kDetectorEndpoint = "DetectorEndpoint"
 
-@inline(__always)
-private func shareLog(_ message: String) {
-    NSLog("[ShareExtension] %@", message)
-}
-
 public class SharedMediaFile: Codable {
     var path: String
     var mimeType: String?
@@ -667,18 +662,23 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urlString: String,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
-        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
-            shareLog("ScrapingBee API key missing - falling back to host app download")
-            completion(.success([]))
-            return
-        }
+        let session = URLSession(configuration: .ephemeral)
 
-        performInstagramScrape(
-            instagramUrl: urlString,
-            apiKey: apiKey,
-            attempt: 0,
-            completion: completion
-        )
+        // Prefer new hybrid pipeline
+        fetchInstagramImageUrlsAndDownload(from: urlString, session: session) { result in
+            switch result {
+            case .success(let files):
+                self.shareLog("✅ Hybrid Instagram download completed successfully")
+                completion(.success(files))
+            case .failure(let error):
+                self.shareLog("❌ Hybrid download failed (\(error.localizedDescription)) — falling back to legacy ScrapingBee path")
+                if let apiKey = self.scrapingBeeApiKey(), !apiKey.isEmpty {
+                    self.performInstagramScrape(instagramUrl: urlString, apiKey: apiKey, attempt: 0, completion: completion)
+                } else {
+                    completion(.failure(error))
+                }
+            }
+        }
     }
 
     // Get detector endpoint from UserDefaults or fallback
@@ -1428,6 +1428,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     // MARK: - Helpers
 
+    private func shareLog(_ message: String) {
+    NSLog("[ShareExtension] %@", message)
+    }
+    
     private func extractInstagramShortcode(from url: String) -> String? {
         let pattern = #"instagram\.com/p/([^/?#]+)/?"#
         if let regex = try? NSRegularExpression(pattern: pattern),
@@ -1467,6 +1471,134 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+        private func downloadInstagramImages(
+        _ urls: [String],
+        originalURL: String,
+        session: URLSession,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
+            completion(.failure(self.makeInstagramError("Unable to resolve shared container URL")))
+            return
+        }
+
+        var uniqueUrls: [String] = []
+        for url in urls {
+            let sanitized = sanitizeInstagramURLString(url)
+            if !sanitized.isEmpty && !uniqueUrls.contains(sanitized) {
+                uniqueUrls.append(sanitized)
+                shareLog("Queueing Instagram image candidate: \(sanitized)")
+            }
+        }
+
+        guard !uniqueUrls.isEmpty else {
+            completion(.failure(self.makeInstagramError("No valid Instagram image URLs after sanitization")))
+            return
+        }
+
+        // Only pick one image based on user preference (default 0)
+        let userSelectedIndex = UserDefaults.standard.integer(forKey: "InstagramImageIndex")
+        let safeIndex = min(max(userSelectedIndex, 0), uniqueUrls.count - 1)
+        let selectedUrl = uniqueUrls[safeIndex]
+        shareLog("✅ Selected Instagram image index \(safeIndex) of \(uniqueUrls.count): \(selectedUrl)")
+
+        downloadSingleImage(
+            urlString: selectedUrl,
+            originalURL: originalURL,
+            containerURL: containerURL,
+            session: session,
+            index: safeIndex
+        ) { result in
+            switch result {
+            case .success(let file):
+                session.finishTasksAndInvalidate()
+                if let file = file {
+                    completion(.success([file]))
+                } else {
+                    completion(.success([]))
+                }
+            case .failure(let error):
+                session.invalidateAndCancel()
+                completion(.failure(error))
+            }
+        }
+    }
+
+    private func downloadSingleImage(
+        urlString: String,
+        originalURL: String,
+        containerURL: URL,
+        session: URLSession,
+        index: Int,
+        completion: @escaping (Result<SharedMediaFile?, Error>) -> Void
+    ) {
+        guard let url = URL(string: urlString) else {
+            completion(.failure(self.makeInstagramError("Invalid image URL: \(urlString)")))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 20.0
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
+        request.setValue("https://www.instagram.com/", forHTTPHeaderField: "Referer")
+
+        shareLog("⬇️ Downloading Instagram CDN image: \(urlString)")
+        session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                httpResponse.statusCode == 200,
+                let data = data else {
+                completion(.failure(self.makeInstagramError("Image download failed or empty data")))
+                return
+            }
+
+            let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+            let fileName = "instagram_image_\(timestamp)_\(index).jpg"
+            let fileURL = containerURL.appendingPathComponent(fileName)
+
+            let hasDetectionConfig = self.detectorEndpoint() != nil && self.serpApiKey() != nil
+            if hasDetectionConfig {
+                shareLog("🧠 Detection configured — holding file in memory")
+                self.shouldAttemptDetection = true
+                self.pendingImageData = data
+                self.pendingImageUrl = originalURL
+
+                let sharedFile = SharedMediaFile(
+                    path: fileURL.absoluteString,
+                    mimeType: "image/jpeg",
+                    message: originalURL,
+                    type: .image
+                )
+                self.pendingSharedFile = sharedFile
+                self.uploadAndDetect(imageData: data)
+                shareLog("📤 uploadAndDetect started (holding completion)")
+            } else {
+                shareLog("💾 Writing image to shared container: \(fileURL.path)")
+                do {
+                    if FileManager.default.fileExists(atPath: fileURL.path) {
+                        try FileManager.default.removeItem(at: fileURL)
+                    }
+                    try data.write(to: fileURL, options: .atomic)
+
+                    let sharedFile = SharedMediaFile(
+                        path: fileURL.absoluteString,
+                        mimeType: "image/jpeg",
+                        message: originalURL,
+                        type: .image
+                    )
+                    completion(.success(sharedFile))
+                } catch {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+
+    
     private func saveAndRedirect(message: String? = nil) {
         hasQueuedRedirect = true
         let userDefaults = UserDefaults(suiteName: appGroupId)
