@@ -823,6 +823,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         self.stopSmoothProgress()
                         self.detectionResults = detectionResponse.results
                         self.isShowingDetectionResults = true
+
+                        // Haptic feedback for successful analysis
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+
                         shareLog("Calling showDetectionResults with \(self.detectionResults.count) items")
                         self.showDetectionResults()
                     }
@@ -1065,7 +1070,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         separator.translatesAutoresizingMaskIntoConstraints = false
 
         let saveButton = UIButton(type: .system)
-        saveButton.setTitle("Save All", for: .normal)
+        saveButton.setTitle("Import all", for: .normal)
         saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         saveButton.setTitleColor(.white, for: .normal)
@@ -1241,6 +1246,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     @objc private func saveAllTapped() {
         shareLog("Save All button tapped - saving all results and redirecting")
+
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
 
         // Write the pending image file to shared container
         if let data = pendingImageData, let file = pendingSharedFile {
@@ -2014,6 +2023,14 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
         let cell = tableView.dequeueReusableCell(withIdentifier: "ResultCell", for: indexPath) as! ResultCell
         let result = filteredResults[indexPath.row]
         cell.configure(with: result)
+
+        // Hide separator for last cell
+        if indexPath.row == filteredResults.count - 1 {
+            cell.separatorInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: .greatestFiniteMagnitude)
+        } else {
+            cell.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        }
+
         return cell
     }
 
