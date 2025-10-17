@@ -137,7 +137,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
     private var progressView: UIProgressView?
-    private var scanEffectView: UIView?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -800,7 +799,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 if detectionResponse.success {
                     shareLog("SUCCESS: Detection found \(detectionResponse.total_results) results")
-                    self.updateProgress(1.0, status: "Complete! Found \(detectionResponse.total_results) products")
+                    self.updateProgress(1.0, status: "Analysis complete")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         self.detectionResults = detectionResponse.results
                         self.isShowingDetectionResults = true
@@ -828,6 +827,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
     // Upload image to ImgBB and trigger detection
     private func uploadAndDetect(imageData: Data) {
         shareLog("START uploadAndDetect - image size: \(imageData.count) bytes")
+
+        // Stop status polling since we're now in detection mode
+        stopStatusPolling()
+
         updateProgress(0.1, status: "Uploading photo...")
 
         let base64Image = imageData.base64EncodedString()
@@ -999,17 +1002,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         logoImageView.contentMode = .scaleAspectFit
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Save All button
-        let saveButton = UIButton(type: .system)
-        saveButton.setTitle("Save All", for: .normal)
-        saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-        saveButton.setTitleColor(.white, for: .normal)
-        saveButton.layer.cornerRadius = 20
-        saveButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
-        saveButton.addTarget(self, action: #selector(saveAllTapped), for: .touchUpInside)
-        saveButton.translatesAutoresizingMaskIntoConstraints = false
-
         // Cancel button
         let cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
@@ -1018,7 +1010,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
 
         headerView.addSubview(logoImageView)
-        headerView.addSubview(saveButton)
         headerView.addSubview(cancelButton)
 
         // Create category filter chips
@@ -1040,12 +1031,35 @@ open class RSIShareViewController: SLComposeServiceViewController {
             resultsTableView = tableView
         }
 
+        // Create bottom bar with Save All button
+        let bottomBarContainer = UIView()
+        bottomBarContainer.backgroundColor = .systemBackground
+        bottomBarContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        // Separator line
+        let separator = UIView()
+        separator.backgroundColor = UIColor.systemGray5
+        separator.translatesAutoresizingMaskIntoConstraints = false
+
+        let saveButton = UIButton(type: .system)
+        saveButton.setTitle("Save All", for: .normal)
+        saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        saveButton.setTitleColor(.white, for: .normal)
+        saveButton.layer.cornerRadius = 28
+        saveButton.addTarget(self, action: #selector(saveAllTapped), for: .touchUpInside)
+        saveButton.translatesAutoresizingMaskIntoConstraints = false
+
+        bottomBarContainer.addSubview(separator)
+        bottomBarContainer.addSubview(saveButton)
+
         // Add all views to loadingView
         loadingView?.addSubview(headerView)
         loadingView?.addSubview(filterView)
         if let tableView = resultsTableView {
             loadingView?.addSubview(tableView)
         }
+        loadingView?.addSubview(bottomBarContainer)
 
         // Layout constraints
         NSLayoutConstraint.activate([
@@ -1059,9 +1073,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
             logoImageView.heightAnchor.constraint(equalToConstant: 28),
             logoImageView.widthAnchor.constraint(equalToConstant: 102),
 
-            saveButton.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
-            saveButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-
             cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
             cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
 
@@ -1073,7 +1084,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
             resultsTableView!.topAnchor.constraint(equalTo: filterView.bottomAnchor),
             resultsTableView!.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
             resultsTableView!.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
-            resultsTableView!.bottomAnchor.constraint(equalTo: loadingView!.bottomAnchor)
+            resultsTableView!.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
+
+            bottomBarContainer.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
+            bottomBarContainer.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
+            bottomBarContainer.bottomAnchor.constraint(equalTo: loadingView!.safeAreaLayoutGuide.bottomAnchor),
+            bottomBarContainer.heightAnchor.constraint(equalToConstant: 90),
+
+            separator.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
+            separator.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor),
+            separator.heightAnchor.constraint(equalToConstant: 1),
+
+            saveButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 16),
+            saveButton.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor, constant: 16),
+            saveButton.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor, constant: -16),
+            saveButton.heightAnchor.constraint(equalToConstant: 56)
         ])
 
         resultsTableView?.reloadData()
@@ -1773,33 +1799,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stack.spacing = 20
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        // Scan effect container
-        let scanContainer = UIView()
-        scanContainer.translatesAutoresizingMaskIntoConstraints = false
-        scanContainer.backgroundColor = UIColor.systemGray6
-        scanContainer.layer.cornerRadius = 12
-        scanContainer.clipsToBounds = true
-
-        let scanEffect = UIView()
-        scanEffect.translatesAutoresizingMaskIntoConstraints = false
-        scanEffect.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 0.3)
-        scanContainer.addSubview(scanEffect)
-        scanEffectView = scanEffect
-
-        NSLayoutConstraint.activate([
-            scanEffect.leadingAnchor.constraint(equalTo: scanContainer.leadingAnchor),
-            scanEffect.trailingAnchor.constraint(equalTo: scanContainer.trailingAnchor),
-            scanEffect.heightAnchor.constraint(equalToConstant: 3),
-            scanEffect.topAnchor.constraint(equalTo: scanContainer.topAnchor)
-        ])
-
-        stack.addArrangedSubview(scanContainer)
-
-        NSLayoutConstraint.activate([
-            scanContainer.widthAnchor.constraint(equalToConstant: 200),
-            scanContainer.heightAnchor.constraint(equalToConstant: 200)
-        ])
-
         let activity = UIActivityIndicatorView(style: .large)
         activity.startAnimating()
         activityIndicator = activity
@@ -1849,20 +1848,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         view.addSubview(overlay)
         loadingView = overlay
         loadingShownAt = Date()
-
-        // Start scan animation
-        startScanAnimation()
-    }
-
-    private func startScanAnimation() {
-        guard let scanEffect = scanEffectView,
-              let container = scanEffect.superview else { return }
-
-        scanEffect.frame.origin.y = 0
-
-        UIView.animate(withDuration: 2.0, delay: 0, options: [.repeat, .curveEaseInOut], animations: {
-            scanEffect.frame.origin.y = container.bounds.height - 3
-        })
     }
 
     private func updateProgress(_ progress: Float, status: String) {
@@ -1954,18 +1939,15 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
         let selectedResult = filteredResults[indexPath.row]
         shareLog("User selected result: \(selectedResult.product_name)")
 
-        // Open product URL in Safari while keeping the extension alive
-        if let url = URL(string: selectedResult.purchase_url) {
-            shareLog("Opening product URL in Safari: \(selectedResult.purchase_url)")
-
-            // Use extensionContext's open method - this keeps the extension running
-            extensionContext?.open(url, completionHandler: { success in
-                shareLog("URL opened: \(success ? "success" : "failed")")
-                // Extension stays alive - user can return and browse more results
-            })
-        } else {
-            shareLog("ERROR: Invalid product URL: \(selectedResult.purchase_url)")
+        // Save the selected product URL and redirect to app (share extensions can't open arbitrary URLs)
+        if let defaults = UserDefaults(suiteName: appGroupId) {
+            defaults.set(selectedResult.purchase_url, forKey: "SelectedProductURL")
+            defaults.synchronize()
+            shareLog("Saved product URL for main app to open: \(selectedResult.purchase_url)")
         }
+
+        // Save the selected result and redirect to app
+        saveSelectedResultAndRedirect(selectedResult)
     }
 
     private func saveSelectedResultAndRedirect(_ result: DetectionResultItem) {
