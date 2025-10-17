@@ -136,6 +136,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var selectedCategory: String = "All"
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
+    private var progressView: UIProgressView?
+    private var scanEffectView: UIView?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -718,7 +720,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Detection endpoint: \(endpoint)")
         shareLog("SerpAPI key: \(serpKey.prefix(8))...")
-        updateStatusLabel("Analyzing your photo...")
+        updateProgress(0.5, status: "Searching for products...")
 
         let requestBody: [String: Any] = [
             "image_url": imageUrl,
@@ -798,7 +800,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 if detectionResponse.success {
                     shareLog("SUCCESS: Detection found \(detectionResponse.total_results) results")
-                    DispatchQueue.main.async {
+                    self.updateProgress(1.0, status: "Complete! Found \(detectionResponse.total_results) products")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         self.detectionResults = detectionResponse.results
                         self.isShowingDetectionResults = true
                         shareLog("Calling showDetectionResults with \(self.detectionResults.count) items")
@@ -825,7 +828,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     // Upload image to ImgBB and trigger detection
     private func uploadAndDetect(imageData: Data) {
         shareLog("START uploadAndDetect - image size: \(imageData.count) bytes")
-        updateStatusLabel("Uploading photo...")
+        updateProgress(0.1, status: "Uploading photo...")
 
         let base64Image = imageData.base64EncodedString()
         shareLog("Base64 encoded - length: \(base64Image.count) chars")
@@ -948,6 +951,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self.downloadedImageUrl = imageUrl
 
             // Trigger detection
+            self.updateProgress(0.3, status: "Detecting garments...")
             shareLog("Calling runDetectionAnalysis...")
             self.runDetectionAnalysis(imageUrl: imageUrl)
         }
@@ -995,6 +999,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
         logoImageView.contentMode = .scaleAspectFit
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
 
+        // Save All button
+        let saveButton = UIButton(type: .system)
+        saveButton.setTitle("Save All", for: .normal)
+        saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        saveButton.setTitleColor(.white, for: .normal)
+        saveButton.layer.cornerRadius = 20
+        saveButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+        saveButton.addTarget(self, action: #selector(saveAllTapped), for: .touchUpInside)
+        saveButton.translatesAutoresizingMaskIntoConstraints = false
+
         // Cancel button
         let cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
@@ -1003,6 +1018,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
 
         headerView.addSubview(logoImageView)
+        headerView.addSubview(saveButton)
         headerView.addSubview(cancelButton)
 
         // Create category filter chips
@@ -1042,6 +1058,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             logoImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
             logoImageView.heightAnchor.constraint(equalToConstant: 28),
             logoImageView.widthAnchor.constraint(equalToConstant: 102),
+
+            saveButton.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
+            saveButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
 
             cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
             cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
@@ -1169,6 +1188,64 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         resultsTableView?.reloadData()
         shareLog("Filtered to \(filteredResults.count) results for category: \(selectedCategory)")
+    }
+
+    @objc private func saveAllTapped() {
+        shareLog("Save All button tapped - saving all results and redirecting")
+
+        // Write the pending image file to shared container
+        if let data = pendingImageData, let file = pendingSharedFile {
+            guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
+                shareLog("ERROR: Cannot get container URL for Save All")
+                return
+            }
+
+            let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+            let fileName = "instagram_image_\(timestamp)_all.jpg"
+            let fileURL = containerURL.appendingPathComponent(fileName)
+
+            do {
+                if FileManager.default.fileExists(atPath: fileURL.path) {
+                    try FileManager.default.removeItem(at: fileURL)
+                }
+                try data.write(to: fileURL, options: .atomic)
+                shareLog("SAVE ALL: Wrote file to shared container: \(fileURL.path)")
+
+                // Update the shared file path
+                var updatedFile = file
+                updatedFile.path = fileURL.absoluteString
+
+                // Save all detection results and the file to UserDefaults
+                if let defaults = UserDefaults(suiteName: appGroupId) {
+                    // Encode all detection results
+                    if let resultsData = try? JSONEncoder().encode(detectionResults),
+                       let jsonString = String(data: resultsData, encoding: .utf8) {
+                        defaults.set(jsonString, forKey: "AllDetectionResults")
+                        shareLog("SAVE ALL: Saved \(detectionResults.count) results to UserDefaults")
+                    }
+
+                    // Save the file
+                    defaults.set(toData(data: [updatedFile]), forKey: kUserDefaultsKey)
+                    defaults.synchronize()
+                    shareLog("SAVE ALL: Saved file to UserDefaults")
+                }
+            } catch {
+                shareLog("ERROR writing file for Save All: \(error.localizedDescription)")
+                return
+            }
+        }
+
+        // Redirect to app
+        loadIds()
+        guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):detection-all") else {
+            shareLog("ERROR: Failed to build redirect URL for Save All")
+            return
+        }
+
+        hasQueuedRedirect = true
+        shareLog("Redirecting to app with all detection results")
+        performRedirect(to: redirectURL)
+        finishExtensionRequest()
     }
 
     @objc private func cancelDetectionTapped() {
@@ -1693,8 +1770,35 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.alignment = .center
-        stack.spacing = 16
+        stack.spacing = 20
         stack.translatesAutoresizingMaskIntoConstraints = false
+
+        // Scan effect container
+        let scanContainer = UIView()
+        scanContainer.translatesAutoresizingMaskIntoConstraints = false
+        scanContainer.backgroundColor = UIColor.systemGray6
+        scanContainer.layer.cornerRadius = 12
+        scanContainer.clipsToBounds = true
+
+        let scanEffect = UIView()
+        scanEffect.translatesAutoresizingMaskIntoConstraints = false
+        scanEffect.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 0.3)
+        scanContainer.addSubview(scanEffect)
+        scanEffectView = scanEffect
+
+        NSLayoutConstraint.activate([
+            scanEffect.leadingAnchor.constraint(equalTo: scanContainer.leadingAnchor),
+            scanEffect.trailingAnchor.constraint(equalTo: scanContainer.trailingAnchor),
+            scanEffect.heightAnchor.constraint(equalToConstant: 3),
+            scanEffect.topAnchor.constraint(equalTo: scanContainer.topAnchor)
+        ])
+
+        stack.addArrangedSubview(scanContainer)
+
+        NSLayoutConstraint.activate([
+            scanContainer.widthAnchor.constraint(equalToConstant: 200),
+            scanContainer.heightAnchor.constraint(equalToConstant: 200)
+        ])
 
         let activity = UIActivityIndicatorView(style: .large)
         activity.startAnimating()
@@ -1702,13 +1806,29 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stack.addArrangedSubview(activity)
 
         let status = UILabel()
-        status.text = "Fetching your photo..."
-        status.font = UIFont.preferredFont(forTextStyle: .body)
+        status.text = "Preparing analysis..."
+        status.font = UIFont.systemFont(ofSize: 17, weight: .medium)
         status.textAlignment = .center
-        status.textColor = UIColor.secondaryLabel
+        status.textColor = UIColor.label
         status.numberOfLines = 2
         stack.addArrangedSubview(status)
         statusLabel = status
+
+        // Progress bar
+        let progress = UIProgressView(progressViewStyle: .default)
+        progress.translatesAutoresizingMaskIntoConstraints = false
+        progress.progressTintColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        progress.trackTintColor = UIColor.systemGray5
+        progress.layer.cornerRadius = 4
+        progress.clipsToBounds = true
+        progress.setProgress(0.0, animated: false)
+        progressView = progress
+        stack.addArrangedSubview(progress)
+
+        NSLayoutConstraint.activate([
+            progress.widthAnchor.constraint(equalToConstant: 250),
+            progress.heightAnchor.constraint(equalToConstant: 8)
+        ])
 
         let cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
@@ -1729,6 +1849,28 @@ open class RSIShareViewController: SLComposeServiceViewController {
         view.addSubview(overlay)
         loadingView = overlay
         loadingShownAt = Date()
+
+        // Start scan animation
+        startScanAnimation()
+    }
+
+    private func startScanAnimation() {
+        guard let scanEffect = scanEffectView,
+              let container = scanEffect.superview else { return }
+
+        scanEffect.frame.origin.y = 0
+
+        UIView.animate(withDuration: 2.0, delay: 0, options: [.repeat, .curveEaseInOut], animations: {
+            scanEffect.frame.origin.y = container.bounds.height - 3
+        })
+    }
+
+    private func updateProgress(_ progress: Float, status: String) {
+        DispatchQueue.main.async { [weak self] in
+            self?.progressView?.setProgress(progress, animated: true)
+            self?.statusLabel?.text = status
+            self?.shareLog("Progress: \(Int(progress * 100))% - \(status)")
+        }
     }
 
     private func startStatusPolling() {
@@ -1812,29 +1954,15 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
         let selectedResult = filteredResults[indexPath.row]
         shareLog("User selected result: \(selectedResult.product_name)")
 
-        // Open product URL in Safari
+        // Open product URL in Safari while keeping the extension alive
         if let url = URL(string: selectedResult.purchase_url) {
-            shareLog("Opening product URL: \(selectedResult.purchase_url)")
+            shareLog("Opening product URL in Safari: \(selectedResult.purchase_url)")
 
-            var responder: UIResponder? = self
-            if #available(iOS 18.0, *) {
-                while let current = responder {
-                    if let application = current as? UIApplication {
-                        application.open(url, options: [:], completionHandler: nil)
-                        break
-                    }
-                    responder = current.next
-                }
-            } else {
-                let selectorOpenURL = sel_registerName("openURL:")
-                while let current = responder {
-                    if current.responds(to: selectorOpenURL) {
-                        _ = current.perform(selectorOpenURL, with: url)
-                        break
-                    }
-                    responder = current.next
-                }
-            }
+            // Use extensionContext's open method - this keeps the extension running
+            extensionContext?.open(url, completionHandler: { [weak self] success in
+                self?.shareLog("URL opened: \(success ? "success" : "failed")")
+                // Extension stays alive - user can return and browse more results
+            })
         } else {
             shareLog("ERROR: Invalid product URL: \(selectedResult.purchase_url)")
         }
