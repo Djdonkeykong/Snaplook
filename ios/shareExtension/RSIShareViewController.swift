@@ -141,6 +141,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var progressTimer: Timer?
     private var currentProgress: Float = 0.0
     private var targetProgress: Float = 0.0
+    private var statusRotationTimer: Timer?
+    private var currentStatusMessages: [String] = []
+    private var currentStatusIndex: Int = 0
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -303,6 +306,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Fetching Instagram HTML via ScrapingBee (attempt \(attempt + 1)) for \(instagramUrl)")
 
+        // Update progress to show ScrapingBee activity
+        DispatchQueue.main.async { [weak self] in
+            self?.updateProgress(0.10, status: "Fetching your photo...")
+        }
+
         var request = URLRequest(url: requestURL)
         request.timeoutInterval = 20.0
 
@@ -362,6 +370,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 session.invalidateAndCancel()
                 deliver(.failure(self.makeInstagramError("No image URLs found in Instagram response")))
                 return
+            }
+
+            // Update progress to show image download starting
+            DispatchQueue.main.async { [weak self] in
+                self?.updateProgress(0.20, status: "Downloading photo...")
             }
 
             self.downloadInstagramImages(
@@ -535,6 +548,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Check if detection is configured
             let hasDetectionConfig = detectorEndpoint() != nil && serpApiKey() != nil
+
+            // If detection is configured, start smooth progress animation early
+            if hasDetectionConfig {
+                DispatchQueue.main.async { [weak self] in
+                    self?.startSmoothProgress()
+                    self?.targetProgress = 0.05
+
+                    // Start rotating status messages for the fetch phase
+                    let fetchMessages = [
+                        "Fetching your photo...",
+                        "Downloading image...",
+                        "Getting ready..."
+                    ]
+                    self?.startStatusRotation(messages: fetchMessages, interval: 2.5)
+                }
+            }
 
             downloadInstagramMedia(from: item) { [weak self] result in
                 guard let self = self else {
@@ -764,7 +793,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Detection endpoint: \(endpoint)")
         shareLog("SerpAPI key: \(serpKey.prefix(8))...")
-        updateProgress(0.60, status: "Searching for products...")
+        targetProgress = 0.60
+
+        // Start rotating status messages for the search phase
+        let searchMessages = [
+            "Searching for products...",
+            "Finding similar items...",
+            "Analyzing style...",
+            "Checking retailers...",
+            "Almost there..."
+        ]
+        startStatusRotation(messages: searchMessages, interval: 2.5)
 
         let requestBody: [String: Any] = [
             "image_url": imageUrl,
@@ -882,10 +921,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Stop status polling since we're now in detection mode
         stopStatusPolling()
 
-        // Start smooth progress animation
-        startSmoothProgress()
-
-        updateProgress(0.05, status: "Uploading photo...")
+        // Progress should already be started and at ~0.20 from Instagram download
+        // Continue the smooth progress animation
+        updateProgress(0.25, status: "Uploading photo...")
 
         let base64Image = imageData.base64EncodedString()
         shareLog("Base64 encoded - length: \(base64Image.count) chars")
@@ -1008,8 +1046,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self.downloadedImageUrl = imageUrl
 
             // Trigger detection
-            self.updateProgress(0.25, status: "Detecting garments...")
+            self.targetProgress = 0.25
             shareLog("Calling runDetectionAnalysis...")
+
+            // Start rotating status messages for the detection phase
+            let detectionMessages = [
+                "Detecting garments...",
+                "Analyzing clothing...",
+                "Identifying items..."
+            ]
+            self.startStatusRotation(messages: detectionMessages, interval: 2.5)
+
             self.runDetectionAnalysis(imageUrl: imageUrl)
         }
 
@@ -2010,6 +2057,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func stopSmoothProgress() {
         progressTimer?.invalidate()
         progressTimer = nil
+        stopStatusRotation()
     }
 
     private func updateProgress(_ progress: Float, status: String) {
@@ -2019,6 +2067,56 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self?.statusLabel?.text = status
             shareLog("Progress: \(Int(progress * 100))% - \(status)")
         }
+
+        // Stop any existing rotation when explicitly setting a status
+        stopStatusRotation()
+    }
+
+    // Start rotating through multiple status messages
+    private func startStatusRotation(messages: [String], interval: TimeInterval = 2.5) {
+        guard !messages.isEmpty else { return }
+
+        stopStatusRotation()
+
+        currentStatusMessages = messages
+        currentStatusIndex = 0
+
+        // Set first message immediately
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.statusLabel?.text = messages[0]
+            shareLog("Status: \(messages[0])")
+        }
+
+        // Only start timer if we have multiple messages
+        guard messages.count > 1 else { return }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.statusRotationTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+                guard let self = self else { return }
+
+                // Move to next message
+                self.currentStatusIndex = (self.currentStatusIndex + 1) % self.currentStatusMessages.count
+                let message = self.currentStatusMessages[self.currentStatusIndex]
+
+                // Animate the text change
+                UIView.transition(with: self.statusLabel ?? UILabel(),
+                                duration: 0.3,
+                                options: .transitionCrossDissolve,
+                                animations: {
+                    self.statusLabel?.text = message
+                }, completion: nil)
+
+                shareLog("Status rotated: \(message)")
+            }
+        }
+    }
+
+    private func stopStatusRotation() {
+        statusRotationTimer?.invalidate()
+        statusRotationTimer = nil
+        currentStatusMessages.removeAll()
+        currentStatusIndex = 0
     }
 
     private func startStatusPolling() {
