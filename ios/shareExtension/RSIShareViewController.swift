@@ -12,6 +12,7 @@ import MobileCoreServices
 import Photos
 import UniformTypeIdentifiers
 import AVFoundation
+import WebKit
 
 let kSchemePrefix = "ShareMedia"
 let kUserDefaultsKey = "ShareKey"
@@ -1044,6 +1045,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         filteredResults = detectionResults
         selectedCategory = "All"
 
+        // Show navigation bar and add Done button
+        navigationController?.navigationBar.isHidden = false
+        navigationController?.navigationBar.prefersLargeTitles = false
+
+        let doneButton = UIBarButtonItem(
+            title: "Done",
+            style: .done,
+            target: self,
+            action: #selector(doneButtonTapped)
+        )
+        navigationItem.rightBarButtonItem = doneButton
+        navigationItem.title = "Results"
+
         // Create header with logo and cancel button
         let headerView = UIView()
         headerView.backgroundColor = .systemBackground
@@ -1055,15 +1069,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         logoImageView.contentMode = .scaleAspectFit
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Cancel button
-        let cancelButton = UIButton(type: .system)
-        cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
-        cancelButton.addTarget(self, action: #selector(cancelDetectionTapped), for: .touchUpInside)
-        cancelButton.translatesAutoresizingMaskIntoConstraints = false
-
         headerView.addSubview(logoImageView)
-        headerView.addSubview(cancelButton)
 
         // Create category filter chips
         let filterView = createCategoryFilters()
@@ -1095,7 +1101,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         separator.translatesAutoresizingMaskIntoConstraints = false
 
         let saveButton = UIButton(type: .system)
-        saveButton.setTitle("Import all", for: .normal)
+        saveButton.setTitle("Save", for: .normal)
         saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         saveButton.setTitleColor(.white, for: .normal)
@@ -1116,18 +1122,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Layout constraints
         NSLayoutConstraint.activate([
-            headerView.topAnchor.constraint(equalTo: loadingView!.safeAreaLayoutGuide.topAnchor),
+            headerView.topAnchor.constraint(equalTo: loadingView!.topAnchor),
             headerView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
             headerView.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
             headerView.heightAnchor.constraint(equalToConstant: 60),
 
-            logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 8),
+            logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
             logoImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
             logoImageView.heightAnchor.constraint(equalToConstant: 26),
             logoImageView.widthAnchor.constraint(equalToConstant: 97),
-
-            cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
 
             filterView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
             filterView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
@@ -1329,6 +1332,43 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("Redirecting to app with all detection results")
         performRedirect(to: redirectURL)
         finishExtensionRequest()
+    }
+
+    @objc private func doneButtonTapped() {
+        shareLog("Done button tapped - closing extension")
+        closeExtension()
+    }
+
+    // Public method that can be called from WebViewController to close the entire extension
+    func closeExtension() {
+        shareLog("Closing share extension")
+
+        // Immediately hide default UI to prevent flash
+        hideDefaultUI()
+
+        // Clean up state
+        loadingHideWorkItem?.cancel()
+        loadingHideWorkItem = nil
+        isShowingDetectionResults = false
+        shouldAttemptDetection = false
+        detectionResults.removeAll()
+        filteredResults.removeAll()
+        pendingImageData = nil
+        pendingSharedFile = nil
+        pendingImageUrl = nil
+
+        clearSharedData()
+        hideLoadingUI()
+
+        // Complete the extension request - this dismisses the share sheet and returns to source app
+        let error = NSError(
+            domain: "com.snaplook.shareExtension",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: "User cancelled"]
+        )
+        didCompleteRequest = true
+        extensionContext?.cancelRequest(withError: error)
+        shareLog("Extension closed - user returned to source app")
     }
 
     @objc private func cancelDetectionTapped() {
@@ -2075,15 +2115,16 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
         let selectedResult = filteredResults[indexPath.row]
         shareLog("User selected result: \(selectedResult.product_name)")
 
-        // Save the selected product URL and redirect to app (share extensions can't open arbitrary URLs)
-        if let defaults = UserDefaults(suiteName: appGroupId) {
-            defaults.set(selectedResult.purchase_url, forKey: "SelectedProductURL")
-            defaults.synchronize()
-            shareLog("Saved product URL for main app to open: \(selectedResult.purchase_url)")
+        // Open the product URL in a WKWebView inside the modal
+        guard let url = URL(string: selectedResult.purchase_url) else {
+            shareLog("ERROR: Invalid product URL: \(selectedResult.purchase_url)")
+            return
         }
 
-        // Save the selected result and redirect to app
-        saveSelectedResultAndRedirect(selectedResult)
+        // Push WebViewController onto navigation stack
+        let webVC = WebViewController(url: url, shareViewController: self)
+        navigationController?.pushViewController(webVC, animated: true)
+        shareLog("Pushed WebViewController for URL: \(url.absoluteString)")
     }
 
     private func saveSelectedResultAndRedirect(_ result: DetectionResultItem) {
