@@ -255,12 +255,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
         guard attempt <= maxInstagramScrapeAttempts else {
-            completion(.failure(makeInstagramError("Exceeded Instagram scrape attempts")))
+            completion(.failure(self.makeInstagramError("Exceeded Instagram scrape attempts")))
             return
         }
 
         guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
-            completion(.failure(makeInstagramError("Invalid ScrapingBee URL")))
+            completion(.failure(self.makeInstagramError("Invalid ScrapingBee URL")))
             return
         }
 
@@ -272,7 +272,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         ]
 
         guard let requestURL = components.url else {
-            completion(.failure(makeInstagramError("Failed to build ScrapingBee request URL")))
+            completion(.failure(self.makeInstagramError("Failed to build ScrapingBee request URL")))
             return
         }
 
@@ -1263,7 +1263,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("📡 Fetching Instagram JSON endpoint: \(jsonUrl)")
 
         guard let url = URL(string: jsonUrl) else {
-            completion(.failure(makeInstagramError("Invalid Instagram shortcode URL")))
+            completion(.failure(self.makeInstagramError("Invalid Instagram shortcode URL")))
             return
         }
 
@@ -1281,7 +1281,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard let httpResponse = response as? HTTPURLResponse,
                 httpResponse.statusCode == 200,
                 let data = data else {
-                completion(.failure(makeInstagramError("Invalid response or no data")))
+                completion(.failure(self.makeInstagramError("Invalid response or no data")))
                 return
             }
 
@@ -1289,7 +1289,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 if let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     if let message = root["message"] as? String, message.lowercased().contains("login") {
                         shareLog("🔒 JSON endpoint requires login — likely private post")
-                        completion(.failure(makeInstagramError("Private or login required")))
+                        completion(.failure(self.makeInstagramError("Private or login required")))
                         return
                     }
 
@@ -1314,14 +1314,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                     if urls.isEmpty {
                         shareLog("⚠️ JSON returned but no image URLs found — maybe private or malformed")
-                        completion(.failure(makeInstagramError("No image URLs in JSON")))
+                        completion(.failure(self.makeInstagramError("No image URLs in JSON")))
                     } else {
                         completion(.success(urls))
                     }
 
                 } else {
                     shareLog("⚠️ Invalid JSON root structure")
-                    completion(.failure(makeInstagramError("Invalid JSON format")))
+                    completion(.failure(self.makeInstagramError("Invalid JSON format")))
                 }
             } catch {
                 shareLog("⚠️ JSON parse error: \(error.localizedDescription)")
@@ -1334,7 +1334,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("🐝 Fetching Instagram via ScrapingBee (render_js=true) for fallback...")
 
         guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1") else {
-            completion(.failure(makeInstagramError("Invalid ScrapingBee URL")))
+            completion(.failure(self.makeInstagramError("Invalid ScrapingBee URL")))
             return
         }
 
@@ -1345,7 +1345,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         ]
 
         guard let apiURL = components.url else {
-            completion(.failure(makeInstagramError("Failed to construct ScrapingBee URL")))
+            completion(.failure(self.makeInstagramError("Failed to construct ScrapingBee URL")))
             return
         }
 
@@ -1356,14 +1356,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             guard let data = data, let html = String(data: data, encoding: .utf8) else {
-                completion(.failure(makeInstagramError("Empty ScrapingBee response")))
+                completion(.failure(self.makeInstagramError("Empty ScrapingBee response")))
                 return
             }
 
             let urls = self.extractInstagramImageUrls(from: html)
             if urls.isEmpty {
                 shareLog("⚠️ ScrapingBee returned HTML but no images extracted")
-                completion(.failure(makeInstagramError("No images from ScrapingBee")))
+                completion(.failure(self.makeInstagramError("No images from ScrapingBee")))
             } else {
                 shareLog("✅ Extracted \(urls.count) image URLs via ScrapingBee")
                 completion(.success(urls))
@@ -1421,7 +1421,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-            completion(.failure(makeInstagramError("Unable to resolve shared container URL")))
+            completion(.failure(self.makeInstagramError("Unable to resolve shared container URL")))
             return
         }
 
@@ -1435,7 +1435,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         guard !uniqueUrls.isEmpty else {
-            completion(.failure(makeInstagramError("No valid Instagram image URLs after sanitization")))
+            completion(.failure(self.makeInstagramError("No valid Instagram image URLs after sanitization")))
             return
         }
 
@@ -1476,7 +1476,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         completion: @escaping (Result<SharedMediaFile?, Error>) -> Void
     ) {
         guard let url = URL(string: urlString) else {
-            completion(.failure(makeInstagramError("Invalid image URL: \(urlString)")))
+            completion(.failure(self.makeInstagramError("Invalid image URL: \(urlString)")))
             return
         }
 
@@ -1495,7 +1495,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard let httpResponse = response as? HTTPURLResponse,
                 httpResponse.statusCode == 200,
                 let data = data else {
-                completion(.failure(makeInstagramError("Image download failed or empty data")))
+                completion(.failure(self.makeInstagramError("Image download failed or empty data")))
                 return
             }
 
