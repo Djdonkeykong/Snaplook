@@ -306,9 +306,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Fetching Instagram HTML via ScrapingBee (attempt \(attempt + 1)) for \(instagramUrl)")
 
-        // Update progress to show ScrapingBee activity
+        // Update progress to show ScrapingBee activity (don't stop rotation)
         DispatchQueue.main.async { [weak self] in
-            self?.updateProgress(0.10, status: "Fetching your photo...")
+            self?.targetProgress = 0.10
+            shareLog("Progress: 10% - Fetching your photo...")
         }
 
         var request = URLRequest(url: requestURL)
@@ -372,9 +373,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 return
             }
 
-            // Update progress to show image download starting
+            // Update progress to show image download starting (don't stop rotation)
             DispatchQueue.main.async { [weak self] in
-                self?.updateProgress(0.20, status: "Downloading photo...")
+                self?.targetProgress = 0.20
+                shareLog("Progress: 20% - Downloading photo...")
             }
 
             self.downloadInstagramImages(
