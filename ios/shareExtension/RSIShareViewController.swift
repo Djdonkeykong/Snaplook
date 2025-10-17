@@ -650,7 +650,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
-    private func self.makeInstagramError(_ message: String, code: Int = -1) -> NSError {
+    private func makeInstagramError(_ message: String, code: Int = -1) -> NSError {
         NSError(
             domain: "com.snaplook.shareExtension.instagram",
             code: code,
@@ -1428,7 +1428,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     // MARK: - Helpers
 
-    private func self.shareLog(_ message: String) {
+    private func shareLog(_ message: String) {
     NSLog("[ShareExtension] %@", message)
     }
     
