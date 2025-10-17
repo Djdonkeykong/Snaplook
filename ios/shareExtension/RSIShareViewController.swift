@@ -1869,7 +1869,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         DispatchQueue.main.async { [weak self] in
             self?.progressView?.setProgress(progress, animated: true)
             self?.statusLabel?.text = status
-            self?.shareLog("Progress: \(Int(progress * 100))% - \(status)")
+            shareLog("Progress: \(Int(progress * 100))% - \(status)")
         }
     }
 
@@ -1959,8 +1959,8 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
             shareLog("Opening product URL in Safari: \(selectedResult.purchase_url)")
 
             // Use extensionContext's open method - this keeps the extension running
-            extensionContext?.open(url, completionHandler: { [weak self] success in
-                self?.shareLog("URL opened: \(success ? "success" : "failed")")
+            extensionContext?.open(url, completionHandler: { success in
+                shareLog("URL opened: \(success ? "success" : "failed")")
                 // Extension stays alive - user can return and browse more results
             })
         } else {
