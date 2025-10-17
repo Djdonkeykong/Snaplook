@@ -1838,17 +1838,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         let cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.titleLabel?.font = UIFont.preferredFont(forTextStyle: .body)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
         cancelButton.addTarget(self, action: #selector(cancelImportTapped), for: .touchUpInside)
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
-        cancelButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
 
         overlay.addSubview(stack)
         overlay.addSubview(cancelButton)
         NSLayoutConstraint.activate([
             stack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
-            cancelButton.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 12),
+            cancelButton.centerYAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 30),
             cancelButton.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16)
         ])
 
