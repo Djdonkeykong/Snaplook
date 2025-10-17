@@ -506,6 +506,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if type == .url, isInstagramShareCandidate(item) {
             shareLog("Detected Instagram URL share - starting download pipeline")
             updateProcessingStatus("processing")
+
+            // Check if detection is configured
+            let hasDetectionConfig = detectorEndpoint() != nil && serpApiKey() != nil
+
             downloadInstagramMedia(from: item) { [weak self] result in
                 guard let self = self else {
                     completion()
@@ -521,12 +525,23 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         self.sharedMedia.append(contentsOf: downloaded)
                         shareLog("Appended \(downloaded.count) downloaded Instagram file(s) - count now \(self.sharedMedia.count)")
                     }
+                    completion()
                 case .failure(let error):
                     shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
-                    self.appendLiteralShare(item: item, type: type)
-                }
 
-                completion()
+                    if hasDetectionConfig {
+                        // Detection is configured but ScrapingBee failed - show error instead of redirecting
+                        shareLog("Detection is configured but Instagram download failed - showing error")
+                        DispatchQueue.main.async {
+                            self.showConfigurationError()
+                        }
+                        // Don't call completion - prevents redirect
+                    } else {
+                        // No detection configured - fall back to normal flow
+                        self.appendLiteralShare(item: item, type: type)
+                        completion()
+                    }
+                }
             }
             return
         }
@@ -672,8 +687,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
         guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
-            shareLog("ScrapingBee API key missing - falling back to host app download")
-            completion(.success([]))
+            shareLog("⚠️ ScrapingBee API key missing - cannot download Instagram image")
+            shareLog("💡 Instagram URL detected but ScrapingBee not configured. Please run the main app first to set up API keys.")
+            completion(.failure(makeInstagramError("ScrapingBee API key not configured. Please open the Snaplook app first.")))
             return
         }
 
@@ -1077,11 +1093,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
             logoImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            logoImageView.heightAnchor.constraint(equalToConstant: 28),
-            logoImageView.widthAnchor.constraint(equalToConstant: 102),
+            logoImageView.heightAnchor.constraint(equalToConstant: 24),
+            logoImageView.widthAnchor.constraint(equalToConstant: 88),
 
-            cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
             cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
 
             filterView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
             filterView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
@@ -1701,6 +1717,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
             shareLog("Completed extension request")
         }
+    }
+
+    private func showConfigurationError() {
+        shareLog("Showing configuration error")
+        hideLoadingUI()
+        stopStatusPolling()
+
+        let alert = UIAlertController(
+            title: "Configuration Required",
+            message: "Please open the Snaplook app first to complete setup. Instagram image detection requires API keys to be configured.",
+            preferredStyle: .alert
+        )
+
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            guard let self = self else { return }
+            let error = NSError(
+                domain: "com.snaplook.shareExtension",
+                code: -2,
+                userInfo: [NSLocalizedDescriptionKey: "Configuration required"]
+            )
+            self.didCompleteRequest = true
+            self.extensionContext?.cancelRequest(withError: error)
+        }
+
+        alert.addAction(cancelAction)
+        present(alert, animated: true, completion: nil)
     }
 
     private func dismissWithError() {
