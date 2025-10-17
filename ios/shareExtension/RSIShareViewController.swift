@@ -23,6 +23,11 @@ let kScrapingBeeApiKey = "ScrapingBeeApiKey"
 let kSerpApiKey = "SerpApiKey"
 let kDetectorEndpoint = "DetectorEndpoint"
 
+@inline(__always)
+private func shareLog(_ message: String) {
+    NSLog("[ShareExtension] %@", message)
+}
+
 public class SharedMediaFile: Codable {
     var path: String
     var mimeType: String?
@@ -159,12 +164,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         loadIds()
         sharedMedia.removeAll()
-        self.shareLog("View did load - cleared sharedMedia array")
+        shareLog("View did load - cleared sharedMedia array")
         suppressKeyboard()
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) {
-            self.shareLog("Resolved container URL: \(containerURL.path)")
+            shareLog("Resolved container URL: \(containerURL.path)")
         } else {
-            self.shareLog("ERROR: Failed to resolve container URL for \(appGroupId)")
+            shareLog("ERROR: Failed to resolve container URL for \(appGroupId)")
         }
         loadingHideWorkItem?.cancel()
         setupLoadingUI()
@@ -172,7 +177,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     open override func didSelectPost() {
-        self.shareLog("didSelectPost invoked")
+        shareLog("didSelectPost invoked")
         pendingPostMessage = contentText
         maybeFinalizeShare()
     }
@@ -183,13 +188,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
         if hasProcessedAttachments {
-            self.shareLog("⏸️ viewDidAppear called again - attachments already processed, skipping")
+            shareLog("⏸️ viewDidAppear called again - attachments already processed, skipping")
             return
         }
 
         guard let content = extensionContext?.inputItems.first as? NSExtensionItem,
               let attachments = content.attachments else {
-            self.shareLog("No attachments found on extension context")
+            shareLog("No attachments found on extension context")
             return
         }
 
@@ -201,7 +206,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         pendingPostMessage = nil
 
         if attachments.isEmpty {
-            self.shareLog("No attachments to process")
+            shareLog("No attachments to process")
             maybeFinalizeShare()
             return
         }
@@ -210,19 +215,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard let type = SharedMediaType.allCases.first(where: {
                 attachment.hasItemConformingToTypeIdentifier($0.toUTTypeIdentifier)
             }) else {
-                self.shareLog("Attachment index \(index) has no supported type")
+                shareLog("Attachment index \(index) has no supported type")
                 continue
             }
 
             beginAttachmentProcessing()
-            self.shareLog("Loading attachment index \(index) as \(type)")
+            shareLog("Loading attachment index \(index) as \(type)")
             attachment.loadItem(
                 forTypeIdentifier: type.toUTTypeIdentifier,
                 options: nil
             ) { [weak self] data, error in
                 guard let self = self else { return }
                 if let error = error {
-                    self.shareLog("ERROR: loadItem failed for index \(index) - \(error.localizedDescription)")
+                    shareLog("ERROR: loadItem failed for index \(index) - \(error.localizedDescription)")
                     DispatchQueue.main.async {
                         self.handleLoadFailure()
                     }
@@ -250,12 +255,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
         guard attempt <= maxInstagramScrapeAttempts else {
-            completion(.failure(self.self.makeInstagramError("Exceeded Instagram scrape attempts")))
+            completion(.failure(makeInstagramError("Exceeded Instagram scrape attempts")))
             return
         }
 
         guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
-            completion(.failure(self.self.makeInstagramError("Invalid ScrapingBee URL")))
+            completion(.failure(makeInstagramError("Invalid ScrapingBee URL")))
             return
         }
 
@@ -267,11 +272,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         ]
 
         guard let requestURL = components.url else {
-            completion(.failure(self.self.makeInstagramError("Failed to build ScrapingBee request URL")))
+            completion(.failure(makeInstagramError("Failed to build ScrapingBee request URL")))
             return
         }
 
-        self.shareLog("Fetching Instagram HTML via ScrapingBee (attempt \(attempt + 1)) for \(instagramUrl)")
+        shareLog("Fetching Instagram HTML via ScrapingBee (attempt \(attempt + 1)) for \(instagramUrl)")
 
         var request = URLRequest(url: requestURL)
         request.timeoutInterval = 20.0
@@ -285,7 +290,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     completion(result)
                 case .failure(let error):
                     if attempt < self.maxInstagramScrapeAttempts {
-                        self.shareLog("WARNING: ScrapingBee attempt \(attempt + 1) failed (\(error.localizedDescription)) - retrying")
+                        shareLog("WARNING: ScrapingBee attempt \(attempt + 1) failed (\(error.localizedDescription)) - retrying")
                         self.performInstagramScrape(
                             instagramUrl: instagramUrl,
                             apiKey: apiKey,
@@ -293,7 +298,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                             completion: completion
                         )
                     } else {
-                        self.shareLog("ERROR: ScrapingBee failed after \(attempt + 1) attempts - \(error.localizedDescription)")
+                        shareLog("ERROR: ScrapingBee failed after \(attempt + 1) attempts - \(error.localizedDescription)")
                         completion(.failure(error))
                     }
                 }
@@ -310,27 +315,27 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 session.invalidateAndCancel()
-                deliver(.failure(self.self.makeInstagramError("Missing HTTP response")))
+                deliver(.failure(self.makeInstagramError("Missing HTTP response")))
                 return
             }
 
             guard httpResponse.statusCode == 200 else {
                 session.invalidateAndCancel()
-                deliver(.failure(self.self.makeInstagramError("ScrapingBee returned status \(httpResponse.statusCode)", code: httpResponse.statusCode)))
+                deliver(.failure(self.makeInstagramError("ScrapingBee returned status \(httpResponse.statusCode)", code: httpResponse.statusCode)))
                 return
             }
 
             guard let data = data,
                   let html = String(data: data, encoding: .utf8) else {
                 session.invalidateAndCancel()
-                deliver(.failure(self.self.makeInstagramError("Unable to decode ScrapingBee response body")))
+                deliver(.failure(self.makeInstagramError("Unable to decode ScrapingBee response body")))
                 return
             }
 
             let imageUrls = self.extractInstagramImageUrls(from: html)
             if imageUrls.isEmpty {
                 session.invalidateAndCancel()
-                deliver(.failure(self.self.makeInstagramError("No image URLs found in Instagram response")))
+                deliver(.failure(self.makeInstagramError("No image URLs found in Instagram response")))
                 return
             }
 
@@ -356,24 +361,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func maybeFinalizeShare() {
         guard pendingAttachmentCount == 0, !hasQueuedRedirect else {
-            self.shareLog("⏸️ maybeFinalizeShare: waiting (pending=\(pendingAttachmentCount), hasQueued=\(hasQueuedRedirect))")
+            shareLog("⏸️ maybeFinalizeShare: waiting (pending=\(pendingAttachmentCount), hasQueued=\(hasQueuedRedirect))")
             return
         }
 
         // Don't auto-redirect if we're attempting or showing detection results
         if shouldAttemptDetection || isShowingDetectionResults {
-            self.shareLog("⏸️ maybeFinalizeShare: BLOCKED - detection in progress (attempt=\(shouldAttemptDetection), showing=\(isShowingDetectionResults))")
+            shareLog("⏸️ maybeFinalizeShare: BLOCKED - detection in progress (attempt=\(shouldAttemptDetection), showing=\(isShowingDetectionResults))")
             return
         }
 
-        self.shareLog("✅ maybeFinalizeShare: proceeding with normal redirect")
+        shareLog("✅ maybeFinalizeShare: proceeding with normal redirect")
         hasQueuedRedirect = true
         let message = pendingPostMessage
         saveAndRedirect(message: message)
     }
 
     private func handleLoadFailure() {
-        self.shareLog("Handling load failure for attachment")
+        shareLog("Handling load failure for attachment")
         completeAttachmentProcessing()
     }
 
@@ -386,11 +391,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         switch type {
         case .text:
             guard let text = data as? String else {
-                self.shareLog("Attachment index \(index) text payload missing")
+                shareLog("Attachment index \(index) text payload missing")
                 completeAttachmentProcessing()
                 return
             }
-            self.shareLog("Attachment index \(index) is text")
+            shareLog("Attachment index \(index) is text")
             handleMedia(
                 forLiteral: text,
                 type: type,
@@ -401,7 +406,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
         case .url:
             if let url = data as? URL {
-                self.shareLog("Attachment index \(index) is URL: \(url)")
+                shareLog("Attachment index \(index) is URL: \(url)")
                 handleMedia(
                     forLiteral: url.absoluteString,
                     type: type,
@@ -411,12 +416,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     self?.completeAttachmentProcessing()
                 }
             } else {
-                self.shareLog("Attachment index \(index) URL payload missing")
+                shareLog("Attachment index \(index) URL payload missing")
                 completeAttachmentProcessing()
             }
         default:
             if let url = data as? URL {
-                self.shareLog("Attachment index \(index) is file URL: \(url)")
+                shareLog("Attachment index \(index) is file URL: \(url)")
                 handleMedia(
                     forFile: url,
                     type: type,
@@ -426,7 +431,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     self?.completeAttachmentProcessing()
                 }
             } else if let image = data as? UIImage {
-                self.shareLog("Attachment index \(index) is UIImage")
+                shareLog("Attachment index \(index) is UIImage")
                 handleMedia(
                     forUIImage: image,
                     type: type,
@@ -436,7 +441,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     self?.completeAttachmentProcessing()
                 }
             } else {
-                self.shareLog("Attachment index \(index) could not be handled for type \(type)")
+                shareLog("Attachment index \(index) could not be handled for type \(type)")
                 completeAttachmentProcessing()
             }
         }
@@ -445,11 +450,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func suppressKeyboard() {
         let isResponder = textView?.isFirstResponder ?? false
         let isEditable = textView?.isEditable ?? false
-        self.shareLog("suppressKeyboard invoked (isFirstResponder: \(isResponder), isEditable: \(isEditable))")
+        shareLog("suppressKeyboard invoked (isFirstResponder: \(isResponder), isEditable: \(isEditable))")
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             let scheduledResponder = self.textView?.isFirstResponder ?? false
-            self.shareLog("suppressKeyboard applying changes (isFirstResponder: \(scheduledResponder))")
+            shareLog("suppressKeyboard applying changes (isFirstResponder: \(scheduledResponder))")
             self.textView?.isEditable = false
             self.textView?.isSelectable = false
             self.textView?.text = ""
@@ -460,22 +465,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self.textView?.inputAccessoryView = UIView()
             self.textView?.isHidden = true
             let finalResponder = self.textView?.isFirstResponder ?? false
-            self.shareLog("suppressKeyboard completed (isFirstResponder: \(finalResponder))")
+            shareLog("suppressKeyboard completed (isFirstResponder: \(finalResponder))")
         }
     }
 
     private func loadIds() {
         let shareExtensionAppBundleIdentifier = Bundle.main.bundleIdentifier ?? ""
-        self.shareLog("bundle id: \(shareExtensionAppBundleIdentifier)")
+        shareLog("bundle id: \(shareExtensionAppBundleIdentifier)")
 
         if let lastDot = shareExtensionAppBundleIdentifier.lastIndex(of: ".") {
             hostAppBundleIdentifier = String(shareExtensionAppBundleIdentifier[..<lastDot])
         }
         let defaultAppGroupId = "group.\(hostAppBundleIdentifier)"
-        self.shareLog("default app group: \(defaultAppGroupId)")
+        shareLog("default app group: \(defaultAppGroupId)")
 
         let customAppGroupId = Bundle.main.object(forInfoDictionaryKey: kAppGroupIdKey) as? String
-        self.shareLog("Info.plist AppGroupId: \(customAppGroupId ?? "nil")")
+        shareLog("Info.plist AppGroupId: \(customAppGroupId ?? "nil")")
 
         if let custom = customAppGroupId,
            !custom.isEmpty,
@@ -484,7 +489,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         } else {
             appGroupId = defaultAppGroupId
         }
-        self.shareLog("using app group: \(appGroupId)")
+        shareLog("using app group: \(appGroupId)")
     }
 
     private func handleMedia(
@@ -495,7 +500,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         completion: @escaping () -> Void
     ) {
         if type == .url, isInstagramShareCandidate(item) {
-            self.shareLog("Detected Instagram URL share - starting download pipeline")
+            shareLog("Detected Instagram URL share - starting download pipeline")
             updateProcessingStatus("processing")
             downloadInstagramMedia(from: item) { [weak self] result in
                 guard let self = self else {
@@ -506,14 +511,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 switch result {
                 case .success(let downloaded):
                     if downloaded.isEmpty {
-                        self.shareLog("Instagram download succeeded but returned no files - falling back to literal URL")
+                        shareLog("Instagram download succeeded but returned no files - falling back to literal URL")
                         self.appendLiteralShare(item: item, type: type)
                     } else {
                         self.sharedMedia.append(contentsOf: downloaded)
-                        self.shareLog("Appended \(downloaded.count) downloaded Instagram file(s) - count now \(self.sharedMedia.count)")
+                        shareLog("Appended \(downloaded.count) downloaded Instagram file(s) - count now \(self.sharedMedia.count)")
                     }
                 case .failure(let error):
-                    self.shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
+                    shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
                     self.appendLiteralShare(item: item, type: type)
                 }
 
@@ -534,7 +539,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         completion: @escaping () -> Void
     ) {
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-            self.shareLog("ERROR: containerURL was nil while handling UIImage")
+            shareLog("ERROR: containerURL was nil while handling UIImage")
             completion()
             return
         }
@@ -546,9 +551,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 mimeType: type == .image ? "image/png" : nil,
                 type: type
             ))
-            self.shareLog("Saved UIImage to \(newPathDecoded) - count now \(sharedMedia.count)")
+            shareLog("Saved UIImage to \(newPathDecoded) - count now \(sharedMedia.count)")
         } else {
-            self.shareLog("ERROR: Failed to write UIImage for index \(index)")
+            shareLog("ERROR: Failed to write UIImage for index \(index)")
         }
         completion()
     }
@@ -561,7 +566,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         completion: @escaping () -> Void
     ) {
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-            self.shareLog("ERROR: containerURL was nil while handling file URL")
+            shareLog("ERROR: containerURL was nil while handling file URL")
             completion()
             return
         }
@@ -570,7 +575,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         if copyFile(at: url, to: newPath) {
             let newPathDecoded = newPath.absoluteString.removingPercentEncoding ?? newPath.absoluteString
-            self.shareLog("copyFile succeeded to \(newPathDecoded)")
+            shareLog("copyFile succeeded to \(newPathDecoded)")
             if type == .video {
                 if let videoInfo = getVideoInfo(from: url) {
                     let thumbnailPathDecoded = videoInfo.thumbnail?.removingPercentEncoding
@@ -581,7 +586,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         duration: videoInfo.duration,
                         type: type
                     ))
-                    self.shareLog("Stored video at \(newPathDecoded) - count now \(sharedMedia.count)")
+                    shareLog("Stored video at \(newPathDecoded) - count now \(sharedMedia.count)")
                 }
             } else {
                 sharedMedia.append(SharedMediaFile(
@@ -589,10 +594,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     mimeType: url.mimeType(),
                     type: type
                 ))
-                self.shareLog("Stored file at \(newPathDecoded) - count now \(sharedMedia.count)")
+                shareLog("Stored file at \(newPathDecoded) - count now \(sharedMedia.count)")
             }
         } else {
-            self.shareLog("ERROR: Failed to copy file \(url)")
+            shareLog("ERROR: Failed to copy file \(url)")
         }
         completion()
     }
@@ -615,7 +620,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 type: type
             )
         )
-        self.shareLog("Appended literal item (type \(type)) - count now \(sharedMedia.count)")
+        shareLog("Appended literal item (type \(type)) - count now \(sharedMedia.count)")
     }
 
     private func isInstagramShareCandidate(_ value: String) -> Bool {
@@ -626,14 +631,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func scrapingBeeApiKey() -> String? {
         if let defaults = UserDefaults(suiteName: appGroupId) {
             if let key = defaults.string(forKey: kScrapingBeeApiKey), !key.isEmpty {
-                self.shareLog("Using ScrapingBee key from shared defaults")
+                shareLog("Using ScrapingBee key from shared defaults")
                 return key
             }
         }
 
         if let infoKey = Bundle.main.object(forInfoDictionaryKey: "ScrapingBeeApiKey") as? String,
            !infoKey.isEmpty {
-            self.shareLog("Using ScrapingBee key from Info.plist fallback")
+            shareLog("Using ScrapingBee key from Info.plist fallback")
             return infoKey
         }
 
@@ -662,23 +667,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urlString: String,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
-        let session = URLSession(configuration: .ephemeral)
-
-        // Prefer new hybrid pipeline
-        fetchInstagramImageUrlsAndDownload(from: urlString, session: session) { result in
-            switch result {
-            case .success(let files):
-                self.self.shareLog("✅ Hybrid Instagram download completed successfully")
-                completion(.success(files))
-            case .failure(let error):
-                self.self.shareLog("❌ Hybrid download failed (\(error.localizedDescription)) — falling back to legacy ScrapingBee path")
-                if let apiKey = self.scrapingBeeApiKey(), !apiKey.isEmpty {
-                    self.performInstagramScrape(instagramUrl: urlString, apiKey: apiKey, attempt: 0, completion: completion)
-                } else {
-                    completion(.failure(error))
-                }
-            }
+        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
+            shareLog("ScrapingBee API key missing - falling back to host app download")
+            completion(.success([]))
+            return
         }
+
+        performInstagramScrape(
+            instagramUrl: urlString,
+            apiKey: apiKey,
+            attempt: 0,
+            completion: completion
+        )
     }
 
     // Get detector endpoint from UserDefaults or fallback
@@ -689,7 +689,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return endpoint
         }
         // Fallback to local/ngrok for development (will be set by Flutter app)
-        self.shareLog("Warning: DetectorEndpoint not found in UserDefaults - run Flutter app first")
+        shareLog("Warning: DetectorEndpoint not found in UserDefaults - run Flutter app first")
         return nil
     }
 
@@ -705,19 +705,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     // Call detection API with image URL
     private func runDetectionAnalysis(imageUrl: String) {
-        self.shareLog("START runDetectionAnalysis - imageUrl: \(imageUrl)")
+        shareLog("START runDetectionAnalysis - imageUrl: \(imageUrl)")
 
         guard let endpoint = detectorEndpoint(),
               let serpKey = serpApiKey() else {
-            self.shareLog("ERROR: Detection endpoint or SerpAPI key not configured")
+            shareLog("ERROR: Detection endpoint or SerpAPI key not configured")
             DispatchQueue.main.async {
                 self.proceedWithNormalFlow()
             }
             return
         }
 
-        self.shareLog("Detection endpoint: \(endpoint)")
-        self.shareLog("SerpAPI key: \(serpKey.prefix(8))...")
+        shareLog("Detection endpoint: \(endpoint)")
+        shareLog("SerpAPI key: \(serpKey.prefix(8))...")
         updateStatusLabel("Analyzing your photo...")
 
         let requestBody: [String: Any] = [
@@ -727,17 +727,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
         ]
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
-            self.shareLog("ERROR: Failed to serialize detection request JSON")
+            shareLog("ERROR: Failed to serialize detection request JSON")
             DispatchQueue.main.async {
                 self.proceedWithNormalFlow()
             }
             return
         }
 
-        self.shareLog("Request body size: \(jsonData.count) bytes")
+        shareLog("Request body size: \(jsonData.count) bytes")
 
         guard let url = URL(string: endpoint) else {
-            self.shareLog("ERROR: Invalid detection endpoint URL: \(endpoint)")
+            shareLog("ERROR: Invalid detection endpoint URL: \(endpoint)")
             DispatchQueue.main.async {
                 self.proceedWithNormalFlow()
             }
@@ -750,13 +750,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.httpBody = jsonData
         request.timeoutInterval = 90.0  // Increased from 30s to 90s for multi-garment detection + SerpAPI searches
 
-        self.shareLog("Sending detection API request to: \(endpoint)")
+        shareLog("Sending detection API request to: \(endpoint)")
 
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
             if let error = error {
-                self.shareLog("ERROR: Detection API network error: \(error.localizedDescription)")
+                shareLog("ERROR: Detection API network error: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     self.proceedWithNormalFlow()
                 }
@@ -764,26 +764,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            self.shareLog("Detection API response - status code: \(statusCode)")
+            shareLog("Detection API response - status code: \(statusCode)")
 
             guard let data = data else {
-                self.shareLog("ERROR: Detection API response has no data")
+                shareLog("ERROR: Detection API response has no data")
                 DispatchQueue.main.async {
                     self.proceedWithNormalFlow()
                 }
                 return
             }
 
-            self.shareLog("Detection API response data size: \(data.count) bytes")
+            shareLog("Detection API response data size: \(data.count) bytes")
 
             // Log response preview for debugging
             if let responseString = String(data: data, encoding: .utf8) {
                 let preview = responseString.prefix(500)
-                self.shareLog("Detection API response preview: \(preview)")
+                shareLog("Detection API response preview: \(preview)")
             }
 
             guard statusCode == 200 else {
-                self.shareLog("ERROR: Detection API returned non-200 status: \(statusCode)")
+                shareLog("ERROR: Detection API returned non-200 status: \(statusCode)")
                 DispatchQueue.main.async {
                     self.proceedWithNormalFlow()
                 }
@@ -794,24 +794,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 let decoder = JSONDecoder()
                 let detectionResponse = try decoder.decode(DetectionResponse.self, from: data)
 
-                self.shareLog("Detection response parsed - success: \(detectionResponse.success)")
+                shareLog("Detection response parsed - success: \(detectionResponse.success)")
 
                 if detectionResponse.success {
-                    self.shareLog("SUCCESS: Detection found \(detectionResponse.total_results) results")
+                    shareLog("SUCCESS: Detection found \(detectionResponse.total_results) results")
                     DispatchQueue.main.async {
                         self.detectionResults = detectionResponse.results
                         self.isShowingDetectionResults = true
-                        self.shareLog("Calling showDetectionResults with \(self.detectionResults.count) items")
+                        shareLog("Calling showDetectionResults with \(self.detectionResults.count) items")
                         self.showDetectionResults()
                     }
                 } else {
-                    self.shareLog("ERROR: Detection failed - \(detectionResponse.message ?? "Unknown error")")
+                    shareLog("ERROR: Detection failed - \(detectionResponse.message ?? "Unknown error")")
                     DispatchQueue.main.async {
                         self.proceedWithNormalFlow()
                     }
                 }
             } catch {
-                self.shareLog("ERROR: Failed to parse detection response: \(error.localizedDescription)")
+                shareLog("ERROR: Failed to parse detection response: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     self.proceedWithNormalFlow()
                 }
@@ -819,22 +819,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         task.resume()
-        self.shareLog("Detection API task started")
+        shareLog("Detection API task started")
     }
 
     // Upload image to ImgBB and trigger detection
     private func uploadAndDetect(imageData: Data) {
-        self.shareLog("START uploadAndDetect - image size: \(imageData.count) bytes")
+        shareLog("START uploadAndDetect - image size: \(imageData.count) bytes")
         updateStatusLabel("Uploading photo...")
 
         let base64Image = imageData.base64EncodedString()
-        self.shareLog("Base64 encoded - length: \(base64Image.count) chars")
+        shareLog("Base64 encoded - length: \(base64Image.count) chars")
 
         let apiKey = "d7e1d857e4498c2e28acaa8d943ccea8"
 
         // Build URL with API key as query parameter
         guard var components = URLComponents(string: "https://api.imgbb.com/1/upload") else {
-            self.shareLog("ERROR: Failed to create ImgBB URL components")
+            shareLog("ERROR: Failed to create ImgBB URL components")
             DispatchQueue.main.async {
                 self.proceedWithNormalFlow()
             }
@@ -844,7 +844,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         components.queryItems = [URLQueryItem(name: "key", value: apiKey)]
 
         guard let url = components.url else {
-            self.shareLog("ERROR: Failed to build ImgBB URL")
+            shareLog("ERROR: Failed to build ImgBB URL")
             DispatchQueue.main.async {
                 self.proceedWithNormalFlow()
             }
@@ -872,13 +872,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         request.httpBody = body
 
-        self.shareLog("Sending ImgBB multipart upload request with \(body.count) bytes body...")
+        shareLog("Sending ImgBB multipart upload request with \(body.count) bytes body...")
 
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
             if let error = error {
-                self.shareLog("ERROR: ImgBB upload network error: \(error.localizedDescription)")
+                shareLog("ERROR: ImgBB upload network error: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     self.proceedWithNormalFlow()
                 }
@@ -886,26 +886,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            self.shareLog("ImgBB response - status code: \(statusCode)")
+            shareLog("ImgBB response - status code: \(statusCode)")
 
             guard let data = data else {
-                self.shareLog("ERROR: ImgBB response has no data")
+                shareLog("ERROR: ImgBB response has no data")
                 DispatchQueue.main.async {
                     self.proceedWithNormalFlow()
                 }
                 return
             }
 
-            self.shareLog("ImgBB response data size: \(data.count) bytes")
+            shareLog("ImgBB response data size: \(data.count) bytes")
 
             // Log the raw response for debugging
             if let responseString = String(data: data, encoding: .utf8) {
                 let preview = responseString.prefix(500)
-                self.shareLog("ImgBB response preview: \(preview)")
+                shareLog("ImgBB response preview: \(preview)")
             }
 
             guard statusCode == 200 else {
-                self.shareLog("ERROR: ImgBB returned non-200 status: \(statusCode)")
+                shareLog("ERROR: ImgBB returned non-200 status: \(statusCode)")
                 DispatchQueue.main.async {
                     self.proceedWithNormalFlow()
                 }
@@ -913,21 +913,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                self.shareLog("ERROR: Failed to parse ImgBB JSON")
+                shareLog("ERROR: Failed to parse ImgBB JSON")
                 DispatchQueue.main.async {
                     self.proceedWithNormalFlow()
                 }
                 return
             }
 
-            self.shareLog("ImgBB JSON parsed successfully")
+            shareLog("ImgBB JSON parsed successfully")
 
             guard let dataDict = json["data"] as? [String: Any] else {
-                self.shareLog("ERROR: ImgBB response missing 'data' key")
+                shareLog("ERROR: ImgBB response missing 'data' key")
                 if let success = json["success"] as? Bool, !success {
                     if let errorDict = json["error"] as? [String: Any],
                        let message = errorDict["message"] as? String {
-                        self.shareLog("ERROR: ImgBB API error: \(message)")
+                        shareLog("ERROR: ImgBB API error: \(message)")
                     }
                 }
                 DispatchQueue.main.async {
@@ -937,23 +937,23 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             guard let imageUrl = dataDict["url"] as? String else {
-                self.shareLog("ERROR: ImgBB data dict missing 'url' key")
+                shareLog("ERROR: ImgBB data dict missing 'url' key")
                 DispatchQueue.main.async {
                     self.proceedWithNormalFlow()
                 }
                 return
             }
 
-            self.shareLog("SUCCESS: ImgBB upload complete: \(imageUrl)")
+            shareLog("SUCCESS: ImgBB upload complete: \(imageUrl)")
             self.downloadedImageUrl = imageUrl
 
             // Trigger detection
-            self.shareLog("Calling runDetectionAnalysis...")
+            shareLog("Calling runDetectionAnalysis...")
             self.runDetectionAnalysis(imageUrl: imageUrl)
         }
 
         task.resume()
-        self.shareLog("ImgBB upload task started")
+        shareLog("ImgBB upload task started")
     }
 
     // Update status label helper
@@ -969,11 +969,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Prevent re-creating UI if already showing results
         if resultsTableView != nil {
-            self.shareLog("⏸️ showDetectionResults called again - results already displayed, skipping UI creation")
+            shareLog("⏸️ showDetectionResults called again - results already displayed, skipping UI creation")
             return
         }
 
-        self.shareLog("Showing \(detectionResults.count) detection results")
+        shareLog("Showing \(detectionResults.count) detection results")
 
         // Hide loading indicator
         activityIndicator?.stopAnimating()
@@ -1040,8 +1040,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
             logoImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            logoImageView.heightAnchor.constraint(equalToConstant: 30),
-            logoImageView.widthAnchor.constraint(equalToConstant: 114),
+            logoImageView.heightAnchor.constraint(equalToConstant: 28),
+            logoImageView.widthAnchor.constraint(equalToConstant: 102),
 
             cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
             cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
@@ -1168,11 +1168,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         resultsTableView?.reloadData()
-        self.shareLog("Filtered to \(filteredResults.count) results for category: \(selectedCategory)")
+        shareLog("Filtered to \(filteredResults.count) results for category: \(selectedCategory)")
     }
 
     @objc private func cancelDetectionTapped() {
-        self.shareLog("Cancel button tapped - dismissing extension")
+        shareLog("Cancel button tapped - dismissing extension")
 
         // Clean up state
         loadingHideWorkItem?.cancel()
@@ -1196,16 +1196,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
         )
         didCompleteRequest = true
         extensionContext?.cancelRequest(withError: error)
-        self.shareLog("Extension cancelled - user returned to source app")
+        shareLog("Extension cancelled - user returned to source app")
     }
 
     // Proceed with normal flow (save and redirect to app)
     private func proceedWithNormalFlow() {
         guard !hasQueuedRedirect else {
-            self.shareLog("⚠️ proceedWithNormalFlow called but redirect already queued")
+            shareLog("⚠️ proceedWithNormalFlow called but redirect already queued")
             return
         }
-        self.shareLog("🔄 Proceeding with normal flow (detection failed or no results)")
+        shareLog("🔄 Proceeding with normal flow (detection failed or no results)")
         isShowingDetectionResults = false
         shouldAttemptDetection = false
         hasQueuedRedirect = true
@@ -1213,7 +1213,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // NOW write the file to shared container so Flutter can pick it up
         if let data = pendingImageData, let file = pendingSharedFile {
             guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-                self.shareLog("❌ ERROR: Cannot get container URL for normal flow")
+                shareLog("❌ ERROR: Cannot get container URL for normal flow")
                 saveAndRedirect()
                 return
             }
@@ -1227,7 +1227,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     try FileManager.default.removeItem(at: fileURL)
                 }
                 try data.write(to: fileURL, options: .atomic)
-                self.shareLog("💾 NORMAL FLOW: Wrote file to shared container: \(fileURL.path)")
+                shareLog("💾 NORMAL FLOW: Wrote file to shared container: \(fileURL.path)")
 
                 // Update the shared file path
                 var updatedFile = file
@@ -1237,230 +1237,91 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 let userDefaults = UserDefaults(suiteName: appGroupId)
                 userDefaults?.set(toData(data: [updatedFile]), forKey: kUserDefaultsKey)
                 userDefaults?.synchronize()
-                self.shareLog("💾 NORMAL FLOW: Saved file to UserDefaults")
+                shareLog("💾 NORMAL FLOW: Saved file to UserDefaults")
             } catch {
-                self.shareLog("❌ ERROR writing file in normal flow: \(error.localizedDescription)")
+                shareLog("❌ ERROR writing file in normal flow: \(error.localizedDescription)")
             }
         }
 
         saveAndRedirect()
     }
 
-    // MARK: - Instagram Downloader (Hybrid: JSON first, ScrapingBee fallback)
-
-    private func fetchInstagramImageUrlsAndDownload(
-        from originalURL: String,
-        session: URLSession,
-        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
-    ) {
-        self.shareLog("🚀 Starting Instagram download pipeline (JSON → ScrapingBee fallback) for \(originalURL)")
-
-        let scrapingBeeKey = UserDefaults.standard.string(forKey: "ScrapingBeeKey")
-
-        // Step 1️⃣ — Try JSON endpoint (public, free)
-        fetchInstagramImageUrls(from: originalURL) { result in
-            switch result {
-            case .success(let urls):
-                self.self.shareLog("✅ JSON endpoint succeeded — \(urls.count) URLs found")
-                self.downloadInstagramImages(urls, originalURL: originalURL, session: session, completion: completion)
-
-            case .failure(let error):
-                self.self.shareLog("⚠️ JSON fetch failed (\(error.localizedDescription)) — trying ScrapingBee fallback")
-
-                // Step 2️⃣ — Fallback to ScrapingBee (old logic)
-                guard let apiKey = scrapingBeeKey, !apiKey.isEmpty else {
-                    self.self.shareLog("❌ No ScrapingBee key — cannot fetch private post")
-                    completion(.failure(self.self.makeInstagramError("Private post requires ScrapingBee key")))
-                    return
-                }
-
-                self.fetchInstagramViaScrapingBee(originalURL, apiKey: apiKey) { scrapeResult in
-                    switch scrapeResult {
-                    case .success(let urls):
-                        self.self.shareLog("✅ ScrapingBee fallback succeeded — \(urls.count) URLs extracted")
-                        self.downloadInstagramImages(urls, originalURL: originalURL, session: session, completion: completion)
-
-                    case .failure(let scrapeError):
-                        self.self.shareLog("❌ ScrapingBee fallback failed: \(scrapeError.localizedDescription)")
-                        completion(.failure(scrapeError))
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Step 1️⃣ JSON (Public Fetch)
-
-    private func fetchInstagramImageUrls(
-        from originalURL: String,
-        completion: @escaping (Result<[String], Error>) -> Void
-    ) {
-        self.shareLog("🔍 Fetching JSON endpoint for \(originalURL)")
-
-        guard let shortcode = extractInstagramShortcode(from: originalURL) else {
-            completion(.failure(self.self.makeInstagramError("Invalid Instagram URL")))
-            return
-        }
-
-        let jsonUrl = "https://www.instagram.com/p/\(shortcode)/?__a=1&__d=dis"
-        self.shareLog("🌐 Requesting: \(jsonUrl)")
-
-        guard let url = URL(string: jsonUrl) else {
-            completion(.failure(self.self.makeInstagramError("Invalid JSON URL")))
-            return
-        }
-
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 15.0
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                completion(.failure(self.self.makeInstagramError("Invalid response type")))
-                return
-            }
-
-            if httpResponse.statusCode != 200 {
-                completion(.failure(self.self.makeInstagramError("JSON endpoint returned \(httpResponse.statusCode)")))
-                return
-            }
-
-            guard let data = data, !data.isEmpty else {
-                completion(.failure(self.self.makeInstagramError("Empty JSON response")))
-                return
-            }
-
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                let urls = self.extractUrlsFromInstagramJSON(json) {
-                    self.self.shareLog("✅ Extracted \(urls.count) URLs from JSON")
-                    completion(.success(urls))
-                } else {
-                    completion(.failure(self.self.makeInstagramError("No URLs found in JSON")))
-                }
-            } catch {
-                completion(.failure(self.self.makeInstagramError("JSON parse failed: \(error.localizedDescription)")))
-            }
-        }.resume()
-    }
-
-    // MARK: - Step 2️⃣ ScrapingBee (Private Fallback, Old Logic)
-
-    private func fetchInstagramViaScrapingBee(
-        _ url: String,
-        apiKey: String,
-        completion: @escaping (Result<[String], Error>) -> Void
-    ) {
-        self.shareLog("🐝 Fetching Instagram via ScrapingBee (render_js=true) for fallback...")
-
-        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1") else {
-            completion(.failure(self.self.makeInstagramError("Invalid ScrapingBee URL")))
-            return
-        }
-
-        components.queryItems = [
-            URLQueryItem(name: "api_key", value: apiKey),
-            URLQueryItem(name: "url", value: url),
-            URLQueryItem(name: "render_js", value: "true")
-        ]
-
-        guard let apiURL = components.url else {
-            completion(.failure(self.self.makeInstagramError("Failed to construct ScrapingBee URL")))
-            return
-        }
-
-        URLSession.shared.dataTask(with: apiURL) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-
-            guard let data = data, let html = String(data: data, encoding: .utf8) else {
-                completion(.failure(self.self.makeInstagramError("Empty ScrapingBee response")))
-                return
-            }
-
-            let urls = self.extractInstagramImageUrls(from: html)
-            if urls.isEmpty {
-                self.self.shareLog("⚠️ ScrapingBee returned HTML but no images extracted")
-                completion(.failure(self.self.makeInstagramError("No images from ScrapingBee")))
-            } else {
-                self.self.shareLog("✅ Extracted \(urls.count) image URLs via ScrapingBee")
-                completion(.success(urls))
-            }
-        }.resume()
-    }
-
-    // MARK: - JSON Parsing Helper
-
-    private func extractUrlsFromInstagramJSON(_ json: [String: Any]) -> [String]? {
-        var urls: [String] = []
-
-        func extract(from dict: [String: Any]) {
-            if let displayUrl = dict["display_url"] as? String {
-                urls.append(displayUrl)
-            }
-            if let children = dict["edge_sidecar_to_children"] as? [String: Any],
-            let edges = children["edges"] as? [[String: Any]] {
-                for edge in edges {
-                    if let node = edge["node"] as? [String: Any],
-                    let url = node["display_url"] as? String {
-                        urls.append(url)
-                    }
-                }
-            }
-        }
-
-        if let graphql = json["graphql"] as? [String: Any],
-        let shortcodeMedia = graphql["shortcode_media"] as? [String: Any] {
-            extract(from: shortcodeMedia)
-        } else if let items = json["items"] as? [[String: Any]], let first = items.first {
-            extract(from: first)
-        }
-
-        return urls.isEmpty ? nil : urls
-    }
-
-    // MARK: - Helpers
-
-    private func shareLog(_ message: String) {
-    NSLog("[ShareExtension] %@", message)
-    }
-    
-    private func extractInstagramShortcode(from url: String) -> String? {
-        let pattern = #"instagram\.com/p/([^/?#]+)/?"#
-        if let regex = try? NSRegularExpression(pattern: pattern),
-        let match = regex.firstMatch(in: url, range: NSRange(url.startIndex..., in: url)),
-        let range = Range(match.range(at: 1), in: url) {
-            return String(url[range])
-        }
-        return nil
-    }
-
     private func extractInstagramImageUrls(from html: String) -> [String] {
-        var urls: [String] = []
+        var priorityResults: [String] = []
+        var results: [String] = []
+        let cacheKeyPattern = "\"src\":\"(https:\\\\/\\\\/scontent[^\"]+?ig_cache_key[^\"]*)\""
+        if let regex = try? NSRegularExpression(pattern: cacheKeyPattern, options: []) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                    match.numberOfRanges > 1,
+                    let range = Range(match.range(at: 1), in: html) else { return }
+                let candidate = sanitizeInstagramURLString(String(html[range]))
+                if !candidate.isEmpty && !priorityResults.contains(candidate) {
+                    priorityResults.append(candidate)
+                }
+            }
+        }
 
         let pattern = "\"display_url\"\\s*:\\s*\"([^\"]+)\""
+
         if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
             let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
             regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
                 guard let match = match,
                     match.numberOfRanges > 1,
                     let range = Range(match.range(at: 1), in: html) else { return }
-                let candidate = self.sanitizeInstagramURLString(String(html[range]))
-                if !candidate.contains("profile") {
-                    urls.append(candidate)
+
+                var candidate = String(html[range])
+                candidate = sanitizeInstagramURLString(candidate)
+                if candidate.contains("150x150") || candidate.contains("profile") {
+                    return
+                }
+                if !results.contains(candidate) {
+                    results.append(candidate)
                 }
             }
         }
 
-        self.self.shareLog("✅ Extracted \(urls.count) Instagram image URLs (fallback regex)")
-        return urls
+        let imgPattern = "<img[^>]+src=\"([^\"]+)\""
+        if let regex = try? NSRegularExpression(pattern: imgPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                    match.numberOfRanges > 1,
+                    let range = Range(match.range(at: 1), in: html) else { return }
+                let candidate = sanitizeInstagramURLString(String(html[range]))
+                if candidate.contains("ig_cache_key") && !priorityResults.contains(candidate) {
+                    priorityResults.append(candidate)
+                } else if !candidate.contains("ig_cache_key"),
+                        !results.contains(candidate) {
+                    results.append(candidate)
+                }
+            }
+        }
+
+        if !priorityResults.isEmpty {
+            return priorityResults
+        }
+
+        if !results.isEmpty {
+            return results
+        }
+
+        let ogPattern = "<meta property=\"og:image\" content=\"([^\"]+)\""
+        if let regex = try? NSRegularExpression(pattern: ogPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            if let match = regex.firstMatch(in: html, options: [], range: nsrange),
+            match.numberOfRanges > 1,
+            let range = Range(match.range(at: 1), in: html) {
+                let candidate = sanitizeInstagramURLString(String(html[range]))
+                if !candidate.isEmpty {
+                    results.append(candidate)
+                }
+            }
+        }
+
+        return results
     }
 
     private func sanitizeInstagramURLString(_ value: String) -> String {
@@ -1468,17 +1329,52 @@ open class RSIShareViewController: SLComposeServiceViewController {
         sanitized = sanitized.replacingOccurrences(of: "\\u0026", with: "&")
         sanitized = sanitized.replacingOccurrences(of: "\\/", with: "/")
         sanitized = sanitized.replacingOccurrences(of: "&amp;", with: "&")
-        return sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
+        sanitized = sanitized.trimmingCharacters(in: .whitespacesAndNewlines)
+        if sanitized.contains("ig_cache_key") {
+            return sanitized
+        }
+        return normalizeInstagramCdnUrl(sanitized)
     }
 
-        private func downloadInstagramImages(
+    private func normalizeInstagramCdnUrl(_ urlString: String) -> String {
+        guard var components = URLComponents(string: urlString) else {
+            return urlString
+        }
+
+        if var queryItems = components.percentEncodedQueryItems {
+            for index in 0..<queryItems.count {
+                if queryItems[index].name == "stp",
+                let value = queryItems[index].value,
+                value.contains("c") || value.contains("s640x640") {
+                    queryItems[index].value = value
+                        .replacingOccurrences(of: "c288.0.864.864a_", with: "")
+                        .replacingOccurrences(of: "s640x640_", with: "")
+                }
+            }
+            components.percentEncodedQueryItems = queryItems
+        }
+
+        let path = components.percentEncodedPath
+        if let regex = try? NSRegularExpression(pattern: "_s\\d+x\\d+", options: []) {
+            let range = NSRange(location: 0, length: path.count)
+            if regex.firstMatch(in: path, options: [], range: range) != nil {
+                let mutablePath = NSMutableString(string: path)
+                regex.replaceMatches(in: mutablePath, options: [], range: range, withTemplate: "")
+                components.percentEncodedPath = mutablePath as String
+            }
+        }
+
+        return components.string ?? urlString
+    }
+
+    private func downloadInstagramImages(
         _ urls: [String],
         originalURL: String,
         session: URLSession,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-            completion(.failure(self.self.makeInstagramError("Unable to resolve shared container URL")))
+            completion(.failure(makeInstagramError("Unable to resolve shared container URL")))
             return
         }
 
@@ -1487,21 +1383,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let sanitized = sanitizeInstagramURLString(url)
             if !sanitized.isEmpty && !uniqueUrls.contains(sanitized) {
                 uniqueUrls.append(sanitized)
-                self.shareLog("Queueing Instagram image candidate: \(sanitized)")
+                shareLog("Queueing Instagram image candidate: \(sanitized)")
             }
         }
 
         guard !uniqueUrls.isEmpty else {
-            completion(.failure(self.self.makeInstagramError("No valid Instagram image URLs after sanitization")))
+            completion(.failure(makeInstagramError("No valid Instagram image URLs after sanitization")))
             return
         }
 
-        // Only pick one image based on user preference (default 0)
-        let userSelectedIndex = UserDefaults.standard.integer(forKey: "InstagramImageIndex")
+        // 🆕 Only pick one image by index
+        let userSelectedIndex = UserDefaults.standard.integer(forKey: "InstagramImageIndex") // default 0
         let safeIndex = min(max(userSelectedIndex, 0), uniqueUrls.count - 1)
         let selectedUrl = uniqueUrls[safeIndex]
-        self.shareLog("✅ Selected Instagram image index \(safeIndex) of \(uniqueUrls.count): \(selectedUrl)")
+        shareLog("✅ Selected Instagram image index \(safeIndex) of \(uniqueUrls.count): \(selectedUrl)")
 
+        // 🆕 Download just that one image
         downloadSingleImage(
             urlString: selectedUrl,
             originalURL: originalURL,
@@ -1533,16 +1430,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
         completion: @escaping (Result<SharedMediaFile?, Error>) -> Void
     ) {
         guard let url = URL(string: urlString) else {
-            completion(.failure(self.self.makeInstagramError("Invalid image URL: \(urlString)")))
+            completion(.failure(makeInstagramError("Invalid image URL: \(urlString)")))
             return
         }
 
         var request = URLRequest(url: url)
         request.timeoutInterval = 20.0
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", forHTTPHeaderField: "User-Agent")
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148", forHTTPHeaderField: "User-Agent")
         request.setValue("https://www.instagram.com/", forHTTPHeaderField: "Referer")
 
-        self.shareLog("⬇️ Downloading Instagram CDN image: \(urlString)")
+        shareLog("Downloading Instagram CDN image: \(urlString)")
         session.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
@@ -1550,9 +1447,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             guard let httpResponse = response as? HTTPURLResponse,
-                httpResponse.statusCode == 200,
-                let data = data else {
-                completion(.failure(self.self.makeInstagramError("Image download failed or empty data")))
+                httpResponse.statusCode == 200 else {
+                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+                completion(.failure(self.makeInstagramError("Image download failed with status \(status)", code: status)))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(self.makeInstagramError("Image download returned no data")))
                 return
             }
 
@@ -1560,13 +1462,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let fileName = "instagram_image_\(timestamp)_\(index).jpg"
             let fileURL = containerURL.appendingPathComponent(fileName)
 
+            // Check if we should attempt detection BEFORE writing file
             let hasDetectionConfig = self.detectorEndpoint() != nil && self.serpApiKey() != nil
+
             if hasDetectionConfig {
-                self.shareLog("🧠 Detection configured — holding file in memory")
+                shareLog("DETECTION CONFIGURED - Holding file in memory, NOT writing to shared container yet")
                 self.shouldAttemptDetection = true
                 self.pendingImageData = data
                 self.pendingImageUrl = originalURL
 
+                // Create shared file reference but DON'T write to disk yet
                 let sharedFile = SharedMediaFile(
                     path: fileURL.absoluteString,
                     mimeType: "image/jpeg",
@@ -1574,15 +1479,23 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     type: .image
                 )
                 self.pendingSharedFile = sharedFile
+
+                shareLog("Calling uploadAndDetect with \(data.count) bytes of image data")
+                // Upload to ImgBB and trigger detection (async - don't complete yet)
                 self.uploadAndDetect(imageData: data)
-                self.shareLog("📤 uploadAndDetect started (holding completion)")
+
+                // DON'T call completion and DON'T write file - wait for detection results or failure
+                shareLog("File held in memory. Completion held. uploadAndDetect called.")
             } else {
-                self.shareLog("💾 Writing image to shared container: \(fileURL.path)")
+                shareLog("⚠️ Detection NOT configured - proceeding with normal flow")
+
                 do {
+                    // Write file to shared container (normal flow)
                     if FileManager.default.fileExists(atPath: fileURL.path) {
                         try FileManager.default.removeItem(at: fileURL)
                     }
                     try data.write(to: fileURL, options: .atomic)
+                    shareLog("💾 Saved Instagram image to shared container: \(fileURL.path)")
 
                     let sharedFile = SharedMediaFile(
                         path: fileURL.absoluteString,
@@ -1590,6 +1503,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         message: originalURL,
                         type: .image
                     )
+
+                    // No detection - complete normally
                     completion(.success(sharedFile))
                 } catch {
                     completion(.failure(error))
@@ -1598,7 +1513,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }.resume()
     }
 
-    
     private func saveAndRedirect(message: String? = nil) {
         hasQueuedRedirect = true
         let userDefaults = UserDefaults(suiteName: appGroupId)
@@ -1610,7 +1524,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         userDefaults?.set("pending", forKey: kProcessingStatusKey)
         userDefaults?.set(sessionId, forKey: kProcessingSessionKey)
         userDefaults?.synchronize()
-        self.shareLog("Saved \(sharedMedia.count) item(s) to UserDefaults - redirecting (session: \(sessionId))")
+        shareLog("Saved \(sharedMedia.count) item(s) to UserDefaults - redirecting (session: \(sessionId))")
         pendingPostMessage = nil
         redirectToHostApp(sessionId: sessionId)
     }
@@ -1618,7 +1532,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func redirectToHostApp(sessionId: String) {
         loadIds()
         guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share") else {
-            self.shareLog("ERROR: Failed to build redirect URL")
+            shareLog("ERROR: Failed to build redirect URL")
             dismissWithError()
             return
         }
@@ -1626,7 +1540,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let minimumDuration: TimeInterval = 0.5
         let elapsed = loadingShownAt.map { Date().timeIntervalSince($0) } ?? 0
         let delay = max(0, minimumDuration - elapsed)
-        self.shareLog("Redirect scheduled in \(delay) seconds (elapsed: \(elapsed))")
+        shareLog("Redirect scheduled in \(delay) seconds (elapsed: \(elapsed))")
 
         loadingHideWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
@@ -1641,7 +1555,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
 
     private func performRedirect(to url: URL) {
-        self.shareLog("Redirecting to host app with URL: \(url.absoluteString)")
+        shareLog("Redirecting to host app with URL: \(url.absoluteString)")
         var responder: UIResponder? = self
         if #available(iOS 18.0, *) {
             while let current = responder {
@@ -1675,12 +1589,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
             self.hideLoadingUI()
             self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
-            self.shareLog("Completed extension request")
+            shareLog("Completed extension request")
         }
     }
 
     private func dismissWithError() {
-        self.shareLog("ERROR: dismissWithError called")
+        shareLog("ERROR: dismissWithError called")
         DispatchQueue.main.async {
             self.hideLoadingUI()
             let alert = UIAlertController(title: "Error", message: "Error loading data", preferredStyle: .alert)
@@ -1714,10 +1628,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
             let pngData = image.pngData()
             try pngData?.write(to: dstURL)
-            self.shareLog("writeTempFile succeeded at \(dstURL.path)")
+            shareLog("writeTempFile succeeded at \(dstURL.path)")
             return true
         } catch {
-            self.shareLog("ERROR: Cannot write temp file - \(error.localizedDescription)")
+            shareLog("ERROR: Cannot write temp file - \(error.localizedDescription)")
             return false
         }
     }
@@ -1730,7 +1644,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             try FileManager.default.copyItem(at: srcURL, to: dstURL)
             return true
         } catch {
-            self.shareLog("ERROR: Cannot copy item from \(srcURL) to \(dstURL.path): \(error.localizedDescription)")
+            shareLog("ERROR: Cannot copy item from \(srcURL) to \(dstURL.path): \(error.localizedDescription)")
             return false
         }
     }
@@ -1753,7 +1667,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             try UIImage(cgImage: img).pngData()?.write(to: thumbnailPath)
             saved = true
         } catch {
-            self.shareLog("ERROR: Failed to generate video thumbnail - \(error.localizedDescription)")
+            shareLog("ERROR: Failed to generate video thumbnail - \(error.localizedDescription)")
             saved = false
         }
 
@@ -1854,7 +1768,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     @objc private func cancelImportTapped() {
-        self.shareLog("Cancel tapped")
+        shareLog("Cancel tapped")
         loadingHideWorkItem?.cancel()
         loadingHideWorkItem = nil
         clearSharedData()
@@ -1896,11 +1810,11 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let selectedResult = filteredResults[indexPath.row]
-        self.shareLog("User selected result: \(selectedResult.product_name)")
+        shareLog("User selected result: \(selectedResult.product_name)")
 
         // Open product URL in Safari
         if let url = URL(string: selectedResult.purchase_url) {
-            self.shareLog("Opening product URL: \(selectedResult.purchase_url)")
+            shareLog("Opening product URL: \(selectedResult.purchase_url)")
 
             var responder: UIResponder? = self
             if #available(iOS 18.0, *) {
@@ -1922,17 +1836,17 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
                 }
             }
         } else {
-            self.shareLog("ERROR: Invalid product URL: \(selectedResult.purchase_url)")
+            shareLog("ERROR: Invalid product URL: \(selectedResult.purchase_url)")
         }
     }
 
     private func saveSelectedResultAndRedirect(_ result: DetectionResultItem) {
-        self.shareLog("✅ USER SELECTED RESULT - saving and redirecting")
+        shareLog("✅ USER SELECTED RESULT - saving and redirecting")
 
         // NOW write the file to shared container
         if let data = pendingImageData, let file = pendingSharedFile {
             guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-                self.shareLog("❌ ERROR: Cannot get container URL")
+                shareLog("❌ ERROR: Cannot get container URL")
                 return
             }
 
@@ -1945,7 +1859,7 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
                     try FileManager.default.removeItem(at: fileURL)
                 }
                 try data.write(to: fileURL, options: .atomic)
-                self.shareLog("💾 SELECTED RESULT: Wrote file to shared container: \(fileURL.path)")
+                shareLog("💾 SELECTED RESULT: Wrote file to shared container: \(fileURL.path)")
 
                 // Update the shared file path
                 var updatedFile = file
@@ -1966,28 +1880,28 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
                        let jsonString = String(data: jsonData, encoding: .utf8) {
                         defaults.set(jsonString, forKey: "SelectedDetectionResult")
                         defaults.synchronize()
-                        self.shareLog("💾 SELECTED RESULT: Saved result metadata to UserDefaults")
+                        shareLog("💾 SELECTED RESULT: Saved result metadata to UserDefaults")
                     }
 
                     // Save the file
                     defaults.set(toData(data: [updatedFile]), forKey: kUserDefaultsKey)
                     defaults.synchronize()
-                    self.shareLog("💾 SELECTED RESULT: Saved file to UserDefaults")
+                    shareLog("💾 SELECTED RESULT: Saved file to UserDefaults")
                 }
             } catch {
-                self.shareLog("❌ ERROR writing file with selected result: \(error.localizedDescription)")
+                shareLog("❌ ERROR writing file with selected result: \(error.localizedDescription)")
             }
         }
 
         // Redirect to app
         loadIds()
         guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):detection") else {
-            self.shareLog("❌ ERROR: Failed to build redirect URL")
+            shareLog("❌ ERROR: Failed to build redirect URL")
             return
         }
 
         hasQueuedRedirect = true
-        self.shareLog("🚀 Redirecting to app with selected result")
+        shareLog("🚀 Redirecting to app with selected result")
         performRedirect(to: redirectURL)
         finishExtensionRequest()
     }
