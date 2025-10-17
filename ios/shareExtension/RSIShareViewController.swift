@@ -1121,7 +1121,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             headerView.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
             headerView.heightAnchor.constraint(equalToConstant: 60),
 
-            logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 12),
+            logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 8),
             logoImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
             logoImageView.heightAnchor.constraint(equalToConstant: 26),
             logoImageView.widthAnchor.constraint(equalToConstant: 97),
