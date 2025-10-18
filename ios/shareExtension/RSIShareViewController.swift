@@ -315,6 +315,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var currentStatusIndex: Int = 0
     private var backgroundActivity: NSObjectProtocol?
     private var hasPresentedDetectionFailureAlert = false
+    private var headerContainerView: UIView?
+    private var headerLogoImageView: UIImageView?
+    private var cancelButtonView: UIButton?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -1151,6 +1154,69 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
+    @discardableResult
+    private func addResultsHeaderIfNeeded() -> UIView? {
+        guard let overlay = loadingView else { return nil }
+
+        if headerContainerView == nil {
+            let container = UIView()
+            container.translatesAutoresizingMaskIntoConstraints = false
+
+            let logo = UIImageView(image: UIImage(named: "logo"))
+            logo.contentMode = .scaleAspectFit
+            logo.translatesAutoresizingMaskIntoConstraints = false
+
+            let cancelButton: UIButton
+            if let existingButton = cancelButtonView {
+                cancelButton = existingButton
+            } else {
+                let button = UIButton(type: .system)
+                button.setTitle("Cancel", for: .normal)
+                button.titleLabel?.font = .systemFont(ofSize: 16)
+                button.addTarget(self, action: #selector(cancelImportTapped), for: .touchUpInside)
+                cancelButton = button
+            }
+            cancelButton.translatesAutoresizingMaskIntoConstraints = false
+            cancelButton.setContentHuggingPriority(.required, for: .horizontal)
+            cancelButtonView = cancelButton
+
+            container.addSubview(logo)
+            container.addSubview(cancelButton)
+
+            overlay.addSubview(container)
+
+            NSLayoutConstraint.activate([
+                container.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 16),
+                container.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
+                container.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 12),
+                container.heightAnchor.constraint(equalToConstant: 40),
+
+                logo.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                logo.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                logo.heightAnchor.constraint(equalToConstant: 28),
+                logo.widthAnchor.constraint(equalToConstant: 132),
+
+                cancelButton.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                cancelButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16),
+                cancelButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 28)
+            ])
+
+            headerContainerView = container
+            headerLogoImageView = logo
+        }
+
+        headerContainerView?.isHidden = false
+        return headerContainerView
+    }
+
+    private func removeResultsHeader() {
+        headerLogoImageView = nil
+        headerContainerView?.removeFromSuperview()
+        headerContainerView = nil
+        cancelButtonView = nil
+    }
+
     // Upload image to ImgBB and trigger detection
     private func uploadAndDetect(imageData: Data) {
         shareLog("START uploadAndDetect - image size: \(imageData.count) bytes")
@@ -1358,12 +1424,23 @@ open class RSIShareViewController: SLComposeServiceViewController {
         saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         saveButton.setTitleColor(.white, for: .normal)
-        saveButton.layer.cornerRadius = 28
+        saveButton.layer.cornerRadius = 16
         saveButton.addTarget(self, action: #selector(saveAllTapped), for: .touchUpInside)
         saveButton.translatesAutoresizingMaskIntoConstraints = false
 
         bottomBarContainer.addSubview(separator)
         bottomBarContainer.addSubview(saveButton)
+
+        let headerView = addResultsHeaderIfNeeded()
+        let filterTopAnchor: NSLayoutYAxisAnchor
+        let filterTopPadding: CGFloat
+        if let headerView = headerView {
+            filterTopAnchor = headerView.bottomAnchor
+            filterTopPadding = 12
+        } else {
+            filterTopAnchor = loadingView!.safeAreaLayoutGuide.topAnchor
+            filterTopPadding = 0
+        }
 
         // Add all views to loadingView
         loadingView?.addSubview(filterView)
@@ -1371,10 +1448,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             loadingView?.addSubview(tableView)
         }
         loadingView?.addSubview(bottomBarContainer)
+        if let headerView = headerView {
+            loadingView?.bringSubviewToFront(headerView)
+        }
 
         // Layout constraints
         NSLayoutConstraint.activate([
-            filterView.topAnchor.constraint(equalTo: loadingView!.safeAreaLayoutGuide.topAnchor),
+            filterView.topAnchor.constraint(equalTo: filterTopAnchor, constant: filterTopPadding),
             filterView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
             filterView.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
             filterView.heightAnchor.constraint(equalToConstant: 60),
@@ -2164,11 +2244,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stack.spacing = 20
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        let logoImageView = UIImageView(image: UIImage(named: "logo"))
-        logoImageView.contentMode = .scaleAspectFit
-        logoImageView.translatesAutoresizingMaskIntoConstraints = false
-        stack.addArrangedSubview(logoImageView)
-
         let activity = UIActivityIndicatorView(style: .large)
         activity.startAnimating()
         activityIndicator = activity
@@ -2200,31 +2275,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stack.addArrangedSubview(progress)
 
         NSLayoutConstraint.activate([
-            logoImageView.widthAnchor.constraint(equalToConstant: 132),
-            logoImageView.heightAnchor.constraint(equalToConstant: 28),
             progress.widthAnchor.constraint(equalToConstant: 180),
             progress.heightAnchor.constraint(equalToConstant: 6)
         ])
 
-        let cancelButton = UIButton(type: .system)
-        cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
-        cancelButton.addTarget(self, action: #selector(cancelImportTapped), for: .touchUpInside)
-        cancelButton.translatesAutoresizingMaskIntoConstraints = false
-
         overlay.addSubview(stack)
-        overlay.addSubview(cancelButton)
         NSLayoutConstraint.activate([
             stack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
-            cancelButton.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 12),
-            cancelButton.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16)
+            stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor)
         ])
 
         overlay.tag = 9999 // Tag to identify our custom view
         view.addSubview(overlay)
         loadingView = overlay
         loadingShownAt = Date()
+
+        if let header = addResultsHeaderIfNeeded() {
+            overlay.bringSubviewToFront(header)
+        }
 
         // Ensure default UI stays hidden
         hideDefaultUI()
@@ -2399,6 +2467,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stopSmoothProgress()
         loadingView?.removeFromSuperview()
         loadingView = nil
+        removeResultsHeader()
         activityIndicator?.stopAnimating()
         activityIndicator = nil
         stopStatusPolling()
