@@ -1156,9 +1156,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        if let containerView = view.superview {
-            containerView.layer.cornerRadius = 20
-            containerView.layer.masksToBounds = true
+        applySheetCornerRadius(12)
+    }
+
+    private func applySheetCornerRadius(_ radius: CGFloat) {
+        var current = view.superview
+        var hops = 0
+
+        while let container = current, hops < 3 {
+            container.layer.cornerRadius = radius
+            container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+            container.layer.masksToBounds = true
+            current = container.superview
+            hops += 1
         }
     }
 
