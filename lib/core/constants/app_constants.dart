@@ -51,7 +51,8 @@ class AppConstants {
     const localIP = 'http://10.0.0.25:8000/detect';
 
     // 🧩 Priority 4: Production fallback
-    const renderUrl = 'https://snaplook-fastapi-detector.onrender.com/detect';
+    const renderUrl =
+        'https://snaplook-fastapi-detector.onrender.com/detect-and-search';
 
     // Optional override flag for dev
     const bool isLocal =
