@@ -223,27 +223,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Immediately hide and disable all default SLComposeServiceViewController UI
         hideDefaultUI()
-
+        navigationController?.setNavigationBarHidden(true, animated: false)
         navigationItem.leftBarButtonItem = nil
-
-        let titleContainer = UIView(frame: CGRect(x: 0, y: 0, width: 132, height: 28))
-        let titleImageView = UIImageView(image: UIImage(named: "logo"))
-        titleImageView.contentMode = .scaleAspectFit
-        titleImageView.translatesAutoresizingMaskIntoConstraints = false
-        titleContainer.addSubview(titleImageView)
-        NSLayoutConstraint.activate([
-            titleImageView.topAnchor.constraint(equalTo: titleContainer.topAnchor),
-            titleImageView.bottomAnchor.constraint(equalTo: titleContainer.bottomAnchor),
-            titleImageView.leadingAnchor.constraint(equalTo: titleContainer.leadingAnchor),
-            titleImageView.trailingAnchor.constraint(equalTo: titleContainer.trailingAnchor)
-        ])
-        navigationItem.titleView = titleContainer
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
-            title: "Cancel",
-            style: .plain,
-            target: self,
-            action: #selector(cancelDetectionTapped)
-        )
+        navigationItem.rightBarButtonItem = nil
 
         loadIds()
         ShareLogger.shared.configure(appGroupId: appGroupId)
@@ -301,6 +283,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
         hideDefaultUI()
     }
 
@@ -1500,40 +1483,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("Extension closed - user returned to source app")
     }
 
-    @objc private func cancelDetectionTapped() {
-        shareLog("Cancel button tapped - dismissing extension")
-
-        // End extended execution
-        endExtendedExecution()
-
-        // Immediately hide default UI to prevent flash
-        hideDefaultUI()
-
-        // Clean up state
-        loadingHideWorkItem?.cancel()
-        loadingHideWorkItem = nil
-        isShowingDetectionResults = false
-        shouldAttemptDetection = false
-        detectionResults.removeAll()
-        filteredResults.removeAll()
-        pendingImageData = nil
-        pendingSharedFile = nil
-        pendingImageUrl = nil
-
-        clearSharedData()
-        hideLoadingUI()
-
-        // Cancel the extension request - this dismisses the share sheet and returns to source app
-        let error = NSError(
-            domain: "com.snaplook.shareExtension",
-            code: -1,
-            userInfo: [NSLocalizedDescriptionKey: "User cancelled"]
-        )
-        didCompleteRequest = true
-        extensionContext?.cancelRequest(withError: error)
-        shareLog("Extension cancelled - user returned to source app")
-    }
-
     // Proceed with normal flow (save and redirect to app)
     private func proceedWithNormalFlow() {
         guard !hasQueuedRedirect else {
@@ -2077,6 +2026,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stack.spacing = 20
         stack.translatesAutoresizingMaskIntoConstraints = false
 
+        let logoImageView = UIImageView(image: UIImage(named: "logo"))
+        logoImageView.contentMode = .scaleAspectFit
+        logoImageView.translatesAutoresizingMaskIntoConstraints = false
+        stack.addArrangedSubview(logoImageView)
+
         let activity = UIActivityIndicatorView(style: .large)
         activity.startAnimating()
         activityIndicator = activity
@@ -2108,6 +2062,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stack.addArrangedSubview(progress)
 
         NSLayoutConstraint.activate([
+            logoImageView.widthAnchor.constraint(equalToConstant: 132),
+            logoImageView.heightAnchor.constraint(equalToConstant: 28),
             progress.widthAnchor.constraint(equalToConstant: 180),
             progress.heightAnchor.constraint(equalToConstant: 6)
         ])
@@ -2123,7 +2079,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         NSLayoutConstraint.activate([
             stack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
-            cancelButton.centerYAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 30),
+            cancelButton.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 12),
             cancelButton.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16)
         ])
 
