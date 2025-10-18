@@ -190,7 +190,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadIds()
         sharedMedia.removeAll()
         shareLog("View did load - cleared sharedMedia array")
-        if let sourceBundle = extensionContext?.sourceApplicationBundleIdentifier {
+        if let sourceBundle = extensionContext?.value(forKey: "sourceApplicationBundleIdentifier") as? String {
             shareLog("Source application bundle: \(sourceBundle)")
             let photosBundles: Set<String> = [
                 "com.apple.mobileslideshow",
