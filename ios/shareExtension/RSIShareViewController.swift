@@ -2277,6 +2277,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         backgroundActivity = nil
     }
 
+}
+
 // MARK: - Table View Delegate & DataSource
 extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
