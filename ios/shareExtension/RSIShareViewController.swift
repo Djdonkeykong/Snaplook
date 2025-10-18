@@ -224,10 +224,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Immediately hide and disable all default SLComposeServiceViewController UI
         hideDefaultUI()
 
-        // Hide navigation bar items (Post button, Cancel button)
-        navigationController?.navigationBar.isHidden = true
         navigationItem.leftBarButtonItem = nil
-        navigationItem.rightBarButtonItem = nil
+
+        let titleContainer = UIView(frame: CGRect(x: 0, y: 0, width: 132, height: 28))
+        let titleImageView = UIImageView(image: UIImage(named: "logo"))
+        titleImageView.contentMode = .scaleAspectFit
+        titleImageView.translatesAutoresizingMaskIntoConstraints = false
+        titleContainer.addSubview(titleImageView)
+        NSLayoutConstraint.activate([
+            titleImageView.topAnchor.constraint(equalTo: titleContainer.topAnchor),
+            titleImageView.bottomAnchor.constraint(equalTo: titleContainer.bottomAnchor),
+            titleImageView.leadingAnchor.constraint(equalTo: titleContainer.leadingAnchor),
+            titleImageView.trailingAnchor.constraint(equalTo: titleContainer.trailingAnchor)
+        ])
+        navigationItem.titleView = titleContainer
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            title: "Cancel",
+            style: .plain,
+            target: self,
+            action: #selector(cancelDetectionTapped)
+        )
 
         loadIds()
         ShareLogger.shared.configure(appGroupId: appGroupId)
@@ -295,7 +311,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
         if hasProcessedAttachments {
-            shareLog("⏸️ viewDidAppear called again - attachments already processed, skipping")
+            shareLog("⏸️️ viewDidAppear called again - attachments already processed, skipping")
             return
         }
 
@@ -485,13 +501,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func maybeFinalizeShare() {
         guard pendingAttachmentCount == 0, !hasQueuedRedirect else {
-            shareLog("⏸️ maybeFinalizeShare: waiting (pending=\(pendingAttachmentCount), hasQueued=\(hasQueuedRedirect))")
+            shareLog("⏸️️ maybeFinalizeShare: waiting (pending=\(pendingAttachmentCount), hasQueued=\(hasQueuedRedirect))")
             return
         }
 
         // Don't auto-redirect if we're attempting or showing detection results
         if shouldAttemptDetection || isShowingDetectionResults {
-            shareLog("⏸️ maybeFinalizeShare: BLOCKED - detection in progress (attempt=\(shouldAttemptDetection), showing=\(isShowingDetectionResults))")
+            shareLog("⏸️️ maybeFinalizeShare: BLOCKED - detection in progress (attempt=\(shouldAttemptDetection), showing=\(isShowingDetectionResults))")
             return
         }
 
@@ -1167,7 +1183,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Prevent re-creating UI if already showing results
         if resultsTableView != nil {
-            shareLog("⏸️ showDetectionResults called again - results already displayed, skipping UI creation")
+            shareLog("⏸️️ showDetectionResults called again - results already displayed, skipping UI creation")
             return
         }
 
@@ -1185,27 +1201,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Initialize filtered results
         filteredResults = detectionResults
         selectedCategory = "All"
-
-        // Create header with logo and cancel button
-        let headerView = UIView()
-        headerView.backgroundColor = .systemBackground
-        headerView.translatesAutoresizingMaskIntoConstraints = false
-
-        // Logo image
-        let logoImageView = UIImageView()
-        logoImageView.image = UIImage(named: "logo")
-        logoImageView.contentMode = .scaleAspectFit
-        logoImageView.translatesAutoresizingMaskIntoConstraints = false
-
-        // Cancel button
-        let cancelButton = UIButton(type: .system)
-        cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
-        cancelButton.addTarget(self, action: #selector(cancelDetectionTapped), for: .touchUpInside)
-        cancelButton.translatesAutoresizingMaskIntoConstraints = false
-
-        headerView.addSubview(logoImageView)
-        headerView.addSubview(cancelButton)
 
         // Create category filter chips
         let filterView = createCategoryFilters()
@@ -1250,7 +1245,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         bottomBarContainer.addSubview(saveButton)
 
         // Add all views to loadingView
-        loadingView?.addSubview(headerView)
         loadingView?.addSubview(filterView)
         if let tableView = resultsTableView {
             loadingView?.addSubview(tableView)
@@ -1259,20 +1253,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Layout constraints
         NSLayoutConstraint.activate([
-            headerView.topAnchor.constraint(equalTo: loadingView!.safeAreaLayoutGuide.topAnchor),
-            headerView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
-            headerView.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
-            headerView.heightAnchor.constraint(equalToConstant: 60),
-
-            logoImageView.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 8),
-            logoImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            logoImageView.heightAnchor.constraint(equalToConstant: 26),
-            logoImageView.widthAnchor.constraint(equalToConstant: 97),
-
-            cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            cancelButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
-
-            filterView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
+            filterView.topAnchor.constraint(equalTo: loadingView!.safeAreaLayoutGuide.topAnchor),
             filterView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
             filterView.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
             filterView.heightAnchor.constraint(equalToConstant: 60),
