@@ -2251,28 +2251,31 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func requestExtendedExecution() {
         endExtendedExecution() // Clean up any existing activity first
 
-        shareLog("🔋 Requesting extended execution time from iOS")
-        backgroundActivity = ProcessInfo.processInfo.performExpiringActivity(withReason: "User browsing detection results") { [weak self] expired in
-            if expired {
-                shareLog("⚠️ Extended execution time expired - iOS is requesting termination")
-                // iOS is asking us to wrap up - but don't force close if user is still interacting
-                DispatchQueue.main.async {
-                    self?.shareLog("Extended time expired but keeping extension alive for user interaction")
-                }
+        let reason = "User browsing detection results"
+        shareLog("Requesting extended execution time from iOS")
+        backgroundActivity = ProcessInfo.processInfo.beginActivity(
+            options: [.userInitiatedAllowingIdleSystemSleep],
+            reason: reason
+        )
+        ProcessInfo.processInfo.performExpiringActivity(withReason: reason) { [weak self] expired in
+            guard expired else { return }
+            shareLog("Extended execution time expired - iOS is requesting termination")
+            // iOS is asking us to wrap up - keep extension alive if the user is still interacting
+            DispatchQueue.main.async {
+                shareLog("Extended time expired but keeping extension alive for user interaction")
+                self?.endExtendedExecution()
             }
         }
-        shareLog("✅ Extended execution time granted")
+        shareLog("Extended execution time granted")
     }
 
     // End extended execution time
     private func endExtendedExecution() {
-        if let activity = backgroundActivity {
-            shareLog("🔋 Ending extended execution time")
-            ProcessInfo.processInfo.performActivity(options: [], reason: "Cleanup") {}
-            backgroundActivity = nil
-        }
+        guard let activity = backgroundActivity else { return }
+        shareLog("Ending extended execution time")
+        ProcessInfo.processInfo.endActivity(activity)
+        backgroundActivity = nil
     }
-}
 
 // MARK: - Table View Delegate & DataSource
 extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
