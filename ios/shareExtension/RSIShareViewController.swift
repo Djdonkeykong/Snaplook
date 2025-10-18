@@ -127,13 +127,115 @@ public enum SharedMediaType: String, Codable, CaseIterable {
 struct DetectionResultItem: Codable {
     let id: String
     let product_name: String
-    let brand: String
-    let price: Double
+    let brand: String?
+    private let priceNumeric: Double?
+    private let priceText: String?
     let image_url: String
     let category: String
-    let confidence: Double
+    let confidence: Double?
     let description: String?
-    let purchase_url: String
+    let purchase_url: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case product_name
+        case brand
+        case price
+        case image_url
+        case category
+        case confidence
+        case description
+        case purchase_url
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = (try? container.decode(String.self, forKey: .id)) ?? UUID().uuidString
+        let rawName = (try? container.decode(String.self, forKey: .product_name)) ?? ""
+        product_name = rawName.isEmpty ? "Untitled" : rawName
+
+        let rawBrand = try? container.decodeIfPresent(String.self, forKey: .brand)
+        if let trimmedBrand = rawBrand?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmedBrand.isEmpty {
+            brand = trimmedBrand
+        } else {
+            brand = nil
+        }
+
+        var numeric: Double? = nil
+        var textValue: String? = nil
+        if let doubleValue = try? container.decode(Double.self, forKey: .price) {
+            numeric = doubleValue
+        } else if let intValue = try? container.decode(Int.self, forKey: .price) {
+            numeric = Double(intValue)
+        } else if let stringValue = try? container.decode(String.self, forKey: .price) {
+            let trimmed = stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                textValue = trimmed
+            }
+            let digits = trimmed.replacingOccurrences(of: "[^0-9.,]", with: "", options: .regularExpression)
+                .replacingOccurrences(of: ",", with: "")
+            if let parsed = Double(digits), parsed.isFinite {
+                numeric = parsed
+            }
+        }
+        priceNumeric = numeric
+        priceText = textValue
+
+        image_url = (try? container.decode(String.self, forKey: .image_url)) ?? ""
+        let rawCategory = (try? container.decode(String.self, forKey: .category)) ?? ""
+        category = rawCategory.isEmpty ? "Uncategorized" : rawCategory
+        confidence = try? container.decodeIfPresent(Double.self, forKey: .confidence)
+        description = try? container.decodeIfPresent(String.self, forKey: .description)
+        purchase_url = try? container.decodeIfPresent(String.self, forKey: .purchase_url)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(product_name, forKey: .product_name)
+        if let brand = brand {
+            try container.encode(brand, forKey: .brand)
+        } else {
+            try container.encodeNil(forKey: .brand)
+        }
+        if let text = priceText, !text.isEmpty {
+            try container.encode(text, forKey: .price)
+        } else if let numeric = priceNumeric {
+            try container.encode(numeric, forKey: .price)
+        } else {
+            try container.encodeNil(forKey: .price)
+        }
+        try container.encode(image_url, forKey: .image_url)
+        try container.encode(category, forKey: .category)
+        if let confidence = confidence {
+            try container.encode(confidence, forKey: .confidence)
+        } else {
+            try container.encodeNil(forKey: .confidence)
+        }
+        if let description = description {
+            try container.encode(description, forKey: .description)
+        } else {
+            try container.encodeNil(forKey: .description)
+        }
+        if let purchase_url = purchase_url {
+            try container.encode(purchase_url, forKey: .purchase_url)
+        } else {
+            try container.encodeNil(forKey: .purchase_url)
+        }
+    }
+
+    var priceValue: Double? { priceNumeric }
+
+    var priceDisplay: String? {
+        if let text = priceText, !text.isEmpty {
+            return text
+        }
+        if let numeric = priceNumeric, numeric > 0 {
+            return String(format: "$%.2f", numeric)
+        }
+        return nil
+    }
 }
 
 struct DetectionResponse: Codable {
@@ -142,6 +244,29 @@ struct DetectionResponse: Codable {
     let total_results: Int
     let results: [DetectionResultItem]
     let message: String?
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case detected_garment
+        case total_results
+        case results
+        case message
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = (try? container.decode(Bool.self, forKey: .success)) ?? false
+        detected_garment = try? container.decodeIfPresent(DetectedGarment.self, forKey: .detected_garment)
+        if let total = try? container.decode(Int.self, forKey: .total_results) {
+            total_results = total
+        } else if let decodedResults = try? container.decode([DetectionResultItem].self, forKey: .results) {
+            total_results = decodedResults.count
+        } else {
+            total_results = 0
+        }
+        results = (try? container.decode([DetectionResultItem].self, forKey: .results)) ?? []
+        message = try? container.decodeIfPresent(String.self, forKey: .message)
+    }
 
     struct DetectedGarment: Codable {
         let label: String
@@ -2373,8 +2498,9 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
         shareLog("User selected result: \(selectedResult.product_name)")
 
         // Open the product URL in a WKWebView inside the modal
-        guard let url = URL(string: selectedResult.purchase_url) else {
-            shareLog("ERROR: Invalid product URL: \(selectedResult.purchase_url)")
+        guard let urlString = selectedResult.purchase_url,
+              let url = URL(string: urlString) else {
+            shareLog("ERROR: Invalid product URL: \(selectedResult.purchase_url ?? "nil")")
             return
         }
 
@@ -2418,14 +2544,18 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
 
                 // Save the selected result to UserDefaults
                 if let defaults = UserDefaults(suiteName: appGroupId) {
-                    let resultData: [String: Any] = [
+                    var resultData: [String: Any] = [
                         "product_name": result.product_name,
-                        "brand": result.brand,
-                        "price": result.price,
+                        "brand": result.brand ?? "",
+                        "price": result.priceValue ?? 0,
                         "image_url": result.image_url,
-                        "purchase_url": result.purchase_url,
+                        "purchase_url": result.purchase_url ?? "",
                         "category": result.category
                     ]
+
+                    if let priceDisplay = result.priceDisplay {
+                        resultData["price_display"] = priceDisplay
+                    }
 
                     if let jsonData = try? JSONSerialization.data(withJSONObject: resultData),
                        let jsonString = String(data: jsonData, encoding: .utf8) {
@@ -2530,11 +2660,17 @@ class ResultCell: UITableViewCell {
     }
 
     func configure(with result: DetectionResultItem) {
-        brandLabel.text = result.brand
+        if let brand = result.brand, !brand.isEmpty {
+            brandLabel.text = brand
+        } else {
+            brandLabel.text = "Snaplook match"
+        }
         productNameLabel.text = result.product_name
 
-        if result.price > 0 {
-            priceLabel.text = String(format: "$%.2f", result.price)
+        if let displayPrice = result.priceDisplay {
+            priceLabel.text = displayPrice
+        } else if let priceValue = result.priceValue, priceValue > 0 {
+            priceLabel.text = String(format: "$%.2f", priceValue)
         } else {
             priceLabel.text = "See store"
         }
