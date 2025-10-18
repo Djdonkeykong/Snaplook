@@ -1186,9 +1186,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         filteredResults = detectionResults
         selectedCategory = "All"
 
-        // Keep navigation bar hidden - we'll use custom header
-        navigationController?.navigationBar.isHidden = true
-
         // Create header with logo and cancel button
         let headerView = UIView()
         headerView.backgroundColor = .systemBackground
