@@ -189,6 +189,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var currentStatusMessages: [String] = []
     private var currentStatusIndex: Int = 0
     private var backgroundActivity: NSObjectProtocol?
+    private var hasPresentedDetectionFailureAlert = false
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -867,9 +868,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         guard let endpoint = detectorEndpoint(),
               let serpKey = serpApiKey() else {
             shareLog("ERROR: Detection endpoint or SerpAPI key not configured")
-            DispatchQueue.main.async {
-                self.proceedWithNormalFlow()
-            }
+            handleDetectionFailure(reason: "Detection setup is incomplete. Please open Snaplook to finish configuring analysis.")
             return
         }
 
@@ -898,9 +897,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             shareLog("ERROR: Failed to serialize detection request JSON")
-            DispatchQueue.main.async {
-                self.proceedWithNormalFlow()
-            }
+            handleDetectionFailure(reason: "Could not prepare the analysis request. Please try sharing again.")
             return
         }
 
@@ -908,9 +905,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         guard let url = URL(string: endpoint) else {
             shareLog("ERROR: Invalid detection endpoint URL: \(endpoint)")
-            DispatchQueue.main.async {
-                self.proceedWithNormalFlow()
-            }
+            handleDetectionFailure(reason: "The detection service URL looks invalid. Check your configuration in Snaplook.")
             return
         }
 
@@ -927,9 +922,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             if let error = error {
                 shareLog("ERROR: Detection API network error: \(error.localizedDescription)")
-                DispatchQueue.main.async {
-                    self.proceedWithNormalFlow()
-                }
+                self.handleDetectionFailure(reason: "We couldn't reach the detection service (\(error.localizedDescription)).")
                 return
             }
 
@@ -938,9 +931,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             guard let data = data else {
                 shareLog("ERROR: Detection API response has no data")
-                DispatchQueue.main.async {
-                    self.proceedWithNormalFlow()
-                }
+                self.handleDetectionFailure(reason: "The detection service responded without data. Please try again.")
                 return
             }
 
@@ -954,9 +945,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             guard statusCode == 200 else {
                 shareLog("ERROR: Detection API returned non-200 status: \(statusCode)")
-                DispatchQueue.main.async {
-                    self.proceedWithNormalFlow()
-                }
+                self.handleDetectionFailure(reason: "Detection service returned status \(statusCode).")
                 return
             }
 
@@ -983,20 +972,58 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     }
                 } else {
                     shareLog("ERROR: Detection failed - \(detectionResponse.message ?? "Unknown error")")
-                    DispatchQueue.main.async {
-                        self.proceedWithNormalFlow()
-                    }
+                    let message = detectionResponse.message ?? "We couldn't find any products to show."
+                    self.handleDetectionFailure(reason: message)
                 }
             } catch {
                 shareLog("ERROR: Failed to parse detection response: \(error.localizedDescription)")
-                DispatchQueue.main.async {
-                    self.proceedWithNormalFlow()
-                }
+                self.handleDetectionFailure(reason: "We couldn't read the detection results (\(error.localizedDescription)).")
             }
         }
 
         task.resume()
         shareLog("Detection API task started")
+    }
+
+    private func handleDetectionFailure(reason: String) {
+        shareLog("Detection failure: \(reason)")
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if self.hasQueuedRedirect { return }
+            if self.hasPresentedDetectionFailureAlert { return }
+            self.hasPresentedDetectionFailureAlert = true
+            self.shouldAttemptDetection = false
+            self.isShowingDetectionResults = false
+            self.stopStatusRotation()
+            self.stopSmoothProgress()
+            self.activityIndicator?.stopAnimating()
+            self.statusLabel?.isHidden = false
+            self.statusLabel?.text = reason
+
+            let alert = UIAlertController(
+                title: "Analysis Unavailable",
+                message: reason,
+                preferredStyle: .alert
+            )
+
+            alert.addAction(UIAlertAction(
+                title: "Open Snaplook",
+                style: .default
+            ) { _ in
+                self.proceedWithNormalFlow()
+            })
+
+            alert.addAction(UIAlertAction(
+                title: "Cancel Share",
+                style: .cancel
+            ) { _ in
+                self.closeExtension()
+            })
+
+            if self.presentedViewController == nil {
+                self.present(alert, animated: true)
+            }
+        }
     }
 
     // Upload image to ImgBB and trigger detection
@@ -1005,6 +1032,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Stop status polling since we're now in detection mode
         stopStatusPolling()
+        hasPresentedDetectionFailureAlert = false
 
         // Progress should already be started and at ~0.20 from Instagram download
         // Continue the smooth progress animation
@@ -1018,9 +1046,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Build URL with API key as query parameter
         guard var components = URLComponents(string: "https://api.imgbb.com/1/upload") else {
             shareLog("ERROR: Failed to create ImgBB URL components")
-            DispatchQueue.main.async {
-                self.proceedWithNormalFlow()
-            }
+            handleDetectionFailure(reason: "Couldn't prepare the upload request. Please try again.")
             return
         }
 
@@ -1028,9 +1054,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         guard let url = components.url else {
             shareLog("ERROR: Failed to build ImgBB URL")
-            DispatchQueue.main.async {
-                self.proceedWithNormalFlow()
-            }
+            handleDetectionFailure(reason: "Encountered an invalid upload URL. Please try again.")
             return
         }
 
@@ -1062,9 +1086,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             if let error = error {
                 shareLog("ERROR: ImgBB upload network error: \(error.localizedDescription)")
-                DispatchQueue.main.async {
-                    self.proceedWithNormalFlow()
-                }
+                self.handleDetectionFailure(reason: "Upload failed (\(error.localizedDescription)).")
                 return
             }
 
@@ -1073,9 +1095,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             guard let data = data else {
                 shareLog("ERROR: ImgBB response has no data")
-                DispatchQueue.main.async {
-                    self.proceedWithNormalFlow()
-                }
+                self.handleDetectionFailure(reason: "Upload response was empty. Please try again.")
                 return
             }
 
@@ -1089,17 +1109,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             guard statusCode == 200 else {
                 shareLog("ERROR: ImgBB returned non-200 status: \(statusCode)")
-                DispatchQueue.main.async {
-                    self.proceedWithNormalFlow()
-                }
+                self.handleDetectionFailure(reason: "Upload service returned status \(statusCode).")
                 return
             }
 
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 shareLog("ERROR: Failed to parse ImgBB JSON")
-                DispatchQueue.main.async {
-                    self.proceedWithNormalFlow()
-                }
+                self.handleDetectionFailure(reason: "Upload response was unreadable. Please try again.")
                 return
             }
 
@@ -1113,17 +1129,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         shareLog("ERROR: ImgBB API error: \(message)")
                     }
                 }
-                DispatchQueue.main.async {
-                    self.proceedWithNormalFlow()
-                }
+                self.handleDetectionFailure(reason: "Upload response was missing data. Please try again.")
                 return
             }
 
             guard let imageUrl = dataDict["url"] as? String else {
                 shareLog("ERROR: ImgBB data dict missing 'url' key")
-                DispatchQueue.main.async {
-                    self.proceedWithNormalFlow()
-                }
+                self.handleDetectionFailure(reason: "Upload did not return a URL. Please try again.")
                 return
             }
 
