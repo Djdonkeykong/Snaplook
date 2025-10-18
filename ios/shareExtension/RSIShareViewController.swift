@@ -1154,6 +1154,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
+    open override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        if let containerView = view.superview {
+            containerView.layer.cornerRadius = 20
+            containerView.layer.masksToBounds = true
+        }
+    }
+
     @discardableResult
     private func addResultsHeaderIfNeeded() -> UIView? {
         guard let overlay = loadingView else { return nil }
@@ -1422,7 +1430,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         saveButton.setTitleColor(.white, for: .normal)
-        saveButton.layer.cornerRadius = 18
+        saveButton.layer.cornerRadius = 28
         saveButton.addTarget(self, action: #selector(saveAllTapped), for: .touchUpInside)
         saveButton.translatesAutoresizingMaskIntoConstraints = false
 
