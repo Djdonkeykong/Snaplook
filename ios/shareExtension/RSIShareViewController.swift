@@ -860,9 +860,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return nil
     }
 
-    // Call detection API with image URL
-    private func runDetectionAnalysis(imageUrl: String) {
-        shareLog("START runDetectionAnalysis - imageUrl: \(imageUrl)")
+    // Call detection API with image URL and base64 payload
+    private func runDetectionAnalysis(imageUrl: String, imageBase64: String) {
+        shareLog("START runDetectionAnalysis - imageUrl: \(imageUrl), base64 length: \(imageBase64.count)")
 
         guard let endpoint = detectorEndpoint(),
               let serpKey = serpApiKey() else {
@@ -889,8 +889,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         ]
         startStatusRotation(messages: searchMessages, interval: 2.5, stopAtLast: true)
 
-        let requestBody: [String: Any] = [
+        var requestBody: [String: Any] = [
             "image_url": imageUrl,
+            "image_base64": imageBase64,
             "serp_api_key": serpKey,
             "max_results_per_garment": 10
         ]
@@ -1141,7 +1142,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             ]
             self.startStatusRotation(messages: detectionMessages, interval: 2.5)
 
-            self.runDetectionAnalysis(imageUrl: imageUrl)
+            self.runDetectionAnalysis(imageUrl: imageUrl, imageBase64: base64Image)
         }
 
         task.resume()
