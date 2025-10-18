@@ -233,7 +233,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         ShareLogger.shared.configure(appGroupId: appGroupId)
         sharedMedia.removeAll()
         shareLog("View did load - cleared sharedMedia array")
-        if let sourceBundle = extensionContext?.value(forKey: "sourceApplicationBundleIdentifier") as? String {
+        if let sourceBundle = readSourceApplicationBundleIdentifier() {
             shareLog("Source application bundle: \(sourceBundle)")
             let photosBundles: Set<String> = [
                 "com.apple.mobileslideshow",
@@ -256,6 +256,25 @@ open class RSIShareViewController: SLComposeServiceViewController {
         setupLoadingUI()
         startStatusPolling()
         enforcePhotosStatusIfNeeded()
+    }
+
+    private func readSourceApplicationBundleIdentifier() -> String? {
+        guard let context = extensionContext else { return nil }
+        let selector = NSSelectorFromString("sourceApplicationBundleIdentifier")
+        guard (context as AnyObject).responds(to: selector) else {
+            shareLog("Source application bundle not available on this OS version")
+            return nil
+        }
+
+        guard
+            let unmanaged = (context as AnyObject).perform(selector),
+            let bundleId = unmanaged.takeUnretainedValue() as? String
+        else {
+            shareLog("Source application bundle lookup returned nil")
+            return nil
+        }
+
+        return bundleId
     }
 
     open override func didSelectPost() {
