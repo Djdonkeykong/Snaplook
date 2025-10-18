@@ -9,7 +9,7 @@ import requests
 import re
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, Set
+from typing import Optional, List, Set, Union
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed  # parallel uploads
 
@@ -375,12 +375,23 @@ def overlap_ratio(inner, outer):
     return inter_area / inner_area
 
 # === RELIABLE & FAST IMG UPLOAD ===
-def upload_to_imgbb(image: Image.Image, api_key: str) -> Optional[str]:
+def upload_to_imgbb(image: Image.Image, api_key: str, label: Optional[str] = None) -> Optional[str]:
     """Upload image to ImgBB with compression, retry, and smart size filtering."""
     image = image.convert("RGB")
     w, h = image.size
-    if w < MIN_CROP_W or h < MIN_CROP_H or (w * h) < MIN_CROP_AREA:
-        print(f"⚠️ Skipping tiny/insignificant crop {w}x{h}")
+    label_lower = (label or "").lower()
+
+    min_w = MIN_CROP_W
+    min_h = MIN_CROP_H
+    min_area = MIN_CROP_AREA
+
+    if "shoe" in label_lower:
+        min_w = 60
+        min_h = 60
+        min_area = 8000
+
+    if w < min_w or h < min_h or (w * h) < min_area:
+        print(f"⚠️ Skipping tiny/insignificant crop {w}x{h} (label={label_lower or 'unknown'})")
         return None
 
     for attempt in range(1, 4):
@@ -596,7 +607,85 @@ def looks_like_collection(url: str, title: str) -> bool:
 
     return False
 
-def fashion_score(result: dict, price: float) -> float:
+def normalize_price_value(price: Union[float, int, str, dict, list, tuple, None]) -> float:
+    """
+    Normalize SerpAPI price payloads which may be floats, strings, or nested dicts.
+    Returns 0.0 when no numeric value can be extracted.
+    """
+    if price is None or isinstance(price, bool):
+        return 0.0
+
+    if isinstance(price, (int, float)):
+        return float(price)
+
+    if isinstance(price, str):
+        cleaned = price.strip()
+        match = re.search(r'[-+]?[0-9][0-9.,\s]*', cleaned)
+        if not match:
+            return 0.0
+
+        token = match.group(0).replace(' ', '')
+
+        if token.count('.') > 1 and token.count(',') == 0:
+            token = token.replace('.', '')
+        if token.count(',') > 1 and '.' not in token:
+            token = token.replace(',', '')
+
+        if '.' in token and ',' in token:
+            if token.rfind('.') > token.rfind(','):
+                token = token.replace(',', '')
+            else:
+                token = token.replace('.', '')
+                token = token.replace(',', '.')
+        elif ',' in token and '.' not in token:
+            integer_part, fractional_part = token.split(',', 1)
+            if len(fractional_part) == 3 and len(integer_part) >= 1:
+                token = token.replace(',', '')
+            else:
+                token = token.replace(',', '.')
+        else:
+            token = token.replace(',', '')
+
+        try:
+            return float(token)
+        except ValueError:
+            return 0.0
+
+    if isinstance(price, dict):
+        candidate_keys = (
+            'extracted_value',
+            'value',
+            'amount',
+            'price',
+            'min',
+            'max',
+            'low',
+            'high',
+            'raw'
+        )
+        for key in candidate_keys:
+            if key in price:
+                normalized = normalize_price_value(price[key])
+                if normalized > 0:
+                    return normalized
+        # Fallback: try any remaining values
+        for val in price.values():
+            normalized = normalize_price_value(val)
+            if normalized > 0:
+                return normalized
+        return 0.0
+
+    if isinstance(price, (list, tuple, set)):
+        for entry in price:
+            normalized = normalize_price_value(entry)
+            if normalized > 0:
+                return normalized
+        return 0.0
+
+    return 0.0
+
+
+def fashion_score(result: dict, price: Union[float, int, str, dict, list, tuple, None] = None) -> float:
     """
     Fashion-aware scoring with tier-1 boost, marketplace penalty, style keywords.
     Ported from Flutter detection_service.dart
@@ -604,6 +693,7 @@ def fashion_score(result: dict, price: float) -> float:
     purchase_url = result.get('purchase_url', '')
     product_name = result.get('product_name', '')
     domain = extract_domain(purchase_url)
+    normalized_price = normalize_price_value(price if price is not None else result.get('price'))
 
     mult = 1.0
 
@@ -628,7 +718,7 @@ def fashion_score(result: dict, price: float) -> float:
     if 'slip' in title_lower:
         mult *= 1.04
 
-    if price > 0:
+    if normalized_price > 0:
         mult *= 1.02
 
     base = 0.75  # Base confidence for serp results
@@ -646,7 +736,7 @@ def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
     Ported from Flutter detection_service.dart
     """
     # Sort by fashion score
-    results.sort(key=lambda r: fashion_score(r, r.get('price', 0.0)), reverse=True)
+    results.sort(key=lambda r: fashion_score(r), reverse=True)
 
     by_domain = {}
     domain_count = {}
@@ -702,7 +792,7 @@ def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
                     existing.get('product_name', '')
                 )
                 if not existing_is_pdp:
-                    score = fashion_score(existing, existing.get('price', 0.0))
+                    score = fashion_score(existing)
                     if score < worst_score:
                         worst_score = score
                         replace_idx = i
@@ -832,8 +922,10 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
 
             # Suppress inner garments under long outerwear
             if kept["label"] in OUTERWEAR and det["label"] not in OUTERWEAR:
-                if overlap_inner > 0.7:
-                    print(f"🧥 Suppressing inner '{det['label']}' under '{kept['label']}' ({overlap_inner:.2f})")
+                if det["label"] == "bag, wallet" and det.get("score", 0) >= 0.55:
+                    print(f"[Filter] Allowing '{det['label']}' under '{kept['label']}' (score={det['score']:.2f})")
+                elif overlap_inner > 0.7:
+                    print(f"[Filter] Suppressing inner '{det['label']}' under '{kept['label']}' ({overlap_inner:.2f})")
                     keep = False
                     break
 
@@ -1087,7 +1179,7 @@ def detect(req: DetectRequest):
             print(f"☁️ Uploading {len(crops)} crops to ImgBB in parallel...")
             with ThreadPoolExecutor(max_workers=min(4, len(crops))) as executor:
                 future_to_item = {
-                    executor.submit(upload_to_imgbb, crop, req.imbb_api_key): (det, bbox)
+                    executor.submit(upload_to_imgbb, crop, req.imbb_api_key, det.get('label')): (det, bbox)
                     for det, crop, bbox in crops
                 }
                 for future in as_completed(future_to_item):
@@ -1163,7 +1255,7 @@ def detect_and_search(req: DetectAndSearchRequest):
         def upload_crop_safe(crop_tuple):
             det, crop = crop_tuple
             try:
-                return det, upload_to_imgbb_optimized(crop, imgbb_api_key)
+                return det, upload_to_imgbb_optimized(crop, imgbb_api_key, det.get('label'))
             except Exception as e:
                 print(f"⚠️ Upload failed for {det['label']}: {e}")
                 return det, None
@@ -1246,12 +1338,23 @@ def detect_and_search(req: DetectAndSearchRequest):
 
 
 # === Optimized helpers ===
-def upload_to_imgbb_optimized(image: Image.Image, api_key: str) -> Optional[str]:
+def upload_to_imgbb_optimized(image: Image.Image, api_key: str, label: Optional[str] = None) -> Optional[str]:
     """Optimized upload: lower timeout + faster retry."""
     image = image.convert("RGB")
     w, h = image.size
-    if w < 80 or h < 80 or (w * h) < 14400:
-        print(f"⚠️ Skipping tiny crop {w}x{h}")
+    label_lower = (label or "").lower()
+
+    min_w = 80
+    min_h = 80
+    min_area = 14400
+
+    if "shoe" in label_lower:
+        min_w = 60
+        min_h = 60
+        min_area = 8000
+
+    if w < min_w or h < min_h or (w * h) < min_area:
+        print(f"[ImgBB] Skipping crop {w}x{h} (label={label_lower or 'unknown'})")
         return None
 
     for attempt in range(1, 3):  # only two tries
@@ -1277,20 +1380,26 @@ def upload_to_imgbb_optimized(image: Image.Image, api_key: str) -> Optional[str]
 
 
 def search_serp_api_optimized(image_url: str, api_key: str, max_results: int = 10):
-    """Wrapper with short timeout & retry."""
+    """Products-only Google Lens search with short timeout & retry."""
     try:
         from serpapi import GoogleSearch
         search = GoogleSearch({
             "engine": "google_lens",
             "api_key": api_key,
-            "url": image_url
+            "url": image_url,
+            "type": "products",
         })
         result = search.get_dict()
-        matches = result.get("visual_matches", [])
+        matches = result.get("visual_matches") or result.get("product_results", [])
+        if isinstance(matches, dict):
+            matches = matches.get("organic_results", [])
+        if not isinstance(matches, list):
+            matches = []
         return matches[:max_results]
     except Exception as e:
-        print(f"⚠️ SerpAPI error: {e}")
+        print(f"[SerpAPI] Products search error: {e}")
         return []
+
 
 # === DEBUG ENDPOINT ===
 @app.post("/debug")

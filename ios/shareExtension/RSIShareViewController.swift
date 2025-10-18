@@ -115,6 +115,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     var sharedMedia: [SharedMediaFile] = []
     private var loadingView: UIView?
     private var loadingShownAt: Date?
+    private var isPhotosSourceApp = false
+    private let photoImportStatusMessage = "Importing your photo..."
     private var loadingHideWorkItem: DispatchWorkItem?
     private var currentProcessingSession: String?
     private var didCompleteRequest = false
@@ -188,6 +190,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadIds()
         sharedMedia.removeAll()
         shareLog("View did load - cleared sharedMedia array")
+        if let sourceBundle = extensionContext?.sourceApplicationBundleIdentifier {
+            shareLog("Source application bundle: \(sourceBundle)")
+            let photosBundles: Set<String> = [
+                "com.apple.mobileslideshow",
+                "com.apple.Photos"
+            ]
+            if photosBundles.contains(sourceBundle) {
+                isPhotosSourceApp = true
+                shareLog("Detected Photos source app - enforcing minimum 2s redirect delay")
+            }
+        } else {
+            shareLog("Source application bundle: nil")
+        }
         suppressKeyboard()
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) {
             shareLog("Resolved container URL: \(containerURL.path)")
@@ -197,6 +212,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingHideWorkItem?.cancel()
         setupLoadingUI()
         startStatusPolling()
+        enforcePhotosStatusIfNeeded()
     }
 
     open override func didSelectPost() {
@@ -1073,6 +1089,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     // Update status label helper
     private func updateStatusLabel(_ text: String) {
+        if isPhotosSourceApp {
+            enforcePhotosStatusIfNeeded()
+            return
+        }
+
         DispatchQueue.main.async { [weak self] in
             self?.statusLabel?.text = text
         }
@@ -1393,8 +1414,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         hasQueuedRedirect = true
         shareLog("Redirecting to app with all detection results")
-        performRedirect(to: redirectURL)
-        finishExtensionRequest()
+        let minimumDuration = isPhotosSourceApp ? 2.0 : 0.0
+        enqueueRedirect(to: redirectURL, minimumDuration: minimumDuration) { [weak self] in
+            self?.finishExtensionRequest()
+        }
     }
 
     @objc private func doneButtonTapped() {
@@ -1801,6 +1824,27 @@ open class RSIShareViewController: SLComposeServiceViewController {
         redirectToHostApp(sessionId: sessionId)
     }
 
+    private func enqueueRedirect(
+        to url: URL,
+        minimumDuration: TimeInterval,
+        completion: @escaping () -> Void
+    ) {
+        loadingHideWorkItem?.cancel()
+        let elapsed = loadingShownAt.map { Date().timeIntervalSince($0) } ?? 0
+        let delay = max(0, minimumDuration - elapsed)
+        shareLog("Redirect scheduled in \(delay) seconds (elapsed: \(elapsed)) -> \(url.absoluteString)")
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            self.loadingHideWorkItem = nil
+            self.performRedirect(to: url)
+            completion()
+        }
+
+        loadingHideWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
     private func redirectToHostApp(sessionId: String) {
         loadIds()
         guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share") else {
@@ -1809,20 +1853,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        let minimumDuration: TimeInterval = 0.5
-        let elapsed = loadingShownAt.map { Date().timeIntervalSince($0) } ?? 0
-        let delay = max(0, minimumDuration - elapsed)
-        shareLog("Redirect scheduled in \(delay) seconds (elapsed: \(elapsed))")
-
-        loadingHideWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
-            self.loadingHideWorkItem = nil
-            self.performRedirect(to: redirectURL)
-            self.finishExtensionRequest()
+        let minimumDuration: TimeInterval = isPhotosSourceApp ? 2.0 : 0.5
+        enqueueRedirect(to: redirectURL, minimumDuration: minimumDuration) { [weak self] in
+            self?.finishExtensionRequest()
         }
-        loadingHideWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
 
@@ -1983,6 +2017,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         (try? JSONEncoder().encode(data)) ?? Data()
     }
 
+    private func enforcePhotosStatusIfNeeded() {
+        guard isPhotosSourceApp else { return }
+        stopStatusRotation()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.statusLabel?.text = self.photoImportStatusMessage
+        }
+    }
+
     private func setupLoadingUI() {
         let overlay = UIView(frame: view.bounds)
         overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -2089,6 +2132,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func updateProgress(_ progress: Float, status: String) {
         targetProgress = progress
 
+        if isPhotosSourceApp {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.statusLabel?.text = self.photoImportStatusMessage
+                shareLog("Progress: \(Int(progress * 100))% - \(status)")
+            }
+            stopStatusRotation()
+            return
+        }
+
         DispatchQueue.main.async { [weak self] in
             self?.statusLabel?.text = status
             shareLog("Progress: \(Int(progress * 100))% - \(status)")
@@ -2101,6 +2154,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
     // Start rotating through multiple status messages
     private func startStatusRotation(messages: [String], interval: TimeInterval = 2.5, stopAtLast: Bool = false) {
         guard !messages.isEmpty else { return }
+
+        if isPhotosSourceApp {
+            enforcePhotosStatusIfNeeded()
+            return
+        }
 
         stopStatusRotation()
 
@@ -2386,8 +2444,10 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
 
         hasQueuedRedirect = true
         shareLog("🚀 Redirecting to app with selected result")
-        performRedirect(to: redirectURL)
-        finishExtensionRequest()
+        let minimumDuration = isPhotosSourceApp ? 2.0 : 0.0
+        enqueueRedirect(to: redirectURL, minimumDuration: minimumDuration) { [weak self] in
+            self?.finishExtensionRequest()
+        }
     }
 }
 

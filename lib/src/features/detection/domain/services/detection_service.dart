@@ -209,8 +209,8 @@ class DetectionService {
 
     final filteredAll = <Map<String, dynamic>>[];
 
-    // 👇 Hit products first, then fall back to visual_matches
-    const rails = ['products', 'visual_matches'];
+    // 👇 Products-only search (visual_matches disabled to avoid duplicate Lens hits)
+    const rails = ['products'];
 
     for (final rail in rails) {
       String? nextToken;
@@ -221,7 +221,7 @@ class DetectionService {
           'engine': 'google_lens',
           'api_key': AppConstants.serpApiKey,
           'url': imageUrl,
-          'type': rail, // 👈 key line: products first
+          'type': rail, // 👈 lock to products rail (no visual_matches)
           if (textQuery != null && textQuery.isNotEmpty) 'text_query': textQuery,
           if (nextToken != null) 'next_page_token': nextToken!,
         };
@@ -235,8 +235,20 @@ class DetectionService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         if (data['error'] != null) throw Exception('SerpAPI error: ${data['error']}');
 
-        final rawMatches = (data['visual_matches'] as List<dynamic>? ?? const [])
-            .map((e) => e as Map<String, dynamic>)
+        final dynamic productResults = data['product_results'];
+        final List<dynamic> rawList;
+        if (data['visual_matches'] is List<dynamic>) {
+          rawList = data['visual_matches'] as List<dynamic>;
+        } else if (productResults is List<dynamic>) {
+          rawList = productResults;
+        } else if (productResults is Map<String, dynamic>) {
+          final organic = productResults['organic_results'];
+          rawList = organic is List<dynamic> ? organic : const [];
+        } else {
+          rawList = const [];
+        }
+        final rawMatches = rawList
+            .whereType<Map<String, dynamic>>()
             .toList();
 
         final pageFiltered = <Map<String, dynamic>>[];
@@ -258,11 +270,9 @@ class DetectionService {
             'total ${filteredAll.length} (${elapsed.toStringAsFixed(2)}s) next=${nextToken != null}');
         page++;
 
-        if (filteredAll.length >= 120) break;
+        if (filteredAll.length >= _maxResultsPerGarment) break;
       } while (nextToken != null);
 
-      // If products already gave us enough, stop before hitting visual_matches
-      if (rail == 'products' && filteredAll.length >= 15) break;
     }
 
     _serpCache[cacheKey] = filteredAll;
