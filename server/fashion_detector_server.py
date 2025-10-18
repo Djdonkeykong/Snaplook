@@ -13,8 +13,10 @@ from typing import Optional, List, Set, Union
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed  # parallel uploads
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, root_validator
 from PIL import Image, ImageDraw
 from transformers import AutoImageProcessor, YolosForObjectDetection
 
@@ -306,6 +308,29 @@ STYLE_HINT_KEYWORDS = ['silk', 'satin', 'lace', 'bias', 'midi', 'maxi', 'slip', 
 # === FASTAPI SETUP ===
 app = FastAPI(title="Fashion Detector API")
 
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    try:
+        body_bytes = await request.body()
+        hex_preview = body_bytes[:128].hex()
+        try:
+            text_preview = body_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            text_preview = "<non-utf8>"
+    except Exception:
+        hex_preview = "<unavailable>"
+        text_preview = "<unavailable>"
+    print(
+        "[RequestValidationError]"
+        f" path={request.url.path}"
+        f" errors={exc.errors()}"
+        f" headers={dict(request.headers)}"
+        f" body_hex_prefix={hex_preview}"
+        f" body_text_prefix={text_preview[:256]}"
+    )
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
 # === MODELS ===
 print("🔄 Loading YOLOS model...")
 processor = AutoImageProcessor.from_pretrained(MODEL_ID)
@@ -321,12 +346,19 @@ class DetectRequest(BaseModel):
     max_crops: Optional[int] = Field(default=MAX_GARMENTS)
 
 class DetectAndSearchRequest(BaseModel):
-    image_url: str
+    image_url: Optional[str] = None
+    image_base64: Optional[str] = None
     serp_api_key: str
     threshold: Optional[float] = Field(default_factory=lambda: CONF_THRESHOLD)
     expand_ratio: Optional[float] = Field(default=EXPAND_RATIO)
     max_crops: Optional[int] = Field(default=MAX_GARMENTS)
     max_results_per_garment: Optional[int] = Field(default=10)
+
+    @root_validator
+    def validate_image_source(cls, values):
+        if not values.get("image_url") and not values.get("image_base64"):
+            raise ValueError("Either image_url or image_base64 must be provided.")
+        return values
 
 # === HELPERS ===
 def expand_bbox(bbox, img_width, img_height, ratio=0.1):
@@ -1231,11 +1263,23 @@ def detect_and_search(req: DetectAndSearchRequest):
     """
     try:
         t0 = time.time()
-        print(f"🚀 Starting detect-and-search pipeline for: {req.image_url[:80]}...")
+        source_desc = req.image_url[:80] if req.image_url else f"<base64:{len(req.image_base64 or '')} chars>"
+        print(f"\U0001f680 Starting detect-and-search pipeline for: {source_desc}...")
 
-        # Step 1: Download image
-        image = download_image_from_url(req.image_url)
-        print(f"✅ Image downloaded: {image.width}x{image.height} ({time.time()-t0:.2f}s)")
+        # Step 1: Acquire image
+        if req.image_base64:
+            try:
+                img_bytes = base64.b64decode(req.image_base64)
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Invalid image_base64 payload: {e}")
+            try:
+                image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Unable to decode base64 image: {e}")
+            print(f"\u2705 Image decoded from base64: {image.width}x{image.height} ({time.time()-t0:.2f}s)")
+        else:
+            image = download_image_from_url(req.image_url)
+            print(f"\u2705 Image downloaded: {image.width}x{image.height} ({time.time()-t0:.2f}s)")
 
         # Step 2: YOLOS detection
         t_detect = time.time()

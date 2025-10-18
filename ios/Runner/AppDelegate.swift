@@ -11,6 +11,8 @@ import receive_sharing_intent
   private let scrapingBeeApiKeyKey = "ScrapingBeeApiKey"
   private let serpApiKeyKey = "SerpApiKey"
   private let detectorEndpointKey = "DetectorEndpoint"
+  private let shareLogsChannelName = "snaplook/share_extension_logs"
+  private let shareLogsKey = "ShareExtensionLogEntries"
 
   override func application(
     _ application: UIApplication,
@@ -28,6 +30,11 @@ import receive_sharing_intent
       // Share config channel
       let shareConfigChannel = FlutterMethodChannel(
         name: shareConfigChannelName,
+        binaryMessenger: controller.binaryMessenger
+      )
+
+      let shareLogsChannel = FlutterMethodChannel(
+        name: shareLogsChannelName,
         binaryMessenger: controller.binaryMessenger
       )
 
@@ -153,3 +160,32 @@ import receive_sharing_intent
     return UserDefaults(suiteName: defaultGroupId)
   }
 }
+      shareLogsChannel.setMethodCallHandler { [weak self] call, result in
+        guard let self = self else {
+          result(
+            FlutterError(
+              code: "UNAVAILABLE",
+              message: "AppDelegate released",
+              details: nil
+            )
+          )
+          return
+        }
+
+        guard let defaults = self.sharedUserDefaults() else {
+          result(FlutterError(code: "NO_APP_GROUP", message: "App group not configured", details: nil))
+          return
+        }
+
+        switch call.method {
+        case "getLogs":
+          let logs = defaults.stringArray(forKey: self.shareLogsKey) ?? []
+          result(logs)
+        case "clearLogs":
+          defaults.removeObject(forKey: self.shareLogsKey)
+          defaults.synchronize()
+          result(nil)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }

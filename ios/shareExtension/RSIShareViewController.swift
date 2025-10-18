@@ -23,10 +23,52 @@ let kProcessingSessionKey = "ShareProcessingSession"
 let kScrapingBeeApiKey = "ScrapingBeeApiKey"
 let kSerpApiKey = "SerpApiKey"
 let kDetectorEndpoint = "DetectorEndpoint"
+let kShareExtensionLogKey = "ShareExtensionLogEntries"
 
 @inline(__always)
 private func shareLog(_ message: String) {
     NSLog("[ShareExtension] %@", message)
+    ShareLogger.shared.append(message)
+}
+
+final class ShareLogger {
+    static let shared = ShareLogger()
+
+    private let queue = DispatchQueue(label: "com.snaplook.shareExtension.logger")
+    private let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private var defaults: UserDefaults?
+    private let maxEntries = 200
+
+    func configure(appGroupId: String) {
+        queue.async {
+            self.defaults = UserDefaults(suiteName: appGroupId)
+        }
+    }
+
+    func append(_ message: String) {
+        queue.async {
+            guard let defaults = self.defaults else { return }
+            let timestamp = self.isoFormatter.string(from: Date())
+            var entries = defaults.stringArray(forKey: kShareExtensionLogKey) ?? []
+            entries.append("[\(timestamp)] \(message)")
+            if entries.count > self.maxEntries {
+                entries.removeFirst(entries.count - self.maxEntries)
+            }
+            defaults.set(entries, forKey: kShareExtensionLogKey)
+        }
+    }
+
+    func clear() {
+        queue.async { [weak self] in
+            guard let defaults = self?.defaults else { return }
+            defaults.removeObject(forKey: kShareExtensionLogKey)
+        }
+    }
 }
 
 public class SharedMediaFile: Codable {
@@ -188,6 +230,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         navigationItem.rightBarButtonItem = nil
 
         loadIds()
+        ShareLogger.shared.configure(appGroupId: appGroupId)
         sharedMedia.removeAll()
         shareLog("View did load - cleared sharedMedia array")
         if let sourceBundle = extensionContext?.value(forKey: "sourceApplicationBundleIdentifier") as? String {

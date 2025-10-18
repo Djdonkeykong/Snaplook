@@ -5,6 +5,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import '../../../../shared/widgets/share_logs_page.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -35,13 +36,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         ),
         content: const Text(
           'Are you sure you want to logout?',
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-          ),
+          style: TextStyle(fontFamily: 'PlusJakartaSans'),
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -76,9 +73,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         if (mounted) {
           Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const LoginPage(),
-            ),
+            MaterialPageRoute(builder: (context) => const LoginPage()),
             (route) => false,
           );
         }
@@ -303,6 +298,26 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
                 SizedBox(height: spacing.l),
 
+                _SectionCard(
+                  title: 'Diagnostics',
+                  children: [
+                    _SettingItem(
+                      icon: Icons.list_alt_outlined,
+                      title: 'Share Extension Logs',
+                      subtitle: 'View recent share extension activity',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ShareLogsPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: spacing.l),
+
                 // Social Section
                 _SectionCard(
                   title: 'Social',
@@ -367,10 +382,7 @@ class _SectionCard extends StatelessWidget {
   final String? title;
   final List<Widget> children;
 
-  const _SectionCard({
-    this.title,
-    required this.children,
-  });
+  const _SectionCard({this.title, required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -396,10 +408,7 @@ class _SectionCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFFE5E7EB),
-              width: 1.5,
-            ),
+            border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
           ),
           child: Column(
             children: [
@@ -455,11 +464,7 @@ class _SettingItem extends StatelessWidget {
                 color: Color(0xFFF9F9F9),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 18,
-                color: Colors.black87,
-              ),
+              child: Icon(icon, size: 18, color: Colors.black87),
             ),
             SizedBox(width: spacing.m),
             Expanded(
