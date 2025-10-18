@@ -1163,8 +1163,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
             container.translatesAutoresizingMaskIntoConstraints = false
 
             let logo = UIImageView(image: UIImage(named: "logo"))
-            logo.contentMode = .scaleAspectFit
+            logo.contentMode = .left
+            logo.clipsToBounds = true
             logo.translatesAutoresizingMaskIntoConstraints = false
+            logo.setContentHuggingPriority(.required, for: .horizontal)
+            logo.setContentCompressionResistancePriority(.required, for: .horizontal)
 
             let cancelButton: UIButton
             if let existingButton = cancelButtonView {
@@ -1194,7 +1197,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 logo.leadingAnchor.constraint(equalTo: container.leadingAnchor),
                 logo.centerYAnchor.constraint(equalTo: container.centerYAnchor),
                 logo.heightAnchor.constraint(equalToConstant: 28),
-                logo.widthAnchor.constraint(equalToConstant: 132),
 
                 cancelButton.trailingAnchor.constraint(equalTo: container.trailingAnchor),
                 cancelButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
@@ -1424,7 +1426,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         saveButton.setTitleColor(.white, for: .normal)
-        saveButton.layer.cornerRadius = 12
+        saveButton.layer.cornerRadius = 10
         saveButton.addTarget(self, action: #selector(saveAllTapped), for: .touchUpInside)
         saveButton.translatesAutoresizingMaskIntoConstraints = false
 
