@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed  # parallel uplo
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 from PIL import Image, ImageDraw
 from transformers import AutoImageProcessor, YolosForObjectDetection
 
@@ -354,11 +354,11 @@ class DetectAndSearchRequest(BaseModel):
     max_crops: Optional[int] = Field(default=MAX_GARMENTS)
     max_results_per_garment: Optional[int] = Field(default=10)
 
-    @root_validator
-    def validate_image_source(cls, values):
-        if not values.get("image_url") and not values.get("image_base64"):
+    @model_validator(mode="after")
+    def validate_image_source(self) -> "DetectAndSearchRequest":
+        if not self.image_url and not self.image_base64:
             raise ValueError("Either image_url or image_base64 must be provided.")
-        return values
+        return self
 
 # === HELPERS ===
 def expand_bbox(bbox, img_width, img_height, ratio=0.1):
