@@ -1163,11 +1163,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             container.translatesAutoresizingMaskIntoConstraints = false
 
             let logo = UIImageView(image: UIImage(named: "logo"))
-            logo.contentMode = .left
-            logo.clipsToBounds = true
+            logo.contentMode = .scaleAspectFit
             logo.translatesAutoresizingMaskIntoConstraints = false
-            logo.setContentHuggingPriority(.required, for: .horizontal)
-            logo.setContentCompressionResistancePriority(.required, for: .horizontal)
 
             let cancelButton: UIButton
             if let existingButton = cancelButtonView {
@@ -1180,7 +1177,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 cancelButton = button
             }
             cancelButton.translatesAutoresizingMaskIntoConstraints = false
-            cancelButton.setContentHuggingPriority(.required, for: .horizontal)
             cancelButtonView = cancelButton
 
             container.addSubview(logo)
@@ -1189,19 +1185,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
             overlay.addSubview(container)
 
             NSLayoutConstraint.activate([
-                container.leadingAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-                container.trailingAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+                container.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 16),
+                container.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
                 container.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 12),
                 container.heightAnchor.constraint(equalToConstant: 40),
 
                 logo.leadingAnchor.constraint(equalTo: container.leadingAnchor),
                 logo.centerYAnchor.constraint(equalTo: container.centerYAnchor),
                 logo.heightAnchor.constraint(equalToConstant: 28),
+                logo.widthAnchor.constraint(equalToConstant: 132),
 
                 cancelButton.trailingAnchor.constraint(equalTo: container.trailingAnchor),
                 cancelButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-                cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16),
-                cancelButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 28)
+                cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16)
             ])
 
             headerContainerView = container
@@ -1426,7 +1422,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         saveButton.setTitleColor(.white, for: .normal)
-        saveButton.layer.cornerRadius = 10
+        saveButton.layer.cornerRadius = 12
         saveButton.addTarget(self, action: #selector(saveAllTapped), for: .touchUpInside)
         saveButton.translatesAutoresizingMaskIntoConstraints = false
 
