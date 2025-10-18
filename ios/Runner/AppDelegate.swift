@@ -60,9 +60,9 @@ import receive_sharing_intent
           defaults.set(endpoint, forKey: self.detectorEndpointKey)
           defaults.synchronize()
 
-          NSLog("[ShareConfig] ✅ Saved to app group \(appGroupId)")
-          NSLog("[ShareConfig] ✅ SerpApiKey: \(serpKey.prefix(8))...")
-          NSLog("[ShareConfig] ✅ DetectorEndpoint: \(endpoint)")
+          NSLog("[ShareConfig] âœ… Saved to app group \(appGroupId)")
+          NSLog("[ShareConfig] âœ… SerpApiKey: \(serpKey.prefix(8))...")
+          NSLog("[ShareConfig] âœ… DetectorEndpoint: \(endpoint)")
 
           result(nil)
         default:
@@ -133,33 +133,7 @@ import receive_sharing_intent
           result(FlutterMethodNotImplemented)
         }
       }
-    }
 
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-  }
-
-  override func application(
-    _ app: UIApplication,
-    open url: URL,
-    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
-  ) -> Bool {
-    let sharingIntent = SwiftReceiveSharingIntentPlugin.instance
-    if sharingIntent.hasMatchingSchemePrefix(url: url) {
-      return sharingIntent.application(app, open: url, options: options)
-    }
-    return super.application(app, open: url, options: options)
-  }
-
-  private func sharedUserDefaults() -> UserDefaults? {
-    let defaultGroupId = "group.\(Bundle.main.bundleIdentifier ?? "")"
-    if let customGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String,
-       !customGroupId.isEmpty,
-       customGroupId != "$(CUSTOM_GROUP_ID)" {
-      return UserDefaults(suiteName: customGroupId)
-    }
-    return UserDefaults(suiteName: defaultGroupId)
-  }
-}
       shareLogsChannel.setMethodCallHandler { [weak self] call, result in
         guard let self = self else {
           result(
@@ -189,3 +163,30 @@ import receive_sharing_intent
           result(FlutterMethodNotImplemented)
         }
       }
+    }
+
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    let sharingIntent = SwiftReceiveSharingIntentPlugin.instance
+    if sharingIntent.hasMatchingSchemePrefix(url: url) {
+      return sharingIntent.application(app, open: url, options: options)
+    }
+    return super.application(app, open: url, options: options)
+  }
+
+  private func sharedUserDefaults() -> UserDefaults? {
+    let defaultGroupId = "group.\(Bundle.main.bundleIdentifier ?? "")"
+    if let customGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String,
+       !customGroupId.isEmpty,
+       customGroupId != "$(CUSTOM_GROUP_ID)" {
+      return UserDefaults(suiteName: customGroupId)
+    }
+    return UserDefaults(suiteName: defaultGroupId)
+  }
+}
