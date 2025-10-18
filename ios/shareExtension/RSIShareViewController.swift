@@ -1185,7 +1185,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             overlay.addSubview(container)
 
             NSLayoutConstraint.activate([
-                container.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 16),
+                container.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: -5),
                 container.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
                 container.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 12),
                 container.heightAnchor.constraint(equalToConstant: 40),
@@ -1422,7 +1422,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         saveButton.setTitleColor(.white, for: .normal)
-        saveButton.layer.cornerRadius = 12
+        saveButton.layer.cornerRadius = 18
         saveButton.addTarget(self, action: #selector(saveAllTapped), for: .touchUpInside)
         saveButton.translatesAutoresizingMaskIntoConstraints = false
 
