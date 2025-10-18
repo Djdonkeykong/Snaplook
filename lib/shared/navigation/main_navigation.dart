@@ -269,8 +269,8 @@ class _NavigationItem extends StatelessWidget {
         onTap();
       },
       child: Container(
-        width: 48.0,
-        height: 48.0,
+        width: 70.0,
+        height: 70.0,
         padding: EdgeInsets.only(top: topPadding ?? 0.0),
         child: Center(
           child: _buildIcon(),

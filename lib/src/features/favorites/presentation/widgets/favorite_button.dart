@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../domain/providers/favorites_provider.dart';
+import '../../../../../core/theme/snaplook_icons.dart';
 
 class FavoriteButton extends ConsumerWidget {
   final DetectionResult product;
@@ -52,12 +53,15 @@ class FavoriteButton extends ConsumerWidget {
           ],
         ),
         child: Center(
-          child: Icon(
-            isFavorite ? Icons.favorite : Icons.favorite_border,
-            size: size,
-            color: isFavorite
-                ? (activeColor ?? const Color(0xFFf2003c))
-                : (inactiveColor ?? Colors.grey.shade600),
+          child: Transform.translate(
+            offset: isFavorite ? Offset.zero : const Offset(-1, 0),
+            child: Icon(
+              isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
+              size: isFavorite ? size * 0.85 : size * 0.75,
+              color: isFavorite
+                  ? (activeColor ?? const Color(0xFFf2003c))
+                  : (inactiveColor ?? Colors.grey.shade600),
+            ),
           ),
         ),
       ),
@@ -81,10 +85,13 @@ class FavoriteIconButton extends ConsumerWidget {
     final isFavorite = ref.watch(isFavoriteProvider(product.id));
 
     return IconButton(
-      icon: Icon(
-        isFavorite ? Icons.favorite : Icons.favorite_border,
-        size: size,
-        color: isFavorite ? const Color(0xFFf2003c) : Colors.grey.shade400,
+      icon: Transform.translate(
+        offset: isFavorite ? Offset.zero : const Offset(-1, 0),
+        child: Icon(
+          isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
+          size: isFavorite ? size * 0.85 : size * 0.75,
+          color: isFavorite ? const Color(0xFFf2003c) : Colors.grey.shade400,
+        ),
       ),
       onPressed: () async {
         try {

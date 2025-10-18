@@ -154,50 +154,75 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                               ),
                             ],
                           ),
-                          SizedBox(height: spacing.m),
-                          // 🧩 Dynamic category chips
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: categories.map((category) {
-                                final isSelected =
-                                    selectedCategory == category.toLowerCase();
-                                return Container(
-                                  margin: EdgeInsets.only(right: spacing.sm),
-                                  child: FilterChip(
-                                    label: Text(
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: spacing.m),
+                    // Category filter chips - edge to edge with 16px content inset
+                    SizedBox(
+                      height: 48,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                        itemCount: categories.length,
+                        itemBuilder: (context, index) {
+                          final category = categories[index];
+                          final isSelected =
+                              selectedCategory == category.toLowerCase();
+                          return Container(
+                            margin: EdgeInsets.only(
+                              right: index < categories.length - 1
+                                  ? spacing.sm
+                                  : 0,
+                            ),
+                            child: Material(
+                              color: isSelected
+                                  ? const Color(0xFFf2003c)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(26),
+                              child: InkWell(
+                                onTap: () {
+                                  notifier.setSelectedCategory(category);
+                                },
+                                borderRadius: BorderRadius.circular(26),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(26),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? const Color(0xFFf2003c)
+                                          : Colors.grey[300]!,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
                                       category[0].toUpperCase() +
                                           category.substring(1),
                                       style: TextStyle(
                                         fontFamily: 'PlusJakartaSans',
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
                                         color: isSelected
                                             ? Colors.white
                                             : Colors.black,
                                       ),
                                     ),
-                                    selected: isSelected,
-                                    onSelected: (_) {
-                                      notifier.setSelectedCategory(category);
-                                    },
-                                    backgroundColor: Colors.grey[100],
-                                    selectedColor: const Color(0xFFf2003c),
-                                    checkmarkColor: Colors.white,
-                                    side: BorderSide.none,
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    visualDensity: VisualDensity.compact,
                                   ),
-                                );
-                              }).toList(),
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
                     SizedBox(height: spacing.sm),
                     Expanded(
-                      child: ListView.builder(
+                      child: ListView.separated(
                         controller: scrollController,
                         physics: const ClampingScrollPhysics(),
                         padding: EdgeInsets.fromLTRB(
@@ -207,6 +232,16 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                           safeAreaBottom + spacing.l,
                         ),
                         itemCount: results.length,
+                        separatorBuilder: (context, index) {
+                          return Padding(
+                            padding: EdgeInsets.only(left: spacing.m),
+                            child: Divider(
+                              color: Colors.grey[300],
+                              height: 1,
+                              thickness: 1,
+                            ),
+                          );
+                        },
                         itemBuilder: (context, index) {
                           final result = results[index];
                           return _ProductCard(
@@ -258,34 +293,15 @@ class _ProductCard extends StatelessWidget {
     final spacing = context.spacing;
     final radius = context.radius;
 
-    return Container(
-      margin: EdgeInsets.only(bottom: spacing.m),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(radius.medium),
-        child: Container(
-          padding: EdgeInsets.only(
-            top: spacing.m,
-            bottom: spacing.m,
-            left: 0,
-            right: spacing.m,
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(radius.medium),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          vertical: spacing.m,
+        ),
+        color: Theme.of(context).colorScheme.surface,
+        child: Row(
+          children: [
               // Image
               Stack(
                 children: [
@@ -355,13 +371,12 @@ class _ProductCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey[400],
-              ),
-            ],
-          ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
         ),
       ),
     );

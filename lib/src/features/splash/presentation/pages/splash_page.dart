@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
+import 'dart:ui';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -25,11 +26,11 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       context,
     );
 
-    // Wait for auth state to be ready (with minimum 1.5s splash time)
+    // Wait for auth state to be ready (with minimum 1.0s splash time)
     final authStateAsync = ref.read(authStateProvider);
 
     await Future.wait([
-      Future.delayed(const Duration(milliseconds: 1500)),
+      Future.delayed(const Duration(milliseconds: 1000)),
       authStateAsync.when(
         data: (_) => Future.value(),
         loading: () => Future.value(),
@@ -41,7 +42,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
     // Now check if user is authenticated
     final isAuthenticated = ref.read(isAuthenticatedProvider);
-    final nextPage = isAuthenticated ? const MainNavigation() : const LoginPage();
+    final nextPage =
+        isAuthenticated ? const MainNavigation() : const LoginPage();
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
@@ -60,7 +62,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFf2003c),
+      backgroundColor: const Color.fromRGBO(255, 0, 66, 1),
       body: Center(
         child: SizedBox(
           width: 180,

@@ -71,7 +71,7 @@ class AwesomeIntroPage extends ConsumerWidget {
                 child: Stack(
                   children: [
                     Image.asset(
-                      'assets/images/test.png',
+                      'assets/images/social_media_share_mobile_screen.png',
                       fit: BoxFit.contain,
                       scale: 0.77,
                     ),
@@ -108,15 +108,17 @@ class AwesomeIntroPage extends ConsumerWidget {
             SizedBox(height: spacing.xl),
 
             // Description text
-            const Text(
-              'Share fashion images from Instagram, Pinterest,\nor any app to find similar styles and products!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -0.3,
+            const Center(
+              child: Text(
+                'Share fashion images from Instagram, Pinterest,\nor any app to find similar styles and products!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'PlusJakartaSans',
+                  letterSpacing: -0.3,
+                ),
               ),
             ),
 

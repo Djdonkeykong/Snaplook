@@ -129,7 +129,7 @@ class PaywallPage extends ConsumerWidget {
                         child: _PlanOption(
                           plan: SubscriptionPlan.monthly,
                           title: 'Monthly',
-                          price: 'NOK 129,00/mo',
+                          price: '\$7.99/mo',
                           subtitle: '', // Empty subtitle to match yearly plan height
                           isSelected: selectedPlan == SubscriptionPlan.monthly,
                           onTap: () => ref.read(selectedPlanProvider.notifier).state = SubscriptionPlan.monthly,
@@ -141,7 +141,7 @@ class PaywallPage extends ConsumerWidget {
                         child: _PlanOption(
                           plan: SubscriptionPlan.yearly,
                           title: 'Yearly',
-                          price: 'NOK 33,25/mo',
+                          price: '\$4.99/mo',
                           subtitle: '3 DAYS FREE',
                           isSelected: selectedPlan == SubscriptionPlan.yearly,
                           onTap: () => ref.read(selectedPlanProvider.notifier).state = SubscriptionPlan.yearly,
@@ -218,15 +218,17 @@ class PaywallPage extends ConsumerWidget {
             SizedBox(height: spacing.m),
 
             // Bottom pricing text
-            const Text(
-              '3 days free, then NOK 399,00 per year (NOK 33,25/mo)',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 14,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.2,
+            const Center(
+              child: Text(
+                '3 days free, then \$59.99 per year (\$4.99/mo)',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
 
@@ -422,7 +424,7 @@ class _PlanOption extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isSelected ? Colors.black : Colors.grey.shade300,
-                width: isSelected ? 2 : 1,
+                width: 2,
               ),
             ),
             child: Column(

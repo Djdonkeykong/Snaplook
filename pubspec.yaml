@@ -2,7 +2,7 @@ name: snaplook
 description: "A Flutter app for fashion detection and styling recommendations"
 publish_to: 'none'
 
-version: 1.0.0+48
+version: 1.0.0+49
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -108,3 +108,6 @@ flutter:
     - family: snaplook-icons
       fonts:
         - asset: assets/fonts/snaplook-icons.ttf
+    - family: snaplook-ai-icon
+      fonts:
+        - asset: assets/fonts/snaplook-ai-icon.ttf

@@ -52,17 +52,22 @@ class DetectionService {
 
       // Run queries (in parallel) with pagination + fallback broaden
       final futures = urls.map((url) async {
-        final matches = await _fetchSerpResults(url, textQuery: textQuery);
-        final seen = <String>{};
-        final uniqueMatches = matches.where((m) {
-          final link = (m['link'] as String?) ?? '';
-          final title = (m['title'] as String?) ?? '';
-          final key = '$link|$title';
-          if (seen.contains(key)) return false;
-          seen.add(key);
-          return true;
-        }).take(_maxResultsPerGarment).toList();
-        return _mapToDetectionResults(uniqueMatches, url);
+        try {
+          final matches = await _fetchSerpResults(url, textQuery: textQuery);
+          final seen = <String>{};
+          final uniqueMatches = matches.where((m) {
+            final link = (m['link'] as String?) ?? '';
+            final title = (m['title'] as String?) ?? '';
+            final key = '$link|$title';
+            if (seen.contains(key)) return false;
+            seen.add(key);
+            return true;
+          }).take(_maxResultsPerGarment).toList();
+          return _mapToDetectionResults(uniqueMatches, url);
+        } catch (e) {
+          debugPrint('⚠️ Search failed for image crop (continuing with others): $e');
+          return <DetectionResult>[]; // Return empty list instead of throwing
+        }
       }).toList();
 
       // Flatten
@@ -159,14 +164,26 @@ class DetectionService {
     String? textQuery,
   }) async {
     // Primary pass (possibly with textQuery)
-    final primary = await _fetchSerpResultsOnce(imageUrl, textQuery: textQuery);
+    List<Map<String, dynamic>> primary = [];
+    try {
+      primary = await _fetchSerpResultsOnce(imageUrl, textQuery: textQuery);
+    } catch (e) {
+      debugPrint('⚠️ Primary search failed: $e');
+      // Continue to broadening pass
+    }
 
     // If the hint over-filters, broaden with a second pass (no textQuery)
     if ((textQuery == null || textQuery.isEmpty) || primary.length >= 15) {
       return primary;
     }
 
-    final secondary = await _fetchSerpResultsOnce(imageUrl, textQuery: null);
+    List<Map<String, dynamic>> secondary = [];
+    try {
+      secondary = await _fetchSerpResultsOnce(imageUrl, textQuery: null);
+    } catch (e) {
+      debugPrint('⚠️ Broadening search failed: $e');
+      return primary; // Return primary results (even if empty)
+    }
 
     // Merge unique: primary first (keeps original sort bias)
     final seen = <String>{};

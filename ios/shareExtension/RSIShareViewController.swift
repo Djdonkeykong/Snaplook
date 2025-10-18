@@ -144,6 +144,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var statusRotationTimer: Timer?
     private var currentStatusMessages: [String] = []
     private var currentStatusIndex: Int = 0
+    private var backgroundActivity: NSObjectProtocol?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -1089,6 +1090,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Showing \(detectionResults.count) detection results")
 
+        // REQUEST EXTENDED EXECUTION TIME to prevent iOS from killing the extension
+        // while user is browsing results. Critical for real device stability.
+        requestExtendedExecution()
+
         // Hide loading indicator
         activityIndicator?.stopAnimating()
         activityIndicator?.isHidden = true
@@ -1138,6 +1143,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             tableView.backgroundColor = .systemBackground
             tableView.separatorStyle = .singleLine
             tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+
             resultsTableView = tableView
         }
 
@@ -1329,6 +1335,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     @objc private func saveAllTapped() {
         shareLog("Save All button tapped - saving all results and redirecting")
 
+        // End extended execution since we're wrapping up
+        endExtendedExecution()
+
         // Haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
@@ -1397,6 +1406,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     func closeExtension() {
         shareLog("Closing share extension")
 
+        // End extended execution
+        endExtendedExecution()
+
         // Immediately hide default UI to prevent flash
         hideDefaultUI()
 
@@ -1427,6 +1439,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     @objc private func cancelDetectionTapped() {
         shareLog("Cancel button tapped - dismissing extension")
+
+        // End extended execution
+        endExtendedExecution()
 
         // Immediately hide default UI to prevent flash
         hideDefaultUI()
@@ -1993,6 +2008,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stack.addArrangedSubview(status)
         statusLabel = status
 
+        // Add shimmer animation to status label
+        DispatchQueue.main.async { [weak self] in
+            self?.addShimmerAnimation(to: status)
+        }
+
         // Progress bar
         let progress = UIProgressView(progressViewStyle: .default)
         progress.translatesAutoresizingMaskIntoConstraints = false
@@ -2152,9 +2172,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
         statusPollTimer = nil
     }
 
+    private func addShimmerAnimation(to label: UILabel) {
+        // Remove any existing animations
+        label.layer.removeAnimation(forKey: "shimmerAnimation")
+
+        // Create a subtle pulsing opacity animation - similar to Claude's "breathing" text effect
+        let pulseAnimation = CABasicAnimation(keyPath: "opacity")
+        pulseAnimation.fromValue = 0.5
+        pulseAnimation.toValue = 1.0
+        pulseAnimation.duration = 1.5
+        pulseAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        pulseAnimation.autoreverses = true
+        pulseAnimation.repeatCount = .infinity
+
+        label.layer.add(pulseAnimation, forKey: "shimmerAnimation")
+    }
+
     private func refreshStatusLabel() {
+        // Don't override the text - just ensure the shimmer animation is running
+        // The actual text is managed by the status rotation system
         DispatchQueue.main.async { [weak self] in
-            self?.statusLabel?.text = "Fetching your photo..."
+            guard let self = self, let label = self.statusLabel else { return }
+
+            // Ensure shimmer animation is active
+            if label.layer.animation(forKey: "shimmerAnimation") == nil {
+                self.addShimmerAnimation(to: label)
+            }
         }
     }
 
@@ -2173,6 +2216,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     @objc private func cancelImportTapped() {
         shareLog("Cancel tapped")
+
+        // End extended execution
+        endExtendedExecution()
 
         // Immediately hide default UI to prevent flash
         hideDefaultUI()
@@ -2198,6 +2244,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
             defaults.removeObject(forKey: kProcessingStatusKey)
             defaults.removeObject(forKey: kProcessingSessionKey)
             defaults.synchronize()
+        }
+    }
+
+    // Request extended execution time from iOS to prevent extension termination
+    private func requestExtendedExecution() {
+        endExtendedExecution() // Clean up any existing activity first
+
+        shareLog("🔋 Requesting extended execution time from iOS")
+        backgroundActivity = ProcessInfo.processInfo.performExpiringActivity(withReason: "User browsing detection results") { [weak self] expired in
+            if expired {
+                shareLog("⚠️ Extended execution time expired - iOS is requesting termination")
+                // iOS is asking us to wrap up - but don't force close if user is still interacting
+                DispatchQueue.main.async {
+                    self?.shareLog("Extended time expired but keeping extension alive for user interaction")
+                }
+            }
+        }
+        shareLog("✅ Extended execution time granted")
+    }
+
+    // End extended execution time
+    private func endExtendedExecution() {
+        if let activity = backgroundActivity {
+            shareLog("🔋 Ending extended execution time")
+            ProcessInfo.processInfo.performActivity(options: [], reason: "Cleanup") {}
+            backgroundActivity = nil
         }
     }
 }

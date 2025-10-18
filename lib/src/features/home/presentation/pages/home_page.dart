@@ -13,6 +13,7 @@ import '../../../product/presentation/pages/product_detail_page.dart';
 import '../../../product/presentation/pages/detected_products_page.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
@@ -1056,15 +1057,11 @@ class _ScanIcon extends StatelessWidget {
         ),
         child: Center(
           child: Transform.translate(
-            offset: const Offset(0, -1),
-            child: SvgPicture.asset(
-              'assets/icons/search-icon-sparkle.svg',
-              width: size * 0.55,
-              height: size * 0.55,
-              colorFilter: const ColorFilter.mode(
-                Colors.black54,
-                BlendMode.srcIn,
-              ),
+            offset: const Offset(0, -0.5),
+            child: Icon(
+              SnaplookAiIcon.aiSearchIcon,
+              size: size * 0.4675,
+              color: Colors.black54,
             ),
           ),
         ),

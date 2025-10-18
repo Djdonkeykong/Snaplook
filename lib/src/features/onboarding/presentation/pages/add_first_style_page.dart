@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -88,6 +89,7 @@ class AddFirstStylePage extends ConsumerWidget {
             // Skip Button
             GestureDetector(
               onTap: () {
+                HapticFeedback.mediumImpact();
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const TrialIntroPage(),

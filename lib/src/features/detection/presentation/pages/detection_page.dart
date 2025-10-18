@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -560,6 +561,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           .analyzeImage(imageToAnalyze);
 
       if (mounted && results.isNotEmpty) {
+        // Haptic feedback for successful detection
+        HapticFeedback.mediumImpact();
+
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => ResultsPage(
@@ -614,6 +618,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           .analyzeImage(imageToAnalyze);
 
       if (mounted && results.isNotEmpty) {
+        // Haptic feedback for successful detection
+        HapticFeedback.mediumImpact();
+
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => ResultsPage(

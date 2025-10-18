@@ -410,7 +410,7 @@ def upload_to_imgbb(image: Image.Image, api_key: str) -> Optional[str]:
         except Exception as e:
             print(f"❌ ImgBB error (attempt {attempt}): {e}")
 
-        time.sleep(1)
+        time.sleep(0.5)
 
     print("🚫 All ImgBB upload attempts failed.")
     return None
@@ -950,111 +950,89 @@ def download_image_from_url(image_url: str) -> Image.Image:
 
 def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List[dict]:
     """
-    Search Google Lens via SerpAPI with fallback strategy:
-    1. Try 'products' first (shopping results with prices)
-    2. Only try 'visual_matches' if products fails/times out
-    This saves API credits and reduces latency.
+    Search Google Lens via SerpAPI using ONLY the 'products' engine.
+    No fallback to visual_matches - products only for shopping results.
     """
     print(f"🔍 Searching SerpAPI for image: {image_url[:80]}...")
 
     results = []
-    products_succeeded = False
 
-    for rail in ['products', 'visual_matches']:
-        # Skip visual_matches if products succeeded
-        if rail == 'visual_matches':
-            if products_succeeded:
-                print(f"✅ Skipping visual_matches (products already succeeded with {len(results)} results)")
-                break
-            else:
-                print(f"⚠️ Falling back to visual_matches (products failed or timed out)")
+    # Only use products engine - no fallback
+    rail = 'products'
+    print(f"🔎 Using {rail} engine (no fallback)...")
+    params = {
+        'engine': 'google_lens',
+        'api_key': api_key,
+        'url': image_url,
+        'type': rail,
+    }
 
-        print(f"🔎 Trying {rail} engine...")
-        params = {
-            'engine': 'google_lens',
-            'api_key': api_key,
-            'url': image_url,
-            'type': rail,
-        }
+    try:
+        # Increased timeout to 20s to allow for slower SerpAPI responses
+        response = requests.get('https://serpapi.com/search', params=params, timeout=20)
+        if response.status_code != 200:
+            print(f"⚠️ SerpAPI products failed: {response.status_code}")
+            return results
 
-        try:
-            # Increased timeout to 15s to match SerpAPI's actual response time
-            response = requests.get('https://serpapi.com/search', params=params, timeout=15)
-            if response.status_code != 200:
-                print(f"⚠️ SerpAPI {rail} failed: {response.status_code}")
+        data = response.json()
+
+        # Check for "no results" error
+        if 'error' in data:
+            error_msg = data['error']
+            print(f"⚠️ SerpAPI products error: {error_msg}")
+            return results
+
+        matches = data.get('visual_matches', [])
+
+        # Early exit if no matches
+        if not matches:
+            print(f"⚠️ No matches found in products response")
+            return results
+
+        print(f"✅ Products engine returned {len(matches)} matches")
+
+        for match in matches:
+            link = match.get('link', '')
+            title = match.get('title', '')
+            source = match.get('source', '')
+            thumbnail = match.get('thumbnail', '')
+            snippet = match.get('snippet', '')
+
+            # Basic validation
+            if not link or not title:
                 continue
 
-            data = response.json()
-
-            # Check for "no results" error and exit early
-            if 'error' in data:
-                error_msg = data['error']
-                print(f"⚠️ SerpAPI {rail} error: {error_msg}")
-
-                # Detect "no results" pattern and skip remaining rails
-                if "hasn't returned any results" in error_msg.lower() or "no results" in error_msg.lower():
-                    print(f"🚫 Google Lens found no results - skipping remaining searches")
-                    no_results_error = True
-                    break
+            # Apply sophisticated filtering (ported from Flutter)
+            if not is_ecommerce_result(link, source, title, snippet):
                 continue
 
-            matches = data.get('visual_matches', [])
-
-            # Early exit if no matches
-            if not matches:
-                print(f"⚠️ No matches found in {rail} response")
+            if not is_relevant_result(title):
                 continue
 
-            # Mark products as successful if we got results
-            if rail == 'products' and matches:
-                products_succeeded = True
-                print(f"✅ Products engine returned {len(matches)} matches")
+            # Extract price if available
+            price = 0.0
+            price_obj = match.get('price', {})
+            if isinstance(price_obj, dict):
+                price = price_obj.get('extracted_value', 0.0)
 
-            for match in matches:
-                link = match.get('link', '')
-                title = match.get('title', '')
-                source = match.get('source', '')
-                thumbnail = match.get('thumbnail', '')
-                snippet = match.get('snippet', '')
+            results.append({
+                'title': title,
+                'link': link,
+                'source': source,
+                'thumbnail': thumbnail,
+                'snippet': snippet,
+                'price': price,
+            })
 
-                # Basic validation
-                if not link or not title:
-                    continue
-
-                # Apply sophisticated filtering (ported from Flutter)
-                if not is_ecommerce_result(link, source, title, snippet):
-                    continue
-
-                if not is_relevant_result(title):
-                    continue
-
-                # Extract price if available
-                price = 0.0
-                price_obj = match.get('price', {})
-                if isinstance(price_obj, dict):
-                    price = price_obj.get('extracted_value', 0.0)
-
-                results.append({
-                    'title': title,
-                    'link': link,
-                    'source': source,
-                    'thumbnail': thumbnail,
-                    'snippet': snippet,
-                    'price': price,
-                })
-
-                if len(results) >= max_results * 2:  # Fetch extra before dedup
-                    break
-
-            if len(results) >= max_results * 2:
+            if len(results) >= max_results * 2:  # Fetch extra before dedup
                 break
 
-        except requests.exceptions.Timeout:
-            print(f"⏱️ SerpAPI {rail} timeout after 15s - moving on")
-            continue
-        except Exception as e:
-            print(f"❌ SerpAPI {rail} error: {e}")
-            continue
+    except requests.exceptions.Timeout:
+        print(f"⏱️ SerpAPI products timeout after 20s - returning empty results")
+        return results
+    except Exception as e:
+        print(f"❌ SerpAPI products error: {e}")
+        return results
 
     print(f"✅ Found {len(results)} filtered results from SerpAPI")
     return results
@@ -1152,124 +1130,103 @@ def detect(req: DetectRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# === DETECT AND SEARCH ENDPOINT (For Share Extension) ===
+# === DETECT AND SEARCH ENDPOINT (Optimized) ===
 @app.post("/detect-and-search")
 def detect_and_search(req: DetectAndSearchRequest):
     """
     Full pipeline: Download image -> Detect garments -> Search SerpAPI -> Return results.
-    Designed for iOS share extension to show results in modal.
+    Optimized for lower latency and higher reliability.
     """
     try:
+        t0 = time.time()
         print(f"🚀 Starting detect-and-search pipeline for: {req.image_url[:80]}...")
 
-        # Step 1: Download image from URL
+        # Step 1: Download image
         image = download_image_from_url(req.image_url)
-        print(f"✅ Image downloaded: {image.width}x{image.height}")
+        print(f"✅ Image downloaded: {image.width}x{image.height} ({time.time()-t0:.2f}s)")
 
-        # Step 2: Run YOLOS detection
+        # Step 2: YOLOS detection
+        t_detect = time.time()
         filtered = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
+        print(f"🧠 Detection completed in {time.time()-t_detect:.2f}s with {len(filtered)} garments")
 
         if not filtered:
-            return {
-                'success': False,
-                'message': 'No garments detected in image',
-                'results': []
-            }
+            return {'success': False, 'message': 'No garments detected', 'results': []}
 
-        # Step 3: Crop all garments and upload to ImgBB (in parallel)
+        # Step 3: Crop & upload garments to ImgBB (parallel)
         imgbb_api_key = "d7e1d857e4498c2e28acaa8d943ccea8"
+        crop_data = [
+            (det, image.crop(expand_bbox(det["bbox"], image.width, image.height, req.expand_ratio)))
+            for det in filtered
+        ]
 
-        print(f"🔍 Processing {len(filtered)} detected garments...")
+        def upload_crop_safe(crop_tuple):
+            det, crop = crop_tuple
+            try:
+                return det, upload_to_imgbb_optimized(crop, imgbb_api_key)
+            except Exception as e:
+                print(f"⚠️ Upload failed for {det['label']}: {e}")
+                return det, None
 
-        # Prepare all crops
-        crop_data = []
-        for det in filtered:
-            x1, y1, x2, y2 = expand_bbox(det["bbox"], image.width, image.height, req.expand_ratio)
-            crop = image.crop((x1, y1, x2, y2))
-            crop_data.append((det, crop))
+        print(f"☁️ Uploading {len(crop_data)} crops in parallel...")
+        t_upload = time.time()
+        with ThreadPoolExecutor(max_workers=min(6, len(crop_data))) as ex:
+            results = list(ex.map(upload_crop_safe, crop_data))
+        print(f"✅ Uploads complete in {time.time()-t_upload:.2f}s")
 
-        # Upload all crops in parallel
-        crops_with_urls = []
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            future_to_det = {
-                executor.submit(upload_to_imgbb, crop, imgbb_api_key): det
-                for det, crop in crop_data
-            }
-
-            for future in as_completed(future_to_det):
-                det = future_to_det[future]
-                try:
-                    crop_url = future.result(timeout=30)
-                    if crop_url:
-                        crops_with_urls.append({
-                            'garment': det,
-                            'crop_url': crop_url
-                        })
-                        print(f"✅ Uploaded {det['label']} crop: {crop_url}")
-                except Exception as e:
-                    print(f"⚠️ ImgBB upload failed for {det['label']}: {e}")
-
+        crops_with_urls = [
+            {"garment": det, "crop_url": url}
+            for det, url in results if url
+        ]
         if not crops_with_urls:
-            return {
-                'success': False,
-                'message': 'Failed to upload garment crops',
-                'results': []
-            }
+            return {'success': False, 'message': 'Failed to upload garment crops', 'results': []}
 
-        # Step 4: Search SerpAPI for each garment crop (in parallel for speed)
-        print(f"🔍 Searching SerpAPI for {len(crops_with_urls)} garments in parallel...")
+        # Step 4: SerpAPI searches (parallel)
+        print(f"🔍 Searching SerpAPI for {len(crops_with_urls)} garments...")
 
         def search_single_garment(item):
             garment = item['garment']
             crop_url = item['crop_url']
-            print(f"🔍 Searching SerpAPI for {garment['label']} (score: {garment['score']:.3f})...")
+            label = garment['label']
+            t_search = time.time()
+            try:
+                serp_results = search_serp_api_optimized(
+                    crop_url, req.serp_api_key, req.max_results_per_garment
+                )
+                print(f"✅ {label} search took {time.time()-t_search:.2f}s ({len(serp_results)} results)")
+            except Exception as e:
+                print(f"⚠️ SerpAPI search failed for {label}: {e}")
+                serp_results = []
 
-            serp_results = search_serp_api(
-                crop_url,
-                req.serp_api_key,
-                max_results=req.max_results_per_garment
-            )
+            return [
+                format_detection_result(r, label, i)
+                for i, r in enumerate(serp_results)
+            ]
 
-            # Format results for this garment
-            formatted_results = []
-            for i, serp_result in enumerate(serp_results):
-                formatted = format_detection_result(serp_result, garment['label'], i)
-                formatted_results.append(formatted)
-
-            return formatted_results
-
-        # Execute searches in parallel
+        t_serp = time.time()
         all_results = []
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            futures = [executor.submit(search_single_garment, item) for item in crops_with_urls]
-
+        with ThreadPoolExecutor(max_workers=min(6, len(crops_with_urls))) as ex:
+            futures = [ex.submit(search_single_garment, item) for item in crops_with_urls]
             for future in as_completed(futures):
-                try:
-                    results = future.result(timeout=60)
-                    all_results.extend(results)
-                except Exception as e:
-                    print(f"⚠️ SerpAPI search failed for a garment: {e}")
-                    continue
+                all_results.extend(future.result() or [])
+        print(f"📊 SerpAPI searches complete in {time.time()-t_serp:.2f}s")
 
-        print(f"📊 Total raw results before filtering: {len(all_results)}")
-
-        # Step 5: Apply sophisticated filtering
-        # Remove collection pages if we have enough PDPs
-        pdp_count = sum(1 for r in all_results if not looks_like_collection(
-            r.get('purchase_url', ''), r.get('product_name', '')
-        ))
-
+        # Step 5: Filter, deduplicate, and summarize
+        pdp_count = sum(
+            1 for r in all_results
+            if not looks_like_collection(r.get('purchase_url', ''), r.get('product_name', ''))
+        )
         if pdp_count >= 10:
             before = len(all_results)
-            all_results = [r for r in all_results if not looks_like_collection(
-                r.get('purchase_url', ''), r.get('product_name', '')
-            )]
-            print(f"🧹 Removed {before - len(all_results)} collection pages (kept PDPs)")
+            all_results = [
+                r for r in all_results
+                if not looks_like_collection(r.get('purchase_url', ''), r.get('product_name', ''))
+            ]
+            print(f"🧹 Removed {before - len(all_results)} collection pages")
 
-        # Step 6: Deduplicate and limit by domain with fashion scoring
         deduped_results = deduplicate_and_limit_by_domain(all_results)
-
-        print(f"✅ Pipeline complete. Returning {len(deduped_results)} high-quality results from {len(crops_with_urls)} garments")
+        print(f"✅ Pipeline complete ({time.time()-t0:.2f}s total). "
+              f"Returned {len(deduped_results)} results from {len(crops_with_urls)} garments.")
 
         return {
             'success': True,
@@ -1284,9 +1241,56 @@ def detect_and_search(req: DetectAndSearchRequest):
 
     except Exception as e:
         print(f"❌ detect-and-search failed: {e}")
-        import traceback
-        traceback.print_exc()
+        import traceback; traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# === Optimized helpers ===
+def upload_to_imgbb_optimized(image: Image.Image, api_key: str) -> Optional[str]:
+    """Optimized upload: lower timeout + faster retry."""
+    image = image.convert("RGB")
+    w, h = image.size
+    if w < 80 or h < 80 or (w * h) < 14400:
+        print(f"⚠️ Skipping tiny crop {w}x{h}")
+        return None
+
+    for attempt in range(1, 3):  # only two tries
+        try:
+            buf = io.BytesIO()
+            image.save(buf, format="JPEG", quality=90, optimize=True)
+            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            r = requests.post(
+                "https://api.imgbb.com/1/upload",
+                data={"key": api_key, "image": b64},
+                timeout=8
+            )
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("success"):
+                    url = data["data"].get("url")
+                    if url and not url.endswith(".png"):
+                        return url
+        except Exception as e:
+            print(f"❌ ImgBB attempt {attempt} failed: {e}")
+        time.sleep(0.5)
+    return None
+
+
+def search_serp_api_optimized(image_url: str, api_key: str, max_results: int = 10):
+    """Wrapper with short timeout & retry."""
+    try:
+        from serpapi import GoogleSearch
+        search = GoogleSearch({
+            "engine": "google_lens",
+            "api_key": api_key,
+            "url": image_url
+        })
+        result = search.get_dict()
+        matches = result.get("visual_matches", [])
+        return matches[:max_results]
+    except Exception as e:
+        print(f"⚠️ SerpAPI error: {e}")
+        return []
 
 # === DEBUG ENDPOINT ===
 @app.post("/debug")
