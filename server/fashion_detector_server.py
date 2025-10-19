@@ -1480,11 +1480,15 @@ def search_serp_api_optimized(
         "type": "products",
     }
 
+    # Use a higher HTTP timeout (30s) to allow SerpAPI time to respond
+    # The concurrent.futures timeout at the caller level controls the actual wait time
+    http_timeout = 30.0
+
     try:
-        response = requests.get("https://serpapi.com/search", params=params, timeout=request_timeout)
+        response = requests.get("https://serpapi.com/search", params=params, timeout=http_timeout)
         response.raise_for_status()
     except requests.exceptions.Timeout:
-        print(f"[SerpAPI] Products search timeout after {request_timeout:.1f}s")
+        print(f"[SerpAPI] Products search HTTP timeout after {http_timeout:.1f}s")
         return []
     except requests.RequestException as exc:
         print(f"[SerpAPI] Products search error: {exc}")
