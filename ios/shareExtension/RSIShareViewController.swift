@@ -323,6 +323,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open func shouldAutoFinalizeShare() -> Bool { true }
 
+    open func shouldAutoStartDetection() -> Bool { true }
+
     open override func isContentValid() -> Bool { true }
 
     private func hideDefaultUI() {
@@ -619,22 +621,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func maybeFinalizeShare() {
         guard pendingAttachmentCount == 0, !hasQueuedRedirect else {
-            shareLog("⏸️️ maybeFinalizeShare: waiting (pending=\(pendingAttachmentCount), hasQueued=\(hasQueuedRedirect))")
+            shareLog("maybeFinalizeShare: waiting (pending=\(pendingAttachmentCount), hasQueued=\(hasQueuedRedirect))")
             return
         }
 
-        // Don't auto-redirect if we're attempting or showing detection results
         if shouldAttemptDetection || isShowingDetectionResults {
-            shareLog("⏸️️ maybeFinalizeShare: BLOCKED - detection in progress (attempt=\(shouldAttemptDetection), showing=\(isShowingDetectionResults))")
+            shareLog("maybeFinalizeShare: blocked while detection is in progress (attempt=\(shouldAttemptDetection), showing=\(isShowingDetectionResults))")
             return
         }
 
         guard shouldAutoFinalizeShare() else {
-            shareLog("⏸️️ maybeFinalizeShare: auto finalize suppressed by subclass")
+            shareLog("maybeFinalizeShare: auto finalize suppressed by subclass")
             return
         }
 
-        shareLog("✅ maybeFinalizeShare: proceeding with normal redirect")
+        shareLog("maybeFinalizeShare: proceeding with normal redirect")
         hasQueuedRedirect = true
         let message = pendingPostMessage
         saveAndRedirect(message: message)
@@ -2009,10 +2010,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let fileURL = containerURL.appendingPathComponent(fileName)
 
             // Check if we should attempt detection BEFORE writing file
-            let hasDetectionConfig = self.detectorEndpoint() != nil && self.serpApiKey() != nil
+            let detectionConfigured = self.detectorEndpoint() != nil && self.serpApiKey() != nil
 
-            if hasDetectionConfig {
-                shareLog("DETECTION CONFIGURED - Holding file in memory, NOT writing to shared container yet")
+            if detectionConfigured && self.shouldAutoStartDetection() {
+                shareLog("Detection configured - holding file in memory for automatic analysis")
                 self.shouldAttemptDetection = true
                 self.pendingImageData = data
                 self.pendingImageUrl = originalURL
@@ -2033,15 +2034,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // DON'T call completion and DON'T write file - wait for detection results or failure
                 shareLog("File held in memory. Completion held. uploadAndDetect called.")
             } else {
-                shareLog("⚠️ Detection NOT configured - proceeding with normal flow")
+                if detectionConfigured {
+                    shareLog("Detection configured but auto-start disabled - saving file for manual flow")
+                } else {
+                    shareLog("Detection not configured - saving file to shared container")
+                }
 
                 do {
-                    // Write file to shared container (normal flow)
                     if FileManager.default.fileExists(atPath: fileURL.path) {
                         try FileManager.default.removeItem(at: fileURL)
                     }
                     try data.write(to: fileURL, options: .atomic)
-                    shareLog("💾 Saved Instagram image to shared container: \(fileURL.path)")
+                    shareLog("Saved Instagram image to shared container: \(fileURL.path)")
 
                     let sharedFile = SharedMediaFile(
                         path: fileURL.absoluteString,
@@ -2050,12 +2054,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         type: .image
                     )
 
-                    // No detection - complete normally
                     completion(.success(sharedFile))
                 } catch {
                     completion(.failure(error))
                 }
             }
+
         }.resume()
     }
 

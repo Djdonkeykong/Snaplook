@@ -272,6 +272,10 @@ class ShareViewController: RSIShareViewController {
         present(alert, animated: true)
     }
 
+    override func shouldAutoStartDetection() -> Bool {
+        return false
+    }
+
     override func shouldAutoFinalizeShare() -> Bool {
         return isUserInitiated
     }
