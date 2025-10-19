@@ -43,7 +43,16 @@ class DetectionService {
       if (batch.originalUrl.isNotEmpty) urls.add(batch.originalUrl);
       urls.addAll(sortedCrops.skip(1).map((c) => c.url));
 
-      if (urls.isEmpty) throw Exception('No usable image crops produced.');
+      if (urls.isEmpty) {
+        final fallbackUrl = batch.originalUrl.isNotEmpty
+            ? batch.originalUrl
+            : await _uploadImageToImgbb(image);
+        if (fallbackUrl.isNotEmpty) {
+          urls.add(fallbackUrl);
+        } else {
+          throw Exception('No usable image crops produced.');
+        }
+      }
 
       debugPrint('🔍 Querying SerpAPI for ${urls.length} image URLs (best-first)...');
 
