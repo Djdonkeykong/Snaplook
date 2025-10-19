@@ -19,7 +19,7 @@ class DetectionService {
   final http.Client _client;
   final bool strictMode;
 
-  static const int _maxGarments = 4;
+  static const int _maxGarments = 5;
   static const int _maxResultsPerGarment = 25; // allow more per query since we paginate
   static const int _maxPerDomain = 3;
 
@@ -37,6 +37,7 @@ class DetectionService {
         ..sort((a, b) => b.score.compareTo(a.score));
 
       // Build query order: best crop → original (context) → remaining crops
+      final labelByUrl = {for (final crop in sortedCrops) crop.url: crop.label};
       final urls = <String>[];
       if (sortedCrops.isNotEmpty) urls.add(sortedCrops.first.url);
       if (batch.originalUrl.isNotEmpty) urls.add(batch.originalUrl);
@@ -63,7 +64,11 @@ class DetectionService {
             seen.add(key);
             return true;
           }).take(_maxResultsPerGarment).toList();
-          return _mapToDetectionResults(uniqueMatches, url);
+          return _mapToDetectionResults(
+            uniqueMatches,
+            url,
+            detectionLabel: labelByUrl[url],
+          );
         } catch (e) {
           debugPrint('⚠️ Search failed for image crop (continuing with others): $e');
           return <DetectionResult>[]; // Return empty list instead of throwing
@@ -324,8 +329,9 @@ class DetectionService {
   /// === Convert SerpAPI JSON → DetectionResult ===
   List<DetectionResult> _mapToDetectionResults(
     List<Map<String, dynamic>> matches,
-    String fallbackImageUrl,
-  ) {
+    String fallbackImageUrl, {
+    String? detectionLabel,
+  }) {
     final results = <DetectionResult>[];
 
     for (var i = 0; i < matches.length; i++) {
@@ -343,7 +349,7 @@ class DetectionService {
           0.0;
 
       final brand = _extractBrand(title, source);
-      final category = _categorize(title);
+      final category = _categorize(title, brand: brand, detectionLabel: detectionLabel);
       final confidence = _estimateConfidence(i, price);
       final tags = _generateTags(title, source);
 
@@ -596,11 +602,20 @@ class DetectionService {
 
   // === Category resolution ===
   // Keeps your explicit rules, then applies a generalized token-vote override.
-  String _categorize(String title, {String? brand}) {
+  String _categorize(String title, {String? brand, String? detectionLabel}) {
     final lower = title.toLowerCase();
     final brandLower = brand?.toLowerCase() ?? '';
+    final labelCategory = detectionLabel == null
+        ? null
+        : _labelCategoryOverrides[detectionLabel.toLowerCase().trim()];
 
     String? explicitCat;
+    String finalizeCategory(String candidate) => _applyCategoryGuards(
+      title: title,
+      lower: lower,
+      candidate: candidate,
+      labelCategory: labelCategory,
+    );
 
     // 1️⃣ Accessories (explicit)
     if (lower.contains('sunglass') ||
@@ -758,24 +773,69 @@ class DetectionService {
 
     if (explicitCat == null) {
       debugPrint('🧩 Categorized "$title" as $best (vote only)');
-      return best;
+      return finalizeCategory(best);
     }
 
     final explicitScore = votes[explicitCat] ?? 0;
 
     if (bestScore > explicitScore) {
       debugPrint('🧩 Categorized "$title" as $best (vote override; explicit was $explicitCat)');
-      return best;
+      return finalizeCategory(best);
     }
 
     if (bestScore == explicitScore && best != explicitCat) {
       final pick = (priority.indexOf(best) < priority.indexOf(explicitCat)) ? best : explicitCat;
       debugPrint('🧩 Categorized "$title" as $pick (tie-break; explicit=$explicitCat, vote=$best)');
-      return pick;
+      return finalizeCategory(pick);
     }
 
     debugPrint('🧩 Categorized "$title" as $explicitCat (explicit)');
-    return explicitCat;
+    return finalizeCategory(explicitCat!);
+  }
+
+  String _applyCategoryGuards({
+    required String title,
+    required String lower,
+    required String candidate,
+    String? labelCategory,
+  }) {
+    if (candidate == 'all') {
+      if (labelCategory != null && _categoryHasKeyword(labelCategory, lower)) {
+        debugPrint('Guard align "$title": detector label prefers $labelCategory over $candidate');
+        return labelCategory;
+      }
+      return candidate;
+    }
+
+    final candidateValid = _categoryHasKeyword(candidate, lower);
+    final labelValid = labelCategory != null && _categoryHasKeyword(labelCategory, lower);
+
+    if (!candidateValid) {
+      if (labelValid) {
+        debugPrint('Guard override "$title": detector label forced $labelCategory (candidate $candidate missing keywords)');
+        return labelCategory!;
+      }
+      debugPrint('Guard fallback "$title": missing keyword for $candidate, assigning all');
+      return 'all';
+    }
+
+    if (labelValid && labelCategory != candidate) {
+      debugPrint('Guard align "$title": detector label prefers $labelCategory over $candidate');
+      return labelCategory!;
+    }
+
+    return candidate;
+  }
+
+  bool _categoryHasKeyword(String category, String lower) {
+    final tokens = _categoryGuardTokens[category];
+    if (tokens == null || tokens.isEmpty) return true;
+    for (final token in tokens) {
+      if (lower.contains(token)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   double _estimateConfidence(int index, double price) {
@@ -813,6 +873,43 @@ class DetectionService {
 
   static const Set<String> _stopWords = {
     'the', 'and', 'with', 'from', 'shop', 'buy', 'store', 'official'
+  };
+
+  static const Map<String, List<String>> _categoryGuardTokens = {
+    'dresses': ['dress', 'gown', 'jumpsuit', 'romper', 'maxi', 'midi', 'mini'],
+    'tops': ['top', 'shirt', 'tee', 't-shirt', 'blouse', 'tank', 'sweater', 'hoodie', 'cardigan', 'crewneck'],
+    'bottoms': ['pant', 'pants', 'trouser', 'jean', 'denim', 'short', 'skirt', 'legging', 'culotte', 'jogger'],
+    'outerwear': ['jacket', 'coat', 'blazer', 'trench', 'parka', 'vest', 'puffer', 'windbreaker'],
+    'shoes': ['shoe', 'sneaker', 'boot', 'heel', 'loafer', 'sandal', 'trainer', 'cleat', 'moccasin', 'slipper', 'oxford', 'derby'],
+    'bags': ['bag', 'handbag', 'tote', 'purse', 'crossbody', 'backpack', 'satchel', 'clutch', 'wallet', 'duffel'],
+    'accessories': ['scarf', 'belt', 'glasses', 'sunglass', 'earring', 'necklace', 'bracelet', 'ring', 'watch', 'hair clip', 'headband', 'beanie'],
+    'headwear': ['hat', 'cap', 'beanie', 'headband', 'beret', 'visor', 'bucket'],
+  };
+
+  static const Map<String, String> _labelCategoryOverrides = {
+    'dress': 'dresses',
+    'jumpsuit': 'dresses',
+    'romper': 'dresses',
+    'cape': 'outerwear',
+    'coat': 'outerwear',
+    'jacket': 'outerwear',
+    'vest': 'outerwear',
+    'cardigan': 'tops',
+    'sweater': 'tops',
+    'shirt, blouse': 'tops',
+    'top, t-shirt, sweatshirt': 'tops',
+    'shirt': 'tops',
+    'pants': 'bottoms',
+    'shorts': 'bottoms',
+    'skirt': 'bottoms',
+    'shoe': 'shoes',
+    'bag, wallet': 'bags',
+    'bag': 'bags',
+    'glasses': 'accessories',
+    'hat': 'headwear',
+    'headband, head covering, hair accessory': 'headwear',
+    'scarf': 'accessories',
+    'belt': 'accessories',
   };
 
   static const Map<String, List<String>> _categoryKeywords = {

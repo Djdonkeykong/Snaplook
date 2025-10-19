@@ -1226,8 +1226,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             NSLayoutConstraint.activate([
                 container.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: -5),
                 container.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
-                container.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 12),
-                container.heightAnchor.constraint(equalToConstant: 40),
+                container.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
+                container.heightAnchor.constraint(equalToConstant: 48),
 
                 logo.leadingAnchor.constraint(equalTo: container.leadingAnchor),
                 logo.centerYAnchor.constraint(equalTo: container.centerYAnchor),
