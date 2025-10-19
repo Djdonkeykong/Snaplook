@@ -32,14 +32,14 @@ class ShareViewController: RSIShareViewController {
 
     // MARK: - UI Setup
     private func setupCustomUI() {
-        // Container view
+        view.backgroundColor = UIColor(white: 0, alpha: 0.35)
+
         containerView.backgroundColor = .white
         containerView.layer.cornerRadius = 16
         containerView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerView)
 
-        // Title
-        titleLabel.text = "How would you like to\nanalyze this image?"
+        titleLabel.text = "How would you like to analyze this image?"
         titleLabel.numberOfLines = 0
         titleLabel.textAlignment = .center
         titleLabel.font = UIFont.systemFont(ofSize: 20, weight: .semibold)
@@ -47,26 +47,23 @@ class ShareViewController: RSIShareViewController {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(titleLabel)
 
-        // Analyze in App Button
         configureButton(
             analyzeInAppButton,
-            title: "📱 Analyze in App",
+            title: "Analyze in App",
             isPrimary: false,
             action: #selector(analyzeInAppTapped)
         )
         containerView.addSubview(analyzeInAppButton)
 
-        // Analyze Now Button
         configureButton(
             analyzeNowButton,
-            title: "⚡ Analyze Now",
+            title: "Analyze Now",
             isPrimary: true,
             action: #selector(analyzeNowTapped)
         )
         containerView.addSubview(analyzeNowButton)
 
-        // Disclaimer
-        disclaimerLabel.text = "💡 Tip: Analyzing in-app lets you crop the image to use fewer search credits"
+        disclaimerLabel.text = "Tip: Analyzing in-app lets you crop the image to use fewer search credits."
         disclaimerLabel.numberOfLines = 0
         disclaimerLabel.textAlignment = .center
         disclaimerLabel.font = UIFont.systemFont(ofSize: 13, weight: .regular)
@@ -74,32 +71,26 @@ class ShareViewController: RSIShareViewController {
         disclaimerLabel.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(disclaimerLabel)
 
-        // Layout constraints
         NSLayoutConstraint.activate([
-            // Container
             containerView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             containerView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
-            // Title
             titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 32),
             titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 24),
             titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -24),
 
-            // Analyze in App Button
             analyzeInAppButton.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 32),
             analyzeInAppButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 24),
             analyzeInAppButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -24),
             analyzeInAppButton.heightAnchor.constraint(equalToConstant: 56),
 
-            // Analyze Now Button
             analyzeNowButton.topAnchor.constraint(equalTo: analyzeInAppButton.bottomAnchor, constant: 12),
             analyzeNowButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 24),
             analyzeNowButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -24),
             analyzeNowButton.heightAnchor.constraint(equalToConstant: 56),
 
-            // Disclaimer
             disclaimerLabel.topAnchor.constraint(equalTo: analyzeNowButton.bottomAnchor, constant: 24),
             disclaimerLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 24),
             disclaimerLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -24),
@@ -257,7 +248,7 @@ class ShareViewController: RSIShareViewController {
     }
 
     private func showSuccessAndRedirect(resultCount: Int) {
-        analyzeNowButton.setTitle("✓ Found \(resultCount) results", for: .normal)
+        analyzeNowButton.setTitle("Found \(resultCount) results", for: .normal)
 
         // Wait briefly to show success message
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
@@ -281,6 +272,10 @@ class ShareViewController: RSIShareViewController {
         present(alert, animated: true)
     }
 
+    override func shouldAutoFinalizeShare() -> Bool {
+        return isUserInitiated
+    }
+
     // Disable auto-redirect since we're showing custom UI
     override func shouldAutoRedirect() -> Bool {
         return false
@@ -292,6 +287,7 @@ class ShareViewController: RSIShareViewController {
         // Check if this was called by us (not by base class)
         if isUserInitiated {
             super.didSelectPost()
+            isUserInitiated = false
         } else {
             NSLog("[ShareExtension] Blocked auto-post from base class")
         }

@@ -321,6 +321,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open func shouldAutoRedirect() -> Bool { true }
 
+    open func shouldAutoFinalizeShare() -> Bool { true }
+
     open override func isContentValid() -> Bool { true }
 
     private func hideDefaultUI() {
@@ -624,6 +626,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Don't auto-redirect if we're attempting or showing detection results
         if shouldAttemptDetection || isShowingDetectionResults {
             shareLog("⏸️️ maybeFinalizeShare: BLOCKED - detection in progress (attempt=\(shouldAttemptDetection), showing=\(isShowingDetectionResults))")
+            return
+        }
+
+        guard shouldAutoFinalizeShare() else {
+            shareLog("⏸️️ maybeFinalizeShare: auto finalize suppressed by subclass")
             return
         }
 
@@ -2052,7 +2059,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }.resume()
     }
 
-    private func saveAndRedirect(message: String? = nil) {
+    func saveAndRedirect(message: String? = nil) {
         hasQueuedRedirect = true
         let userDefaults = UserDefaults(suiteName: appGroupId)
         userDefaults?.set(toData(data: sharedMedia), forKey: kUserDefaultsKey)
