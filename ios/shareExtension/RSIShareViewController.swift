@@ -1159,6 +1159,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         applySheetCornerRadius(12)
     }
 
+    open override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        DispatchQueue.main.async { [weak self] in
+            self?.applySheetCornerRadius(12)
+        }
+    }
+
     private func applySheetCornerRadius(_ radius: CGFloat) {
         if #available(iOS 15.0, *) {
             if let sheet = presentationController as? UISheetPresentationController {
