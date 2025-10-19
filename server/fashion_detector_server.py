@@ -7,26 +7,41 @@ import time
 import torch
 import requests
 import re
+import uuid
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Set, Union
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed, wait  # parallel workloads
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, Field, model_validator
 from PIL import Image, ImageDraw
 from transformers import AutoImageProcessor, YolosForObjectDetection
+import cloudinary
+import cloudinary.uploader
+
+# Load environment variables from .env file in parent directory
+load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env')
 
 # === CONFIG ===
 MODEL_ID = "valentinafeve/yolos-fashionpedia"
 CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", 0.275))
 EXPAND_RATIO = float(os.getenv("EXPAND_RATIO", 0.1))
 SHOE_EXPAND_RATIO = float(os.getenv("SHOE_EXPAND_RATIO", 0.22))
+HAT_EXPAND_RATIO = float(os.getenv("HAT_EXPAND_RATIO", 0.18))
 MAX_GARMENTS = int(os.getenv("MAX_GARMENTS", 5))
-UPLOAD_TO_IMGBB = True
+
+# Cloudinary configuration
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
 
 # SearchAPI.io credentials and configuration
 SEARCHAPI_KEY = os.getenv("SEARCHAPI_KEY", "T2BUYdLUfK1zpz4qvoz5u2HF")
@@ -80,7 +95,11 @@ BANNED_TERMS = {
     "logo", "microphone", "mockup", "monitor", "mouse", "office", "pattern",
     "pc", "phone", "png", "printer", "router", "screen", "shoelace",
     "silhouette", "software", "speaker", "stencil", "svg", "tablet", "tech",
-    "texture", "vector", "wallpaper", "sofa", "chair", "desk", "earbuds"
+    "texture", "vector", "wallpaper", "sofa", "chair", "desk", "earbuds",
+    "jewelry", "jewellery", "necklace", "bracelet", "earring", "earrings", "ring",
+    "rings", "anklet", "anklets", "brooch", "brooches", "pendant", "pendants",
+    "choker", "chokers", "cufflinks", "tiara", "tiaras", "hair pin", "hairpin",
+    "hair clip", "hairclip", "hair comb", "haircomb"
 }
 
 CATEGORY_KEYWORDS = {
@@ -306,6 +325,10 @@ RELEVANCE_BANNED_TERMS = [
     'projector', 'render', 'router', 'scanner', 'screen', 'silhouette', 'sofa',
     'speaker', 'stand', 'stock photo', 'tablet', 'tech', 'template', 'texture',
     'tripod', 'tutorial', 'tv', 'vector', 'wallpaper', '3d', 'shoelace', 'clip art',
+    'jewelry', 'jewellery', 'necklace', 'bracelet', 'earring', 'earrings', 'ring',
+    'rings', 'anklet', 'anklets', 'brooch', 'brooches', 'pendant', 'pendants',
+    'choker', 'chokers', 'cufflinks', 'tiara', 'tiaras', 'hair pin', 'hairpin',
+    'hair clip', 'hairclip', 'hair comb', 'haircomb'
 ]
 
 # Fashion keywords for relevance detection
@@ -354,7 +377,6 @@ print("✅ Model loaded.")
 # === INPUT SCHEMA ===
 class DetectRequest(BaseModel):
     image_base64: str
-    imbb_api_key: Optional[str] = None
     threshold: Optional[float] = Field(default_factory=lambda: CONF_THRESHOLD)
     expand_ratio: Optional[float] = Field(default=EXPAND_RATIO)
     max_crops: Optional[int] = Field(default=MAX_GARMENTS)
@@ -389,6 +411,8 @@ def expand_bbox(bbox, img_width, img_height, ratio=0.1):
 def resolve_expand_ratio(label: str, base_ratio: float) -> float:
     if label == "shoe":
         return max(base_ratio, SHOE_EXPAND_RATIO)
+    if label == "hat":
+        return max(base_ratio, HAT_EXPAND_RATIO)
     return base_ratio
 
 def bbox_iou(box1, box2):
@@ -426,57 +450,8 @@ def overlap_ratio(inner, outer):
     inner_area = (x2 - x1) * (y2 - y1)
     return inter_area / inner_area
 
-# === RELIABLE & FAST IMG UPLOAD ===
-def upload_to_imgbb(image: Image.Image, api_key: str, label: Optional[str] = None) -> Optional[str]:
-    """Upload image to ImgBB with compression, retry, and smart size filtering."""
-    image = image.convert("RGB")
-    w, h = image.size
-    label_lower = (label or "").lower()
-
-    min_w = MIN_CROP_W
-    min_h = MIN_CROP_H
-    min_area = MIN_CROP_AREA
-
-    if "shoe" in label_lower:
-        min_w = 60
-        min_h = 60
-        min_area = 8000
-
-    if w < min_w or h < min_h or (w * h) < min_area:
-        print(f"⚠️ Skipping tiny/insignificant crop {w}x{h} (label={label_lower or 'unknown'})")
-        return None
-
-    for attempt in range(1, 4):
-        try:
-            buf = io.BytesIO()
-            # High quality first, reduce on retries
-            quality = 95 if attempt == 1 else 85 - (attempt - 2) * 10  # 95, 85, 75
-            image.save(buf, format="JPEG", quality=quality, optimize=True)
-            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-
-            r = requests.post(
-                "https://api.imgbb.com/1/upload",
-                data={"key": api_key, "image": b64},
-                timeout=12,
-            )
-
-            if r.status_code == 200:
-                data = r.json()
-                if data.get("success") and "data" in data:
-                    url = data["data"].get("url")
-                    # ImgBB sometimes returns blue PNG placeholder for truncated uploads
-                    if url and not url.endswith(".png"):
-                        print(f"☁️ ImgBB upload succeeded (attempt {attempt}): {url}")
-                        return url
-
-            print(f"⚠️ ImgBB upload failed (attempt {attempt}): {r.status_code}")
-        except Exception as e:
-            print(f"❌ ImgBB error (attempt {attempt}): {e}")
-
-        time.sleep(0.5)
-
-    print("🚫 All ImgBB upload attempts failed.")
-    return None
+# === CLOUDINARY CDN UPLOAD ===
+# (Cloudinary upload function is defined later in the file - see upload_to_cloudinary)
 
 # === SOPHISTICATED FILTERING HELPERS (Ported from Flutter) ===
 
@@ -1228,13 +1203,13 @@ def detect(req: DetectRequest):
             crop = image.crop((x1, y1, x2, y2))
             crops.append((det, crop, expanded_bbox))
 
-        # Step 3 — Parallel ImgBB uploads
+        # Step 3 — Parallel Cloudinary uploads
         results = []
-        if UPLOAD_TO_IMGBB and req.imbb_api_key and len(crops) > 0:
-            print(f"☁️ Uploading {len(crops)} crops to ImgBB in parallel...")
+        if len(crops) > 0:
+            print(f"[Cloudinary] Uploading {len(crops)} crops in parallel...")
             with ThreadPoolExecutor(max_workers=min(4, len(crops))) as executor:
                 future_to_item = {
-                    executor.submit(upload_to_imgbb, crop, req.imbb_api_key, det.get('label')): (det, bbox)
+                    executor.submit(upload_to_cloudinary, crop, det.get('label')): (det, bbox)
                     for det, crop, bbox in crops
                 }
                 for future in as_completed(future_to_item):
@@ -1243,24 +1218,24 @@ def detect(req: DetectRequest):
                     try:
                         upload_url = future.result(timeout=25)
                     except Exception as e:
-                        print(f"⚠️ Upload failed for {det['label']}: {e}")
+                        print(f"[Cloudinary] Upload failed for {det['label']}: {e}")
 
                     results.append({
                         "id": det["id"],
                         "label": det["label"],
                         "score": round(det["score"], 3),
                         "bbox": bbox,
-                        "imgbb_url": upload_url,
+                        "image_url": upload_url,
                     })
         else:
-            # If uploads are disabled or no key provided
+            # No crops to upload
             for det, crop, bbox in crops:
                 results.append({
                     "id": det["id"],
                     "label": det["label"],
                     "score": round(det["score"], 3),
                     "bbox": bbox,
-                    "imgbb_url": None,
+                    "image_url": None,
                 })
 
         print(f"✅ Detection complete. {len(results)} garments processed.")
@@ -1279,7 +1254,7 @@ def detect(req: DetectRequest):
 
 # === DETECT AND SEARCH ENDPOINT (Optimized) ===
 @app.post("/detect-and-search")
-def detect_and_search(req: DetectAndSearchRequest):
+def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
     """
     Full pipeline: Download image -> Detect garments -> Search SerpAPI -> Return results.
     Optimized for lower latency and higher reliability.
@@ -1312,8 +1287,7 @@ def detect_and_search(req: DetectAndSearchRequest):
         if not filtered:
             return {'success': False, 'message': 'No garments detected', 'results': []}
 
-        # Step 3: Crop & upload garments to ImgBB (parallel)
-        imgbb_api_key = "d7e1d857e4498c2e28acaa8d943ccea8"
+        # Step 3: Crop & upload garments to Cloudinary (parallel)
         crop_data = []
         for det in filtered:
             ratio = resolve_expand_ratio(det["label"], req.expand_ratio)
@@ -1324,23 +1298,33 @@ def detect_and_search(req: DetectAndSearchRequest):
         def upload_crop_safe(crop_tuple):
             det, crop = crop_tuple
             try:
-                return det, upload_to_imgbb_optimized(crop, imgbb_api_key, det.get('label'))
+                url = upload_to_cloudinary(crop, det.get('label'))
+                if url:
+                    return det, url
+                print(f"[Cloudinary] Empty response for {det.get('label') or 'unknown'}")
             except Exception as e:
-                print(f"⚠️ Upload failed for {det['label']}: {e}")
-                return det, None
+                print(f"[Cloudinary] Upload failed for {det['label']}: {e}")
+            return det, None
 
-        print(f"☁️ Uploading {len(crop_data)} crops in parallel...")
+        print(f"[Cloudinary] Uploading {len(crop_data)} crops in parallel...")
         t_upload = time.time()
         with ThreadPoolExecutor(max_workers=min(6, len(crop_data))) as ex:
             results = list(ex.map(upload_crop_safe, crop_data))
-        print(f"✅ Uploads complete in {time.time()-t_upload:.2f}s")
+        print(f"[Cloudinary] Uploads complete in {time.time()-t_upload:.2f}s")
 
         crops_with_urls = [
             {"garment": det, "crop_url": url}
             for det, url in results if url
         ]
         if not crops_with_urls:
-            return {'success': False, 'message': 'Failed to upload garment crops', 'results': []}
+            print("[Cloudinary] All crop uploads failed - attempting fallback with entire image")
+            fallback_url = upload_to_cloudinary(image, filtered[0].get('label'))
+            if fallback_url:
+                crops_with_urls = [{"garment": filtered[0], "crop_url": fallback_url}]
+                print("[Cloudinary] Fallback: Using entire image for search")
+            else:
+                print("[Cloudinary] Fallback failed - aborting search")
+                return {'success': False, 'message': 'Failed to upload garment crops to CDN', 'results': []}
 
         # Step 4: Visual product search (parallel, no timeout)
         print(f"[SearchAPI] Searching {len(crops_with_urls)} garments...")
@@ -1421,44 +1405,63 @@ def detect_and_search(req: DetectAndSearchRequest):
 
 
 # === Optimized helpers ===
-def upload_to_imgbb_optimized(image: Image.Image, api_key: str, label: Optional[str] = None) -> Optional[str]:
-    """Optimized upload: lower timeout + faster retry."""
+
+
+def upload_to_cloudinary(image: Image.Image, label: Optional[str] = None) -> Optional[str]:
+    """Upload image to Cloudinary CDN for global availability."""
     image = image.convert("RGB")
     w, h = image.size
     label_lower = (label or "").lower()
 
+    # Validate minimum dimensions based on garment type
     min_w = 80
     min_h = 80
     min_area = 14400
 
     if "shoe" in label_lower:
+        min_w = 55
+        min_h = 50
+        min_area = 6500
+    elif "hat" in label_lower:
         min_w = 60
-        min_h = 60
-        min_area = 8000
+        min_h = 50
+        min_area = 5500
+    elif "bag" in label_lower or "wallet" in label_lower:
+        min_w = 50
+        min_h = 45
+        min_area = 5000
 
     if w < min_w or h < min_h or (w * h) < min_area:
-        print(f"[ImgBB] Skipping crop {w}x{h} (label={label_lower or 'unknown'})")
+        print(f"[Cloudinary] Skipping crop {w}x{h} (label={label_lower or 'unknown'})")
         return None
 
-    for attempt in range(1, 3):  # only two tries
+    for attempt in range(1, 3):  # Two attempts
         try:
             buf = io.BytesIO()
-            image.save(buf, format="JPEG", quality=90, optimize=True)
-            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-            r = requests.post(
-                "https://api.imgbb.com/1/upload",
-                data={"key": api_key, "image": b64},
+            # Lower quality for faster uploads - images only used for visual search
+            image.save(buf, format="JPEG", quality=80)
+            buf.seek(0)
+
+            # Upload to Cloudinary with minimal processing for speed
+            result = cloudinary.uploader.upload(
+                buf,
+                folder="snaplook_crops",
+                resource_type="image",
+                format="jpg",
                 timeout=8
             )
-            if r.status_code == 200:
-                data = r.json()
-                if data.get("success"):
-                    url = data["data"].get("url")
-                    if url and not url.endswith(".png"):
-                        return url
+
+            if result and result.get("secure_url"):
+                url = result["secure_url"]
+                print(f"[Cloudinary] Uploaded {label_lower or 'garment'}: {url}")
+                return url
+
         except Exception as e:
-            print(f"❌ ImgBB attempt {attempt} failed: {e}")
-        time.sleep(0.5)
+            print(f"[Cloudinary] Attempt {attempt} failed: {e}")
+
+        if attempt < 2:
+            time.sleep(0.5)
+
     return None
 
 
