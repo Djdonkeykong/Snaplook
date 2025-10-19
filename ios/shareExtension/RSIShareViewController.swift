@@ -420,6 +420,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         super.viewDidAppear(animated)
         suppressKeyboard()
         hideDefaultUI()
+        applySheetCornerRadius(12)
+        DispatchQueue.main.async { [weak self] in
+            self?.applySheetCornerRadius(12)
+        }
 
         // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
         if hasProcessedAttachments {
@@ -1157,13 +1161,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
     open override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         applySheetCornerRadius(12)
-    }
-
-    open override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        DispatchQueue.main.async { [weak self] in
-            self?.applySheetCornerRadius(12)
-        }
     }
 
     private func applySheetCornerRadius(_ radius: CGFloat) {
