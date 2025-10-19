@@ -11,8 +11,23 @@ class ShareViewController: RSIShareViewController {
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
+        // Call super to initialize base class (needed for sharedMedia, appGroupId, etc.)
         super.viewDidLoad()
+
+        // Immediately show our custom UI on top of any base class UI
         setupCustomUI()
+
+        NSLog("[ShareExtension] Custom UI initialized - showing choice screen")
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        // Ensure our UI is visible and on top
+        containerView.isHidden = false
+        view.bringSubviewToFront(containerView)
+
+        NSLog("[ShareExtension] Custom choice screen visible")
     }
 
     // MARK: - UI Setup
@@ -115,6 +130,8 @@ class ShareViewController: RSIShareViewController {
     // MARK: - Button Actions
     @objc private func analyzeInAppTapped() {
         NSLog("[ShareExtension] User selected: Analyze in App")
+        // Mark as user-initiated so didSelectPost won't be blocked
+        isUserInitiated = true
         // Trigger the standard redirect flow - user will crop in Snaplook
         didSelectPost()
     }
@@ -244,8 +261,11 @@ class ShareViewController: RSIShareViewController {
 
         // Wait briefly to show success message
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            // Mark as user-initiated so didSelectPost won't be blocked
+            self.isUserInitiated = true
             // Redirect to main app to show results
-            self?.didSelectPost()
+            self.didSelectPost()
         }
     }
 
@@ -265,4 +285,17 @@ class ShareViewController: RSIShareViewController {
     override func shouldAutoRedirect() -> Bool {
         return false
     }
+
+    // Override to prevent base class from auto-posting
+    override func didSelectPost() {
+        // Only allow posting when explicitly called by our button handlers
+        // Check if this was called by us (not by base class)
+        if isUserInitiated {
+            super.didSelectPost()
+        } else {
+            NSLog("[ShareExtension] Blocked auto-post from base class")
+        }
+    }
+
+    private var isUserInitiated = false
 }
