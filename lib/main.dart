@@ -63,7 +63,11 @@ void main() async {
 
   if (Platform.isIOS) {
     PathProviderPlatform.instance = PathProviderFoundation();
-    await DefaultCacheManager().getFileFromCache('__warmup__').catchError((_) {});
+    try {
+      await DefaultCacheManager().getFileFromCache('__warmup__');
+    } catch (e) {
+      debugPrint('[Config] cache warmup skipped: $e');
+    }
   }
 
   // Load environment variables (optional - won't crash if missing)
