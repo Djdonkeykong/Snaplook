@@ -1,5 +1,7 @@
 import 'package:path_provider/path_provider.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:path_provider_foundation/path_provider_foundation.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -59,6 +61,11 @@ class SharedPreferencesLocalStorage extends LocalStorage {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  if (Platform.isIOS) {
+    PathProviderPlatform.instance = PathProviderFoundation();
+    await DefaultCacheManager().getFileFromCache('__warmup__').catchError((_) {});
+  }
+
   // Load environment variables (optional - won't crash if missing)
   try {
     await dotenv.load(fileName: ".env");
@@ -69,7 +76,8 @@ void main() async {
   }
 
   // 🧠 Log which endpoint is active
-  debugPrint('🔍 SERP_DETECTOR_ENDPOINT = ${AppConstants.serpDetectorEndpoint}');
+  debugPrint('🔍 SERP_DETECT_ENDPOINT = ${AppConstants.serpDetectEndpoint}');
+  debugPrint('🛒 SERP_DETECT_AND_SEARCH_ENDPOINT = ${AppConstants.serpDetectAndSearchEndpoint}');
 
   // Warm up path_provider so method channels are registered before cache usage.
   try {
@@ -721,5 +729,4 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     );
   }
 }
-
 

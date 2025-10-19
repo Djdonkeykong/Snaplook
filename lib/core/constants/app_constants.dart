@@ -34,31 +34,79 @@ class AppConstants {
       dotenv.env['IMGBB_API_KEY'] ??
       'd7e1d857e4498c2e28acaa8d943ccea8';
 
-  // === 🧠 Smart Detector Endpoint ===
-  static String get serpDetectorEndpoint {
-    // 🧩 Priority 1: dart-define (used in Codemagic)
-    const defineUrl = String.fromEnvironment(
-      'SERP_DETECTOR_ENDPOINT',
-      defaultValue: '',
+  // === 🧠 Smart Detector Endpoints ===
+  static String get serpDetectEndpoint {
+    final detect = _maybeEndpoint(
+      defineKey: 'SERP_DETECT_ENDPOINT',
+      envKey: 'SERP_DETECT_ENDPOINT',
     );
-    if (defineUrl.isNotEmpty) return defineUrl;
+    if (detect != null) return detect;
 
-    // 🧩 Priority 2: .env file (used in local dev)
-    final envUrl = dotenv.env['SERP_DETECTOR_ENDPOINT'];
-    if (envUrl != null && envUrl.isNotEmpty) return envUrl;
+    final legacy = _maybeEndpoint(
+      defineKey: 'SERP_DETECTOR_ENDPOINT',
+      envKey: 'SERP_DETECTOR_ENDPOINT',
+    );
+    if (legacy != null) {
+      if (legacy.endsWith('/detect-and-search')) {
+        return legacy.replaceFirst('/detect-and-search', '/detect');
+      }
+      return legacy;
+    }
 
-    // 🧩 Priority 3: Local LAN (for debugging)
-    const localIP = 'http://10.0.0.25:8000/detect';
+    return _defaultDetectEndpoint();
+  }
 
-    // 🧩 Priority 4: Production fallback
-    const renderUrl =
-        'https://snaplook-fastapi-detector.onrender.com/detect-and-search';
+  static String get serpDetectAndSearchEndpoint {
+    final detectSearch = _maybeEndpoint(
+      defineKey: 'SERP_DETECT_AND_SEARCH_ENDPOINT',
+      envKey: 'SERP_DETECT_AND_SEARCH_ENDPOINT',
+    );
+    if (detectSearch != null) return detectSearch;
 
-    // Optional override flag for dev
+    final legacy = _maybeEndpoint(
+      defineKey: 'SERP_DETECTOR_ENDPOINT',
+      envKey: 'SERP_DETECTOR_ENDPOINT',
+    );
+    if (legacy != null) {
+      if (legacy.endsWith('/detect')) {
+        final base = legacy.substring(0, legacy.length - '/detect'.length);
+        return '$base/detect-and-search';
+      }
+      return legacy;
+    }
+
+    return _defaultDetectAndSearchEndpoint();
+  }
+
+  static String get serpDetectorEndpoint => serpDetectEndpoint;
+
+  static String? _maybeEndpoint({
+    required String defineKey,
+    required String envKey,
+  }) {
+    const defineValue = String.fromEnvironment(defineKey, defaultValue: '');
+    if (defineValue.isNotEmpty) return defineValue;
+
+    final envValue = dotenv.env[envKey];
+    if (envValue != null && envValue.isNotEmpty) return envValue;
+
+    return null;
+  }
+
+  static String _defaultDetectEndpoint() {
     const bool isLocal =
         bool.fromEnvironment('USE_LOCAL_API', defaultValue: false);
+    return isLocal
+        ? 'http://10.0.0.25:8000/detect'
+        : 'https://snaplook-fastapi-detector.onrender.com/detect';
+  }
 
-    return isLocal ? localIP : renderUrl;
+  static String _defaultDetectAndSearchEndpoint() {
+    const bool isLocal =
+        bool.fromEnvironment('USE_LOCAL_API', defaultValue: false);
+    return isLocal
+        ? 'http://10.0.0.25:8000/detect-and-search'
+        : 'https://snaplook-fastapi-detector.onrender.com/detect-and-search';
   }
 
   // === 🐝 ScrapingBee Keys ===

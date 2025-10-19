@@ -111,7 +111,7 @@ class DetectionService {
 
   /// Step 1 — Call local YOLOS FastAPI detection server
   Future<_SerpImageBatch> _runLocalDetector(XFile image) async {
-    final endpoint = AppConstants.serpDetectorEndpoint;
+    final endpoint = AppConstants.serpDetectEndpoint;
     try {
       final bytes = await image.readAsBytes();
       final payload = jsonEncode({

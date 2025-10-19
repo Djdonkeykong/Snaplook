@@ -16,7 +16,7 @@ class ShareExtensionConfigService {
     try {
       // Use method channel to write to app group UserDefaults (iOS native)
       final serpKey = AppConstants.serpApiKey;
-      final endpoint = AppConstants.serpDetectorEndpoint;
+      final endpoint = AppConstants.serpDetectAndSearchEndpoint;
 
       await _channel.invokeMethod('saveSharedConfig', {
         'appGroupId': _appGroupId,
