@@ -28,8 +28,10 @@ SHOE_EXPAND_RATIO = float(os.getenv("SHOE_EXPAND_RATIO", 0.22))
 MAX_GARMENTS = int(os.getenv("MAX_GARMENTS", 5))
 UPLOAD_TO_IMGBB = True
 
-# SerpAPI search controls
-SERPAPI_SEARCH_TIMEOUT = float(os.getenv("SERPAPI_SEARCH_TIMEOUT", 10.0))
+# SearchAPI.io credentials and configuration
+SEARCHAPI_KEY = os.getenv("SEARCHAPI_KEY", "T2BUYdLUfK1zpz4qvoz5u2HF")
+SEARCHAPI_LOCATION = os.getenv("SEARCHAPI_LOCATION", "us")  # Country code for results
+SEARCHAPI_DEVICE = os.getenv("SEARCHAPI_DEVICE", "mobile")  # mobile or desktop
 
 # Tiny/irrelevant crop guard (pixels)
 MIN_CROP_W = 80
@@ -360,12 +362,11 @@ class DetectRequest(BaseModel):
 class DetectAndSearchRequest(BaseModel):
     image_url: Optional[str] = None
     image_base64: Optional[str] = None
-    serp_api_key: str
     threshold: Optional[float] = Field(default_factory=lambda: CONF_THRESHOLD)
     expand_ratio: Optional[float] = Field(default=EXPAND_RATIO)
     max_crops: Optional[int] = Field(default=MAX_GARMENTS)
     max_results_per_garment: Optional[int] = Field(default=10)
-    serp_timeout_seconds: Optional[float] = Field(default=None, ge=1.0, le=60.0)
+    location: Optional[str] = Field(default=None)  # Country code for search results (e.g., 'us', 'uk', 'ca')
 
     @model_validator(mode="after")
     def validate_image_source(self) -> "DetectAndSearchRequest":
@@ -1341,26 +1342,24 @@ def detect_and_search(req: DetectAndSearchRequest):
         if not crops_with_urls:
             return {'success': False, 'message': 'Failed to upload garment crops', 'results': []}
 
-        # Step 4: SerpAPI searches (parallel with timeout)
-        serp_timeout = max(1.0, float(req.serp_timeout_seconds or SERPAPI_SEARCH_TIMEOUT))
-        print(f"[SerpAPI] Searching {len(crops_with_urls)} garments (timeout {serp_timeout:.0f}s)...")
+        # Step 4: Visual product search (parallel, no timeout)
+        print(f"[SearchAPI] Searching {len(crops_with_urls)} garments...")
 
         def search_single_garment(item):
             garment = item['garment']
             crop_url = item['crop_url']
             label = garment['label']
             t_search = time.time()
-            serp_results = search_serp_api_optimized(
+            search_results = search_visual_products(
                 crop_url,
-                req.serp_api_key,
                 req.max_results_per_garment,
-                request_timeout=serp_timeout,
+                req.location,
             )
-            print(f"[SerpAPI] {label} search took {time.time() - t_search:.2f}s ({len(serp_results)} results)")
+            print(f"[SearchAPI] {label} search took {time.time() - t_search:.2f}s ({len(search_results)} results)")
 
             return [
                 format_detection_result(r, label, i)
-                for i, r in enumerate(serp_results)
+                for i, r in enumerate(search_results)
             ]
 
         t_serp = time.time()
@@ -1369,26 +1368,23 @@ def detect_and_search(req: DetectAndSearchRequest):
         future_to_item = {executor.submit(search_single_garment, item): item for item in crops_with_urls}
         done, not_done = set(), set()
         try:
-            done, not_done = wait(list(future_to_item.keys()), timeout=serp_timeout)
+            done, not_done = wait(list(future_to_item.keys()), timeout=None)  # Wait indefinitely
             for future in done:
                 try:
                     all_results.extend(future.result() or [])
                 except Exception as exc:
                     label = future_to_item[future]["garment"]["label"]
-                    print(f"[SerpAPI] Unexpected error collecting results for {label}: {exc}")
+                    print(f"[SearchAPI] Unexpected error collecting results for {label}: {exc}")
             if not_done:
                 for future in not_done:
                     label = future_to_item[future]["garment"]["label"]
-                    print(f"[SerpAPI] Skipping slow search for {label} (> {serp_timeout:.1f}s)")
+                    print(f"[SearchAPI] Search incomplete for {label}")
                     future.cancel()
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
 
         serp_elapsed = time.time() - t_serp
-        if not_done:
-            print(f"[SerpAPI] Returning partial results after {serp_elapsed:.2f}s ({len(done)} finished, {len(not_done)} timed out)")
-        else:
-            print(f"[SerpAPI] Searches complete in {serp_elapsed:.2f}s")
+        print(f"[SearchAPI] All searches complete in {serp_elapsed:.2f}s")
 
         # Step 5: Filter, deduplicate, and summarize
         pdp_count = sum(
@@ -1466,42 +1462,41 @@ def upload_to_imgbb_optimized(image: Image.Image, api_key: str, label: Optional[
     return None
 
 
-def search_serp_api_optimized(
+def search_visual_products(
     image_url: str,
-    api_key: str,
     max_results: int = 10,
-    request_timeout: float = SERPAPI_SEARCH_TIMEOUT,
+    location: str = None,
 ):
-    """Products-only Google Lens search with request timeout."""
+    """SearchAPI.io optimized Google Lens search for fashion products."""
     params = {
         "engine": "google_lens",
-        "api_key": api_key,
+        "api_key": SEARCHAPI_KEY,
         "url": image_url,
-        "type": "products",
+        "search_type": "products",
+        "location": location or SEARCHAPI_LOCATION,  # Country-specific results
+        "device": SEARCHAPI_DEVICE,  # Mobile optimized for better fashion results
+        "hl": "en",  # English interface
     }
 
-    # Use a higher HTTP timeout (30s) to allow SerpAPI time to respond
-    # The concurrent.futures timeout at the caller level controls the actual wait time
     http_timeout = 30.0
 
     try:
-        response = requests.get("https://serpapi.com/search", params=params, timeout=http_timeout)
+        response = requests.get("https://www.searchapi.io/api/v1/search", params=params, timeout=http_timeout)
         response.raise_for_status()
     except requests.exceptions.Timeout:
-        print(f"[SerpAPI] Products search HTTP timeout after {http_timeout:.1f}s")
+        print(f"[SearchAPI] HTTP timeout after {http_timeout:.1f}s")
         return []
     except requests.RequestException as exc:
-        print(f"[SerpAPI] Products search error: {exc}")
+        print(f"[SearchAPI] Request error: {exc}")
         return []
 
     data = response.json()
     if data.get("error"):
-        print(f"[SerpAPI] Products search returned error: {data['error']}")
+        print(f"[SearchAPI] API error: {data['error']}")
         return []
 
-    matches = data.get("visual_matches") or data.get("product_results", [])
-    if isinstance(matches, dict):
-        matches = matches.get("organic_results", [])
+    # SearchAPI.io returns results in visual_matches array
+    matches = data.get("visual_matches", [])
     if not isinstance(matches, list):
         matches = []
 
