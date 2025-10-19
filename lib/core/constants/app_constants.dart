@@ -3,6 +3,27 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppConstants {
   AppConstants._();
 
+  static const List<MapEntry<String, String>> _detectEndpointKeyCandidates = [
+    MapEntry('DETECT_ENDPOINT', 'DETECT_ENDPOINT'),
+    MapEntry('DETECTOR_ENDPOINT', 'DETECTOR_ENDPOINT'),
+    MapEntry('SEARCHAPI_DETECT_ENDPOINT', 'SEARCHAPI_DETECT_ENDPOINT'),
+    MapEntry('SEARCH_DETECT_ENDPOINT', 'SEARCH_DETECT_ENDPOINT'),
+    MapEntry('SERP_DETECT_ENDPOINT', 'SERP_DETECT_ENDPOINT'),
+  ];
+
+  static const List<MapEntry<String, String>>
+      _detectAndSearchEndpointKeyCandidates = [
+    MapEntry('DETECT_AND_SEARCH_ENDPOINT', 'DETECT_AND_SEARCH_ENDPOINT'),
+    MapEntry('DETECTOR_AND_SEARCH_ENDPOINT', 'DETECTOR_AND_SEARCH_ENDPOINT'),
+    MapEntry('SEARCHAPI_DETECT_AND_SEARCH_ENDPOINT',
+        'SEARCHAPI_DETECT_AND_SEARCH_ENDPOINT'),
+    MapEntry('SEARCH_DETECT_AND_SEARCH_ENDPOINT',
+        'SEARCH_DETECT_AND_SEARCH_ENDPOINT'),
+    MapEntry('SERP_DETECT_AND_SEARCH_ENDPOINT',
+        'SERP_DETECT_AND_SEARCH_ENDPOINT'),
+    MapEntry('SERP_DETECTOR_ENDPOINT', 'SERP_DETECTOR_ENDPOINT'),
+  ];
+
   // === 🔐 Supabase Configuration ===
   static String get supabaseUrl =>
       dotenv.env['SUPABASE_URL'] ??
@@ -36,43 +57,39 @@ class AppConstants {
 
   // === 🧠 Smart Detector Endpoints ===
   static String get serpDetectEndpoint {
-    final detect = _maybeEndpoint(
-      defineKey: 'SERP_DETECT_ENDPOINT',
-      envKey: 'SERP_DETECT_ENDPOINT',
-    );
+    final detect = _firstEndpoint(_detectEndpointKeyCandidates);
     if (detect != null) return detect;
 
-    final legacy = _maybeEndpoint(
-      defineKey: 'SERP_DETECTOR_ENDPOINT',
-      envKey: 'SERP_DETECTOR_ENDPOINT',
-    );
-    if (legacy != null) {
-      if (legacy.endsWith('/detect-and-search')) {
-        return legacy.replaceFirst('/detect-and-search', '/detect');
+    final fromDetectAndSearch =
+        _firstEndpoint(_detectAndSearchEndpointKeyCandidates);
+    if (fromDetectAndSearch != null) {
+      if (fromDetectAndSearch.endsWith('/detect-and-search')) {
+        return fromDetectAndSearch.replaceFirst(
+          '/detect-and-search',
+          '/detect',
+        );
       }
-      return legacy;
+      return fromDetectAndSearch;
     }
 
     return _defaultDetectEndpoint();
   }
 
   static String get serpDetectAndSearchEndpoint {
-    final detectSearch = _maybeEndpoint(
-      defineKey: 'SERP_DETECT_AND_SEARCH_ENDPOINT',
-      envKey: 'SERP_DETECT_AND_SEARCH_ENDPOINT',
-    );
+    final detectSearch =
+        _firstEndpoint(_detectAndSearchEndpointKeyCandidates);
     if (detectSearch != null) return detectSearch;
 
-    final legacy = _maybeEndpoint(
-      defineKey: 'SERP_DETECTOR_ENDPOINT',
-      envKey: 'SERP_DETECTOR_ENDPOINT',
-    );
-    if (legacy != null) {
-      if (legacy.endsWith('/detect')) {
-        final base = legacy.substring(0, legacy.length - '/detect'.length);
+    final detectOnly = _firstEndpoint(_detectEndpointKeyCandidates);
+    if (detectOnly != null) {
+      if (detectOnly.endsWith('/detect')) {
+        final base = detectOnly.substring(
+          0,
+          detectOnly.length - '/detect'.length,
+        );
         return '$base/detect-and-search';
       }
-      return legacy;
+      return detectOnly;
     }
 
     return _defaultDetectAndSearchEndpoint();
@@ -90,6 +107,17 @@ class AppConstants {
     final envValue = dotenv.env[envKey];
     if (envValue != null && envValue.isNotEmpty) return envValue;
 
+    return null;
+  }
+
+  static String? _firstEndpoint(List<MapEntry<String, String>> candidates) {
+    for (final candidate in candidates) {
+      final resolved = _maybeEndpoint(
+        defineKey: candidate.key,
+        envKey: candidate.value,
+      );
+      if (resolved != null) return resolved;
+    }
     return null;
   }
 
