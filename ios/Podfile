@@ -48,15 +48,4 @@ post_install do |installer|
       config.build_settings.delete 'IPHONEOS_DEPLOYMENT_TARGET'
     end
   end
-
-  # Remove path_provider_foundation from GeneratedPluginRegistrant
-  # We use Directory.systemTemp instead which doesn't require a plugin
-  registrant_path = File.join(File.dirname(__FILE__), 'Runner', 'GeneratedPluginRegistrant.m')
-  if File.exist?(registrant_path)
-    puts "Removing path_provider_foundation from GeneratedPluginRegistrant.m"
-    registrant_content = File.read(registrant_path)
-    registrant_content.gsub!(/\[PathProviderPlugin registerWithRegistrar.*?\];/, '// PathProviderPlugin removed')
-    registrant_content.gsub!(/#import <path_provider_foundation.*?>/, '// path_provider_foundation removed')
-    File.write(registrant_path, registrant_content)
-  end
 end
