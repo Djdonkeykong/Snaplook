@@ -1160,11 +1160,28 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func applySheetCornerRadius(_ radius: CGFloat) {
+        if #available(iOS 15.0, *) {
+            if let sheet = presentationController as? UISheetPresentationController {
+                if sheet.preferredCornerRadius != radius {
+                    sheet.preferredCornerRadius = radius
+                }
+            }
+        }
+
+        view.layer.cornerRadius = radius
+        if #available(iOS 13.0, *) {
+            view.layer.cornerCurve = .continuous
+        }
+        view.layer.masksToBounds = true
+
         var current = view.superview
         var hops = 0
 
-        while let container = current, hops < 3 {
+        while let container = current, hops < 4 {
             container.layer.cornerRadius = radius
+            if #available(iOS 13.0, *) {
+                container.layer.cornerCurve = .continuous
+            }
             container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
             container.layer.masksToBounds = true
             current = container.superview

@@ -100,6 +100,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               // Sign in link
               TextButton(
                 onPressed: () {
+                  HapticFeedback.mediumImpact();
                   _showSignInBottomSheet(context);
                 },
                 child: RichText(

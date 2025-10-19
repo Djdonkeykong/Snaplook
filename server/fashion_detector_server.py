@@ -24,7 +24,8 @@ from transformers import AutoImageProcessor, YolosForObjectDetection
 MODEL_ID = "valentinafeve/yolos-fashionpedia"
 CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", 0.275))
 EXPAND_RATIO = float(os.getenv("EXPAND_RATIO", 0.1))
-MAX_GARMENTS = int(os.getenv("MAX_GARMENTS", 4))
+SHOE_EXPAND_RATIO = float(os.getenv("SHOE_EXPAND_RATIO", 0.22))
+MAX_GARMENTS = int(os.getenv("MAX_GARMENTS", 5))
 UPLOAD_TO_IMGBB = True
 
 # Tiny/irrelevant crop guard (pixels)
@@ -67,10 +68,14 @@ CATEGORY_PRIORITY = {
 
 # === Serp relevance hints (returned to the client) ===
 BANNED_TERMS = {
-    "texture", "pattern", "drawing", "clipart", "illustration",
-    "lace", "shoelace", "buttons", "fabric", "cloth", "hanger",
-    "cartoon", "design template", "icon", "logo", "silhouette",
-    "vector", "png", "mockup", "stencil", "svg", "ai generated"
+    "ai generated", "animation", "blueprint", "buttons", "camera", "cartoon",
+    "cloth", "clipart", "computer", "controller", "design template", "desktop",
+    "device", "digital", "drawing", "electronics", "fabric", "furniture", "gaming",
+    "hanger", "hardware", "headphones", "icon", "illustration", "keyboard", "lace", "laptop",
+    "logo", "microphone", "mockup", "monitor", "mouse", "office", "pattern",
+    "pc", "phone", "png", "printer", "router", "screen", "shoelace",
+    "silhouette", "software", "speaker", "stencil", "svg", "tablet", "tech",
+    "texture", "vector", "wallpaper", "sofa", "chair", "desk", "earbuds"
 }
 
 CATEGORY_KEYWORDS = {
@@ -286,12 +291,16 @@ STOP_WORDS = {
 
 # Relevance filter - banned terms for non-fashion content
 RELEVANCE_BANNED_TERMS = [
-    'texture', 'pattern', 'drawing', 'illustration', 'clipart', 'mockup',
-    'template', 'icon', 'logo', 'vector', 'stock photo', 'hanger', 'material',
-    'silhouette', 'outline', 'preset', 'filter', 'lightroom', 'photoshop',
-    'digital download', 'tutorial', 'guide', 'lesson', 'manual', 'holder',
-    'stand', 'tripod', 'mount', 'case', 'charger', 'adapter', 'cable',
-    'keyboard', 'mouse', 'phone', 'tablet', 'shoelace',
+    'adapter', 'ai generated', 'animation', 'art', 'backdrop', 'blueprint', 'cable', 'camera',
+    'case', 'charger', 'clipart', 'computer', 'controller', 'decor', 'desk',
+    'digital download', 'drawing', 'electronics', 'filter', 'furniture', 'gadget',
+    'gaming', 'graphic', 'guide', 'hanger', 'headphones', 'holder',
+    'illustration', 'icon', 'keyboard', 'laptop', 'lesson', 'lightroom',
+    'logo', 'manual', 'material', 'mockup', 'monitor', 'mount', 'mouse',
+    'outline', 'pattern', 'phone', 'photoshop', 'poster', 'preset', 'printer',
+    'projector', 'render', 'router', 'scanner', 'screen', 'silhouette', 'sofa',
+    'speaker', 'stand', 'stock photo', 'tablet', 'tech', 'template', 'texture',
+    'tripod', 'tutorial', 'tv', 'vector', 'wallpaper', '3d', 'shoelace', 'clip art',
 ]
 
 # Fashion keywords for relevance detection
@@ -370,6 +379,12 @@ def expand_bbox(bbox, img_width, img_height, ratio=0.1):
     x2 = min(img_width, x2 + expand_w)
     y2 = min(img_height, y2 + expand_h)
     return [int(x1), int(y1), int(x2), int(y2)]
+
+
+def resolve_expand_ratio(label: str, base_ratio: float) -> float:
+    if label == "shoe":
+        return max(base_ratio, SHOE_EXPAND_RATIO)
+    return base_ratio
 
 def bbox_iou(box1, box2):
     x1, y1, x2, y2 = box1
@@ -1201,9 +1216,12 @@ def detect(req: DetectRequest):
         # Step 2 — Prepare crops
         crops = []
         for det in filtered:
-            x1, y1, x2, y2 = expand_bbox(det["bbox"], image.width, image.height, req.expand_ratio)
+            ratio = resolve_expand_ratio(det["label"], req.expand_ratio)
+            x1, y1, x2, y2 = expand_bbox(det["bbox"], image.width, image.height, ratio)
+            expanded_bbox = [x1, y1, x2, y2]
+            det["expanded_bbox"] = expanded_bbox
             crop = image.crop((x1, y1, x2, y2))
-            crops.append((det, crop, [x1, y1, x2, y2]))
+            crops.append((det, crop, expanded_bbox))
 
         # Step 3 — Parallel ImgBB uploads
         results = []
@@ -1291,10 +1309,12 @@ def detect_and_search(req: DetectAndSearchRequest):
 
         # Step 3: Crop & upload garments to ImgBB (parallel)
         imgbb_api_key = "d7e1d857e4498c2e28acaa8d943ccea8"
-        crop_data = [
-            (det, image.crop(expand_bbox(det["bbox"], image.width, image.height, req.expand_ratio)))
-            for det in filtered
-        ]
+        crop_data = []
+        for det in filtered:
+            ratio = resolve_expand_ratio(det["label"], req.expand_ratio)
+            expanded = expand_bbox(det["bbox"], image.width, image.height, ratio)
+            det["expanded_bbox"] = expanded
+            crop_data.append((det, image.crop(tuple(expanded))))
 
         def upload_crop_safe(crop_tuple):
             det, crop = crop_tuple
@@ -1369,7 +1389,7 @@ def detect_and_search(req: DetectAndSearchRequest):
             'detected_garment': {
                 'label': filtered[0]['label'],
                 'score': round(filtered[0]['score'], 3),
-                'bbox': filtered[0]['bbox']
+                'bbox': filtered[0].get('expanded_bbox', filtered[0]['bbox'])
             },
             'total_results': len(deduped_results),
             'results': deduped_results
@@ -1462,8 +1482,10 @@ def debug_detect(req: DetectRequest):
     cropped_items = []
 
     for i, det in enumerate(filtered):
-        x1, y1, x2, y2 = expand_bbox(det["bbox"], image.width, image.height, req.expand_ratio)
         label, score = det["label"], det["score"]
+        ratio = resolve_expand_ratio(label, req.expand_ratio)
+        x1, y1, x2, y2 = expand_bbox(det["bbox"], image.width, image.height, ratio)
+        det["expanded_bbox"] = [x1, y1, x2, y2]
         draw.rectangle((x1, y1, x2, y2), outline="red", width=3)
         draw.text((x1 + 4, y1 + 4), f"{label}:{score:.2f}", fill="red")
         crop = image.crop((x1, y1, x2, y2))
