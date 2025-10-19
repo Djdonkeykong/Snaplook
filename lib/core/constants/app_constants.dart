@@ -84,7 +84,7 @@ class AppConstants {
     required String defineKey,
     required String envKey,
   }) {
-    const defineValue = String.fromEnvironment(defineKey, defaultValue: '');
+    final defineValue = String.fromEnvironment(defineKey, defaultValue: '');
     if (defineValue.isNotEmpty) return defineValue;
 
     final envValue = dotenv.env[envKey];

@@ -76,14 +76,14 @@ void main() async {
   }
 
   // 🧠 Log which endpoint is active
-  debugPrint('🔍 SERP_DETECT_ENDPOINT = ${AppConstants.serpDetectEndpoint}');
-  debugPrint('🛒 SERP_DETECT_AND_SEARCH_ENDPOINT = ${AppConstants.serpDetectAndSearchEndpoint}');
+  debugPrint('[Config] SERP_DETECT_ENDPOINT = ${AppConstants.serpDetectEndpoint}');
+  debugPrint('[Config] SERP_DETECT_AND_SEARCH_ENDPOINT = ${AppConstants.serpDetectAndSearchEndpoint}');
 
   // Warm up path_provider so method channels are registered before cache usage.
   try {
     await getTemporaryDirectory();
   } catch (e) {
-    debugPrint('🔔 path_provider warmup failed: $e');
+    debugPrint('[Config] path_provider warmup failed: $e');
   }
 
   await Supabase.initialize(
@@ -729,4 +729,3 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     );
   }
 }
-
