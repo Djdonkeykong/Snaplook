@@ -71,6 +71,13 @@ void main() async {
   // 🧠 Log which endpoint is active
   debugPrint('🔍 SERP_DETECTOR_ENDPOINT = ${AppConstants.serpDetectorEndpoint}');
 
+  // Warm up path_provider so method channels are registered before cache usage.
+  try {
+    await getTemporaryDirectory();
+  } catch (e) {
+    debugPrint('🔔 path_provider warmup failed: $e');
+  }
+
   await Supabase.initialize(
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
