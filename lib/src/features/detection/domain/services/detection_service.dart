@@ -110,6 +110,7 @@ class DetectionService {
         'max_crops': _maxGarments,
         'imbb_api_key': AppConstants.imgbbApiKey,
         'upload_to_imgbb': true,
+        'serp_api_key': AppConstants.serpApiKey,
       });
 
       debugPrint('🚀 Sending image to local detector: $endpoint');
