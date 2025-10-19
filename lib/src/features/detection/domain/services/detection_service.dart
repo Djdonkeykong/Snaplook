@@ -63,7 +63,7 @@ class DetectionService {
       // Run queries (in parallel) with pagination + fallback broaden
       final futures = urls.map((url) async {
         try {
-          final matches = await _fetchSerpResults(url, textQuery: textQuery);
+          final matches = await _fetchSerpResults(url, textQuery: textQuery, maxDuration: const Duration(seconds: 10));
           final seen = <String>{};
           final uniqueMatches = matches.where((m) {
             final link = (m['link'] as String?) ?? '';
@@ -173,48 +173,69 @@ class DetectionService {
     return (data['data']?['url'] ?? '') as String;
   }
 
-  /// Step 2 — Search via SerpAPI (Google Lens), with pagination + optional text query and a fallback broadening pass.
+  /// Step 2 – Search via SerpAPI (Google Lens), with pagination + optional text query and a fallback broadening pass.
   Future<List<Map<String, dynamic>>> _fetchSerpResults(
     String imageUrl, {
     String? textQuery,
+    Duration? maxDuration,
   }) async {
+    final deadline =
+        maxDuration != null ? DateTime.now().add(maxDuration) : null;
+
+    Duration? _timeRemaining() {
+      if (deadline == null) return null;
+      final remaining = deadline.difference(DateTime.now());
+      return remaining.isNegative ? Duration.zero : remaining;
+    }
+
+    if (_timeRemaining() == Duration.zero) {
+      return const [];
+    }
+
     // Primary pass (possibly with textQuery)
     List<Map<String, dynamic>> primary = [];
     try {
-      primary = await _fetchSerpResultsOnce(imageUrl, textQuery: textQuery);
+      primary = await _fetchSerpResultsOnce(
+        imageUrl,
+        textQuery: textQuery,
+        maxDuration: _timeRemaining(),
+      );
     } catch (e) {
-      debugPrint('⚠️ Primary search failed: $e');
-      // Continue to broadening pass
+      debugPrint('[Search] Primary search failed: $e');
     }
 
-    // If the hint over-filters, broaden with a second pass (no textQuery)
-    if ((textQuery == null || textQuery.isEmpty) || primary.length >= 15) {
+    if ((textQuery == null || textQuery.isEmpty) ||
+        primary.length >= 15 ||
+        _timeRemaining() == Duration.zero) {
       return primary;
     }
 
     List<Map<String, dynamic>> secondary = [];
     try {
-      secondary = await _fetchSerpResultsOnce(imageUrl, textQuery: null);
+      secondary = await _fetchSerpResultsOnce(
+        imageUrl,
+        textQuery: null,
+        maxDuration: _timeRemaining(),
+      );
     } catch (e) {
-      debugPrint('⚠️ Broadening search failed: $e');
-      return primary; // Return primary results (even if empty)
+      debugPrint('[Search] Broadening search failed: $e');
+      return primary;
     }
 
-    // Merge unique: primary first (keeps original sort bias)
     final seen = <String>{};
     final merged = <Map<String, dynamic>>[];
 
     for (final m in [...primary, ...secondary]) {
       final key = '${m['link'] ?? ''}|${m['title'] ?? ''}';
       if (seen.add(key)) merged.add(m);
-      if (merged.length >= 120) break; // hard safety cap
+      if (merged.length >= 120) break;
     }
     return merged;
   }
-
   Future<List<Map<String, dynamic>>> _fetchSerpResultsOnce(
     String imageUrl, {
     String? textQuery,
+    Duration? maxDuration,
   }) async {
     final cacheKey = '$imageUrl|${textQuery ?? ''}';
     if (_serpCache.containsKey(cacheKey)) {
@@ -223,6 +244,10 @@ class DetectionService {
     }
 
     final filteredAll = <Map<String, dynamic>>[];
+    final deadline = maxDuration != null ? DateTime.now().add(maxDuration) : null;
+    if (deadline != null && DateTime.now().isAfter(deadline)) {
+      return const [];
+    }
 
     // 👇 Products-only search (visual_matches disabled to avoid duplicate Lens hits)
     const rails = ['products'];
@@ -279,6 +304,11 @@ class DetectionService {
         }
 
         filteredAll.addAll(pageFiltered);
+        if (deadline != null && DateTime.now().isAfter(deadline)) {
+          debugPrint('⚠️ [$rail] Stopping early after time limit.');
+          nextToken = null;
+          break;
+        }
 
         nextToken = (data['serpapi_pagination']?['next_page_token'] as String?);
         debugPrint('🛍️ [$rail] Page $page: +${pageFiltered.length}, '
