@@ -35,7 +35,7 @@ class ShareViewController: RSIShareViewController {
 
     // MARK: - UI Setup
     private func setupCustomUI() {
-        view.backgroundColor = UIColor(white: 0, alpha: 0.35)
+        view.backgroundColor = .systemBackground
 
         containerView.tag = 9999
         containerView.backgroundColor = .white
