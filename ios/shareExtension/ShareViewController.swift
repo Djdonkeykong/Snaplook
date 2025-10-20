@@ -3,7 +3,6 @@ import UIKit
 class ShareViewController: RSIShareViewController {
 
     // MARK: - UI Components
-    private let containerView = UIView()
     private let titleLabel = UILabel()
     private let analyzeInAppButton = UIButton(type: .system)
     private let analyzeNowButton = UIButton(type: .system)
@@ -28,7 +27,6 @@ class ShareViewController: RSIShareViewController {
 
         // Ensure our UI is visible and on top
         showCustomUIElements()
-        view.bringSubviewToFront(containerView)
 
         NSLog("[ShareExtension] Custom choice screen visible")
     }
@@ -37,19 +35,13 @@ class ShareViewController: RSIShareViewController {
     private func setupCustomUI() {
         view.backgroundColor = .systemBackground
 
-        containerView.tag = 9999
-        containerView.backgroundColor = .clear
-        containerView.layer.cornerRadius = 0
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(containerView)
-
         titleLabel.text = "How would you like to analyze this image?"
         titleLabel.numberOfLines = 0
         titleLabel.textAlignment = .center
         titleLabel.font = UIFont.systemFont(ofSize: 20, weight: .semibold)
         titleLabel.textColor = UIColor(red: 28/255, green: 28/255, blue: 37/255, alpha: 1.0)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        containerView.addSubview(titleLabel)
+        view.addSubview(titleLabel)
 
         configureButton(
             analyzeInAppButton,
@@ -76,7 +68,7 @@ class ShareViewController: RSIShareViewController {
         view.addSubview(disclaimerLabel)
 
         NSLayoutConstraint.activate([
-                        titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
+            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
             titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
@@ -92,8 +84,10 @@ class ShareViewController: RSIShareViewController {
 
             disclaimerLabel.topAnchor.constraint(equalTo: analyzeNowButton.bottomAnchor, constant: 16),
             disclaimerLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            disclaimerLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24)
+            disclaimerLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            disclaimerLabel.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24)
         ])
+    }
 
     private func showCustomUIElements() {
         [titleLabel, analyzeInAppButton, analyzeNowButton, disclaimerLabel].forEach { element in
