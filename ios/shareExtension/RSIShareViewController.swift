@@ -318,12 +318,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var headerContainerView: UIView?
     private var headerLogoImageView: UIImageView?
     private var cancelButtonView: UIButton?
+    private var cachedExtensionItem: NSExtensionItem?
+    private var cachedAttachments: [NSItemProvider] = []
 
     open func shouldAutoRedirect() -> Bool { true }
 
     open func shouldAutoFinalizeShare() -> Bool { true }
 
     open func shouldAutoStartDetection() -> Bool { true }
+
+    open func shouldAutoProcessAttachments() -> Bool { true }
 
     open override func isContentValid() -> Bool { true }
 
@@ -429,20 +433,45 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self?.applySheetCornerRadius(12)
         }
 
-        // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
-        if hasProcessedAttachments {
-            shareLog("⏸️️ viewDidAppear called again - attachments already processed, skipping")
-            return
-        }
-
         guard let content = extensionContext?.inputItems.first as? NSExtensionItem,
               let attachments = content.attachments else {
             shareLog("No attachments found on extension context")
             return
         }
 
-        // Mark as processed to prevent re-runs
-        hasProcessedAttachments = true
+        cachedExtensionItem = content
+        cachedAttachments = attachments
+
+        guard shouldAutoProcessAttachments() else {
+            shareLog("Attachment auto-processing suppressed - awaiting manual trigger")
+            return
+        }
+
+        processAttachmentsIfNeeded()
+    }
+
+    open func processAttachmentsIfNeeded() {
+        if hasProcessedAttachments {
+            shareLog("processAttachmentsIfNeeded: already processed, skipping")
+            return
+        }
+
+        let content: NSExtensionItem
+        let attachments: [NSItemProvider]
+
+        if let cachedItem = cachedExtensionItem, !cachedAttachments.isEmpty {
+            content = cachedItem
+            attachments = cachedAttachments
+        } else if let ctxItem = extensionContext?.inputItems.first as? NSExtensionItem,
+                  let ctxAttachments = ctxItem.attachments {
+            cachedExtensionItem = ctxItem
+            cachedAttachments = ctxAttachments
+            content = ctxItem
+            attachments = ctxAttachments
+        } else {
+            shareLog("processAttachmentsIfNeeded: no attachments available")
+            return
+        }
 
         pendingAttachmentCount = 0
         hasQueuedRedirect = false
@@ -453,6 +482,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             maybeFinalizeShare()
             return
         }
+
+        hasProcessedAttachments = true
 
         for (index, attachment) in attachments.enumerated() {
             guard let type = SharedMediaType.allCases.first(where: {
@@ -490,6 +521,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         maybeFinalizeShare()
     }
+
+    open func attachmentProcessingDidFinish() { }
 
     private func performInstagramScrape(
         instagramUrl: String,
@@ -616,6 +649,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func completeAttachmentProcessing() {
         pendingAttachmentCount = max(pendingAttachmentCount - 1, 0)
+        if pendingAttachmentCount == 0 {
+            attachmentProcessingDidFinish()
+        }
         maybeFinalizeShare()
     }
 

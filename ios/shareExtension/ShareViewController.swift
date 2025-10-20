@@ -8,6 +8,7 @@ class ShareViewController: RSIShareViewController {
     private let analyzeInAppButton = UIButton(type: .system)
     private let analyzeNowButton = UIButton(type: .system)
     private let disclaimerLabel = UILabel()
+    private var awaitingImmediateAnalysis = false
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -121,8 +122,11 @@ class ShareViewController: RSIShareViewController {
     // MARK: - Button Actions
     @objc private func analyzeInAppTapped() {
         NSLog("[ShareExtension] User selected: Analyze in App")
+        analyzeInAppButton.isEnabled = false
+        analyzeNowButton.isEnabled = false
         // Mark as user-initiated so didSelectPost won't be blocked
         isUserInitiated = true
+        processAttachmentsIfNeeded()
         // Trigger the standard redirect flow - user will crop in Snaplook
         didSelectPost()
     }
@@ -135,8 +139,19 @@ class ShareViewController: RSIShareViewController {
         analyzeNowButton.setTitle("Analyzing...", for: .normal)
         analyzeInAppButton.isEnabled = false
 
-        // Start immediate analysis
-        performImmediateAnalysis()
+        awaitingImmediateAnalysis = true
+        processAttachmentsIfNeeded()
+        if !sharedMedia.isEmpty {
+            attachmentProcessingDidFinish()
+        }
+    }
+
+    override func attachmentProcessingDidFinish() {
+        super.attachmentProcessingDidFinish()
+        if awaitingImmediateAnalysis {
+            awaitingImmediateAnalysis = false
+            performImmediateAnalysis()
+        }
     }
 
     private func performImmediateAnalysis() {
@@ -273,6 +288,10 @@ class ShareViewController: RSIShareViewController {
     }
 
     override func shouldAutoStartDetection() -> Bool {
+        return false
+    }
+
+    override func shouldAutoProcessAttachments() -> Bool {
         return false
     }
 
