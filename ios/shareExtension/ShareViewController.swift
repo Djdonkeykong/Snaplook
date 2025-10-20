@@ -17,6 +17,7 @@ class ShareViewController: RSIShareViewController {
 
         // Immediately show our custom UI on top of any base class UI
         setupCustomUI()
+        hideLoadingOverlay()
 
         NSLog("[ShareExtension] Custom UI initialized - showing choice screen")
     }

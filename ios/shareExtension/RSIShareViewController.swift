@@ -1769,7 +1769,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         pendingImageUrl = nil
 
         clearSharedData()
-        hideLoadingUI()
+        hideLoadingOverlay()
 
         // Complete the extension request - this dismisses the share sheet and returns to source app
         let error = NSError(
@@ -2184,7 +2184,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 defaults.removeObject(forKey: kProcessingSessionKey)
                 defaults.synchronize()
             }
-            self.hideLoadingUI()
+            self.hideLoadingOverlay()
             self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
             shareLog("Completed extension request")
         }
@@ -2192,7 +2192,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func showConfigurationError() {
         shareLog("Showing configuration error")
-        hideLoadingUI()
+        hideLoadingOverlay()
         stopStatusPolling()
 
         let alert = UIAlertController(
@@ -2219,7 +2219,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func dismissWithError() {
         shareLog("ERROR: dismissWithError called")
         DispatchQueue.main.async {
-            self.hideLoadingUI()
+            self.hideLoadingOverlay()
             let alert = UIAlertController(title: "Error", message: "Error loading data", preferredStyle: .alert)
             let action = UIAlertAction(title: "OK", style: .cancel) { _ in
                 self.dismiss(animated: true, completion: nil)
@@ -2545,7 +2545,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
-    private func hideLoadingUI() {
+    open func hideLoadingOverlay() {
         loadingHideWorkItem?.cancel()
         loadingHideWorkItem = nil
         stopSmoothProgress()
@@ -2571,7 +2571,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingHideWorkItem?.cancel()
         loadingHideWorkItem = nil
         clearSharedData()
-        hideLoadingUI()
+        hideLoadingOverlay()
         let error = NSError(
             domain: "com.snaplook.shareExtension",
             code: -1,
