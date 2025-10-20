@@ -57,7 +57,7 @@ class ShareViewController: RSIShareViewController {
             isPrimary: false,
             action: #selector(analyzeInAppTapped)
         )
-        containerView.addSubview(analyzeInAppButton)
+        view.addSubview(analyzeInAppButton)
 
         configureButton(
             analyzeNowButton,
@@ -65,7 +65,7 @@ class ShareViewController: RSIShareViewController {
             isPrimary: true,
             action: #selector(analyzeNowTapped)
         )
-        containerView.addSubview(analyzeNowButton)
+        view.addSubview(analyzeNowButton)
 
         disclaimerLabel.text = "Tip: Analyzing in-app lets you crop the image to use fewer search credits."
         disclaimerLabel.numberOfLines = 0
@@ -73,39 +73,30 @@ class ShareViewController: RSIShareViewController {
         disclaimerLabel.font = UIFont.systemFont(ofSize: 13, weight: .regular)
         disclaimerLabel.textColor = UIColor(red: 107/255, green: 114/255, blue: 128/255, alpha: 1.0)
         disclaimerLabel.translatesAutoresizingMaskIntoConstraints = false
-        containerView.addSubview(disclaimerLabel)
+        view.addSubview(disclaimerLabel)
 
         NSLayoutConstraint.activate([
-            containerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
-            containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            containerView.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
-
-            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
-            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 0),
-            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: 0),
+                        titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
             analyzeInAppButton.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 24),
-            analyzeInAppButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            analyzeInAppButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            analyzeInAppButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            analyzeInAppButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
             analyzeInAppButton.heightAnchor.constraint(equalToConstant: 52),
 
             analyzeNowButton.topAnchor.constraint(equalTo: analyzeInAppButton.bottomAnchor, constant: 12),
-            analyzeNowButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            analyzeNowButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            analyzeNowButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            analyzeNowButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
             analyzeNowButton.heightAnchor.constraint(equalToConstant: 52),
 
             disclaimerLabel.topAnchor.constraint(equalTo: analyzeNowButton.bottomAnchor, constant: 16),
-            disclaimerLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            disclaimerLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            disclaimerLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -16)
+            disclaimerLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            disclaimerLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24)
         ])
 
-        showCustomUIElements()
-    }
-
     private func showCustomUIElements() {
-        [containerView, titleLabel, analyzeInAppButton, analyzeNowButton, disclaimerLabel].forEach { element in
+        [titleLabel, analyzeInAppButton, analyzeNowButton, disclaimerLabel].forEach { element in
             element.isHidden = false
             element.alpha = 1.0
         }
