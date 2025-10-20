@@ -2,13 +2,13 @@ class GarmentDetection {
   final String label;
   final double score;
   final List<int> bbox;
-  final String imgbbUrl;
+  final String imageUrl;
 
   GarmentDetection({
     required this.label,
     required this.score,
     required this.bbox,
-    required this.imgbbUrl,
+    required this.imageUrl,
   });
 
   factory GarmentDetection.fromJson(Map<String, dynamic> json) {
@@ -16,7 +16,7 @@ class GarmentDetection {
       label: json['label'] ?? '',
       score: (json['score'] ?? 0).toDouble(),
       bbox: (json['bbox'] as List<dynamic>?)?.cast<int>() ?? [0, 0, 0, 0],
-      imgbbUrl: json['imgbb_url'] ?? '',
+      imageUrl: json['image_url'] ?? '',
     );
   }
 
@@ -25,7 +25,7 @@ class GarmentDetection {
       'label': label,
       'score': score,
       'bbox': bbox,
-      'imgbb_url': imgbbUrl,
+      'image_url': imageUrl,
     };
   }
 }

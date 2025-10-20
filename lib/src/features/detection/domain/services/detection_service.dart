@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
+﻿import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -13,7 +12,7 @@ import '../../../../core/constants/category_rules.dart';
 class DetectionService {
   DetectionService({
     http.Client? client,
-    this.strictMode = true, // ✅ Strict mode ON by default
+    this.strictMode = true, // Γ£à Strict mode ON by default
   }) : _client = client ?? http.Client();
 
   final http.Client _client;
@@ -27,22 +26,22 @@ class DetectionService {
   // serp cache keyed by imageUrl + textQuery
   static final Map<String, List<Map<String, dynamic>>> _serpCache = {};
 
-  /// Main entrypoint — prefer the backend SearchAPI pipeline, with optional legacy fallback.
+  /// Main entrypoint ΓÇö prefer the backend SearchAPI pipeline, with optional legacy fallback.
   Future<List<DetectionResult>> analyzeImage(XFile image) async {
     try {
       final serverResults = await _analyzeViaDetectorServer(image);
       if (serverResults.isNotEmpty) {
         debugPrint(
-          '✅ Returning ${serverResults.length} results from SearchAPI pipeline.',
+          'Γ£à Returning ${serverResults.length} results from SearchAPI pipeline.',
         );
         return serverResults;
       }
       throw Exception('Detector returned no results.');
     } catch (error, stackTrace) {
-      debugPrint('⚠️ SearchAPI pipeline failed: $error\n$stackTrace');
+      debugPrint('ΓÜá∩╕Å SearchAPI pipeline failed: $error\n$stackTrace');
       if (!strictMode) {
         debugPrint(
-          '↩️ Falling back to legacy SerpAPI pipeline (strictMode=false).',
+          'Γå⌐∩╕Å Falling back to legacy SerpAPI pipeline (strictMode=false).',
         );
         return _analyzeImageLegacy(image);
       }
@@ -64,7 +63,7 @@ class DetectionService {
       payload['location'] = location;
     }
 
-    debugPrint('🚀 Sending image to detector+search endpoint: $endpoint');
+    debugPrint('≡ƒÜÇ Sending image to detector+search endpoint: $endpoint');
     final response = await _client.post(
       Uri.parse(endpoint),
       headers: {'Content-Type': 'application/json'},
@@ -99,7 +98,7 @@ class DetectionService {
 
   Future<List<DetectionResult>> _analyzeImageLegacy(XFile image) async {
     debugPrint(
-      '🧠 Starting legacy garment detection pipeline (strict=$strictMode)...',
+      '≡ƒºá Starting legacy garment detection pipeline (strict=$strictMode)...',
     );
     final batch = await _runLocalDetector(image);
 
@@ -107,7 +106,7 @@ class DetectionService {
     final sortedCrops = batch.crops.take(_maxGarments).toList()
       ..sort((a, b) => b.score.compareTo(a.score));
 
-    // Build query order: best crop → original (context) → remaining crops
+    // Build query order: best crop ΓåÆ original (context) ΓåÆ remaining crops
     final labelByUrl = {for (final crop in sortedCrops) crop.url: crop.label};
     final urls = <String>[];
     if (sortedCrops.isNotEmpty) urls.add(sortedCrops.first.url);
@@ -115,18 +114,15 @@ class DetectionService {
     urls.addAll(sortedCrops.skip(1).map((c) => c.url));
 
     if (urls.isEmpty) {
-      final fallbackUrl = batch.originalUrl.isNotEmpty
-          ? batch.originalUrl
-          : await _uploadImageToImgbb(image);
-      if (fallbackUrl.isNotEmpty) {
-        urls.add(fallbackUrl);
+      if (batch.originalUrl.isNotEmpty) {
+        urls.add(batch.originalUrl);
       } else {
         throw Exception('No usable image crops produced.');
       }
     }
 
     debugPrint(
-      '🔍 Querying SerpAPI for ${urls.length} image URLs (best-first)...',
+      '≡ƒöì Querying SerpAPI for ${urls.length} image URLs (best-first)...',
     );
 
     // Try to derive a helpful text query from the best crop label
@@ -160,7 +156,7 @@ class DetectionService {
         );
       } catch (e) {
         debugPrint(
-          '⚠️ Search failed for image crop (continuing with others): $e',
+          'ΓÜá∩╕Å Search failed for image crop (continuing with others): $e',
         );
         return <DetectionResult>[]; // Return empty list instead of throwing
       }
@@ -179,7 +175,7 @@ class DetectionService {
         (r) => _looksLikeCollection(r.productName, r.purchaseUrl ?? ''),
       );
       debugPrint(
-        '🧽 Removed ${before - allResults.length} generic collection pages (kept PDPs)',
+        '≡ƒº╜ Removed ${before - allResults.length} generic collection pages (kept PDPs)',
       );
     }
 
@@ -192,7 +188,7 @@ class DetectionService {
     }
 
     debugPrint(
-      '✅ Legacy pipeline complete. Returning ${deduped.length} verified results.',
+      'Γ£à Legacy pipeline complete. Returning ${deduped.length} verified results.',
     );
     return deduped;
   }
@@ -254,7 +250,7 @@ class DetectionService {
     };
   }
 
-  /// Step 1 — Call local YOLOS FastAPI detection server
+  /// Step 1 ΓÇö Call local YOLOS FastAPI detection server
   Future<_SerpImageBatch> _runLocalDetector(XFile image) async {
     final endpoint = AppConstants.serpDetectEndpoint;
     try {
@@ -262,12 +258,9 @@ class DetectionService {
       final payload = jsonEncode({
         'image_base64': base64Encode(bytes),
         'max_crops': _maxGarments,
-        'imbb_api_key': AppConstants.imgbbApiKey,
-        'upload_to_imgbb': true,
-        'serp_api_key': AppConstants.serpApiKey,
       });
 
-      debugPrint('🚀 Sending image to local detector: $endpoint');
+      debugPrint('≡ƒÜÇ Sending image to local detector: $endpoint');
       final response = await _client.post(
         Uri.parse(endpoint),
         headers: {'Content-Type': 'application/json'},
@@ -276,8 +269,7 @@ class DetectionService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final originalUrl = (data['original_url'] as String?) ?? '';
-        final cropsRaw = (data['results'] as List<dynamic>? ?? const [])
+                final cropsRaw = (data['results'] as List<dynamic>? ?? const [])
             .map((e) => e as Map<String, dynamic>)
             .toList();
 
@@ -285,7 +277,7 @@ class DetectionService {
             .map(
               (crop) => _SerpCrop(
                 url:
-                    (crop['imgbb_url'] as String?) ??
+                    (crop['image_url'] as String?) ??
                     (crop['url'] as String?) ??
                     '',
                 score: (crop['score'] as num?)?.toDouble() ?? 0.0,
@@ -295,8 +287,10 @@ class DetectionService {
             .where((crop) => crop.url.isNotEmpty)
             .toList();
 
+        final originalUrl = (data['original_url'] as String?) ?? (crops.isNotEmpty ? crops.first.url : '');
+
         crops.sort((a, b) => b.score.compareTo(a.score));
-        debugPrint('👕 ${crops.length} garment crops detected.');
+        debugPrint('≡ƒæò ${crops.length} garment crops detected.');
         return _SerpImageBatch(originalUrl: originalUrl, crops: crops);
       }
 
@@ -304,29 +298,12 @@ class DetectionService {
         'Detector server responded with ${response.statusCode}: ${response.body}',
       );
     } catch (error) {
-      debugPrint('⚠️ Detector unavailable: $error');
-      final fallbackUrl = await _uploadImageToImgbb(image);
-      return _SerpImageBatch(originalUrl: fallbackUrl, crops: const []);
+      debugPrint('?? Detector unavailable: ');
+      return const _SerpImageBatch(originalUrl: '', crops: []);
     }
   }
 
-  /// Upload fallback image to ImgBB
-  Future<String> _uploadImageToImgbb(XFile file) async {
-    final imageBytes = await file.readAsBytes();
-    final response = await _client.post(
-      Uri.https('api.imgbb.com', '/1/upload'),
-      body: {
-        'key': AppConstants.imgbbApiKey,
-        'image': base64Encode(imageBytes),
-      },
-    );
-
-    if (response.statusCode != 200) throw Exception('ImgBB upload failed.');
-    final data = jsonDecode(response.body);
-    return (data['data']?['url'] ?? '') as String;
-  }
-
-  /// Legacy Step 2 – Search via SerpAPI (Google Lens), with pagination + optional text query and a fallback broadening pass.
+  /// Legacy Step 2 ΓÇô Search via SerpAPI (Google Lens), with pagination + optional text query and a fallback broadening pass.
   Future<List<Map<String, dynamic>>> _fetchSerpResults(
     String imageUrl, {
     String? textQuery,
@@ -394,7 +371,7 @@ class DetectionService {
   }) async {
     final cacheKey = '$imageUrl|${textQuery ?? ''}';
     if (_serpCache.containsKey(cacheKey)) {
-      debugPrint('⚡ Using cached SerpAPI results for: $cacheKey');
+      debugPrint('ΓÜí Using cached SerpAPI results for: $cacheKey');
       return _serpCache[cacheKey]!;
     }
 
@@ -406,7 +383,7 @@ class DetectionService {
       return const <Map<String, dynamic>>[];
     }
 
-    // 👇 Products-only search (visual_matches disabled to avoid duplicate Lens hits)
+    // ≡ƒæç Products-only search (visual_matches disabled to avoid duplicate Lens hits)
     const rails = ['products'];
 
     for (final rail in rails) {
@@ -418,7 +395,7 @@ class DetectionService {
           'engine': 'google_lens',
           'api_key': AppConstants.serpApiKey,
           'url': imageUrl,
-          'type': rail, // 👈 lock to products rail (no visual_matches)
+          'type': rail, // ≡ƒæê lock to products rail (no visual_matches)
           if (textQuery != null && textQuery.isNotEmpty)
             'text_query': textQuery,
           if (nextToken != null) 'next_page_token': nextToken!,
@@ -470,14 +447,14 @@ class DetectionService {
 
         filteredAll.addAll(pageFiltered);
         if (deadline != null && DateTime.now().isAfter(deadline)) {
-          debugPrint('⚠️ [$rail] Stopping early after time limit.');
+          debugPrint('ΓÜá∩╕Å [$rail] Stopping early after time limit.');
           nextToken = null;
           break;
         }
 
         nextToken = (data['serpapi_pagination']?['next_page_token'] as String?);
         debugPrint(
-          '🛍️ [$rail] Page $page: +${pageFiltered.length}, '
+          '≡ƒ¢ì∩╕Å [$rail] Page $page: +${pageFiltered.length}, '
           'total ${filteredAll.length} (${elapsed.toStringAsFixed(2)}s) next=${nextToken != null}',
         );
         page++;
@@ -506,7 +483,7 @@ class DetectionService {
   bool _isRelevantResult(String title) {
     final lower = title.toLowerCase();
 
-    // 🚫 banned terms (keep 'shoelace', DO NOT ban 'lace')
+    // ≡ƒÜ½ banned terms (keep 'shoelace', DO NOT ban 'lace')
     const banned = [
       'texture',
       'pattern',
@@ -548,7 +525,7 @@ class DetectionService {
     ];
     if (banned.any((term) => lower.contains(term))) return false;
 
-    // ✅ expected garment keywords
+    // Γ£à expected garment keywords
     const garmentKeywords = [
       'dress',
       'top',
@@ -598,7 +575,7 @@ class DetectionService {
     return false;
   }
 
-  /// === Convert SerpAPI JSON → DetectionResult ===
+  /// === Convert SerpAPI JSON ΓåÆ DetectionResult ===
   List<DetectionResult> _mapToDetectionResults(
     List<Map<String, dynamic>> matches,
     String fallbackImageUrl, {
@@ -646,7 +623,7 @@ class DetectionService {
       );
     }
 
-    // Category consistency with compatibility (e.g., skirts ↔ slip dresses)
+    // Category consistency with compatibility (e.g., skirts Γåö slip dresses)
     if (results.isNotEmpty) {
       final categoryCounts = <String, int>{};
       for (final r in results) {
@@ -673,7 +650,7 @@ class DetectionService {
         final before = results.length;
         results.removeWhere((r) => !isCompatible(dominant, r.category));
         debugPrint(
-          '🧩 Kept dominant "$dominant" (+ compatible), pruned ${before - results.length}',
+          '≡ƒº⌐ Kept dominant "$dominant" (+ compatible), pruned ${before - results.length}',
         );
       }
     }
@@ -733,7 +710,7 @@ class DetectionService {
       return true;
 
     // Generic ecommerce hints
-    final hasPrice = RegExp(r'(\$|€|£|¥)\s?\d').hasMatch(text);
+    final hasPrice = RegExp(r'(\$|Γé¼|┬ú|┬Ñ)\s?\d').hasMatch(text);
     final hasCart = RegExp(
       r'(add[\s_-]?to[\s_-]?cart|buy\s?now|checkout|in\s?stock)',
     ).hasMatch(text);
@@ -837,7 +814,7 @@ class DetectionService {
     byDomain.values.forEach(flattened.addAll);
 
     debugPrint(
-      '🧹 Deduped ${flattened.length} results across ${byDomain.length} domains.',
+      '≡ƒº╣ Deduped ${flattened.length} results across ${byDomain.length} domains.',
     );
     return flattened;
   }
@@ -881,7 +858,7 @@ class DetectionService {
     );
 
     // Split on common separators and keep the most informative part
-    final parts = clean.split(RegExp(r'[\|\-:–—]+'));
+    final parts = clean.split(RegExp(r'[\|\-:ΓÇôΓÇö]+'));
     if (parts.isNotEmpty) {
       final good = parts.firstWhere(
         (p) => RegExp(r'[a-zA-Z]').hasMatch(p.trim()),
@@ -908,11 +885,11 @@ class DetectionService {
 
   double? _extractPrice(String snippet) {
     final match = RegExp(
-      r'(\$|£|€|¥|USD|CAD|AUD|Rs\.?|₹)\s?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)',
+      r'(\$|┬ú|Γé¼|┬Ñ|USD|CAD|AUD|Rs\.?|Γé╣)\s?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)',
       caseSensitive: false,
     ).firstMatch(snippet);
     if (match == null) return null;
-    final amount = match.group(2)!.replaceAll(RegExp(r'[,€£$¥₹]'), '');
+    final amount = match.group(2)!.replaceAll(RegExp(r'[,Γé¼┬ú$┬ÑΓé╣]'), '');
     return double.tryParse(amount);
   }
 
@@ -933,7 +910,7 @@ class DetectionService {
       labelCategory: labelCategory,
     );
 
-    // 1️⃣ Accessories (explicit)
+    // 1∩╕ÅΓâú Accessories (explicit)
     if (lower.contains('sunglass') ||
         lower.contains('eyeglass') ||
         lower.contains('spectacle') ||
@@ -958,7 +935,7 @@ class DetectionService {
       explicitCat = 'accessories';
     }
 
-    // 2️⃣ Bags
+    // 2∩╕ÅΓâú Bags
     if (explicitCat == null &&
         (lower.contains('bag') ||
             lower.contains('purse') ||
@@ -972,7 +949,7 @@ class DetectionService {
       explicitCat = 'bags';
     }
 
-    // 3️⃣ Shoes
+    // 3∩╕ÅΓâú Shoes
     if (explicitCat == null &&
         (lower.contains('shoe') ||
             lower.contains('boot') ||
@@ -987,7 +964,7 @@ class DetectionService {
       explicitCat = 'shoes';
     }
 
-    // 4️⃣ Outerwear
+    // 4∩╕ÅΓâú Outerwear
     if (explicitCat == null &&
         (lower.contains('jacket') ||
             lower.contains('coat') ||
@@ -998,7 +975,7 @@ class DetectionService {
       explicitCat = 'outerwear';
     }
 
-    // 5️⃣ Dresses
+    // 5∩╕ÅΓâú Dresses
     if (explicitCat == null &&
         (lower.contains('dress') ||
             lower.contains('jumpsuit') ||
@@ -1007,7 +984,7 @@ class DetectionService {
       explicitCat = 'dresses';
     }
 
-    // 6️⃣ Bottoms
+    // 6∩╕ÅΓâú Bottoms
     if (explicitCat == null &&
         (lower.contains('pants') ||
             lower.contains('trouser') ||
@@ -1018,7 +995,7 @@ class DetectionService {
       explicitCat = 'bottoms';
     }
 
-    // 7️⃣ Tops
+    // 7∩╕ÅΓâú Tops
     if (explicitCat == null &&
         (lower.contains('t-shirt') ||
             lower.contains('tee') ||
@@ -1036,7 +1013,7 @@ class DetectionService {
       explicitCat = 'tops';
     }
 
-    // 8️⃣ Headwear
+    // 8∩╕ÅΓâú Headwear
     if (explicitCat == null &&
         (lower.contains('cap') ||
             lower.contains('hat') ||
@@ -1046,7 +1023,7 @@ class DetectionService {
       explicitCat = 'headwear';
     }
 
-    // 9️⃣ Brand-based hints
+    // 9∩╕ÅΓâú Brand-based hints
     if (explicitCat == null) {
       for (final entry in kBrandCategoryHints.entries) {
         if (brandLower.contains(entry.key) || lower.contains(entry.key)) {
@@ -1056,7 +1033,7 @@ class DetectionService {
       }
     }
 
-    // 🔟 Luxury brand fallback
+    // ≡ƒöƒ Luxury brand fallback
     if (explicitCat == null &&
         RegExp(
           r'gucci|prada|balenciaga|ysl|saint laurent|fendi|valentino|versace',
@@ -1147,7 +1124,7 @@ class DetectionService {
     }
 
     if (explicitCat == null) {
-      debugPrint('🧩 Categorized "$title" as $best (vote only)');
+      debugPrint('≡ƒº⌐ Categorized "$title" as $best (vote only)');
       return finalizeCategory(best);
     }
 
@@ -1155,7 +1132,7 @@ class DetectionService {
 
     if (bestScore > explicitScore) {
       debugPrint(
-        '🧩 Categorized "$title" as $best (vote override; explicit was $explicitCat)',
+        '≡ƒº⌐ Categorized "$title" as $best (vote override; explicit was $explicitCat)',
       );
       return finalizeCategory(best);
     }
@@ -1165,12 +1142,12 @@ class DetectionService {
           ? best
           : explicitCat;
       debugPrint(
-        '🧩 Categorized "$title" as $pick (tie-break; explicit=$explicitCat, vote=$best)',
+        '≡ƒº⌐ Categorized "$title" as $pick (tie-break; explicit=$explicitCat, vote=$best)',
       );
       return finalizeCategory(pick);
     }
 
-    debugPrint('🧩 Categorized "$title" as $explicitCat (explicit)');
+    debugPrint('≡ƒº⌐ Categorized "$title" as $explicitCat (explicit)');
     return finalizeCategory(explicitCat!);
   }
 

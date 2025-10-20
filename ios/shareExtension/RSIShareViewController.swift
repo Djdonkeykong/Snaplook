@@ -994,8 +994,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     // Call detection API with image URL and base64 payload
-    private func runDetectionAnalysis(imageUrl: String, imageBase64: String) {
-        shareLog("START runDetectionAnalysis - imageUrl: \(imageUrl), base64 length: \(imageBase64.count)")
+    private func runDetectionAnalysis(imageUrl: String?, imageBase64: String) {
+        let urlForLog = imageUrl ?? "<nil>"
+        shareLog("START runDetectionAnalysis - imageUrl: \(urlForLog), base64 length: \(imageBase64.count)")
 
         guard let endpoint = detectorEndpoint(),
               let serpKey = serpApiKey() else {
@@ -1021,11 +1022,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         startStatusRotation(messages: searchMessages, interval: 2.5, stopAtLast: true)
 
         var requestBody: [String: Any] = [
-            "image_url": imageUrl,
             "image_base64": imageBase64,
             "serp_api_key": serpKey,
             "max_results_per_garment": 10
         ]
+
+        if let imageUrl = imageUrl, !imageUrl.isEmpty {
+            requestBody["image_url"] = imageUrl
+        }
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             shareLog("ERROR: Failed to serialize detection request JSON")
@@ -1254,7 +1258,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cancelButtonView = nil
     }
 
-    // Upload image to ImgBB and trigger detection
+    // Trigger detection using the Cloudinary-backed API
     private func uploadAndDetect(imageData: Data) {
         shareLog("START uploadAndDetect - image size: \(imageData.count) bytes")
 
@@ -1262,131 +1266,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stopStatusPolling()
         hasPresentedDetectionFailureAlert = false
 
-        // Progress should already be started and at ~0.20 from Instagram download
-        // Continue the smooth progress animation
-        updateProgress(0.25, status: "Uploading photo...")
+        // Progress should already be started from the source fetch; keep things moving
+        updateProgress(0.25, status: "Preparing photo...")
 
         let base64Image = imageData.base64EncodedString()
         shareLog("Base64 encoded - length: \(base64Image.count) chars")
 
-        let apiKey = "d7e1d857e4498c2e28acaa8d943ccea8"
+        let resolvedUrl = pendingImageUrl?.isEmpty == false ? pendingImageUrl : downloadedImageUrl
+        downloadedImageUrl = resolvedUrl
 
-        // Build URL with API key as query parameter
-        guard var components = URLComponents(string: "https://api.imgbb.com/1/upload") else {
-            shareLog("ERROR: Failed to create ImgBB URL components")
-            handleDetectionFailure(reason: "Couldn't prepare the upload request. Please try again.")
-            return
-        }
+        targetProgress = 0.25
+        shareLog("Calling runDetectionAnalysis...")
 
-        components.queryItems = [URLQueryItem(name: "key", value: apiKey)]
+        let detectionMessages = [
+            "Detecting garments...",
+            "Analyzing clothing...",
+            "Identifying items..."
+        ]
+        startStatusRotation(messages: detectionMessages, interval: 2.5)
 
-        guard let url = components.url else {
-            shareLog("ERROR: Failed to build ImgBB URL")
-            handleDetectionFailure(reason: "Encountered an invalid upload URL. Please try again.")
-            return
-        }
-
-        // Create multipart/form-data request
-        let boundary = "Boundary-\(UUID().uuidString)"
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 45.0  // Increased from 30s for larger images
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-
-        // Build multipart body
-        var body = Data()
-
-        // Add image field
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"image\"\r\n\r\n".data(using: .utf8)!)
-        body.append(base64Image.data(using: .utf8)!)
-        body.append("\r\n".data(using: .utf8)!)
-
-        // Add closing boundary
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-
-        request.httpBody = body
-
-        shareLog("Sending ImgBB multipart upload request with \(body.count) bytes body...")
-
-        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                shareLog("ERROR: ImgBB upload network error: \(error.localizedDescription)")
-                self.handleDetectionFailure(reason: "Upload failed (\(error.localizedDescription)).")
-                return
-            }
-
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            shareLog("ImgBB response - status code: \(statusCode)")
-
-            guard let data = data else {
-                shareLog("ERROR: ImgBB response has no data")
-                self.handleDetectionFailure(reason: "Upload response was empty. Please try again.")
-                return
-            }
-
-            shareLog("ImgBB response data size: \(data.count) bytes")
-
-            // Log the raw response for debugging
-            if let responseString = String(data: data, encoding: .utf8) {
-                let preview = responseString.prefix(500)
-                shareLog("ImgBB response preview: \(preview)")
-            }
-
-            guard statusCode == 200 else {
-                shareLog("ERROR: ImgBB returned non-200 status: \(statusCode)")
-                self.handleDetectionFailure(reason: "Upload service returned status \(statusCode).")
-                return
-            }
-
-            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                shareLog("ERROR: Failed to parse ImgBB JSON")
-                self.handleDetectionFailure(reason: "Upload response was unreadable. Please try again.")
-                return
-            }
-
-            shareLog("ImgBB JSON parsed successfully")
-
-            guard let dataDict = json["data"] as? [String: Any] else {
-                shareLog("ERROR: ImgBB response missing 'data' key")
-                if let success = json["success"] as? Bool, !success {
-                    if let errorDict = json["error"] as? [String: Any],
-                       let message = errorDict["message"] as? String {
-                        shareLog("ERROR: ImgBB API error: \(message)")
-                    }
-                }
-                self.handleDetectionFailure(reason: "Upload response was missing data. Please try again.")
-                return
-            }
-
-            guard let imageUrl = dataDict["url"] as? String else {
-                shareLog("ERROR: ImgBB data dict missing 'url' key")
-                self.handleDetectionFailure(reason: "Upload did not return a URL. Please try again.")
-                return
-            }
-
-            shareLog("SUCCESS: ImgBB upload complete: \(imageUrl)")
-            self.downloadedImageUrl = imageUrl
-
-            // Trigger detection
-            self.targetProgress = 0.25
-            shareLog("Calling runDetectionAnalysis...")
-
-            // Start rotating status messages for the detection phase
-            let detectionMessages = [
-                "Detecting garments...",
-                "Analyzing clothing...",
-                "Identifying items..."
-            ]
-            self.startStatusRotation(messages: detectionMessages, interval: 2.5)
-
-            self.runDetectionAnalysis(imageUrl: imageUrl, imageBase64: base64Image)
-        }
-
-        task.resume()
-        shareLog("ImgBB upload task started")
+        runDetectionAnalysis(imageUrl: resolvedUrl, imageBase64: base64Image)
     }
 
     // Update status label helper
@@ -2020,7 +1919,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.pendingSharedFile = sharedFile
 
                 shareLog("Calling uploadAndDetect with \(data.count) bytes of image data")
-                // Upload to ImgBB and trigger detection (async - don't complete yet)
+                // Trigger detection pipeline immediately (async - don't complete yet)
                 self.uploadAndDetect(imageData: data)
 
                 // DON'T call completion and DON'T write file - wait for detection results or failure
@@ -2811,3 +2710,5 @@ extension URL {
         return "application/octet-stream"
     }
 }
+
+

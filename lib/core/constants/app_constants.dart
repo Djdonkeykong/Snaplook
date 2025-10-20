@@ -62,8 +62,23 @@ class AppConstants {
     return value.trim();
   }
 
-  static String get imgbbApiKey =>
-      dotenv.env['IMGBB_API_KEY'] ?? 'd7e1d857e4498c2e28acaa8d943ccea8';
+  static String? get cloudinaryCloudName {
+    final value = dotenv.env['CLOUDINARY_CLOUD_NAME'];
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  static String? get cloudinaryApiKey {
+    final value = dotenv.env['CLOUDINARY_API_KEY'];
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  static String? get cloudinaryApiSecret {
+    final value = dotenv.env['CLOUDINARY_API_SECRET'];
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
 
   // === 🧠 Smart Detector Endpoints ===
   static String get serpDetectEndpoint {
