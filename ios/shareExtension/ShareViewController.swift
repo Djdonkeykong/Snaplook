@@ -18,6 +18,7 @@ class ShareViewController: RSIShareViewController {
         // Immediately show our custom UI on top of any base class UI
         setupCustomUI()
         hideLoadingOverlay()
+        showCustomUIElements()
 
         NSLog("[ShareExtension] Custom UI initialized - showing choice screen")
     }
@@ -26,7 +27,7 @@ class ShareViewController: RSIShareViewController {
         super.viewDidAppear(animated)
 
         // Ensure our UI is visible and on top
-        containerView.isHidden = false
+        showCustomUIElements()
         view.bringSubviewToFront(containerView)
 
         NSLog("[ShareExtension] Custom choice screen visible")
@@ -36,6 +37,7 @@ class ShareViewController: RSIShareViewController {
     private func setupCustomUI() {
         view.backgroundColor = UIColor(white: 0, alpha: 0.35)
 
+        containerView.tag = 9999
         containerView.backgroundColor = .white
         containerView.layer.cornerRadius = 16
         containerView.translatesAutoresizingMaskIntoConstraints = false
@@ -98,6 +100,15 @@ class ShareViewController: RSIShareViewController {
             disclaimerLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -24),
             disclaimerLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -24)
         ])
+
+        showCustomUIElements()
+    }
+
+    private func showCustomUIElements() {
+        [containerView, titleLabel, analyzeInAppButton, analyzeNowButton, disclaimerLabel].forEach { element in
+            element.isHidden = false
+            element.alpha = 1.0
+        }
     }
 
     private func configureButton(_ button: UIButton, title: String, isPrimary: Bool, action: Selector) {
