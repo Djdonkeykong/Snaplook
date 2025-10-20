@@ -329,6 +329,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open func shouldAutoProcessAttachments() -> Bool { true }
 
+    open func shouldUseDefaultLoadingUI() -> Bool { true }
+
     open override func isContentValid() -> Bool { true }
 
     private func hideDefaultUI() {
@@ -388,9 +390,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             shareLog("ERROR: Failed to resolve container URL for \(appGroupId)")
         }
         loadingHideWorkItem?.cancel()
-        setupLoadingUI()
-        startStatusPolling()
-        enforcePhotosStatusIfNeeded()
+        if shouldUseDefaultLoadingUI() {
+            setupLoadingUI()
+            startStatusPolling()
+            enforcePhotosStatusIfNeeded()
+        } else {
+            view.backgroundColor = .systemBackground
+        }
     }
 
     private func readSourceApplicationBundleIdentifier() -> String? {

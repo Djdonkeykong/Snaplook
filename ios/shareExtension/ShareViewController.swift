@@ -38,8 +38,8 @@ class ShareViewController: RSIShareViewController {
         view.backgroundColor = .systemBackground
 
         containerView.tag = 9999
-        containerView.backgroundColor = .white
-        containerView.layer.cornerRadius = 16
+        containerView.backgroundColor = .clear
+        containerView.layer.cornerRadius = 0
         containerView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerView)
 
@@ -76,29 +76,29 @@ class ShareViewController: RSIShareViewController {
         containerView.addSubview(disclaimerLabel)
 
         NSLayoutConstraint.activate([
-            containerView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            containerView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            containerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
             containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            containerView.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
 
-            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 32),
-            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 24),
-            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -24),
+            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
+            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 0),
+            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: 0),
 
-            analyzeInAppButton.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 32),
-            analyzeInAppButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 24),
-            analyzeInAppButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -24),
-            analyzeInAppButton.heightAnchor.constraint(equalToConstant: 56),
+            analyzeInAppButton.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 24),
+            analyzeInAppButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            analyzeInAppButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            analyzeInAppButton.heightAnchor.constraint(equalToConstant: 52),
 
             analyzeNowButton.topAnchor.constraint(equalTo: analyzeInAppButton.bottomAnchor, constant: 12),
-            analyzeNowButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 24),
-            analyzeNowButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -24),
-            analyzeNowButton.heightAnchor.constraint(equalToConstant: 56),
+            analyzeNowButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            analyzeNowButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            analyzeNowButton.heightAnchor.constraint(equalToConstant: 52),
 
-            disclaimerLabel.topAnchor.constraint(equalTo: analyzeNowButton.bottomAnchor, constant: 24),
-            disclaimerLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 24),
-            disclaimerLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -24),
-            disclaimerLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -24)
+            disclaimerLabel.topAnchor.constraint(equalTo: analyzeNowButton.bottomAnchor, constant: 16),
+            disclaimerLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            disclaimerLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            disclaimerLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -16)
         ])
 
         showCustomUIElements()
@@ -297,6 +297,10 @@ class ShareViewController: RSIShareViewController {
             self?.extensionContext?.cancelRequest(withError: NSError(domain: "ShareExtension", code: -1))
         })
         present(alert, animated: true)
+    }
+
+    override func shouldUseDefaultLoadingUI() -> Bool {
+        return false
     }
 
     override func shouldAutoStartDetection() -> Bool {
