@@ -6,9 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../src/features/home/presentation/pages/home_page.dart';
 import '../../src/features/wardrobe/presentation/pages/wardrobe_page.dart';
-import '../../src/features/discover/presentation/pages/discover_page.dart';
 import '../../src/features/profile/presentation/pages/profile_page.dart';
-import '../../src/features/product/presentation/pages/product_detail_page.dart';
 import '../../src/features/home/domain/providers/image_provider.dart';
 import '../../src/features/detection/presentation/pages/detection_page.dart';
 import '../../core/theme/app_colors.dart';
@@ -16,19 +14,14 @@ import '../../core/theme/theme_extensions.dart';
 import '../../core/theme/snaplook_icons.dart';
 
 final selectedIndexProvider = StateProvider<int>((ref) => 0);
-
-// Provider to trigger scroll to top
 final scrollToTopTriggerProvider = StateProvider<int>((ref) => 0);
-
-// Provider to track if we're at root of home tab (to show/hide floating bar)
 final isAtHomeRootProvider = StateProvider<bool>((ref) => true);
 
-// Global keys for each tab's navigator
+// Global navigator keys
 final homeNavigatorKey = GlobalKey<NavigatorState>();
 final wardrobeNavigatorKey = GlobalKey<NavigatorState>();
 final profileNavigatorKey = GlobalKey<NavigatorState>();
 
-// Provider for scroll controllers
 final homeScrollControllerProvider = Provider<ScrollController?>((ref) => null);
 
 class MainNavigation extends ConsumerStatefulWidget {
@@ -44,19 +37,14 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   void _handleTabTap(int index) {
     final currentIndex = ref.read(selectedIndexProvider);
 
-    // If tapping the same tab
     if (currentIndex == index) {
       final navigatorKey = _getNavigatorKey(index);
-
-      // Try to pop to root if we're not already at root
       if (navigatorKey?.currentState?.canPop() ?? false) {
         navigatorKey!.currentState!.popUntil((route) => route.isFirst);
       } else {
-        // We're at root, try to scroll to top
         _scrollToTop(index);
       }
     } else {
-      // Switch to different tab
       ref.read(selectedIndexProvider.notifier).state = index;
     }
   }
@@ -75,17 +63,13 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   }
 
   void _scrollToTop(int index) {
-    // Trigger scroll to top by incrementing the counter
     ref.read(scrollToTopTriggerProvider.notifier).state++;
   }
 
   @override
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(selectedIndexProvider);
-    final isAtHomeRoot = ref.watch(isAtHomeRootProvider);
-    final spacing = context.spacing;
 
-    // Create navigators for each tab to allow proper hero transitions
     final pages = [
       Navigator(
         key: homeNavigatorKey,
@@ -125,14 +109,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: selectedIndex,
-            children: pages,
-          ),
-        ],
-      ),
+      body: IndexedStack(index: selectedIndex, children: pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -144,46 +121,55 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
           ),
         ),
         child: SafeArea(
+          minimum: const EdgeInsets.only(bottom: 6),
           child: Container(
-            height: 56,
+            height: 64, // slightly taller for easier tap
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             child: Row(
               children: [
-                const Spacer(flex: 3),
-                _NavigationItem(
-                  icon: SnaplookIcons.homeOutline,
-                  selectedIcon: SnaplookIcons.homeFilled,
-                  label: 'Home',
-                  index: 0,
-                  isSelected: selectedIndex == 0,
-                  onTap: () => _handleTabTap(0),
-                  iconSize: 25.0,
-                  selectedIconSize: 26.0,
+                Expanded(
+                  child: Center(
+                    child: _NavigationItem(
+                      icon: SnaplookIcons.homeOutline,
+                      selectedIcon: SnaplookIcons.homeFilled,
+                      label: 'Home',
+                      index: 0,
+                      isSelected: selectedIndex == 0,
+                      onTap: () => _handleTabTap(0),
+                      iconSize: 25.0,
+                      selectedIconSize: 26.0,
+                    ),
+                  ),
                 ),
-                const Spacer(flex: 8),
-                _NavigationItem(
-                  icon: SnaplookIcons.heartOutline,
-                  selectedIcon: SnaplookIcons.heartFilled,
-                  label: 'Wardrobe',
-                  index: 1,
-                  isSelected: selectedIndex == 1,
-                  onTap: () => _handleTabTap(1),
-                  iconSize: 25.0,
-                  selectedIconSize: 29.0,
-                  selectedIconOffset: const Offset(2, 0),
+                Expanded(
+                  child: Center(
+                    child: _NavigationItem(
+                      icon: SnaplookIcons.heartOutline,
+                      selectedIcon: SnaplookIcons.heartFilled,
+                      label: 'Wardrobe',
+                      index: 1,
+                      isSelected: selectedIndex == 1,
+                      onTap: () => _handleTabTap(1),
+                      iconSize: 25.0,
+                      selectedIconSize: 29.0,
+                      selectedIconOffset: const Offset(2, 0),
+                    ),
+                  ),
                 ),
-                const Spacer(flex: 8),
-                _NavigationItem(
-                  icon: SnaplookIcons.profileOutline,
-                  selectedIcon: SnaplookIcons.profileFilled,
-                  label: 'Profile',
-                  index: 2,
-                  isSelected: selectedIndex == 2,
-                  onTap: () => _handleTabTap(2),
-                  iconSize: 25.0,
-                  selectedIconSize: 26.0,
+                Expanded(
+                  child: Center(
+                    child: _NavigationItem(
+                      icon: SnaplookIcons.profileOutline,
+                      selectedIcon: SnaplookIcons.profileFilled,
+                      label: 'Profile',
+                      index: 2,
+                      isSelected: selectedIndex == 2,
+                      onTap: () => _handleTabTap(2),
+                      iconSize: 25.0,
+                      selectedIconSize: 26.0,
+                    ),
+                  ),
                 ),
-                const Spacer(flex: 3),
               ],
             ),
           ),
@@ -241,10 +227,10 @@ class _NavigationItem extends StatelessWidget {
   final int index;
   final bool isSelected;
   final VoidCallback onTap;
-  final double? iconSize; // Optional custom icon size
-  final double? selectedIconSize; // Optional custom selected icon size
-  final double? topPadding; // Optional top padding adjustment
-  final Offset? selectedIconOffset; // Optional offset for selected icon
+  final double? iconSize;
+  final double? selectedIconSize;
+  final double? topPadding;
+  final Offset? selectedIconOffset;
 
   const _NavigationItem({
     this.icon,
@@ -255,43 +241,43 @@ class _NavigationItem extends StatelessWidget {
     required this.index,
     required this.isSelected,
     required this.onTap,
-    this.iconSize, // Default will be 28.0
-    this.selectedIconSize, // Optional larger size for selected state
-    this.topPadding, // Optional top padding for positioning
-    this.selectedIconOffset, // Optional offset for selected icon
+    this.iconSize,
+    this.selectedIconSize,
+    this.topPadding,
+    this.selectedIconOffset,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque, // ✅ expand tap area even if transparent
       onTap: () {
         HapticFeedback.mediumImpact();
         onTap();
       },
-      child: Container(
-        width: 70.0,
-        height: 70.0,
-        padding: EdgeInsets.only(top: topPadding ?? 0.0),
+      child: SizedBox(
+        width: 80, // wider hitbox
+        height: 56, // fits bottom bar
         child: Center(
-          child: _buildIcon(),
+          child: Padding(
+            padding: EdgeInsets.only(top: topPadding ?? 0.0),
+            child: _buildIcon(),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildIcon() {
-    final color = isSelected
-        ? AppColors.secondary
-        : AppColors.onSurfaceVariant;
+    final color =
+        isSelected ? AppColors.secondary : AppColors.onSurfaceVariant;
 
-    // Use selectedIconSize if selected and available, otherwise use iconSize or default
     final size = isSelected && selectedIconSize != null
         ? selectedIconSize!
-        : (iconSize ?? 28.0); // Use custom size or default to 28px (4px bigger than standard)
+        : (iconSize ?? 28.0);
 
     Widget iconWidget;
 
-    // Use SVG icons if provided
     if (svgIcon != null && selectedSvgIcon != null) {
       iconWidget = SvgPicture.asset(
         isSelected ? selectedSvgIcon! : svgIcon!,
@@ -299,21 +285,16 @@ class _NavigationItem extends StatelessWidget {
         height: size,
         colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
       );
-    }
-    // Fallback to regular icons
-    else if (icon != null && selectedIcon != null) {
+    } else if (icon != null && selectedIcon != null) {
       iconWidget = Icon(
         isSelected ? selectedIcon! : icon!,
         color: color,
         size: size,
       );
-    }
-    // Default fallback
-    else {
-      iconWidget = Container();
+    } else {
+      iconWidget = const SizedBox.shrink();
     }
 
-    // Apply offset if selected and offset is provided
     if (isSelected && selectedIconOffset != null) {
       return Transform.translate(
         offset: selectedIconOffset!,
@@ -341,7 +322,7 @@ class _FloatingActionBar extends StatelessWidget {
     return Container(
       height: 70,
       decoration: BoxDecoration(
-        color: const Color(0xFFf2003c), // Red background
+        color: const Color(0xFFf2003c),
         borderRadius: BorderRadius.circular(35),
         border: Border.all(
           color: const Color(0xFFf2003c),
@@ -349,7 +330,7 @@ class _FloatingActionBar extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.20), // More prominent shadow
+            color: Colors.black.withOpacity(0.20),
             blurRadius: 35,
             offset: const Offset(0, 6),
             spreadRadius: 1,
@@ -361,75 +342,27 @@ class _FloatingActionBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-          _FloatingActionButtonSvg(
-            svgIcon: 'assets/icons/camera_filled.svg',
-            label: 'Snap',
-            onTap: onSnapTap,
-          ),
-          _FloatingActionButtonSvg(
-            svgIcon: 'assets/icons/upload_filled.svg',
-            label: 'Upload',
-            onTap: onUploadTap,
-          ),
-          _FloatingActionButtonSvg(
-            svgIcon: 'assets/icons/tutorials_filled.svg',
-            label: 'Tutorials',
-            onTap: () {
-              // TODO: Implement scan functionality
-            },
-          ),
-          _FloatingActionButtonSvg(
-            svgIcon: 'assets/icons/share_filled.svg',
-            label: 'Share',
-            onTap: onShareTap,
-          ),
-        ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FloatingActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _FloatingActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          onTap();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: Colors.white, // White icons on gradient
-                size: 24,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white, // White text on gradient
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/camera_filled.svg',
+              label: 'Snap',
+              onTap: onSnapTap,
+            ),
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/upload_filled.svg',
+              label: 'Upload',
+              onTap: onUploadTap,
+            ),
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/tutorials_filled.svg',
+              label: 'Tutorials',
+              onTap: () {},
+            ),
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/share_filled.svg',
+              label: 'Share',
+              onTap: onShareTap,
+            ),
+          ],
         ),
       ),
     );
@@ -464,13 +397,14 @@ class _FloatingActionButtonSvg extends StatelessWidget {
                 svgIcon,
                 width: 24,
                 height: 24,
-                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: const TextStyle(
-                  color: Colors.white, // White text on gradient
+                  color: Colors.white,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),

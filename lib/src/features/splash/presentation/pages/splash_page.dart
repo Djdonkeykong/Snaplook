@@ -62,7 +62,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(255, 0, 66, 1),
+      backgroundColor: const Color(0xFFF2003C),
       body: Center(
         child: SizedBox(
           width: 180,

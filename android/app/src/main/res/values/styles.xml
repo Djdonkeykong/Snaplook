@@ -5,6 +5,7 @@
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/transparent_splash_icon</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
         <item name="android:windowSplashScreenBrandingImage">@null</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
         <item name="android:windowBackground">@drawable/launch_background</item>
     </style>
     <!-- Theme applied to the Android Window as soon as the process has started.
@@ -14,7 +15,6 @@
 
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:windowBackground">@drawable/launch_background</item>
     </style>
 </resources>
-
