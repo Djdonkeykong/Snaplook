@@ -6,6 +6,7 @@ import receive_sharing_intent
 @objc class AppDelegate: FlutterAppDelegate {
   private let shareStatusChannelName = "com.snaplook.snaplook/share_status"
   private let shareConfigChannelName = "snaplook/share_config"
+  private let authChannelName = "snaplook/auth"
   private let processingStatusKey = "ShareProcessingStatus"
   private let processingSessionKey = "ShareProcessingSession"
   private let scrapingBeeApiKeyKey = "ScrapingBeeApiKey"
@@ -13,6 +14,7 @@ import receive_sharing_intent
   private let detectorEndpointKey = "DetectorEndpoint"
   private let shareLogsChannelName = "snaplook/share_extension_logs"
   private let shareLogsKey = "ShareExtensionLogEntries"
+  private let authFlagKey = "user_authenticated"
 
   override func application(
     _ application: UIApplication,
@@ -40,6 +42,37 @@ import receive_sharing_intent
         name: shareLogsChannelName,
         binaryMessenger: controller.binaryMessenger
       )
+
+      let authChannel = FlutterMethodChannel(
+        name: authChannelName,
+        binaryMessenger: controller.binaryMessenger
+      )
+
+      // Handle auth method calls
+      authChannel.setMethodCallHandler { [weak self] call, result in
+        guard let self = self else {
+          result(FlutterError(code: "UNAVAILABLE", message: "AppDelegate released", details: nil))
+          return
+        }
+
+        switch call.method {
+        case "setAuthFlag":
+          guard let args = call.arguments as? [String: Any],
+                let isAuthenticated = args["isAuthenticated"] as? Bool,
+                let defaults = self.sharedUserDefaults() else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
+            return
+          }
+
+          defaults.set(isAuthenticated, forKey: self.authFlagKey)
+          defaults.synchronize()
+
+          NSLog("[Auth] Set auth flag to: \(isAuthenticated)")
+          result(nil)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
 
       // Handle share config method calls
       shareConfigChannel.setMethodCallHandler { [weak self] call, result in

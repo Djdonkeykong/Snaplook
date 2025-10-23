@@ -1,23 +1,23 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
 class AuthService {
   final _supabase = Supabase.instance.client;
-  static const String _authFlagKey = 'user_authenticated';
-  static const String _appGroupId = 'group.com.snaplook.snaplook';
+  static const _authChannel = MethodChannel('snaplook/auth');
 
   User? get currentUser => _supabase.auth.currentUser;
   bool get isAuthenticated => currentUser != null;
 
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
-  // Update the authentication flag for share extension
+  // Update the authentication flag for share extension via method channel
   Future<void> _updateAuthFlag(bool isAuthenticated) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_authFlagKey, isAuthenticated);
+      await _authChannel.invokeMethod('setAuthFlag', {
+        'isAuthenticated': isAuthenticated,
+      });
       print('Auth flag set to: $isAuthenticated');
     } catch (e) {
       print('Error updating auth flag: $e');

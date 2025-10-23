@@ -383,7 +383,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
         loadingHideWorkItem?.cancel()
 
-        // Don't show any overlay yet - wait for auth check in viewDidAppear
+        // Create a completely blank overlay to hide default UI immediately
+        let blankOverlay = UIView(frame: view.bounds)
+        blankOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        blankOverlay.backgroundColor = UIColor.systemBackground
+        blankOverlay.tag = 9999
+        view.addSubview(blankOverlay)
     }
 
     private func setupBlankOverlay() {

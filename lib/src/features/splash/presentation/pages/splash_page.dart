@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
@@ -44,10 +44,12 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     // Now check if user is authenticated
     final isAuthenticated = ref.read(isAuthenticatedProvider);
 
-    // Set auth flag for share extension
+    // Set auth flag for share extension via method channel
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('user_authenticated', isAuthenticated);
+      const authChannel = MethodChannel('snaplook/auth');
+      await authChannel.invokeMethod('setAuthFlag', {
+        'isAuthenticated': isAuthenticated,
+      });
       print('Auth flag set on app start: $isAuthenticated');
     } catch (e) {
       print('Error setting auth flag on app start: $e');
