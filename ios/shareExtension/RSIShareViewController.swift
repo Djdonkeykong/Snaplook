@@ -2645,7 +2645,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Open URL using extension context
         extensionContext?.open(url, completionHandler: { [weak self] success in
-            self?.shareLog(success ? "✅ Successfully opened app" : "❌ Failed to open app")
+            shareLog(success ? "✅ Successfully opened app" : "❌ Failed to open app")
 
             // Cancel the extension after opening the app
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
