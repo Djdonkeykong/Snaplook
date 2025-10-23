@@ -382,9 +382,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             shareLog("ERROR: Failed to resolve container URL for \(appGroupId)")
         }
         loadingHideWorkItem?.cancel()
-        setupLoadingUI()
-        startStatusPolling()
-        enforcePhotosStatusIfNeeded()
+
+        // Don't show loading UI immediately - wait to see if we need choice UI instead
+        // setupLoadingUI() will be called later if needed (when not showing choice UI)
     }
 
     private func readSourceApplicationBundleIdentifier() -> String? {
@@ -2632,8 +2632,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         }
                     }
 
-                    // Call the pending completion
-                    self.pendingInstagramCompletion?()
+                    // DON'T call completion - we're analyzing now, not redirecting
+                    // The extension will stay open for detection results
                     self.pendingInstagramCompletion = nil
                     self.pendingInstagramUrl = nil
 
