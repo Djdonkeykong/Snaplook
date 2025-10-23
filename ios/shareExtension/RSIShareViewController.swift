@@ -2565,11 +2565,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             try imageData.write(to: fileURL, options: .atomic)
             shareLog("Saved image to shared container: \(fileURL.path)")
 
+            // Add to shared media array
+            sharedMedia.append(sharedFile)
+
             // Remove choice UI
             hideLoadingUI()
 
             // Open app with the saved file (no detection)
-            redirectToHostApp(sharedMedia: [sharedFile])
+            saveAndRedirect(message: pendingImageUrl)
 
         } catch {
             shareLog("ERROR: Failed to save image - \(error.localizedDescription)")
