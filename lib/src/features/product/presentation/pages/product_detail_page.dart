@@ -8,6 +8,7 @@ import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../home/domain/services/inspiration_service.dart';
+import '../../../detection/presentation/pages/detection_page.dart';
 import 'visual_search_page.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -279,8 +280,8 @@ class _ProductDetailCard extends StatelessWidget {
                         onTap: () {
                           Navigator.of(context, rootNavigator: true).push(
                             MaterialPageRoute(
-                              builder: (context) => VisualSearchPage(
-                                product: product,
+                              builder: (context) => DetectionPage(
+                                imageUrl: product['image_url'] ?? '',
                               ),
                             ),
                           );
@@ -295,14 +296,11 @@ class _ProductDetailCard extends StatelessWidget {
                             ),
                             borderRadius: BorderRadius.circular(24),
                           ),
-                          child: Center(
-                            child: Transform.translate(
-                              offset: const Offset(0, -1.5),
-                              child: Icon(
-                                SnaplookAiIcon.aiSearchIcon,
-                                size: 19,
-                                color: Colors.black,
-                              ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.center_focus_strong,
+                              size: 19,
+                              color: Colors.black,
                             ),
                           ),
                         ),

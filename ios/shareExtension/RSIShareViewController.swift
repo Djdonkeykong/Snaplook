@@ -2525,15 +2525,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let notificationFeedback = UINotificationFeedbackGenerator()
         notificationFeedback.notificationOccurred(.warning)
 
-        // Remove any existing overlay
-        view.subviews.filter { $0.tag == 9999 || $0.tag == 10000 }.forEach { $0.removeFromSuperview() }
-
-        // Create modal overlay
-        let overlay = UIView(frame: view.bounds)
-        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        overlay.backgroundColor = UIColor.systemBackground
-        overlay.tag = 10000
-        view.addSubview(overlay)
+        // Use existing blank overlay or create new one
+        let overlay: UIView
+        if let existingOverlay = view.subviews.first(where: { $0.tag == 9999 }) {
+            overlay = existingOverlay
+            overlay.tag = 10000 // Change tag to identify it as login overlay
+        } else {
+            overlay = UIView(frame: view.bounds)
+            overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            overlay.backgroundColor = UIColor.systemBackground
+            overlay.tag = 10000
+        }
 
         // Add logo and cancel button at top
         let headerContainer = UIView()
@@ -2551,12 +2553,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         headerContainer.addSubview(logo)
         headerContainer.addSubview(cancelButton)
-        overlay.addSubview(headerContainer)
 
         // Container for centered content
         let contentContainer = UIView()
         contentContainer.translatesAutoresizingMaskIntoConstraints = false
-        overlay.addSubview(contentContainer)
 
         // Title
         let titleLabel = UILabel()
@@ -2565,7 +2565,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
         titleLabel.textAlignment = .center
         titleLabel.textColor = .label
-        contentContainer.addSubview(titleLabel)
 
         // Message
         let messageLabel = UILabel()
@@ -2575,7 +2574,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         messageLabel.textAlignment = .center
         messageLabel.textColor = .secondaryLabel
         messageLabel.numberOfLines = 0
-        contentContainer.addSubview(messageLabel)
 
         // Buttons stack
         let buttonStack = UIStackView()
@@ -2583,7 +2581,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         buttonStack.axis = .vertical
         buttonStack.spacing = 16
         buttonStack.distribution = .fillEqually
-        contentContainer.addSubview(buttonStack)
 
         // "Open Snaplook" button (pill-shaped)
         let openAppButton = UIButton(type: .system)
@@ -2605,8 +2602,23 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cancelActionButton.layer.borderColor = UIColor(red: 209/255, green: 213/255, blue: 219/255, alpha: 1.0).cgColor
         cancelActionButton.addTarget(self, action: #selector(cancelLoginRequiredTapped), for: .touchUpInside)
 
+        // Add all subviews to button stack
         buttonStack.addArrangedSubview(openAppButton)
         buttonStack.addArrangedSubview(cancelActionButton)
+
+        // Add all subviews to content container
+        contentContainer.addSubview(titleLabel)
+        contentContainer.addSubview(messageLabel)
+        contentContainer.addSubview(buttonStack)
+
+        // Add all subviews to overlay
+        overlay.addSubview(headerContainer)
+        overlay.addSubview(contentContainer)
+
+        // Add overlay to view if it's new
+        if overlay.superview == nil {
+            view.addSubview(overlay)
+        }
 
         // Layout constraints
         NSLayoutConstraint.activate([
@@ -2664,22 +2676,27 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
 
-        // Open the main app using extensionContext
-        guard let url = URL(string: "snaplook://") else {
-            shareLog("❌ Failed to create app URL")
-            cancelLoginRequiredTapped()
-            return
+        // Save a flag that user needs to sign in
+        if let defaults = UserDefaults(suiteName: appGroupId) {
+            defaults.set(true, forKey: "needs_signin_from_share_extension")
+            defaults.synchronize()
         }
 
-        // Open URL using extension context
-        extensionContext?.open(url, completionHandler: { [weak self] success in
-            shareLog(success ? "✅ Successfully opened app" : "❌ Failed to open app")
+        // Try to open the main app using extensionContext
+        if let url = URL(string: "snaplook://auth") {
+            extensionContext?.open(url, completionHandler: { [weak self] success in
+                shareLog(success ? "✅ Successfully opened app" : "⚠️ Failed to open app (may be simulator limitation)")
 
-            // Cancel the extension after opening the app
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                self?.cancelLoginRequiredTapped()
-            }
-        })
+                // Always cancel the extension
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    self?.cancelLoginRequiredTapped()
+                }
+            })
+        } else {
+            // If URL creation fails, just dismiss
+            shareLog("❌ Failed to create app URL")
+            cancelLoginRequiredTapped()
+        }
     }
 
     @objc private func cancelLoginRequiredTapped() {

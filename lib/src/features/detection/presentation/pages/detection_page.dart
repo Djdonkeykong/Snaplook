@@ -246,7 +246,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           onTap: _startDetection,
           child: const Center(
             child: Icon(
-              Icons.search,
+              Icons.center_focus_strong,
               size: 32,
               color: Colors.white,
             ),
