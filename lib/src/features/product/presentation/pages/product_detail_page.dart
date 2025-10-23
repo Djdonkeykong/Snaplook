@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
+import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../home/domain/services/inspiration_service.dart';
 import 'visual_search_page.dart';
@@ -261,7 +262,7 @@ class _ProductDetailCard extends StatelessWidget {
                           ),
                           child: Center(
                             child: Transform.translate(
-                              offset: const Offset(0, -0.5),
+                              offset: const Offset(0, -1.5),
                               child: Icon(
                                 SnaplookAiIcon.aiSearchIcon,
                                 size: 22,
@@ -285,10 +286,13 @@ class _ProductDetailCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(24),
                           ),
                           child: Center(
-                            child: Icon(
-                              isLiked ? Icons.favorite : Icons.favorite_border,
-                              color: isLiked ? const Color(0xFFf2003c) : Colors.black,
-                              size: 22,
+                            child: Transform.translate(
+                              offset: isLiked ? Offset.zero : const Offset(-1, 0),
+                              child: Icon(
+                                isLiked ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
+                                size: isLiked ? 22 * 0.85 : 22 * 0.75,
+                                color: isLiked ? const Color(0xFFf2003c) : Colors.grey.shade600,
+                              ),
                             ),
                           ),
                         ),
