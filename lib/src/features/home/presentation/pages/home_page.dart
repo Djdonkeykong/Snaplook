@@ -273,49 +273,67 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildBurberryStyleGrid(InspirationState state) {
-    final images = List<Map<String, dynamic>>.from(state.images);
+    final images = state.images.cast<Map<String, dynamic>>();
 
     if (images.length < 3) {
       return _buildFallbackGrid(images);
     }
 
-    // Simple pattern: Every 3 images = 1 large + 2 small (2 rows)
-    // All images are already premium brands from service filtering
-    final maxPatterns = (images.length / 3).floor().clamp(1, 1000);
-    final totalRows = maxPatterns * 2;
+    final rows = <_MagazineGridRow>[];
+    var patternStart = 0;
+
+    while (patternStart + 2 < images.length) {
+      rows.add(
+        _MagazineGridRow.large(
+          image: images[patternStart],
+          startIndex: patternStart,
+        ),
+      );
+      rows.add(
+        _MagazineGridRow.pair(
+          images: [
+            images[patternStart + 1],
+            images[patternStart + 2],
+          ],
+          startIndex: patternStart + 1,
+        ),
+      );
+      patternStart += 3;
+    }
+
+    final remaining = images.length - patternStart;
+    if (remaining == 1) {
+      rows.add(
+        _MagazineGridRow.large(
+          image: images[patternStart],
+          startIndex: patternStart,
+        ),
+      );
+    } else if (remaining == 2) {
+      rows.add(
+        _MagazineGridRow.pair(
+          images: [
+            images[patternStart],
+            images[patternStart + 1],
+          ],
+          startIndex: patternStart,
+        ),
+      );
+    }
 
     return ListView.builder(
       controller: _scrollController,
       padding: EdgeInsets.zero,
-      itemCount: totalRows,
+      itemCount: rows.length,
       itemBuilder: (context, rowIndex) {
-        return _buildSimplePatternRow(rowIndex, images);
+        final descriptor = rows[rowIndex];
+        if (descriptor.isLarge) {
+          return _buildLargeImageRow(descriptor.image!, descriptor.startIndex);
+        }
+
+        return _buildTwoImageRow(descriptor.images!, descriptor.startIndex);
       },
     );
-  }
-
-  Widget _buildSimplePatternRow(
-      int rowIndex, List<Map<String, dynamic>> images) {
-    final isLargeRow = rowIndex.isEven;
-
-    if (isLargeRow) {
-      // Large image row - use every 3rd image starting from pattern index
-      final patternIndex = rowIndex ~/ 2;
-      final imageIndex = patternIndex * 3;
-      final image = images[imageIndex % images.length];
-      return _buildLargeImageRow(image, imageIndex);
-    } else {
-      // Two image row - use the next 2 images after the large one
-      final patternIndex = rowIndex ~/ 2;
-      final baseIndex = patternIndex * 3;
-
-      final List<Map<String, dynamic>> twoImages = [
-        images[(baseIndex + 1) % images.length],
-        images[(baseIndex + 2) % images.length],
-      ];
-
-      return _buildTwoImageRow(twoImages, baseIndex + 1);
-    }
   }
 
   Widget _buildStrictPatternRow(
@@ -431,6 +449,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildTwoImageRow(List<Map<String, dynamic>> images, int startIndex) {
+    if (images.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (images.length < 2) {
+      return _buildLargeImageRow(images.first, startIndex);
+    }
+
     return Column(
       children: [
         Row(
@@ -610,6 +636,40 @@ class _HomePageState extends ConsumerState<HomePage> {
       subject: 'Discover Fashion with Snaplook',
     );
   }
+}
+
+class _MagazineGridRow {
+  const _MagazineGridRow._({
+    this.image,
+    this.images,
+    required this.startIndex,
+    required this.isLarge,
+  });
+
+  const _MagazineGridRow.large({
+    required Map<String, dynamic> image,
+    required int startIndex,
+  }) : this._(
+          image: image,
+          images: null,
+          startIndex: startIndex,
+          isLarge: true,
+        );
+
+  const _MagazineGridRow.pair({
+    required List<Map<String, dynamic>> images,
+    required int startIndex,
+  }) : this._(
+          image: null,
+          images: images,
+          startIndex: startIndex,
+          isLarge: false,
+        );
+
+  final Map<String, dynamic>? image;
+  final List<Map<String, dynamic>>? images;
+  final int startIndex;
+  final bool isLarge;
 }
 
 class _SourceOption extends StatelessWidget {

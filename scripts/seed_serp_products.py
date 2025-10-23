@@ -321,22 +321,64 @@ def main(argv: Optional[List[str]] = None) -> int:
     for query in args.queries:
         print(f"\n[Query] {query}")
         for page in range(args.pages):
-            results = None
-            used_size = None
+            results: Optional[List[dict]] = None
+            used_size = "none"
+            last_error: Optional[SerpApiError] = None
 
-            try:
-                results = fetch_serp_images(serp_api_key, query, page, args.per_page, None if args.img_size == "none" else args.img_size, extra_params)
-                used_size = args.img_size
-            except SerpApiError as exc:
-                print(f"  [Error] Failed to fetch page {page}: {exc}")
+            size_preferences: List[Optional[str]]
+            if args.img_size == "none":
+                size_preferences = [None]
+            else:
+                start_index = SUPPORTED_IMAGE_SIZES.index(args.img_size)
+                size_preferences = SUPPORTED_IMAGE_SIZES[start_index:] + [None]
+
+            for candidate_size in size_preferences:
+                try:
+                    results = fetch_serp_images(
+                        serp_api_key,
+                        query,
+                        page,
+                        args.per_page,
+                        candidate_size,
+                        extra_params,
+                    )
+                    used_size = candidate_size or "none"
+                    if last_error and last_error.is_image_size_error:
+                        print(
+                            f"  [Info] imgsz fallback succeeded with '{used_size}'."
+                        )
+                    last_error = None
+                    break
+                except SerpApiError as exc:
+                    last_error = exc
+                    if exc.is_image_size_error and candidate_size is not None:
+                        print(
+                            f"  [Warn] imgsz '{candidate_size}' unsupported. Retrying with next size."
+                        )
+                        continue
+                    print(f"  [Error] Failed to fetch page {page}: {exc}")
+                    results = None
+                    break
+
+            if results is None:
+                if last_error and not last_error.is_image_size_error:
+                    continue
+                print(
+                    f"  [Error] Exhausted image size fallbacks for page {page} (query '{query}')."
+                )
                 continue
 
-            print(f"  [Info] Retrieved {len(results)} results (page {page}, imgsz={used_size or 'none'})")
+            print(
+                f"  [Info] Retrieved {len(results)} results (page {page}, imgsz={used_size})"
+            )
             transformed = filter_and_transform_results(results, query, seen_urls, next_id)
 
             fresh_records = [r for r in transformed if not supabase.product_exists(r.image_url)]
             for offset, record in enumerate(fresh_records):
                 record.id = next_id + offset
+
+            skipped = len(transformed) - len(fresh_records)
+            total_skipped += skipped
 
             if not fresh_records:
                 print("  [Info] No new records to insert.")
@@ -345,6 +387,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 total_inserted += inserted
                 next_id += inserted
                 print(f"  [Success] Inserted {inserted} new products.")
+            if skipped:
+                print(f"  [Info] Skipped {skipped} duplicates already stored.")
 
             time.sleep(args.delay)
 
