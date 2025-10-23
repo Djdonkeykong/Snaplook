@@ -464,7 +464,7 @@ class _SettingItem extends StatelessWidget {
                 color: Color(0xFFF9F9F9),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 18, color: Colors.black87),
+              child: Icon(icon, size: 18, color: Colors.black),
             ),
             SizedBox(width: spacing.m),
             Expanded(

@@ -929,7 +929,7 @@ class _StaggeredInspirationImageCardState
                   child: const Icon(
                     Icons.crop_free,
                     size: 18,
-                    color: Colors.black54,
+                    color: Colors.black,
                   ),
                 ),
               ),
@@ -1081,7 +1081,7 @@ class _HeartIconState extends State<_HeartIcon> {
         child: Icon(
           _isLiked ? Icons.favorite : Icons.favorite_border,
           size: widget.size * 0.5,
-          color: _isLiked ? Colors.red : Colors.black54,
+          color: _isLiked ? Colors.red : Colors.black,
         ),
       ),
     );
@@ -1121,7 +1121,7 @@ class _ScanIcon extends StatelessWidget {
             child: Icon(
               SnaplookAiIcon.aiSearchIcon,
               size: size * 0.4675,
-              color: Colors.black54,
+              color: Colors.black,
             ),
           ),
         ),

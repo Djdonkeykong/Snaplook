@@ -270,7 +270,7 @@ class _NavigationItem extends StatelessWidget {
 
   Widget _buildIcon() {
     final color =
-        isSelected ? AppColors.secondary : AppColors.onSurfaceVariant;
+        isSelected ? AppColors.secondary : AppColors.black;
 
     final size = isSelected && selectedIconSize != null
         ? selectedIconSize!

@@ -60,7 +60,7 @@ class FavoriteButton extends ConsumerWidget {
               size: isFavorite ? size * 0.85 : size * 0.75,
               color: isFavorite
                   ? (activeColor ?? const Color(0xFFf2003c))
-                  : (inactiveColor ?? Colors.grey.shade600),
+                  : (inactiveColor ?? Colors.black),
             ),
           ),
         ),
@@ -90,7 +90,7 @@ class FavoriteIconButton extends ConsumerWidget {
         child: Icon(
           isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
           size: isFavorite ? size * 0.85 : size * 0.75,
-          color: isFavorite ? const Color(0xFFf2003c) : Colors.grey.shade400,
+          color: isFavorite ? const Color(0xFFf2003c) : Colors.black,
         ),
       ),
       onPressed: () async {
