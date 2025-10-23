@@ -218,9 +218,7 @@ class _ProductDetailCard extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () async {
                             try {
-                              final productUrl = product['product_url'] as String?;
-                              print('[View Product] Product URL: $productUrl');
-                              print('[View Product] Product keys: ${product.keys}');
+                              final productUrl = product['url'] as String?;
 
                               if (productUrl == null || productUrl.isEmpty) {
                                 if (context.mounted) {
@@ -235,13 +233,9 @@ class _ProductDetailCard extends StatelessWidget {
                               }
 
                               final uri = Uri.parse(productUrl);
-                              print('[View Product] Parsed URI: $uri');
-
                               if (await canLaunchUrl(uri)) {
-                                print('[View Product] Launching URL...');
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
                               } else {
-                                print('[View Product] Cannot launch URL');
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -252,7 +246,6 @@ class _ProductDetailCard extends StatelessWidget {
                                 }
                               }
                             } catch (e) {
-                              print('[View Product] Error: $e');
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
