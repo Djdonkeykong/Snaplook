@@ -388,6 +388,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func setupBlankOverlay() {
+        // Create a simple blank overlay with just logo and cancel
+        // Choice buttons will be added later after auth check
         let overlay = UIView(frame: view.bounds)
         overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         overlay.backgroundColor = UIColor.systemBackground
@@ -410,12 +412,46 @@ open class RSIShareViewController: SLComposeServiceViewController {
         headerContainer.addSubview(logo)
         headerContainer.addSubview(cancelButton)
 
+        // Add header to overlay
+        overlay.addSubview(headerContainer)
+
+        // Set up constraints
+        NSLayoutConstraint.activate([
+            // Header container
+            headerContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: -5),
+            headerContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
+            headerContainer.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
+            headerContainer.heightAnchor.constraint(equalToConstant: 48),
+
+            // Logo
+            logo.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
+            logo.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            logo.heightAnchor.constraint(equalToConstant: 28),
+            logo.widthAnchor.constraint(equalToConstant: 132),
+
+            // Cancel button
+            cancelButton.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
+            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16),
+        ])
+
+        view.addSubview(overlay)
+    }
+
+    private func showChoiceButtons() {
+        // Add choice buttons to the existing blank overlay
+        guard let overlay = view.subviews.first(where: { $0.tag == 9999 }) else {
+            shareLog("❌ Cannot find overlay to add choice buttons")
+            return
+        }
+
         // Create vertical stack for buttons
         let buttonStack = UIStackView()
         buttonStack.axis = .vertical
         buttonStack.alignment = .fill
         buttonStack.spacing = 16
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
+        buttonStack.tag = 9998 // Tag to identify button stack
 
         // "Analyze in app" button
         let analyzeInAppButton = UIButton(type: .system)
@@ -450,31 +486,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         disclaimerLabel.textAlignment = .center
         disclaimerLabel.numberOfLines = 0
         disclaimerLabel.translatesAutoresizingMaskIntoConstraints = false
+        disclaimerLabel.tag = 9997 // Tag for disclaimer
 
-        // Add all subviews
-        overlay.addSubview(headerContainer)
+        // Add button stack and disclaimer to overlay
         overlay.addSubview(buttonStack)
         overlay.addSubview(disclaimerLabel)
 
         // Set up constraints
         NSLayoutConstraint.activate([
-            // Header container
-            headerContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: -5),
-            headerContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
-            headerContainer.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
-            headerContainer.heightAnchor.constraint(equalToConstant: 48),
-
-            // Logo
-            logo.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
-            logo.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
-            logo.heightAnchor.constraint(equalToConstant: 28),
-            logo.widthAnchor.constraint(equalToConstant: 132),
-
-            // Cancel button
-            cancelButton.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
-            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
-            cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16),
-
             // Button stack (centered)
             buttonStack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
             buttonStack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
@@ -491,11 +510,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             disclaimerLabel.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -32)
         ])
 
-        view.addSubview(overlay)
         loadingView = overlay
-
         hideDefaultUI()
-        shareLog("Choice UI displayed immediately - waiting for user selection")
+        shareLog("✅ Choice buttons displayed after auth check")
     }
 
     private func readSourceApplicationBundleIdentifier() -> String? {
@@ -544,6 +561,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             showLoginRequiredModal()
             return
         }
+
+        // Show choice buttons after authentication passes
+        showChoiceButtons()
 
         // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
         if hasProcessedAttachments {
@@ -2484,17 +2504,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return false
         }
 
+        // Log all keys for debugging
+        let allKeys = Array(defaults.dictionaryRepresentation().keys).sorted()
+        shareLog("📋 All UserDefaults keys: \(allKeys)")
+
         // Check for Supabase session
-        // Supabase Flutter stores the session in shared preferences
-        // The key format is typically "sb-<project-ref>-auth-token"
-        // We'll check for any session data
-        let allKeys = defaults.dictionaryRepresentation().keys
+        // Supabase Flutter stores the session with the key format:
+        // "flutter.supabase_flutter.persist_session_key" or similar
+        // Also check for the actual Supabase project-specific keys
         let hasSupabaseSession = allKeys.contains { key in
-            key.contains("supabase") || key.contains("sb-") || key.contains("auth-token")
+            key.contains("persist_session") ||
+            key.contains("supabase") ||
+            key.hasPrefix("sb-") ||
+            key.contains("auth") && key.contains("token")
         }
 
         if hasSupabaseSession {
             shareLog("✅ User authenticated - found Supabase session")
+            // Log which key matched
+            if let matchedKey = allKeys.first(where: { key in
+                key.contains("persist_session") ||
+                key.contains("supabase") ||
+                key.hasPrefix("sb-") ||
+                key.contains("auth") && key.contains("token")
+            }) {
+                shareLog("📍 Matched key: \(matchedKey)")
+            }
         } else {
             shareLog("❌ No Supabase session found - user not authenticated")
         }
