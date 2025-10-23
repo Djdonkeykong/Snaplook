@@ -224,160 +224,15 @@ class _VisualSearchPageState extends State<VisualSearchPage> {
     //   // Search WITHOUT item type filter, we'll filter by category group after
     //   final response = await Supabase.instance.client.rpc(
     //     'find_similar_detected_items',
-        params: {
-          'query_embedding': item.embedding!,
-          'match_limit': 100, // Get more results since we'll filter by group
-          'item_type_filter': null, // Don't filter by exact type
-        },
-      );
-
-      print('[Search] RPC returned ${(response as List).length} results');
-
-      if ((response as List).isEmpty) {
-        print('[Search] NO RESULTS FROM RPC!');
-        setState(() {
-          similarProducts = [];
-          isLoadingSearch = false;
-        });
-        return;
-      }
-
-      // Filter results to only include items in the same category group
-      final filteredResponse = (response as List).where((r) {
-        final resultItemType = r['item_type'] as String;
-        final resultGroup = _getCategoryGroup(resultItemType);
-        return resultGroup == categoryGroup;
-      }).toList();
-
-      print('[Search] Filtered to ${filteredResponse.length} results in category group: $categoryGroup');
-
-      if (filteredResponse.isEmpty) {
-        print('[Search] NO RESULTS after category group filtering!');
-        setState(() {
-          similarProducts = [];
-          isLoadingSearch = false;
-        });
-        return;
-      }
-
-      // Print first 3 results for debugging
-      for (int i = 0; i < filteredResponse.length && i < 3; i++) {
-        final r = filteredResponse[i];
-        print('[Search] Result $i: product_id=${r['product_id']}, item_type=${r['item_type']}, group=${_getCategoryGroup(r['item_type'])}, similarity=${r['similarity']}');
-      }
-
-      // Get unique product IDs from filtered results
-      final productIds = filteredResponse
-          .map((r) => r['product_id'] as int)
-          .toSet()
-          .toList();
-
-      print('[Search] Unique product IDs: ${productIds.length} (from ${filteredResponse.length} detected items)');
-      print('[Search] Product IDs: ${productIds.take(10).toList()}');
-
-      // Load product details
-      final productsResponse = await Supabase.instance.client
-          .from('products')
-          .select('id, title, image_url, category')
-          .inFilter('id', productIds);
-
-      print('[Search] Loaded ${productsResponse.length} products from database');
-
-      final productsMap = {
-        for (var p in productsResponse) p['id']: p
-      };
-
-      print('[Search] Product map has ${productsMap.length} entries');
-
-      // Combine filtered results with product info
-      final allResults = filteredResponse.map((r) {
-        final product = productsMap[r['product_id']];
-        return <String, dynamic>{
-          ...Map<String, dynamic>.from(r as Map),
-          'product_title': product?['title'],
-          'product_image_url': product?['image_url'],
-          'product_category': product?['category'],
-        };
-      }).toList();
-
-      // Deduplicate by product_id - keep highest similarity for each product
-      // Also exclude the current product we're viewing
-      final currentProductId = widget.product['id'] as int;
-      final Map<int, Map<String, dynamic>> uniqueProducts = {};
-
-      for (final result in allResults) {
-        final productId = result['product_id'] as int;
-
-        // Skip the current product
-        if (productId == currentProductId) {
-          continue;
-        }
-
-        final similarity = (result['similarity'] as num).toDouble(); // Handle both int and double
-
-        if (!uniqueProducts.containsKey(productId) ||
-            similarity > ((uniqueProducts[productId]!['similarity'] as num).toDouble())) {
-          uniqueProducts[productId] = result;
-        }
-      }
-
-      final deduplicatedResults = uniqueProducts.values.toList();
-
-      // Sort by similarity (highest first)
-      deduplicatedResults.sort((a, b) =>
-        ((b['similarity'] as num).toDouble()).compareTo((a['similarity'] as num).toDouble())
-      );
-
-      print('[Search] Deduplicated from ${allResults.length} to ${deduplicatedResults.length} unique products');
-
-      print('[Search] Combined results (filtered by category group): ${allResults.length}');
-
-      // Debug: show what item types we have in this category group
-      final itemTypeCounts = <String, int>{};
-      for (final r in allResults) {
-        final itemType = r['item_type'] as String?;
-        itemTypeCounts[itemType ?? 'null'] = (itemTypeCounts[itemType ?? 'null'] ?? 0) + 1;
-      }
-      print('[Search] Item types in category group "$categoryGroup": $itemTypeCounts');
-
-      final results = allResults;
-
-      print('[Search] Showing ${results.length} results from category group: $categoryGroup');
-
-      // Check if any results have missing product info
-      final missingProducts = results.where((r) => r['product_title'] == null).length;
-      if (missingProducts > 0) {
-        print('[Search] WARNING: $missingProducts results have missing product info!');
-      }
-
-      // Print first 3 combined results
-      for (int i = 0; i < results.length && i < 3; i++) {
-        final r = results[i];
-        final title = r['product_title'] as String?;
-        final titlePreview = title != null && title.length > 30 ? title.substring(0, 30) : (title ?? 'null');
-        print('[Search] Combined result $i: $titlePreview, similarity=${r['similarity']}, matched_item=${r['item_type']}, product_category=${r['product_category']}');
-      }
-
-      print('[Search] Setting state with ${results.length} results');
-      print('=== END SEARCH DEBUG ===\n');
-
-      setState(() {
-        similarProducts = results;
-        isLoadingSearch = false;
-      });
-    } catch (e) {
-      print('Error searching for similar items: $e');
-      setState(() => isLoadingSearch = false);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    //     params: {
+    //       'query_embedding': item.embedding!,
+    //       'match_limit': 100,
+    //       'item_type_filter': null,
+    //     },
+    //   );
+    // } catch (e) {
+    //   print('Error searching for similar items: $e');
+    // }
   }
 
   DetectedItem? _findBestMatchingItem(Rect cropRect, Size imageSize) {
@@ -664,127 +519,15 @@ class _VisualSearchPageState extends State<VisualSearchPage> {
     //   // Search database with this embedding (no category filtering for Pinterest-style)
     //   final searchResponse = await Supabase.instance.client.rpc(
     //     'find_similar_detected_items',
-        params: {
-          'query_embedding': embedding,
-          'match_limit': 50,
-          'item_type_filter': null,
-        },
-      );
-
-      print('[Crop] Found ${(searchResponse as List).length} similar items');
-
-      if ((searchResponse as List).isEmpty) {
-        setState(() {
-          isLoadingSearch = false;
-          selectedItemType = 'items';
-        });
-        return;
-      }
-
-      // Get unique product IDs
-      final productIds = (searchResponse as List)
-          .map((r) => r['product_id'] as int)
-          .toSet()
-          .toList();
-
-      // Load product details
-      final productsResponse = await Supabase.instance.client
-          .from('products')
-          .select('id, title, image_url, category')
-          .inFilter('id', productIds);
-
-      final productsMap = {
-        for (var p in productsResponse) p['id']: p
-      };
-
-      // Combine results
-      final results = (searchResponse as List).map((r) {
-        final product = productsMap[r['product_id']];
-        return <String, dynamic>{
-          ...Map<String, dynamic>.from(r as Map),
-          'product_title': product?['title'],
-          'product_image_url': product?['image_url'],
-          'product_category': product?['category'],
-        };
-      }).toList();
-
-      // Deduplicate by product_id and exclude current product
-      final currentProductId = widget.product['id'] as int;
-      final Map<int, Map<String, dynamic>> uniqueProducts = {};
-
-      for (final result in results) {
-        final productId = result['product_id'] as int;
-
-        // Skip the current product we're viewing
-        if (productId == currentProductId) {
-          continue;
-        }
-
-        final similarity = (result['similarity'] as num).toDouble(); // Handle both int and double
-
-        if (!uniqueProducts.containsKey(productId) ||
-            similarity > ((uniqueProducts[productId]!['similarity'] as num).toDouble())) {
-          uniqueProducts[productId] = result;
-        }
-      }
-
-      final deduplicatedResults = uniqueProducts.values.toList();
-
-      // Boost same-category items (dresses match dresses, jeans match jeans)
-      final currentCategory = widget.product['category']?.toString().toLowerCase() ?? '';
-
-      for (final result in deduplicatedResults) {
-        final resultCategory = result['product_category']?.toString().toLowerCase() ?? '';
-        var similarity = (result['similarity'] as num).toDouble();
-
-        // Boost by 15% if same category (dress→dress, pants→pants)
-        if (currentCategory.isNotEmpty && resultCategory.isNotEmpty) {
-          // Check for category overlap (e.g., "dress" in both, or "pants" in both)
-          final currentWords = currentCategory.split(RegExp(r'[,\s]+'));
-          final resultWords = resultCategory.split(RegExp(r'[,\s]+'));
-
-          bool hasCategoryMatch = false;
-          for (final word in currentWords) {
-            if (resultWords.contains(word) && word.length > 3) {
-              hasCategoryMatch = true;
-              break;
-            }
-          }
-
-          if (hasCategoryMatch) {
-            similarity = similarity * 1.25; // 25% boost for same category
-            result['similarity'] = similarity;
-            result['category_boost'] = true;
-          }
-        }
-      }
-
-      // Sort by (potentially boosted) similarity
-      deduplicatedResults.sort((a, b) =>
-        ((b['similarity'] as num).toDouble()).compareTo((a['similarity'] as num).toDouble())
-      );
-
-      print('[Crop] Showing ${deduplicatedResults.length} unique products');
-
-      setState(() {
-        similarProducts = deduplicatedResults;
-        selectedItemType = 'similar items';
-        isLoadingSearch = false;
-      });
-
-    } catch (e) {
-      print('[Crop] Error: $e');
-      setState(() => isLoadingSearch = false);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Search error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    //     params: {
+    //       'query_embedding': embedding,
+    //       'match_limit': 50,
+    //       'item_type_filter': null,
+    //     },
+    //   );
+    // } catch (e) {
+    //   print('[Crop] Error: $e');
+    // }
   }
 
   void _updateCropBox(Rect newCropBox, Size containerSize) {
