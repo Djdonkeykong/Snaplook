@@ -37,7 +37,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         slivers: [
           // Floating App Bar
           SliverAppBar(
-            expandedHeight: MediaQuery.of(context).size.height * 0.5,
+            expandedHeight: MediaQuery.of(context).size.height * 0.65,
             pinned: true,
             backgroundColor: Colors.white,
             elevation: 0,
@@ -69,174 +69,53 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                 ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    widget.product['image_url'] != null
-                        ? Hero(
-                            tag: widget.heroTag,
-                            child: _AdaptiveMainProductImage(
-                              imageUrl: widget.product['image_url'],
-                              category: (widget.product['category'] as String?)?.toLowerCase() ?? '',
-                            ),
-                          )
-                        : Container(
-                            color: Colors.grey.shade100,
-                            child: const Icon(
-                              Icons.checkroom,
-                              size: 50,
-                              color: Colors.grey,
-                            ),
-                          ),
-                    // Search icon button
-                    Positioned(
-                      bottom: 16,
-                      right: 16,
-                      child: Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFf2003c),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                child: widget.product['image_url'] != null
+                    ? Hero(
+                        tag: widget.heroTag,
+                        child: _AdaptiveMainProductImage(
+                          imageUrl: widget.product['image_url'],
+                          category: (widget.product['category'] as String?)?.toLowerCase() ?? '',
                         ),
-                        child: Material(
-                          color: Colors.transparent,
-                          shape: const CircleBorder(),
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.of(context, rootNavigator: true).push(
-                                MaterialPageRoute(
-                                  builder: (context) => VisualSearchPage(
-                                    product: widget.product,
-                                  ),
-                                ),
-                              );
-                            },
-                            customBorder: const CircleBorder(),
-                            child: Center(
-                              child: Transform.translate(
-                                offset: const Offset(0, -2),
-                                child: SvgPicture.asset(
-                                  'assets/icons/search-icon-sparkle.svg',
-                                  width: 36,
-                                  height: 36,
-                                  colorFilter: const ColorFilter.mode(
-                                    Colors.white,
-                                    BlendMode.srcIn,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                      )
+                    : Container(
+                        color: Colors.grey.shade100,
+                        child: const Icon(
+                          Icons.checkroom,
+                          size: 50,
+                          color: Colors.grey,
                         ),
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ),
 
-          // Product Details
+          // Product Details - Zalando Style
           SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(spacing.l),
+            child: Container(
+              color: Colors.white,
+              padding: EdgeInsets.all(spacing.m),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Action Row (Like, Comment, Share, Save)
-                  Row(
-                    children: [
-                      // Like Button
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isLiked = !_isLiked;
-                          });
-                        },
-                        child: Row(
-                          children: [
-                            Icon(
-                              _isLiked ? Icons.favorite : Icons.favorite_border,
-                              color: _isLiked ? Colors.red : Colors.black,
-                              size: 28,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${(widget.product['likes'] ?? 735) + (_isLiked ? 1 : 0)}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
+                  // Brand Name
+                  if (widget.product['brand'] != null) ...[
+                    Text(
+                      widget.product['brand'],
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.grey.shade600,
                       ),
-
-                      const SizedBox(width: 24),
-
-                      // Share Button
-                      const Icon(
-                        Icons.share_outlined,
-                        color: Colors.black,
-                        size: 28,
-                      ),
-
-                      const SizedBox(width: 24),
-
-                      // More Options
-                      const Icon(
-                        Icons.more_horiz,
-                        color: Colors.black,
-                        size: 28,
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: spacing.l),
-
-                  // User Attribution
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Colors.grey.shade300,
-                        child: Text(
-                          (widget.product['creator'] ?? 'User')[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        widget.product['creator'] ?? 'Fashion Enthusiast',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: spacing.l),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
 
                   // Product Title
                   if (widget.product['title'] != null) ...[
                     Text(
                       widget.product['title'],
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                         height: 1.3,
@@ -245,34 +124,125 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     SizedBox(height: spacing.m),
                   ],
 
-                  // Buy Now Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: Open product URL in browser
-                        final productUrl = widget.product['product_url'] as String?;
-                        if (productUrl != null) {
-                          // Open URL
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFf2003c),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
+                  // Action Row - Zalando Style
+                  Row(
+                    children: [
+                      // View Product Button
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            final productUrl = widget.product['product_url'] as String?;
+                            if (productUrl != null) {
+                              // TODO: Open URL
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFf2003c),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'View product',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                        elevation: 0,
                       ),
-                      child: const Text(
-                        'Buy now',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+
+                      SizedBox(width: spacing.m),
+
+                      // Search Icon
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context, rootNavigator: true).push(
+                            MaterialPageRoute(
+                              builder: (context) => VisualSearchPage(
+                                product: widget.product,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: const Color(0xFFE5E7EB),
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Center(
+                            child: SvgPicture.asset(
+                              'assets/icons/search-icon-sparkle.svg',
+                              width: 22,
+                              height: 22,
+                              colorFilter: const ColorFilter.mode(
+                                Colors.black,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+
+                      SizedBox(width: spacing.sm),
+
+                      // Heart Icon
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isLiked = !_isLiked;
+                          });
+                        },
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: const Color(0xFFE5E7EB),
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              _isLiked ? Icons.favorite : Icons.favorite_border,
+                              color: _isLiked ? const Color(0xFFf2003c) : Colors.black,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(width: spacing.sm),
+
+                      // Three Dots
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: const Color(0xFFE5E7EB),
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.more_horiz,
+                            color: Colors.black,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
                   SizedBox(height: spacing.l),
