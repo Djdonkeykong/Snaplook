@@ -76,8 +76,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
     _isLoadingMore = false;
 
-    if (inspirationState.images.isEmpty || inspirationState.hasReachedEnd == false) {
-      ref.read(inspirationProvider.notifier).loadImages();
+    if (inspirationState.images.isEmpty || inspirationState.hasMore) {
+      ref.read(inspirationProvider.notifier).loadMoreImages();
     }
   }
 
