@@ -391,17 +391,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
         view.addSubview(blankOverlay)
     }
 
-    private func setupBlankOverlay() {
-        // Create a simple blank overlay with just logo and cancel
-        // Choice buttons will be added later after auth check
-        let overlay = UIView(frame: view.bounds)
-        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        overlay.backgroundColor = UIColor.systemBackground
-        overlay.tag = 9999
+    private func addLogoAndCancel() {
+        // Add logo and cancel button to existing blank overlay
+        guard let overlay = view.subviews.first(where: { $0.tag == 9999 }) else {
+            shareLog("❌ Cannot find blank overlay to add logo/cancel")
+            return
+        }
 
         // Add logo and cancel button at top
         let headerContainer = UIView()
         headerContainer.translatesAutoresizingMaskIntoConstraints = false
+        headerContainer.tag = 9996 // Tag to identify header
 
         let logo = UIImageView(image: UIImage(named: "logo"))
         logo.contentMode = .scaleAspectFit
@@ -438,8 +438,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
             cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
             cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16),
         ])
-
-        view.addSubview(overlay)
     }
 
     private func showChoiceButtons() {
@@ -566,8 +564,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        // User is authenticated - show blank overlay with choice buttons
-        setupBlankOverlay()
+        // User is authenticated - add logo/cancel and choice buttons to existing blank overlay
+        addLogoAndCancel()
         showChoiceButtons()
 
         // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
@@ -2537,24 +2535,28 @@ open class RSIShareViewController: SLComposeServiceViewController {
         overlay.tag = 10000
         view.addSubview(overlay)
 
+        // Add logo and cancel button at top
+        let headerContainer = UIView()
+        headerContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        let logo = UIImageView(image: UIImage(named: "logo"))
+        logo.contentMode = .scaleAspectFit
+        logo.translatesAutoresizingMaskIntoConstraints = false
+
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
+        cancelButton.addTarget(self, action: #selector(cancelLoginRequiredTapped), for: .touchUpInside)
+        cancelButton.translatesAutoresizingMaskIntoConstraints = false
+
+        headerContainer.addSubview(logo)
+        headerContainer.addSubview(cancelButton)
+        overlay.addSubview(headerContainer)
+
         // Container for centered content
         let contentContainer = UIView()
         contentContainer.translatesAutoresizingMaskIntoConstraints = false
         overlay.addSubview(contentContainer)
-
-        // Icon
-        let iconContainer = UIView()
-        iconContainer.translatesAutoresizingMaskIntoConstraints = false
-        iconContainer.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 0.1)
-        iconContainer.layer.cornerRadius = 30
-        contentContainer.addSubview(iconContainer)
-
-        let iconImageView = UIImageView()
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        iconImageView.image = UIImage(systemName: "person.circle.fill")
-        iconImageView.tintColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-        iconImageView.contentMode = .scaleAspectFit
-        iconContainer.addSubview(iconImageView)
 
         // Title
         let titleLabel = UILabel()
@@ -2579,53 +2581,60 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let buttonStack = UIStackView()
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
         buttonStack.axis = .vertical
-        buttonStack.spacing = 12
+        buttonStack.spacing = 16
         buttonStack.distribution = .fillEqually
         contentContainer.addSubview(buttonStack)
 
-        // "Open App" button
+        // "Open Snaplook" button (pill-shaped)
         let openAppButton = UIButton(type: .system)
         openAppButton.setTitle("Open Snaplook", for: .normal)
         openAppButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         openAppButton.setTitleColor(.white, for: .normal)
         openAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-        openAppButton.layer.cornerRadius = 14
+        openAppButton.layer.cornerRadius = 28
         openAppButton.addTarget(self, action: #selector(openAppTapped), for: .touchUpInside)
 
-        // "Cancel" button
-        let cancelButton = UIButton(type: .system)
-        cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .medium)
-        cancelButton.setTitleColor(.label, for: .normal)
-        cancelButton.backgroundColor = UIColor.systemGray5
-        cancelButton.layer.cornerRadius = 14
-        cancelButton.addTarget(self, action: #selector(cancelLoginRequiredTapped), for: .touchUpInside)
+        // "Cancel" button (pill-shaped with border)
+        let cancelActionButton = UIButton(type: .system)
+        cancelActionButton.setTitle("Cancel", for: .normal)
+        cancelActionButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        cancelActionButton.setTitleColor(.black, for: .normal)
+        cancelActionButton.backgroundColor = .clear
+        cancelActionButton.layer.cornerRadius = 28
+        cancelActionButton.layer.borderWidth = 1.5
+        cancelActionButton.layer.borderColor = UIColor(red: 209/255, green: 213/255, blue: 219/255, alpha: 1.0).cgColor
+        cancelActionButton.addTarget(self, action: #selector(cancelLoginRequiredTapped), for: .touchUpInside)
 
         buttonStack.addArrangedSubview(openAppButton)
-        buttonStack.addArrangedSubview(cancelButton)
+        buttonStack.addArrangedSubview(cancelActionButton)
 
         // Layout constraints
         NSLayoutConstraint.activate([
+            // Header container
+            headerContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: -5),
+            headerContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
+            headerContainer.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
+            headerContainer.heightAnchor.constraint(equalToConstant: 48),
+
+            // Logo
+            logo.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
+            logo.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            logo.heightAnchor.constraint(equalToConstant: 28),
+            logo.widthAnchor.constraint(equalToConstant: 132),
+
+            // Cancel button in header
+            cancelButton.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
+            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16),
+
             // Center content container
             contentContainer.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
-            contentContainer.centerYAnchor.constraint(equalTo: overlay.centerYAnchor, constant: -40),
-            contentContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 40),
-            contentContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -40),
-
-            // Icon container
-            iconContainer.topAnchor.constraint(equalTo: contentContainer.topAnchor),
-            iconContainer.centerXAnchor.constraint(equalTo: contentContainer.centerXAnchor),
-            iconContainer.widthAnchor.constraint(equalToConstant: 60),
-            iconContainer.heightAnchor.constraint(equalToConstant: 60),
-
-            // Icon image
-            iconImageView.centerXAnchor.constraint(equalTo: iconContainer.centerXAnchor),
-            iconImageView.centerYAnchor.constraint(equalTo: iconContainer.centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 32),
-            iconImageView.heightAnchor.constraint(equalToConstant: 32),
+            contentContainer.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
+            contentContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            contentContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
 
             // Title
-            titleLabel.topAnchor.constraint(equalTo: iconContainer.bottomAnchor, constant: 20),
+            titleLabel.topAnchor.constraint(equalTo: contentContainer.topAnchor),
             titleLabel.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
             titleLabel.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
 
@@ -2639,11 +2648,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             buttonStack.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
             buttonStack.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
             buttonStack.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
-            buttonStack.heightAnchor.constraint(equalToConstant: 108), // 48 + 48 + 12 spacing
 
             // Button heights
-            openAppButton.heightAnchor.constraint(equalToConstant: 48),
-            cancelButton.heightAnchor.constraint(equalToConstant: 48),
+            openAppButton.heightAnchor.constraint(equalToConstant: 56),
+            cancelActionButton.heightAnchor.constraint(equalToConstant: 56),
         ])
 
         shareLog("✅ Login required modal displayed")
@@ -2678,7 +2686,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("Cancel tapped from login modal")
 
         // Haptic feedback
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
 
         // Cancel the extension
