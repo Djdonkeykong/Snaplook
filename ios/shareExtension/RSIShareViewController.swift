@@ -2105,7 +2105,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 defaults.removeObject(forKey: kProcessingSessionKey)
                 defaults.synchronize()
             }
-            self.hideLoadingUI()
+            // DON'T hide loading UI - keep it visible to prevent flash of default UI
+            // self.hideLoadingUI()
             self.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
             shareLog("Completed extension request")
         }
@@ -2519,8 +2520,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 self.startSmoothProgress()
-                self.targetProgress = 0.3
-                self.updateProgress(0.1, status: "Downloading your photo...")
+                self.targetProgress = 0.8
+                self.updateProgress(0.2, status: "Downloading your photo...")
             }
 
             downloadInstagramMedia(from: instagramUrl) { [weak self] result in
@@ -2535,8 +2536,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         self.sharedMedia.append(contentsOf: downloaded)
                         shareLog("Downloaded and saved \(downloaded.count) Instagram file(s)")
 
-                        // Redirect to app without detection
-                        self.saveAndRedirect(message: self.pendingInstagramUrl)
+                        // Update progress to near completion
+                        self.updateProgress(0.9, status: "Opening Snaplook...")
+
+                        // Small delay to show the completion, then redirect
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            self.saveAndRedirect(message: self.pendingInstagramUrl)
+                        }
                     }
 
                     // Call the pending completion
