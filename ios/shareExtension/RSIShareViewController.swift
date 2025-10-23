@@ -383,8 +383,119 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
         loadingHideWorkItem?.cancel()
 
-        // Don't show loading UI immediately - wait to see if we need choice UI instead
-        // setupLoadingUI() will be called later if needed (when not showing choice UI)
+        // Set up a blank overlay to hide default UI immediately (no text/spinner)
+        setupBlankOverlay()
+    }
+
+    private func setupBlankOverlay() {
+        let overlay = UIView(frame: view.bounds)
+        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        overlay.backgroundColor = UIColor.systemBackground
+        overlay.tag = 9999
+
+        // Add logo and cancel button at top
+        let headerContainer = UIView()
+        headerContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        let logo = UIImageView(image: UIImage(named: "logo"))
+        logo.contentMode = .scaleAspectFit
+        logo.translatesAutoresizingMaskIntoConstraints = false
+
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
+        cancelButton.addTarget(self, action: #selector(cancelImportTapped), for: .touchUpInside)
+        cancelButton.translatesAutoresizingMaskIntoConstraints = false
+
+        headerContainer.addSubview(logo)
+        headerContainer.addSubview(cancelButton)
+
+        // Create vertical stack for buttons
+        let buttonStack = UIStackView()
+        buttonStack.axis = .vertical
+        buttonStack.alignment = .fill
+        buttonStack.spacing = 16
+        buttonStack.translatesAutoresizingMaskIntoConstraints = false
+
+        // "Analyze in app" button
+        let analyzeInAppButton = UIButton(type: .system)
+        analyzeInAppButton.setTitle("Analyze in app", for: .normal)
+        analyzeInAppButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        analyzeInAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        analyzeInAppButton.setTitleColor(.white, for: .normal)
+        analyzeInAppButton.layer.cornerRadius = 28
+        analyzeInAppButton.translatesAutoresizingMaskIntoConstraints = false
+        analyzeInAppButton.addTarget(self, action: #selector(analyzeInAppTapped), for: .touchUpInside)
+
+        // "Analyze now" button
+        let analyzeNowButton = UIButton(type: .system)
+        analyzeNowButton.setTitle("Analyze now", for: .normal)
+        analyzeNowButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        analyzeNowButton.backgroundColor = .clear
+        analyzeNowButton.setTitleColor(.black, for: .normal)
+        analyzeNowButton.layer.cornerRadius = 28
+        analyzeNowButton.layer.borderWidth = 1.5
+        analyzeNowButton.layer.borderColor = UIColor(red: 209/255, green: 213/255, blue: 219/255, alpha: 1.0).cgColor
+        analyzeNowButton.translatesAutoresizingMaskIntoConstraints = false
+        analyzeNowButton.addTarget(self, action: #selector(analyzeNowTapped), for: .touchUpInside)
+
+        buttonStack.addArrangedSubview(analyzeInAppButton)
+        buttonStack.addArrangedSubview(analyzeNowButton)
+
+        // Disclaimer label
+        let disclaimerLabel = UILabel()
+        disclaimerLabel.text = "Analyzing now may use additional credits"
+        disclaimerLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        disclaimerLabel.textColor = UIColor.secondaryLabel
+        disclaimerLabel.textAlignment = .center
+        disclaimerLabel.numberOfLines = 0
+        disclaimerLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        // Add all subviews
+        overlay.addSubview(headerContainer)
+        overlay.addSubview(buttonStack)
+        overlay.addSubview(disclaimerLabel)
+
+        // Set up constraints
+        NSLayoutConstraint.activate([
+            // Header container
+            headerContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: -5),
+            headerContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
+            headerContainer.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
+            headerContainer.heightAnchor.constraint(equalToConstant: 48),
+
+            // Logo
+            logo.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
+            logo.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            logo.heightAnchor.constraint(equalToConstant: 28),
+            logo.widthAnchor.constraint(equalToConstant: 132),
+
+            // Cancel button
+            cancelButton.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
+            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16),
+
+            // Button stack (centered)
+            buttonStack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            buttonStack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
+            buttonStack.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            buttonStack.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
+
+            // Button heights
+            analyzeInAppButton.heightAnchor.constraint(equalToConstant: 56),
+            analyzeNowButton.heightAnchor.constraint(equalToConstant: 56),
+
+            // Disclaimer at bottom
+            disclaimerLabel.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            disclaimerLabel.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
+            disclaimerLabel.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -32)
+        ])
+
+        view.addSubview(overlay)
+        loadingView = overlay
+
+        hideDefaultUI()
+        shareLog("Choice UI displayed immediately - waiting for user selection")
     }
 
     private func readSourceApplicationBundleIdentifier() -> String? {
@@ -768,12 +879,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 pendingInstagramUrl = item
                 pendingInstagramCompletion = completion
 
-                // Show choice UI immediately - NO downloading yet
-                DispatchQueue.main.async { [weak self] in
-                    self?.showAnalysisChoiceUI()
-                }
-
-                shareLog("Choice UI will be shown - awaiting user decision before download")
+                // Choice UI is already visible - just wait for user decision
+                shareLog("Instagram URL detected - awaiting user decision (buttons already visible)")
                 return
             } else {
                 // No detection configured - proceed with normal download flow
@@ -2194,123 +2301,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Ensure default UI stays hidden
         hideDefaultUI()
-    }
-
-    private func showAnalysisChoiceUI() {
-        // Hide any existing loading UI first to prevent flash
-        stopStatusPolling()
-        stopSmoothProgress()
-        hideLoadingUI()
-
-        // Create overlay
-        let overlay = UIView(frame: view.bounds)
-        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        overlay.backgroundColor = UIColor.systemBackground
-
-        // Add logo and cancel button at top
-        let headerContainer = UIView()
-        headerContainer.translatesAutoresizingMaskIntoConstraints = false
-
-        let logo = UIImageView(image: UIImage(named: "logo"))
-        logo.contentMode = .scaleAspectFit
-        logo.translatesAutoresizingMaskIntoConstraints = false
-
-        let cancelButton = UIButton(type: .system)
-        cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
-        cancelButton.addTarget(self, action: #selector(cancelImportTapped), for: .touchUpInside)
-        cancelButton.translatesAutoresizingMaskIntoConstraints = false
-
-        headerContainer.addSubview(logo)
-        headerContainer.addSubview(cancelButton)
-
-        // Create vertical stack for buttons
-        let buttonStack = UIStackView()
-        buttonStack.axis = .vertical
-        buttonStack.alignment = .fill
-        buttonStack.spacing = 16
-        buttonStack.translatesAutoresizingMaskIntoConstraints = false
-
-        // "Analyze in app" button
-        let analyzeInAppButton = UIButton(type: .system)
-        analyzeInAppButton.setTitle("Analyze in app", for: .normal)
-        analyzeInAppButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        analyzeInAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-        analyzeInAppButton.setTitleColor(.white, for: .normal)
-        analyzeInAppButton.layer.cornerRadius = 28
-        analyzeInAppButton.translatesAutoresizingMaskIntoConstraints = false
-        analyzeInAppButton.addTarget(self, action: #selector(analyzeInAppTapped), for: .touchUpInside)
-
-        // "Analyze now" button
-        let analyzeNowButton = UIButton(type: .system)
-        analyzeNowButton.setTitle("Analyze now", for: .normal)
-        analyzeNowButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        analyzeNowButton.backgroundColor = .clear
-        analyzeNowButton.setTitleColor(.black, for: .normal)
-        analyzeNowButton.layer.cornerRadius = 28
-        analyzeNowButton.layer.borderWidth = 1.5
-        analyzeNowButton.layer.borderColor = UIColor(red: 209/255, green: 213/255, blue: 219/255, alpha: 1.0).cgColor
-        analyzeNowButton.translatesAutoresizingMaskIntoConstraints = false
-        analyzeNowButton.addTarget(self, action: #selector(analyzeNowTapped), for: .touchUpInside)
-
-        buttonStack.addArrangedSubview(analyzeInAppButton)
-        buttonStack.addArrangedSubview(analyzeNowButton)
-
-        // Disclaimer label
-        let disclaimerLabel = UILabel()
-        disclaimerLabel.text = "Analyzing now may use additional credits"
-        disclaimerLabel.font = .systemFont(ofSize: 13, weight: .regular)
-        disclaimerLabel.textColor = UIColor.secondaryLabel
-        disclaimerLabel.textAlignment = .center
-        disclaimerLabel.numberOfLines = 0
-        disclaimerLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        // Add all subviews
-        overlay.addSubview(headerContainer)
-        overlay.addSubview(buttonStack)
-        overlay.addSubview(disclaimerLabel)
-
-        // Set up constraints
-        NSLayoutConstraint.activate([
-            // Header container
-            headerContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: -5),
-            headerContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
-            headerContainer.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
-            headerContainer.heightAnchor.constraint(equalToConstant: 48),
-
-            // Logo
-            logo.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
-            logo.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
-            logo.heightAnchor.constraint(equalToConstant: 28),
-            logo.widthAnchor.constraint(equalToConstant: 132),
-
-            // Cancel button
-            cancelButton.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
-            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
-            cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16),
-
-            // Button stack (centered)
-            buttonStack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
-            buttonStack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
-            buttonStack.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
-            buttonStack.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
-
-            // Button heights
-            analyzeInAppButton.heightAnchor.constraint(equalToConstant: 56),
-            analyzeNowButton.heightAnchor.constraint(equalToConstant: 56),
-
-            // Disclaimer at bottom
-            disclaimerLabel.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
-            disclaimerLabel.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
-            disclaimerLabel.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -32)
-        ])
-
-        overlay.tag = 9998 // Different tag to identify choice UI
-        view.addSubview(overlay)
-        loadingView = overlay
-
-        hideDefaultUI()
-        shareLog("Choice UI displayed - waiting for user selection")
     }
 
     private func startSmoothProgress() {
