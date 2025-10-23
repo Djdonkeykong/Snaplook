@@ -630,11 +630,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Fetching Instagram HTML via ScrapingBee (attempt \(attempt + 1)) for \(instagramUrl)")
 
-        // Update progress to show ScrapingBee activity (don't stop rotation)
-        DispatchQueue.main.async { [weak self] in
-            self?.targetProgress = 0.10
-            shareLog("Progress: 10% - Fetching your photo...")
-        }
+        // Progress is now managed by the button handler (analyzeInAppTapped or analyzeNowTapped)
+        // Don't override it here
 
         var request = URLRequest(url: requestURL)
         request.timeoutInterval = 20.0
@@ -697,11 +694,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 return
             }
 
-            // Update progress to show image download starting (don't stop rotation)
-            DispatchQueue.main.async { [weak self] in
-                self?.targetProgress = 0.20
-                shareLog("Progress: 20% - Downloading photo...")
-            }
+            // Progress is now managed by the button handler (analyzeInAppTapped or analyzeNowTapped)
+            // Don't override it here
 
             self.downloadInstagramImages(
                 imageUrls,
@@ -2524,6 +2518,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.updateProgress(0.2, status: "Downloading your photo...")
             }
 
+            // Simulate intermediate progress during download
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                self?.targetProgress = 0.5
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                self?.targetProgress = 0.7
+            }
+
             downloadInstagramMedia(from: instagramUrl) { [weak self] result in
                 guard let self = self else { return }
 
@@ -2537,10 +2539,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         shareLog("Downloaded and saved \(downloaded.count) Instagram file(s)")
 
                         // Update progress to near completion
-                        self.updateProgress(0.9, status: "Opening Snaplook...")
+                        self.targetProgress = 0.95
+                        self.updateProgress(0.95, status: "Opening Snaplook...")
 
                         // Small delay to show the completion, then redirect
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                             self.saveAndRedirect(message: self.pendingInstagramUrl)
                         }
                     }
