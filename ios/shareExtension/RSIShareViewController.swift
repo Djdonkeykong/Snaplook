@@ -1904,7 +1904,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let hasDetectionConfig = self.detectorEndpoint() != nil && self.serpApiKey() != nil
 
             if hasDetectionConfig {
-                shareLog("DETECTION CONFIGURED - Holding file in memory, NOT writing to shared container yet")
+                shareLog("DETECTION CONFIGURED - Holding file in memory, showing choice UI")
                 self.shouldAttemptDetection = true
                 self.pendingImageData = data
                 self.pendingImageUrl = originalURL
@@ -1918,12 +1918,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 )
                 self.pendingSharedFile = sharedFile
 
-                shareLog("Calling uploadAndDetect with \(data.count) bytes of image data")
-                // Trigger detection pipeline immediately (async - don't complete yet)
-                self.uploadAndDetect(imageData: data)
+                shareLog("Showing choice UI - user will choose analyze in app or analyze now")
+                // Show choice UI instead of automatically starting detection
+                DispatchQueue.main.async { [weak self] in
+                    self?.showAnalysisChoiceUI()
+                }
 
-                // DON'T call completion and DON'T write file - wait for detection results or failure
-                shareLog("File held in memory. Completion held. uploadAndDetect called.")
+                // DON'T call completion and DON'T write file - wait for user choice
+                shareLog("File held in memory. Awaiting user choice.")
             } else {
                 shareLog("⚠️ Detection NOT configured - proceeding with normal flow")
 
@@ -2234,6 +2236,118 @@ open class RSIShareViewController: SLComposeServiceViewController {
         hideDefaultUI()
     }
 
+    private func showAnalysisChoiceUI() {
+        // Create overlay
+        let overlay = UIView(frame: view.bounds)
+        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        overlay.backgroundColor = UIColor.systemBackground
+
+        // Add logo and cancel button at top
+        let headerContainer = UIView()
+        headerContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        let logo = UIImageView(image: UIImage(named: "logo"))
+        logo.contentMode = .scaleAspectFit
+        logo.translatesAutoresizingMaskIntoConstraints = false
+
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
+        cancelButton.addTarget(self, action: #selector(cancelImportTapped), for: .touchUpInside)
+        cancelButton.translatesAutoresizingMaskIntoConstraints = false
+
+        headerContainer.addSubview(logo)
+        headerContainer.addSubview(cancelButton)
+
+        // Create vertical stack for buttons
+        let buttonStack = UIStackView()
+        buttonStack.axis = .vertical
+        buttonStack.alignment = .fill
+        buttonStack.spacing = 16
+        buttonStack.translatesAutoresizingMaskIntoConstraints = false
+
+        // "Analyze in app" button
+        let analyzeInAppButton = UIButton(type: .system)
+        analyzeInAppButton.setTitle("Analyze in app", for: .normal)
+        analyzeInAppButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        analyzeInAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        analyzeInAppButton.setTitleColor(.white, for: .normal)
+        analyzeInAppButton.layer.cornerRadius = 28
+        analyzeInAppButton.translatesAutoresizingMaskIntoConstraints = false
+        analyzeInAppButton.addTarget(self, action: #selector(analyzeInAppTapped), for: .touchUpInside)
+
+        // "Analyze now" button
+        let analyzeNowButton = UIButton(type: .system)
+        analyzeNowButton.setTitle("Analyze now", for: .normal)
+        analyzeNowButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        analyzeNowButton.backgroundColor = .clear
+        analyzeNowButton.setTitleColor(UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0), for: .normal)
+        analyzeNowButton.layer.cornerRadius = 28
+        analyzeNowButton.layer.borderWidth = 1
+        analyzeNowButton.layer.borderColor = UIColor(red: 229/255, green: 231/255, blue: 235/255, alpha: 1.0).cgColor
+        analyzeNowButton.translatesAutoresizingMaskIntoConstraints = false
+        analyzeNowButton.addTarget(self, action: #selector(analyzeNowTapped), for: .touchUpInside)
+
+        buttonStack.addArrangedSubview(analyzeInAppButton)
+        buttonStack.addArrangedSubview(analyzeNowButton)
+
+        // Disclaimer label
+        let disclaimerLabel = UILabel()
+        disclaimerLabel.text = "Analyzing now may use additional credits"
+        disclaimerLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        disclaimerLabel.textColor = UIColor.secondaryLabel
+        disclaimerLabel.textAlignment = .center
+        disclaimerLabel.numberOfLines = 0
+        disclaimerLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        // Add all subviews
+        overlay.addSubview(headerContainer)
+        overlay.addSubview(buttonStack)
+        overlay.addSubview(disclaimerLabel)
+
+        // Set up constraints
+        NSLayoutConstraint.activate([
+            // Header container
+            headerContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: -5),
+            headerContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
+            headerContainer.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
+            headerContainer.heightAnchor.constraint(equalToConstant: 48),
+
+            // Logo
+            logo.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
+            logo.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            logo.heightAnchor.constraint(equalToConstant: 28),
+            logo.widthAnchor.constraint(equalToConstant: 132),
+
+            // Cancel button
+            cancelButton.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
+            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16),
+
+            // Button stack (centered)
+            buttonStack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            buttonStack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
+            buttonStack.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            buttonStack.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
+
+            // Button heights
+            analyzeInAppButton.heightAnchor.constraint(equalToConstant: 56),
+            analyzeNowButton.heightAnchor.constraint(equalToConstant: 56),
+
+            // Disclaimer at bottom
+            disclaimerLabel.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            disclaimerLabel.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
+            disclaimerLabel.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -32)
+        ])
+
+        overlay.tag = 9998 // Different tag to identify choice UI
+        view.addSubview(overlay)
+        loadingView = overlay
+
+        hideDefaultUI()
+        shareLog("Choice UI displayed - waiting for user selection")
+    }
+
     private func startSmoothProgress() {
         stopSmoothProgress()
 
@@ -2431,6 +2545,50 @@ open class RSIShareViewController: SLComposeServiceViewController {
         )
         didCompleteRequest = true
         extensionContext?.cancelRequest(withError: error)
+    }
+
+    @objc private func analyzeInAppTapped() {
+        shareLog("Analyze in app tapped - saving file and opening in app")
+
+        guard let imageData = pendingImageData,
+              let sharedFile = pendingSharedFile,
+              let fileURL = URL(string: sharedFile.path) else {
+            shareLog("ERROR: Missing pending image data or shared file reference")
+            return
+        }
+
+        do {
+            // Write the file to shared container
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                try FileManager.default.removeItem(at: fileURL)
+            }
+            try imageData.write(to: fileURL, options: .atomic)
+            shareLog("Saved image to shared container: \(fileURL.path)")
+
+            // Remove choice UI
+            hideLoadingUI()
+
+            // Open app with the saved file (no detection)
+            redirectToHostApp(sharedMedia: [sharedFile])
+
+        } catch {
+            shareLog("ERROR: Failed to save image - \(error.localizedDescription)")
+        }
+    }
+
+    @objc private func analyzeNowTapped() {
+        shareLog("Analyze now tapped - starting detection immediately")
+
+        guard let imageData = pendingImageData else {
+            shareLog("ERROR: Missing pending image data")
+            return
+        }
+
+        // Remove choice UI
+        hideLoadingUI()
+
+        // Start the upload and detection process
+        uploadAndDetect(imageData: imageData)
     }
 
     private func clearSharedData() {
