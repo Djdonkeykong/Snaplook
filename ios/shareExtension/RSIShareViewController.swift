@@ -2537,12 +2537,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let overlay: UIView
         if let existingOverlay = view.subviews.first(where: { $0.tag == 9999 }) {
             overlay = existingOverlay
-            overlay.tag = 10000 // Change tag to identify it as login overlay
+            // Keep tag as 9999 so hideDefaultUI() doesn't hide it
         } else {
             overlay = UIView(frame: view.bounds)
             overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             overlay.backgroundColor = UIColor.systemBackground
-            overlay.tag = 10000
+            overlay.tag = 9999 // Use 9999 so hideDefaultUI() doesn't hide it
         }
 
         // Add logo and cancel button at top
