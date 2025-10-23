@@ -22,47 +22,54 @@ class _DetectedProductsPageState extends ConsumerState<DetectedProductsPage> {
   }
 
   Future<void> _loadProducts() async {
-    setState(() => isLoading = true);
+    // Disabled: detected_items table does not exist
+    setState(() {
+      products = [];
+      isLoading = false;
+    });
+    return;
 
-    try {
-      // Get product IDs that have detected items
-      final detectedItemsResponse = await Supabase.instance.client
-          .from('detected_items')
-          .select('product_id')
-          .limit(1000);
-
-      final productIds = (detectedItemsResponse as List)
-          .map((item) => item['product_id'] as int)
-          .toSet()
-          .toList();
-
-      print('Found ${productIds.length} products with detected items');
-
-      if (productIds.isEmpty) {
-        setState(() {
-          products = [];
-          isLoading = false;
-        });
-        return;
-      }
-
-      // Load products that have detected items
-      final response = await Supabase.instance.client
-          .from('products')
-          .select('id, title, image_url, category')
-          .inFilter('id', productIds)
-          .limit(100);
-
-      print('Loaded ${response.length} products');
-
-      setState(() {
-        products = List<Map<String, dynamic>>.from(response);
-        isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading products: $e');
-      setState(() => isLoading = false);
-    }
+    // setState(() => isLoading = true);
+    //
+    // try {
+    //   // Get product IDs that have detected items
+    //   final detectedItemsResponse = await Supabase.instance.client
+    //       .from('detected_items')
+    //       .select('product_id')
+    //       .limit(1000);
+    //
+    //   final productIds = (detectedItemsResponse as List)
+    //       .map((item) => item['product_id'] as int)
+    //       .toSet()
+    //       .toList();
+    //
+    //   print('Found ${productIds.length} products with detected items');
+    //
+    //   if (productIds.isEmpty) {
+    //     setState(() {
+    //       products = [];
+    //       isLoading = false;
+    //     });
+    //     return;
+    //   }
+    //
+    //   // Load products that have detected items
+    //   final response = await Supabase.instance.client
+    //       .from('products')
+    //       .select('id, title, image_url, category')
+    //       .inFilter('id', productIds)
+    //       .limit(100);
+    //
+    //   print('Loaded ${response.length} products');
+    //
+    //   setState(() {
+    //     products = List<Map<String, dynamic>>.from(response);
+    //     isLoading = false;
+    //   });
+    // } catch (e) {
+    //   print('Error loading products: $e');
+    //   setState(() => isLoading = false);
+    // }
   }
 
   @override

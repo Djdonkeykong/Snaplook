@@ -81,44 +81,52 @@ class _VisualSearchPageState extends State<VisualSearchPage> {
   }
 
   Future<void> _loadDetectedItems() async {
-    setState(() => isLoadingItems = true);
+    // Disabled: detected_items table does not exist
+    // setState(() => isLoadingItems = true);
+    //
+    // try {
+    //   final productId = widget.product['id'];
+    //
+    //   final response = await Supabase.instance.client
+    //       .from('detected_items')
+    //       .select('id, item_type, bbox, confidence, embedding')
+    //       .eq('product_id', productId);
+    //
+    //   print('[Detection] Loaded ${response.length} items from database');
+    //
+    //   final items = (response as List)
+    //       .map((item) => DetectedItem.fromJson(item))
+    //       .toList();
+    //
+    //   // Separate grid embeddings from other detected items
+    //   final grids = items.where((item) => item.itemType.startsWith('grid_')).toList();
+    //   final others = items.where((item) => !item.itemType.startsWith('grid_')).toList();
+    //
+    //   print('[Detection] Found ${grids.length} grid embeddings and ${others.length} fashion items');
+    //
+    //   setState(() {
+    //     gridEmbeddings = grids;
+    //     detectedItems = others;
+    //     isLoadingItems = false;
+    //
+    //     // Enable crop box if we have grid embeddings
+    //     if (grids.isNotEmpty) {
+    //       showCropBox = true;
+    //       print('[Detection] Crop box enabled (grid-based search)');
+    //     }
+    //   });
+    //
+    // } catch (e) {
+    //   print('[Detection] Error loading items: $e');
+    //   setState(() => isLoadingItems = false);
+    // }
 
-    try {
-      final productId = widget.product['id'];
-
-      final response = await Supabase.instance.client
-          .from('detected_items')
-          .select('id, item_type, bbox, confidence, embedding')
-          .eq('product_id', productId);
-
-      print('[Detection] Loaded ${response.length} items from database');
-
-      final items = (response as List)
-          .map((item) => DetectedItem.fromJson(item))
-          .toList();
-
-      // Separate grid embeddings from other detected items
-      final grids = items.where((item) => item.itemType.startsWith('grid_')).toList();
-      final others = items.where((item) => !item.itemType.startsWith('grid_')).toList();
-
-      print('[Detection] Found ${grids.length} grid embeddings and ${others.length} fashion items');
-
-      setState(() {
-        gridEmbeddings = grids;
-        detectedItems = others;
-        isLoadingItems = false;
-
-        // Enable crop box if we have grid embeddings
-        if (grids.isNotEmpty) {
-          showCropBox = true;
-          print('[Detection] Crop box enabled (grid-based search)');
-        }
-      });
-
-    } catch (e) {
-      print('[Detection] Error loading items: $e');
-      setState(() => isLoadingItems = false);
-    }
+    // Set empty state to avoid errors
+    setState(() {
+      gridEmbeddings = [];
+      detectedItems = [];
+      isLoadingItems = false;
+    });
   }
 
   String _getCategoryGroup(String itemType) {
@@ -179,36 +187,43 @@ class _VisualSearchPageState extends State<VisualSearchPage> {
   }
 
   Future<void> _searchSimilarItems(DetectedItem item) async {
-    if (item.embedding == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error: Item has no embedding'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Map to category group for UI display and search
-    final categoryGroup = _getCategoryGroup(item.itemType);
-
+    // Disabled: detected_items table does not exist
     setState(() {
-      selectedItemType = categoryGroup; // Show group instead of specific type
-      isLoadingSearch = true;
       similarProducts = [];
+      isLoadingSearch = false;
     });
+    return;
 
-    try {
-
-      print('\n=== SEARCH DEBUG ===');
-      print('[Search] Detected item type: ${item.itemType}');
-      print('[Search] Category group: $categoryGroup');
-      print('[Search] Embedding length: ${item.embedding!.length}');
-      print('[Search] Looking for similar $categoryGroup items');
-
-      // Search WITHOUT item type filter, we'll filter by category group after
-      final response = await Supabase.instance.client.rpc(
-        'find_similar_detected_items',
+    // if (item.embedding == null) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(
+    //       content: Text('Error: Item has no embedding'),
+    //       backgroundColor: Colors.red,
+    //     ),
+    //   );
+    //   return;
+    // }
+    //
+    // // Map to category group for UI display and search
+    // final categoryGroup = _getCategoryGroup(item.itemType);
+    //
+    // setState(() {
+    //   selectedItemType = categoryGroup; // Show group instead of specific type
+    //   isLoadingSearch = true;
+    //   similarProducts = [];
+    // });
+    //
+    // try {
+    //
+    //   print('\n=== SEARCH DEBUG ===');
+    //   print('[Search] Detected item type: ${item.itemType}');
+    //   print('[Search] Category group: $categoryGroup');
+    //   print('[Search] Embedding length: ${item.embedding!.length}');
+    //   print('[Search] Looking for similar $categoryGroup items');
+    //
+    //   // Search WITHOUT item type filter, we'll filter by category group after
+    //   final response = await Supabase.instance.client.rpc(
+    //     'find_similar_detected_items',
         params: {
           'query_embedding': item.embedding!,
           'match_limit': 100, // Get more results since we'll filter by group
@@ -615,32 +630,40 @@ class _VisualSearchPageState extends State<VisualSearchPage> {
   }
 
   Future<void> _searchWithCropEmbedding(Rect crop, Size imageSize) async {
-    try {
-      setState(() {
-        isLoadingSearch = true;
-        similarProducts = [];
-      });
+    // Disabled: detected_items table does not exist
+    setState(() {
+      isLoadingSearch = false;
+      similarProducts = [];
+      selectedItemType = 'items';
+    });
+    return;
 
-      print('\n=== GRID EMBEDDING SEARCH (INSTANT) ===');
-
-      // Find nearest pre-computed grid cell (NO API CALL!)
-      final gridCell = _findNearestGridCell(crop, imageSize);
-
-      if (gridCell == null || gridCell.embedding == null) {
-        print('[Grid] No grid cell found for crop region');
-        setState(() {
-          isLoadingSearch = false;
-          selectedItemType = 'items';
-        });
-        return;
-      }
-
-      print('[Grid] Using pre-computed embedding from ${gridCell.itemType}');
-      final embedding = gridCell.embedding!;
-
-      // Search database with this embedding (no category filtering for Pinterest-style)
-      final searchResponse = await Supabase.instance.client.rpc(
-        'find_similar_detected_items',
+    // try {
+    //   setState(() {
+    //     isLoadingSearch = true;
+    //     similarProducts = [];
+    //   });
+    //
+    //   print('\n=== GRID EMBEDDING SEARCH (INSTANT) ===');
+    //
+    //   // Find nearest pre-computed grid cell (NO API CALL!)
+    //   final gridCell = _findNearestGridCell(crop, imageSize);
+    //
+    //   if (gridCell == null || gridCell.embedding == null) {
+    //     print('[Grid] No grid cell found for crop region');
+    //     setState(() {
+    //       isLoadingSearch = false;
+    //       selectedItemType = 'items';
+    //     });
+    //     return;
+    //   }
+    //
+    //   print('[Grid] Using pre-computed embedding from ${gridCell.itemType}');
+    //   final embedding = gridCell.embedding!;
+    //
+    //   // Search database with this embedding (no category filtering for Pinterest-style)
+    //   final searchResponse = await Supabase.instance.client.rpc(
+    //     'find_similar_detected_items',
         params: {
           'query_embedding': embedding,
           'match_limit': 50,

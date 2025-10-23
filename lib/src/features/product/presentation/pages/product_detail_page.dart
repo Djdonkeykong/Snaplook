@@ -217,11 +217,49 @@ class _ProductDetailCard extends StatelessWidget {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
-                            final productUrl = product['product_url'] as String?;
-                            if (productUrl != null) {
+                            try {
+                              final productUrl = product['product_url'] as String?;
+                              print('[View Product] Product URL: $productUrl');
+                              print('[View Product] Product keys: ${product.keys}');
+
+                              if (productUrl == null || productUrl.isEmpty) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('No product link available'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
+
                               final uri = Uri.parse(productUrl);
+                              print('[View Product] Parsed URI: $uri');
+
                               if (await canLaunchUrl(uri)) {
+                                print('[View Product] Launching URL...');
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              } else {
+                                print('[View Product] Cannot launch URL');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Cannot open product link'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              print('[View Product] Error: $e');
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error opening link: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
                               }
                             }
                           },
