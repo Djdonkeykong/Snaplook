@@ -444,8 +444,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Disclaimer label
         let disclaimerLabel = UILabel()
-        disclaimerLabel.text = "Analyzing now may use additional credits"
-        disclaimerLabel.font = .systemFont(ofSize: 13, weight: .regular)
+        disclaimerLabel.text = "Note: Analyzing now analyzes the full image and may use more credits. Analyzing in app lets you crop first to save credits."
+        disclaimerLabel.font = .systemFont(ofSize: 12, weight: .regular)
         disclaimerLabel.textColor = UIColor.secondaryLabel
         disclaimerLabel.textAlignment = .center
         disclaimerLabel.numberOfLines = 0
@@ -2515,7 +2515,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Start download process
             updateProcessingStatus("processing")
             setupLoadingUI()
-            updateProgress(0.1, status: "Downloading your photo...")
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.startSmoothProgress()
+                self.targetProgress = 0.3
+                self.updateProgress(0.1, status: "Downloading your photo...")
+            }
 
             downloadInstagramMedia(from: instagramUrl) { [weak self] result in
                 guard let self = self else { return }
