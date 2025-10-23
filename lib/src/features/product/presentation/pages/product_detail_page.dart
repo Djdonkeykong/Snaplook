@@ -97,33 +97,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Brand Name
-                  if (widget.product['brand'] != null) ...[
-                    Text(
-                      widget.product['brand'],
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                  ],
-
-                  // Product Title
-                  if (widget.product['title'] != null) ...[
-                    Text(
-                      widget.product['title'],
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                        height: 1.3,
-                      ),
-                    ),
-                    SizedBox(height: spacing.m),
-                  ],
-
                   // Action Row - Zalando Style
                   Row(
                     children: [
@@ -244,6 +217,34 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       ),
                     ],
                   ),
+
+                  SizedBox(height: spacing.l),
+
+                  // Brand Name
+                  if (widget.product['brand'] != null) ...[
+                    Text(
+                      widget.product['brand'],
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+
+                  // Product Title
+                  if (widget.product['title'] != null) ...[
+                    Text(
+                      widget.product['title'],
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
 
                   SizedBox(height: spacing.l),
                 ],
