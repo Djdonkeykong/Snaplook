@@ -303,6 +303,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingSharedFile: SharedMediaFile?
     private var pendingImageData: Data?
     private var pendingImageUrl: String?
+    private var pendingInstagramUrl: String?
+    private var pendingInstagramCompletion: (() -> Void)?
     private var selectedCategory: String = "All"
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
@@ -756,64 +758,52 @@ open class RSIShareViewController: SLComposeServiceViewController {
         completion: @escaping () -> Void
     ) {
         if type == .url, isInstagramShareCandidate(item) {
-            shareLog("Detected Instagram URL share - starting download pipeline")
-            updateProcessingStatus("processing")
+            shareLog("Detected Instagram URL share - showing choice UI before download")
 
             // Check if detection is configured
             let hasDetectionConfig = detectorEndpoint() != nil && serpApiKey() != nil
 
-            // If detection is configured, start smooth progress animation early
             if hasDetectionConfig {
+                // Store the Instagram URL and completion for later processing
+                pendingInstagramUrl = item
+                pendingInstagramCompletion = completion
+
+                // Show choice UI immediately - NO downloading yet
                 DispatchQueue.main.async { [weak self] in
-                    // Stop the default status polling since we're now managing status ourselves
-                    self?.stopStatusPolling()
-
-                    self?.startSmoothProgress()
-                    self?.targetProgress = 0.05
-
-                    // Start rotating status messages for the fetch phase
-                    let fetchMessages = [
-                        "Fetching your photo...",
-                        "Downloading image..."
-                    ]
-                    self?.startStatusRotation(messages: fetchMessages, interval: 2.5)
-                }
-            }
-
-            downloadInstagramMedia(from: item) { [weak self] result in
-                guard let self = self else {
-                    completion()
-                    return
+                    self?.showAnalysisChoiceUI()
                 }
 
-                switch result {
-                case .success(let downloaded):
-                    if downloaded.isEmpty {
-                        shareLog("Instagram download succeeded but returned no files - falling back to literal URL")
-                        self.appendLiteralShare(item: item, type: type)
-                    } else {
-                        self.sharedMedia.append(contentsOf: downloaded)
-                        shareLog("Appended \(downloaded.count) downloaded Instagram file(s) - count now \(self.sharedMedia.count)")
+                shareLog("Choice UI will be shown - awaiting user decision before download")
+                return
+            } else {
+                // No detection configured - proceed with normal download flow
+                shareLog("No detection configured - starting normal Instagram download")
+                updateProcessingStatus("processing")
+
+                downloadInstagramMedia(from: item) { [weak self] result in
+                    guard let self = self else {
+                        completion()
+                        return
                     }
-                    completion()
-                case .failure(let error):
-                    shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
 
-                    if hasDetectionConfig {
-                        // Detection is configured but ScrapingBee failed - show error instead of redirecting
-                        shareLog("Detection is configured but Instagram download failed - showing error")
-                        DispatchQueue.main.async {
-                            self.showConfigurationError()
+                    switch result {
+                    case .success(let downloaded):
+                        if downloaded.isEmpty {
+                            shareLog("Instagram download succeeded but returned no files - falling back to literal URL")
+                            self.appendLiteralShare(item: item, type: type)
+                        } else {
+                            self.sharedMedia.append(contentsOf: downloaded)
+                            shareLog("Appended \(downloaded.count) downloaded Instagram file(s) - count now \(self.sharedMedia.count)")
                         }
-                        // Don't call completion - prevents redirect
-                    } else {
-                        // No detection configured - fall back to normal flow
+                        completion()
+                    case .failure(let error):
+                        shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
                         self.appendLiteralShare(item: item, type: type)
                         completion()
                     }
                 }
+                return
             }
-            return
         }
 
         appendLiteralShare(item: item, type: type)
@@ -2548,50 +2538,143 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     @objc private func analyzeInAppTapped() {
-        shareLog("Analyze in app tapped - saving file and opening in app")
-
-        guard let imageData = pendingImageData,
-              let sharedFile = pendingSharedFile,
-              let fileURL = URL(string: sharedFile.path) else {
-            shareLog("ERROR: Missing pending image data or shared file reference")
-            return
-        }
-
-        do {
-            // Write the file to shared container
-            if FileManager.default.fileExists(atPath: fileURL.path) {
-                try FileManager.default.removeItem(at: fileURL)
-            }
-            try imageData.write(to: fileURL, options: .atomic)
-            shareLog("Saved image to shared container: \(fileURL.path)")
-
-            // Add to shared media array
-            sharedMedia.append(sharedFile)
-
-            // Remove choice UI
-            hideLoadingUI()
-
-            // Open app with the saved file (no detection)
-            saveAndRedirect(message: pendingImageUrl)
-
-        } catch {
-            shareLog("ERROR: Failed to save image - \(error.localizedDescription)")
-        }
-    }
-
-    @objc private func analyzeNowTapped() {
-        shareLog("Analyze now tapped - starting detection immediately")
-
-        guard let imageData = pendingImageData else {
-            shareLog("ERROR: Missing pending image data")
-            return
-        }
+        shareLog("Analyze in app tapped")
 
         // Remove choice UI
         hideLoadingUI()
 
-        // Start the upload and detection process
-        uploadAndDetect(imageData: imageData)
+        // Check if this is an Instagram URL (before download) or direct image (after download)
+        if let instagramUrl = pendingInstagramUrl {
+            shareLog("Downloading Instagram media and saving to app")
+
+            // Start download process
+            updateProcessingStatus("processing")
+            setupLoadingUI()
+            updateProgress(0.1, status: "Downloading your photo...")
+
+            downloadInstagramMedia(from: instagramUrl) { [weak self] result in
+                guard let self = self else { return }
+
+                switch result {
+                case .success(let downloaded):
+                    if downloaded.isEmpty {
+                        shareLog("Instagram download succeeded but returned no files")
+                        self.dismissWithError()
+                    } else {
+                        self.sharedMedia.append(contentsOf: downloaded)
+                        shareLog("Downloaded and saved \(downloaded.count) Instagram file(s)")
+
+                        // Redirect to app without detection
+                        self.saveAndRedirect(message: self.pendingInstagramUrl)
+                    }
+
+                    // Call the pending completion
+                    self.pendingInstagramCompletion?()
+                    self.pendingInstagramCompletion = nil
+                    self.pendingInstagramUrl = nil
+
+                case .failure(let error):
+                    shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
+                    self.dismissWithError()
+                }
+            }
+        } else if let imageData = pendingImageData,
+                  let sharedFile = pendingSharedFile,
+                  let fileURL = URL(string: sharedFile.path) {
+            shareLog("Saving direct image to app")
+
+            do {
+                // Write the file to shared container
+                if FileManager.default.fileExists(atPath: fileURL.path) {
+                    try FileManager.default.removeItem(at: fileURL)
+                }
+                try imageData.write(to: fileURL, options: .atomic)
+                shareLog("Saved image to shared container: \(fileURL.path)")
+
+                // Add to shared media array
+                sharedMedia.append(sharedFile)
+
+                // Open app with the saved file (no detection)
+                saveAndRedirect(message: pendingImageUrl)
+
+            } catch {
+                shareLog("ERROR: Failed to save image - \(error.localizedDescription)")
+            }
+        } else {
+            shareLog("ERROR: No pending Instagram URL or image data")
+        }
+    }
+
+    @objc private func analyzeNowTapped() {
+        shareLog("Analyze now tapped - starting detection")
+
+        // Remove choice UI
+        hideLoadingUI()
+
+        // Check if this is an Instagram URL (before download) or direct image (after download)
+        if let instagramUrl = pendingInstagramUrl {
+            shareLog("Downloading Instagram media and starting detection")
+
+            // Start download process with detection flow
+            updateProcessingStatus("processing")
+            setupLoadingUI()
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+
+                // Stop the default status polling since we're now managing status ourselves
+                self.stopStatusPolling()
+
+                self.startSmoothProgress()
+                self.targetProgress = 0.05
+
+                // Start rotating status messages for the fetch phase
+                let fetchMessages = [
+                    "Fetching your photo...",
+                    "Downloading image..."
+                ]
+                self.startStatusRotation(messages: fetchMessages, interval: 2.5)
+            }
+
+            downloadInstagramMedia(from: instagramUrl) { [weak self] result in
+                guard let self = self else { return }
+
+                switch result {
+                case .success(let downloaded):
+                    if downloaded.isEmpty {
+                        shareLog("Instagram download succeeded but returned no files")
+                        self.dismissWithError()
+                    } else {
+                        // Get the first downloaded file and start detection
+                        if let firstFile = downloaded.first,
+                           let fileURL = URL(string: firstFile.path),
+                           let imageData = try? Data(contentsOf: fileURL) {
+                            shareLog("Downloaded Instagram image, starting detection with \(imageData.count) bytes")
+                            self.uploadAndDetect(imageData: imageData)
+                        } else {
+                            shareLog("ERROR: Could not read downloaded Instagram file")
+                            self.dismissWithError()
+                        }
+                    }
+
+                    // Call the pending completion
+                    self.pendingInstagramCompletion?()
+                    self.pendingInstagramCompletion = nil
+                    self.pendingInstagramUrl = nil
+
+                case .failure(let error):
+                    shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
+                    self.dismissWithError()
+                }
+            }
+        } else if let imageData = pendingImageData {
+            shareLog("Starting detection on direct image with \(imageData.count) bytes")
+
+            // Start the upload and detection process
+            uploadAndDetect(imageData: imageData)
+        } else {
+            shareLog("ERROR: No pending Instagram URL or image data")
+        }
     }
 
     private func clearSharedData() {
