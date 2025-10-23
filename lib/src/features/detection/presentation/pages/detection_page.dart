@@ -690,7 +690,7 @@ class _CornerBracketPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final bracketLength = 20.0;
-    final cornerRadius = 8.0;
+    final cornerRadius = 20.0;
     final path = Path();
 
     if (alignment == Alignment.topLeft) {
