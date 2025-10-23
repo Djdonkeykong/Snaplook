@@ -1890,55 +1890,25 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let fileName = "instagram_image_\(timestamp)_\(index).jpg"
             let fileURL = containerURL.appendingPathComponent(fileName)
 
-            // Check if we should attempt detection BEFORE writing file
-            let hasDetectionConfig = self.detectorEndpoint() != nil && self.serpApiKey() != nil
+            // User has already made their choice via the choice UI before download started
+            // Just write the file and complete
+            do {
+                if FileManager.default.fileExists(atPath: fileURL.path) {
+                    try FileManager.default.removeItem(at: fileURL)
+                }
+                try data.write(to: fileURL, options: .atomic)
+                shareLog("Saved Instagram image to shared container: \(fileURL.path)")
 
-            if hasDetectionConfig {
-                shareLog("DETECTION CONFIGURED - Holding file in memory, showing choice UI")
-                self.shouldAttemptDetection = true
-                self.pendingImageData = data
-                self.pendingImageUrl = originalURL
-
-                // Create shared file reference but DON'T write to disk yet
                 let sharedFile = SharedMediaFile(
                     path: fileURL.absoluteString,
                     mimeType: "image/jpeg",
                     message: originalURL,
                     type: .image
                 )
-                self.pendingSharedFile = sharedFile
 
-                shareLog("Showing choice UI - user will choose analyze in app or analyze now")
-                // Show choice UI instead of automatically starting detection
-                DispatchQueue.main.async { [weak self] in
-                    self?.showAnalysisChoiceUI()
-                }
-
-                // DON'T call completion and DON'T write file - wait for user choice
-                shareLog("File held in memory. Awaiting user choice.")
-            } else {
-                shareLog("⚠️ Detection NOT configured - proceeding with normal flow")
-
-                do {
-                    // Write file to shared container (normal flow)
-                    if FileManager.default.fileExists(atPath: fileURL.path) {
-                        try FileManager.default.removeItem(at: fileURL)
-                    }
-                    try data.write(to: fileURL, options: .atomic)
-                    shareLog("💾 Saved Instagram image to shared container: \(fileURL.path)")
-
-                    let sharedFile = SharedMediaFile(
-                        path: fileURL.absoluteString,
-                        mimeType: "image/jpeg",
-                        message: originalURL,
-                        type: .image
-                    )
-
-                    // No detection - complete normally
-                    completion(.success(sharedFile))
-                } catch {
-                    completion(.failure(error))
-                }
+                completion(.success(sharedFile))
+            } catch {
+                completion(.failure(error))
             }
         }.resume()
     }
@@ -2227,6 +2197,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func showAnalysisChoiceUI() {
+        // Hide any existing loading UI first to prevent flash
+        stopStatusPolling()
+        stopSmoothProgress()
+        hideLoadingUI()
+
         // Create overlay
         let overlay = UIView(frame: view.bounds)
         overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -2271,10 +2246,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         analyzeNowButton.setTitle("Analyze now", for: .normal)
         analyzeNowButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         analyzeNowButton.backgroundColor = .clear
-        analyzeNowButton.setTitleColor(UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0), for: .normal)
+        analyzeNowButton.setTitleColor(.black, for: .normal)
         analyzeNowButton.layer.cornerRadius = 28
-        analyzeNowButton.layer.borderWidth = 1
-        analyzeNowButton.layer.borderColor = UIColor(red: 229/255, green: 231/255, blue: 235/255, alpha: 1.0).cgColor
+        analyzeNowButton.layer.borderWidth = 1.5
+        analyzeNowButton.layer.borderColor = UIColor(red: 209/255, green: 213/255, blue: 219/255, alpha: 1.0).cgColor
         analyzeNowButton.translatesAutoresizingMaskIntoConstraints = false
         analyzeNowButton.addTarget(self, action: #selector(analyzeNowTapped), for: .touchUpInside)
 
