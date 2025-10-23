@@ -184,26 +184,39 @@ class _ProductDetailCard extends StatelessWidget {
         Column(
           children: [
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                ),
-                child: product['image_url'] != null
-                    ? Hero(
-                        tag: heroTag,
-                        child: _AdaptiveMainProductImage(
+              child: GestureDetector(
+                onTap: () {
+                  if (product['image_url'] != null) {
+                    Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(
+                        builder: (context) => DetectionPage(
                           imageUrl: product['image_url'],
-                          category: (product['category'] as String?)?.toLowerCase() ?? '',
-                        ),
-                      )
-                    : Container(
-                        color: Colors.grey.shade100,
-                        child: const Icon(
-                          Icons.checkroom,
-                          size: 50,
-                          color: Colors.grey,
                         ),
                       ),
+                    );
+                  }
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                  ),
+                  child: product['image_url'] != null
+                      ? Hero(
+                          tag: heroTag,
+                          child: _AdaptiveMainProductImage(
+                            imageUrl: product['image_url'],
+                            category: (product['category'] as String?)?.toLowerCase() ?? '',
+                          ),
+                        )
+                      : Container(
+                          color: Colors.grey.shade100,
+                          child: const Icon(
+                            Icons.checkroom,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
+                        ),
+                ),
               ),
             ),
             Container(

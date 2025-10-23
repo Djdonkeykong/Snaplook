@@ -389,6 +389,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
         blankOverlay.backgroundColor = UIColor.systemBackground
         blankOverlay.tag = 9999
         view.addSubview(blankOverlay)
+
+        // Check authentication and build complete UI immediately to prevent white flash
+        if !isUserAuthenticated() {
+            shareLog("User not authenticated - building login modal in viewDidLoad")
+            showLoginRequiredModal()
+        } else {
+            shareLog("User authenticated - building choice buttons in viewDidLoad")
+            addLogoAndCancel()
+            showChoiceButtons()
+        }
     }
 
     private func addLogoAndCancel() {
@@ -557,16 +567,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self?.applySheetCornerRadius(12)
         }
 
-        // Check authentication first before showing any UI
+        // UI is already built in viewDidLoad - just check if we should process attachments
         if !isUserAuthenticated() {
-            shareLog("❌ User not authenticated - showing login required modal")
-            showLoginRequiredModal()
+            shareLog("User not authenticated - login modal already displayed")
             return
         }
-
-        // User is authenticated - add logo/cancel and choice buttons to existing blank overlay
-        addLogoAndCancel()
-        showChoiceButtons()
 
         // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
         if hasProcessedAttachments {
