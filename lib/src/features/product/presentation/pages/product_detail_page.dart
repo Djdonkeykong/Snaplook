@@ -22,27 +22,84 @@ class ProductDetailPage extends ConsumerStatefulWidget {
 }
 
 class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
-  bool _isLiked = false;
   final _inspirationService = InspirationService();
+  late PageController _pageController;
+  late List<Map<String, dynamic>> _products;
+  int _currentIndex = 0;
+  final Map<int, bool> _likedProducts = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 0);
+    _products = [widget.product];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMoreProducts();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _loadMoreProducts() {
+    final inspirationState = ref.read(inspirationProvider);
+    if (!inspirationState.isLoading && inspirationState.images.isNotEmpty) {
+      final newProducts = inspirationState.images
+          .where((p) {
+            final imageUrl = p['image_url'] as String?;
+            return imageUrl != null && _inspirationService.isHighQualityImage(imageUrl);
+          })
+          .take(50)
+          .toList();
+
+      setState(() {
+        _products = [widget.product, ...newProducts];
+      });
+    }
+  }
+
+  void _onPageChanged(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+
+    if (index >= _products.length - 3) {
+      ref.read(inspirationProvider.notifier).loadImages();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final spacing = context.spacing;
-    final radius = context.radius;
-    final relatedProducts = ref.watch(inspirationProvider);
-
     return Scaffold(
       backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          // Floating App Bar
-          SliverAppBar(
-            expandedHeight: MediaQuery.of(context).size.height * 0.65,
-            pinned: true,
-            backgroundColor: Colors.white,
-            elevation: 0,
-            leading: Container(
-              margin: const EdgeInsets.all(8),
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            scrollDirection: Axis.vertical,
+            onPageChanged: _onPageChanged,
+            itemCount: _products.length,
+            itemBuilder: (context, index) {
+              return _ProductDetailCard(
+                product: _products[index],
+                heroTag: index == 0 ? widget.heroTag : 'product_${_products[index]['id']}_$index',
+                isLiked: _likedProducts[index] ?? false,
+                onLikeToggle: () {
+                  setState(() {
+                    _likedProducts[index] = !(_likedProducts[index] ?? false);
+                  });
+                },
+              );
+            },
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 8,
+            child: Container(
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(20),
@@ -63,18 +120,45 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                 ),
               ),
             ),
-            actions: [],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductDetailCard extends StatelessWidget {
+  final Map<String, dynamic> product;
+  final String heroTag;
+  final bool isLiked;
+  final VoidCallback onLikeToggle;
+
+  const _ProductDetailCard({
+    required this.product,
+    required this.heroTag,
+    required this.isLiked,
+    required this.onLikeToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+
+    return Stack(
+      children: [
+        Column(
+          children: [
+            Expanded(
+              child: Container(
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                 ),
-                child: widget.product['image_url'] != null
+                child: product['image_url'] != null
                     ? Hero(
-                        tag: widget.heroTag,
+                        tag: heroTag,
                         child: _AdaptiveMainProductImage(
-                          imageUrl: widget.product['image_url'],
-                          category: (widget.product['category'] as String?)?.toLowerCase() ?? '',
+                          imageUrl: product['image_url'],
+                          category: (product['category'] as String?)?.toLowerCase() ?? '',
                         ),
                       )
                     : Container(
@@ -87,24 +171,19 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       ),
               ),
             ),
-          ),
-
-          // Product Details - Zalando Style
-          SliverToBoxAdapter(
-            child: Container(
+            Container(
               color: Colors.white,
               padding: EdgeInsets.all(spacing.m),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Action Row - Zalando Style
                   Row(
                     children: [
-                      // View Product Button
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            final productUrl = widget.product['product_url'] as String?;
+                            final productUrl = product['product_url'] as String?;
                             if (productUrl != null) {
                               // TODO: Open URL
                             }
@@ -127,16 +206,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           ),
                         ),
                       ),
-
                       SizedBox(width: spacing.m),
-
-                      // Search Icon
                       GestureDetector(
                         onTap: () {
                           Navigator.of(context, rootNavigator: true).push(
                             MaterialPageRoute(
                               builder: (context) => VisualSearchPage(
-                                product: widget.product,
+                                product: product,
                               ),
                             ),
                           );
@@ -164,16 +240,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           ),
                         ),
                       ),
-
                       SizedBox(width: spacing.sm),
-
-                      // Heart Icon
                       GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isLiked = !_isLiked;
-                          });
-                        },
+                        onTap: onLikeToggle,
                         child: Container(
                           width: 48,
                           height: 48,
@@ -186,17 +255,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           ),
                           child: Center(
                             child: Icon(
-                              _isLiked ? Icons.favorite : Icons.favorite_border,
-                              color: _isLiked ? const Color(0xFFf2003c) : Colors.black,
+                              isLiked ? Icons.favorite : Icons.favorite_border,
+                              color: isLiked ? const Color(0xFFf2003c) : Colors.black,
                               size: 22,
                             ),
                           ),
                         ),
                       ),
-
                       SizedBox(width: spacing.sm),
-
-                      // Three Dots
                       Container(
                         width: 48,
                         height: 48,
@@ -217,13 +283,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       ),
                     ],
                   ),
-
                   SizedBox(height: spacing.l),
-
-                  // Brand Name
-                  if (widget.product['brand'] != null) ...[
+                  if (product['brand'] != null) ...[
                     Text(
-                      widget.product['brand'],
+                      product['brand'],
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
@@ -232,11 +295,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     ),
                     const SizedBox(height: 4),
                   ],
-
-                  // Product Title
-                  if (widget.product['title'] != null) ...[
+                  if (product['title'] != null) ...[
                     Text(
-                      widget.product['title'],
+                      product['title'],
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -245,256 +306,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       ),
                     ),
                   ],
-
-                  SizedBox(height: spacing.l),
+                  SizedBox(height: spacing.m),
                 ],
               ),
             ),
-          ),
-
-          // More to Explore Section
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(spacing.l, 0, spacing.l, spacing.l),
-              child: const Text(
-                'More to explore',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ),
-
-          // Related Products Grid
-          SliverPadding(
-            padding: EdgeInsets.zero,
-            sliver: _buildRelatedProductsSliver(relatedProducts, spacing, radius),
-          ),
-
-          // Bottom Padding
-          SliverToBoxAdapter(
-            child: SizedBox(height: spacing.xxl),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRelatedProductsSliver(InspirationState relatedProducts, dynamic spacing, dynamic radius) {
-    if (relatedProducts.isLoading) {
-      return SliverToBoxAdapter(
-        child: Container(
-          height: 200,
-          child: const Center(
-            child: CircularProgressIndicator(
-              color: Color(0xFFf2003c),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (relatedProducts.error != null) {
-      return SliverToBoxAdapter(
-        child: Container(
-          height: 200,
-          child: const Center(
-            child: Text('Failed to load related products'),
-          ),
-        ),
-      );
-    }
-
-    // Filter out current product, apply quality filter, and show more related items
-    final related = relatedProducts.images
-        .where((p) {
-          if (p['id'] == widget.product['id']) return false; // Exclude current product
-          final imageUrl = p['image_url'] as String?;
-          return imageUrl != null && _inspirationService.isHighQualityImage(imageUrl);
-        })
-        .take(20) // Show more images like home page
-        .toList();
-
-    if (related.isEmpty) {
-      return SliverToBoxAdapter(
-        child: Container(
-          height: 100,
-          child: const Center(
-            child: Text('No related products found'),
-          ),
-        ),
-      );
-    }
-
-    return SliverGrid(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 3,
-        mainAxisSpacing: 3,
-        childAspectRatio: 0.75,
-      ),
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          final product = related[index];
-          return _RelatedProductCard(
-            product: product,
-            index: index,
-          );
-        },
-        childCount: related.length,
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-          ),
+          ],
         ),
       ],
-    );
-  }
-}
-
-class _RelatedProductCard extends StatefulWidget {
-  final Map<String, dynamic> product;
-  final int index;
-
-  const _RelatedProductCard({
-    required this.product,
-    required this.index,
-  });
-
-  @override
-  State<_RelatedProductCard> createState() => _RelatedProductCardState();
-}
-
-class _RelatedProductCardState extends State<_RelatedProductCard> {
-  BoxFit? _boxFit;
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = widget.product['image_url'] as String?;
-    final category = (widget.product['category'] as String?)?.toLowerCase() ?? '';
-    final isShoeCategory = category.contains('shoe') || category.contains('sneaker') || category.contains('boot');
-
-    // Default fit based on category
-    final defaultFit = isShoeCategory ? BoxFit.contain : BoxFit.cover;
-    final currentFit = _boxFit ?? defaultFit;
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => ProductDetailPage(
-              product: widget.product,
-              heroTag: 'related_${widget.product['id']}_${widget.index}',
-            ),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-        ),
-        child: Hero(
-          tag: 'related_${widget.product['id']}_${widget.index}',
-          child: ClipRect(
-            child: imageUrl != null
-                ? Image.network(
-                    imageUrl,
-                    fit: currentFit,
-                    alignment: Alignment.center,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) {
-                        // Image loaded, check if we need to adjust fit for shoes
-                        if (isShoeCategory && _boxFit == null) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            _determineOptimalFit();
-                          });
-                        }
-                        return child;
-                      }
-                      return Container(
-                        color: Colors.grey.shade100,
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFFf2003c),
-                            strokeWidth: 2,
-                          ),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey.shade100,
-                        child: const Icon(
-                          Icons.image_not_supported,
-                          size: 30,
-                          color: Colors.grey,
-                        ),
-                      );
-                    },
-                  )
-                : Container(
-                    color: Colors.grey.shade100,
-                    child: const Icon(
-                      Icons.checkroom,
-                      size: 30,
-                      color: Colors.grey,
-                    ),
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _determineOptimalFit() {
-    if (!mounted) return;
-
-    final imageUrl = widget.product['image_url'] as String?;
-    if (imageUrl == null) return;
-
-    // For shoes, check if the image would look better with cover vs contain
-    final image = NetworkImage(imageUrl);
-
-    image.resolve(const ImageConfiguration()).addListener(
-      ImageStreamListener((ImageInfo info, bool _) {
-        if (!mounted) return;
-
-        final imageAspectRatio = info.image.width / info.image.height;
-        const containerAspectRatio = 0.75; // Related products grid aspect ratio
-
-        // If the image aspect ratio is close to container ratio, use cover
-        final aspectRatioDifference = (imageAspectRatio - containerAspectRatio).abs();
-
-        // If difference is small (< 0.3), the image should fit well with cover
-        final shouldUseCover = aspectRatioDifference < 0.3;
-
-        if (mounted && shouldUseCover && _boxFit != BoxFit.cover) {
-          setState(() {
-            _boxFit = BoxFit.cover;
-          });
-        }
-      }),
     );
   }
 }
