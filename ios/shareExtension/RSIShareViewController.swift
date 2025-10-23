@@ -390,6 +390,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         blankOverlay.tag = 9999
         view.addSubview(blankOverlay)
 
+        // Hide default share extension UI immediately
+        hideDefaultUI()
+
         // Check authentication and build complete UI immediately to prevent white flash
         if !isUserAuthenticated() {
             shareLog("User not authenticated - building login modal in viewDidLoad")
