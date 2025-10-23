@@ -54,7 +54,7 @@ class FavoriteButton extends ConsumerWidget {
         ),
         child: Center(
           child: Transform.translate(
-            offset: isFavorite ? Offset.zero : const Offset(-1, 0),
+            offset: isFavorite ? Offset.zero : const Offset(-1, 1),
             child: Icon(
               isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
               size: isFavorite ? size * 0.85 : size * 0.75,
@@ -86,7 +86,7 @@ class FavoriteIconButton extends ConsumerWidget {
 
     return IconButton(
       icon: Transform.translate(
-        offset: isFavorite ? Offset.zero : const Offset(-1, 0),
+        offset: isFavorite ? Offset.zero : const Offset(-1, 1),
         child: Icon(
           isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
           size: isFavorite ? size * 0.85 : size * 0.75,
