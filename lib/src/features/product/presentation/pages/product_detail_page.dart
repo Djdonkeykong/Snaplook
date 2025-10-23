@@ -2,8 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../home/domain/services/inspiration_service.dart';
 import 'visual_search_page.dart';
@@ -129,9 +129,11 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             top: MediaQuery.of(context).padding.top + 8,
             left: 8,
             child: Container(
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(20),
+                shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -141,6 +143,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                 ],
               ),
               child: IconButton(
+                padding: EdgeInsets.zero,
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(
                   Icons.arrow_back,
@@ -257,13 +260,12 @@ class _ProductDetailCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(24),
                           ),
                           child: Center(
-                            child: SvgPicture.asset(
-                              'assets/icons/search-icon-sparkle.svg',
-                              width: 22,
-                              height: 22,
-                              colorFilter: const ColorFilter.mode(
-                                Colors.black,
-                                BlendMode.srcIn,
+                            child: Transform.translate(
+                              offset: const Offset(0, -0.5),
+                              child: Icon(
+                                SnaplookAiIcon.aiSearchIcon,
+                                size: 22,
+                                color: Colors.black54,
                               ),
                             ),
                           ),
