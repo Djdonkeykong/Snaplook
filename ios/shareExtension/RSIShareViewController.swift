@@ -630,9 +630,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Fetching Instagram HTML via ScrapingBee (attempt \(attempt + 1)) for \(instagramUrl)")
 
-        // Progress is now managed by the button handler (analyzeInAppTapped or analyzeNowTapped)
-        // Don't override it here
-
         var request = URLRequest(url: requestURL)
         request.timeoutInterval = 20.0
 
@@ -693,9 +690,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 deliver(.failure(self.makeInstagramError("No image URLs found in Instagram response")))
                 return
             }
-
-            // Progress is now managed by the button handler (analyzeInAppTapped or analyzeNowTapped)
-            // Don't override it here
 
             self.downloadInstagramImages(
                 imageUrls,
