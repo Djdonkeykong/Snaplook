@@ -265,7 +265,7 @@ class _ProductDetailCard extends StatelessWidget {
                               offset: const Offset(0, -1.5),
                               child: Icon(
                                 SnaplookAiIcon.aiSearchIcon,
-                                size: 20,
+                                size: 19,
                                 color: Colors.black,
                               ),
                             ),
@@ -287,7 +287,7 @@ class _ProductDetailCard extends StatelessWidget {
                           ),
                           child: Center(
                             child: Transform.translate(
-                              offset: isLiked ? Offset.zero : const Offset(-1, 0),
+                              offset: isLiked ? Offset.zero : const Offset(-1, 1),
                               child: Icon(
                                 isLiked ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
                                 size: isLiked ? 22 * 0.85 : 22 * 0.75,
