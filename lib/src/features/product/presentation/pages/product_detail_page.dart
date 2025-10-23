@@ -296,11 +296,14 @@ class _ProductDetailCard extends StatelessWidget {
                             ),
                             borderRadius: BorderRadius.circular(24),
                           ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.center_focus_strong,
-                              size: 19,
-                              color: Colors.black,
+                          child: Center(
+                            child: Transform.translate(
+                              offset: const Offset(0, -0.5),
+                              child: Icon(
+                                SnaplookAiIcon.aiSearchIcon,
+                                size: 19,
+                                color: Colors.black,
+                              ),
                             ),
                           ),
                         ),

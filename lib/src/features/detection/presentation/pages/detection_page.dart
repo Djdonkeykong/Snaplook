@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/pages/results_page.dart';
 import '../../../../../core/constants/app_constants.dart';
+import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../providers/detection_provider.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
@@ -244,11 +245,14 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(40),
           onTap: _startDetection,
-          child: const Center(
-            child: Icon(
-              Icons.center_focus_strong,
-              size: 32,
-              color: Colors.white,
+          child: Center(
+            child: Transform.translate(
+              offset: const Offset(0, -1),
+              child: Icon(
+                SnaplookAiIcon.aiSearchIcon,
+                size: 32,
+                color: Colors.white,
+              ),
             ),
           ),
         ),
