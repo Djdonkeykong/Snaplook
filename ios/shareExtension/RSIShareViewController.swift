@@ -538,6 +538,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self?.applySheetCornerRadius(12)
         }
 
+        // Check authentication first before processing anything
+        if !isUserAuthenticated() {
+            shareLog("❌ User not authenticated - showing login required modal")
+            showLoginRequiredModal()
+            return
+        }
+
         // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
         if hasProcessedAttachments {
             shareLog("⏸️️ viewDidAppear called again - attachments already processed, skipping")
@@ -2469,6 +2476,200 @@ open class RSIShareViewController: SLComposeServiceViewController {
         progressView = nil
     }
 
+    // MARK: - Authentication Check
+
+    private func isUserAuthenticated() -> Bool {
+        guard let defaults = UserDefaults(suiteName: appGroupId) else {
+            shareLog("❌ Cannot access UserDefaults for authentication check")
+            return false
+        }
+
+        // Check for Supabase session
+        // Supabase Flutter stores the session in shared preferences
+        // The key format is typically "sb-<project-ref>-auth-token"
+        // We'll check for any session data
+        let allKeys = defaults.dictionaryRepresentation().keys
+        let hasSupabaseSession = allKeys.contains { key in
+            key.contains("supabase") || key.contains("sb-") || key.contains("auth-token")
+        }
+
+        if hasSupabaseSession {
+            shareLog("✅ User authenticated - found Supabase session")
+        } else {
+            shareLog("❌ No Supabase session found - user not authenticated")
+        }
+
+        return hasSupabaseSession
+    }
+
+    private func showLoginRequiredModal() {
+        // Haptic feedback
+        let notificationFeedback = UINotificationFeedbackGenerator()
+        notificationFeedback.notificationOccurred(.warning)
+
+        // Remove any existing overlay
+        view.subviews.filter { $0.tag == 9999 || $0.tag == 10000 }.forEach { $0.removeFromSuperview() }
+
+        // Create modal overlay
+        let overlay = UIView(frame: view.bounds)
+        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        overlay.backgroundColor = UIColor.systemBackground
+        overlay.tag = 10000
+        view.addSubview(overlay)
+
+        // Container for centered content
+        let contentContainer = UIView()
+        contentContainer.translatesAutoresizingMaskIntoConstraints = false
+        overlay.addSubview(contentContainer)
+
+        // Icon
+        let iconContainer = UIView()
+        iconContainer.translatesAutoresizingMaskIntoConstraints = false
+        iconContainer.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 0.1)
+        iconContainer.layer.cornerRadius = 30
+        contentContainer.addSubview(iconContainer)
+
+        let iconImageView = UIImageView()
+        iconImageView.translatesAutoresizingMaskIntoConstraints = false
+        iconImageView.image = UIImage(systemName: "person.circle.fill")
+        iconImageView.tintColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        iconImageView.contentMode = .scaleAspectFit
+        iconContainer.addSubview(iconImageView)
+
+        // Title
+        let titleLabel = UILabel()
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.text = "Sign in required"
+        titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
+        titleLabel.textAlignment = .center
+        titleLabel.textColor = .label
+        contentContainer.addSubview(titleLabel)
+
+        // Message
+        let messageLabel = UILabel()
+        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        messageLabel.text = "Please sign in to Snaplook to use the share extension"
+        messageLabel.font = .systemFont(ofSize: 15, weight: .regular)
+        messageLabel.textAlignment = .center
+        messageLabel.textColor = .secondaryLabel
+        messageLabel.numberOfLines = 0
+        contentContainer.addSubview(messageLabel)
+
+        // Buttons stack
+        let buttonStack = UIStackView()
+        buttonStack.translatesAutoresizingMaskIntoConstraints = false
+        buttonStack.axis = .vertical
+        buttonStack.spacing = 12
+        buttonStack.distribution = .fillEqually
+        contentContainer.addSubview(buttonStack)
+
+        // "Open App" button
+        let openAppButton = UIButton(type: .system)
+        openAppButton.setTitle("Open Snaplook", for: .normal)
+        openAppButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        openAppButton.setTitleColor(.white, for: .normal)
+        openAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        openAppButton.layer.cornerRadius = 14
+        openAppButton.addTarget(self, action: #selector(openAppTapped), for: .touchUpInside)
+
+        // "Cancel" button
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .medium)
+        cancelButton.setTitleColor(.label, for: .normal)
+        cancelButton.backgroundColor = UIColor.systemGray5
+        cancelButton.layer.cornerRadius = 14
+        cancelButton.addTarget(self, action: #selector(cancelLoginRequiredTapped), for: .touchUpInside)
+
+        buttonStack.addArrangedSubview(openAppButton)
+        buttonStack.addArrangedSubview(cancelButton)
+
+        // Layout constraints
+        NSLayoutConstraint.activate([
+            // Center content container
+            contentContainer.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            contentContainer.centerYAnchor.constraint(equalTo: overlay.centerYAnchor, constant: -40),
+            contentContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 40),
+            contentContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -40),
+
+            // Icon container
+            iconContainer.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+            iconContainer.centerXAnchor.constraint(equalTo: contentContainer.centerXAnchor),
+            iconContainer.widthAnchor.constraint(equalToConstant: 60),
+            iconContainer.heightAnchor.constraint(equalToConstant: 60),
+
+            // Icon image
+            iconImageView.centerXAnchor.constraint(equalTo: iconContainer.centerXAnchor),
+            iconImageView.centerYAnchor.constraint(equalTo: iconContainer.centerYAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 32),
+            iconImageView.heightAnchor.constraint(equalToConstant: 32),
+
+            // Title
+            titleLabel.topAnchor.constraint(equalTo: iconContainer.bottomAnchor, constant: 20),
+            titleLabel.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+
+            // Message
+            messageLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            messageLabel.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            messageLabel.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+
+            // Button stack
+            buttonStack.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: 32),
+            buttonStack.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            buttonStack.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            buttonStack.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
+            buttonStack.heightAnchor.constraint(equalToConstant: 108), // 48 + 48 + 12 spacing
+
+            // Button heights
+            openAppButton.heightAnchor.constraint(equalToConstant: 48),
+            cancelButton.heightAnchor.constraint(equalToConstant: 48),
+        ])
+
+        shareLog("✅ Login required modal displayed")
+    }
+
+    @objc private func openAppTapped() {
+        shareLog("Open App tapped from login modal")
+
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+
+        // Open the main app using extensionContext
+        guard let url = URL(string: "snaplook://") else {
+            shareLog("❌ Failed to create app URL")
+            cancelLoginRequiredTapped()
+            return
+        }
+
+        // Open URL using extension context
+        extensionContext?.open(url, completionHandler: { [weak self] success in
+            self?.shareLog(success ? "✅ Successfully opened app" : "❌ Failed to open app")
+
+            // Cancel the extension after opening the app
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.cancelLoginRequiredTapped()
+            }
+        })
+    }
+
+    @objc private func cancelLoginRequiredTapped() {
+        shareLog("Cancel tapped from login modal")
+
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+
+        // Cancel the extension
+        let error = NSError(
+            domain: "com.snaplook.shareExtension",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]
+        )
+        extensionContext?.cancelRequest(withError: error)
+    }
+
     @objc private func cancelImportTapped() {
         shareLog("Cancel tapped")
 
@@ -2493,6 +2694,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     @objc private func analyzeInAppTapped() {
         shareLog("Analyze in app tapped")
+
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
 
         // Remove choice UI
         hideLoadingUI()
@@ -2581,6 +2786,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     @objc private func analyzeNowTapped() {
         shareLog("Analyze now tapped - starting detection")
+
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
 
         // Remove choice UI
         hideLoadingUI()

@@ -160,7 +160,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                     SizedBox(height: spacing.m),
                     // Category filter chips - edge to edge with 16px content inset
                     SizedBox(
-                      height: 48,
+                      height: 50,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         padding: EdgeInsets.symmetric(horizontal: spacing.m),
@@ -175,46 +175,37 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                                   ? spacing.sm
                                   : 0,
                             ),
-                            child: Material(
-                              color: isSelected
-                                  ? const Color(0xFFf2003c)
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(26),
-                              child: InkWell(
-                                onTap: () {
-                                  notifier.setSelectedCategory(category);
-                                },
-                                borderRadius: BorderRadius.circular(26),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(26),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? const Color(0xFFf2003c)
-                                          : Colors.grey[300]!,
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      category[0].toUpperCase() +
-                                          category.substring(1),
-                                      style: TextStyle(
-                                        fontFamily: 'PlusJakartaSans',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : Colors.black,
-                                      ),
-                                    ),
-                                  ),
+                            child: FilterChip(
+                              label: Text(
+                                category[0].toUpperCase() +
+                                    category.substring(1),
+                                style: TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: isSelected ? Colors.white : Colors.black,
                                 ),
                               ),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                notifier.setSelectedCategory(category);
+                              },
+                              backgroundColor: Colors.white,
+                              selectedColor: const Color(0xFFf2003c),
+                              showCheckmark: false,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(28),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? const Color(0xFFf2003c)
+                                      : const Color(0xFFD1D5DB),
+                                  width: isSelected ? 0 : 1.5,
+                                ),
+                              ),
+                              side: BorderSide.none,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
                             ),
                           );
                         },

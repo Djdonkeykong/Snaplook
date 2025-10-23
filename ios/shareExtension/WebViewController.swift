@@ -97,16 +97,16 @@ class WebViewController: UIViewController, WKNavigationDelegate {
         toolbarContainer.addSubview(separator)
 
         NSLayoutConstraint.activate([
-            // Toolbar container
-            toolbarContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            // Toolbar container - extends to top of screen
+            toolbarContainer.topAnchor.constraint(equalTo: view.topAnchor),
             toolbarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             toolbarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            toolbarContainer.heightAnchor.constraint(equalToConstant: 52),
+            toolbarContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 52),
 
             // URL bar - extends further right now that arrows are removed
             urlBar.leadingAnchor.constraint(equalTo: toolbarContainer.leadingAnchor, constant: 16),
             urlBar.trailingAnchor.constraint(equalTo: doneButton.leadingAnchor, constant: -12),
-            urlBar.centerYAnchor.constraint(equalTo: toolbarContainer.centerYAnchor),
+            urlBar.bottomAnchor.constraint(equalTo: toolbarContainer.bottomAnchor, constant: -8),
             urlBar.heightAnchor.constraint(equalToConstant: 36),
 
             // Lock icon
@@ -122,7 +122,7 @@ class WebViewController: UIViewController, WKNavigationDelegate {
 
             // Done button (positioned where share/refresh were)
             doneButton.trailingAnchor.constraint(equalTo: toolbarContainer.trailingAnchor, constant: -16),
-            doneButton.centerYAnchor.constraint(equalTo: toolbarContainer.centerYAnchor),
+            doneButton.centerYAnchor.constraint(equalTo: urlBar.centerYAnchor),
             doneButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 50),
 
             // Separator

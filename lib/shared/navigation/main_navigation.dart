@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../src/features/home/presentation/pages/home_page.dart';
-import '../../src/features/wardrobe/presentation/pages/wardrobe_page.dart';
+import '../../src/features/wardrobe/presentation/pages/wishlist_page.dart';
 import '../../src/features/profile/presentation/pages/profile_page.dart';
 import '../../src/features/home/domain/providers/image_provider.dart';
 import '../../src/features/detection/presentation/pages/detection_page.dart';
@@ -19,7 +19,7 @@ final isAtHomeRootProvider = StateProvider<bool>((ref) => true);
 
 // Global navigator keys
 final homeNavigatorKey = GlobalKey<NavigatorState>();
-final wardrobeNavigatorKey = GlobalKey<NavigatorState>();
+final wishlistNavigatorKey = GlobalKey<NavigatorState>();
 final profileNavigatorKey = GlobalKey<NavigatorState>();
 
 final homeScrollControllerProvider = Provider<ScrollController?>((ref) => null);
@@ -54,7 +54,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       case 0:
         return homeNavigatorKey;
       case 1:
-        return wardrobeNavigatorKey;
+        return wishlistNavigatorKey;
       case 2:
         return profileNavigatorKey;
       default:
@@ -86,11 +86,11 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         },
       ),
       Navigator(
-        key: wardrobeNavigatorKey,
+        key: wishlistNavigatorKey,
         initialRoute: '/',
         onGenerateRoute: (settings) {
           return MaterialPageRoute(
-            builder: (context) => const WardrobePage(),
+            builder: (context) => const WishlistPage(),
             settings: settings,
           );
         },
@@ -146,7 +146,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                     child: _NavigationItem(
                       icon: SnaplookIcons.heartOutline,
                       selectedIcon: SnaplookIcons.heartFilled,
-                      label: 'Wardrobe',
+                      label: 'Wishlist',
                       index: 1,
                       isSelected: selectedIndex == 1,
                       onTap: () => _handleTabTap(1),

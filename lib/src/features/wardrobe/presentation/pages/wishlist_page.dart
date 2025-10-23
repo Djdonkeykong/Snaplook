@@ -8,14 +8,14 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 
-class WardrobePage extends ConsumerStatefulWidget {
-  const WardrobePage({super.key});
+class WishlistPage extends ConsumerStatefulWidget {
+  const WishlistPage({super.key});
 
   @override
-  ConsumerState<WardrobePage> createState() => _WardrobePageState();
+  ConsumerState<WishlistPage> createState() => _WishlistPageState();
 }
 
-class _WardrobePageState extends ConsumerState<WardrobePage> {
+class _WishlistPageState extends ConsumerState<WishlistPage> {
   String selectedCategory = 'All';
   final ScrollController _scrollController = ScrollController();
 
@@ -27,7 +27,7 @@ class _WardrobePageState extends ConsumerState<WardrobePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to scroll to top trigger for wardrobe tab (index 1)
+    // Listen to scroll to top trigger for wishlist tab (index 1)
     ref.listen(scrollToTopTriggerProvider, (previous, next) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -64,7 +64,7 @@ class _WardrobePageState extends ConsumerState<WardrobePage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'My Wardrobe',
+                        'My Wishlist',
                         style: TextStyle(
                           fontSize: 38,
                           fontFamily: 'PlusJakartaSans',
@@ -106,7 +106,8 @@ class _WardrobePageState extends ConsumerState<WardrobePage> {
                             category,
                             style: TextStyle(
                               fontFamily: 'PlusJakartaSans',
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
                               color: isSelected ? Colors.white : Colors.black,
                             ),
                           ),
@@ -116,10 +117,20 @@ class _WardrobePageState extends ConsumerState<WardrobePage> {
                               selectedCategory = category;
                             });
                           },
-                          backgroundColor: Colors.grey[100],
+                          backgroundColor: Colors.white,
                           selectedColor: const Color(0xFFf2003c),
-                          checkmarkColor: Colors.white,
+                          showCheckmark: false,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                            side: BorderSide(
+                              color: isSelected
+                                  ? const Color(0xFFf2003c)
+                                  : const Color(0xFFD1D5DB),
+                              width: isSelected ? 0 : 1.5,
+                            ),
+                          ),
                           side: BorderSide.none,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           visualDensity: VisualDensity.compact,
                         ),
@@ -201,7 +212,7 @@ class _WardrobePageState extends ConsumerState<WardrobePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'My Wardrobe',
+            'My Wishlist',
             style: TextStyle(
               fontSize: 38,
               fontFamily: 'PlusJakartaSans',
@@ -240,7 +251,7 @@ class _WardrobePageState extends ConsumerState<WardrobePage> {
                   ),
                   SizedBox(height: spacing.l),
                   const Text(
-                    'Start Building Your Wardrobe',
+                    'Start Building Your Wishlist',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
