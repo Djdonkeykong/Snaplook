@@ -1,10 +1,13 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/pages/results_page.dart';
 import '../../../../../core/constants/app_constants.dart';
@@ -22,10 +25,12 @@ class DetectionPage extends ConsumerStatefulWidget {
 
 class _DetectionPageState extends ConsumerState<DetectionPage> {
   final PageController _pageController = PageController();
+  final GlobalKey _imageKey = GlobalKey();
 
   // Crop selection state
   bool _isCropMode = false;
   Rect? _cropRect;
+  Uint8List? _croppedImageBytes;
 
   @override
   void initState() {
@@ -102,21 +107,26 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               ),
               child: IconButton(
                 padding: EdgeInsets.zero,
-                onPressed: () {
-                  setState(() {
-                    _isCropMode = !_isCropMode;
-                    if (_isCropMode && _cropRect == null) {
-                      // Initialize crop rect to center of screen
+                onPressed: () async {
+                  if (_isCropMode) {
+                    // Lock in the crop when exiting crop mode
+                    await _applyCrop();
+                  } else {
+                    // Entering crop mode - initialize crop rect if needed
+                    if (_cropRect == null) {
                       final screenSize = MediaQuery.of(context).size;
                       final cropSize = screenSize.width * 0.7;
                       final left = (screenSize.width - cropSize) / 2;
                       final top = (screenSize.height - cropSize) / 2;
                       _cropRect = Rect.fromLTWH(left, top, cropSize, cropSize);
                     }
+                  }
+                  setState(() {
+                    _isCropMode = !_isCropMode;
                   });
                 },
                 icon: Icon(
-                  _isCropMode ? Icons.fullscreen_exit : Icons.crop_free,
+                  _isCropMode ? Icons.check : Icons.crop_free,
                   color: _isCropMode ? Colors.white : Colors.black,
                   size: 20,
                 ),
@@ -244,7 +254,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(40),
-          onTap: _startDetection,
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            _startDetection();
+          },
           child: Center(
             child: Transform.translate(
               offset: const Offset(0, -1),
@@ -590,13 +603,103 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     }
   }
 
+  Future<void> _applyCrop() async {
+    if (_cropRect == null) return;
+
+    try {
+      Uint8List imageBytes;
+
+      // Get the image bytes
+      if (widget.imageUrl != null) {
+        final response = await http.get(Uri.parse(widget.imageUrl!));
+        if (response.statusCode != 200) {
+          throw Exception('Failed to download image');
+        }
+        imageBytes = response.bodyBytes;
+      } else {
+        final imagesState = ref.read(selectedImagesProvider);
+        final selectedImage = imagesState.currentImage;
+        if (selectedImage == null) return;
+        imageBytes = await File(selectedImage.path).readAsBytes();
+      }
+
+      // Decode the image
+      final originalImage = img.decodeImage(imageBytes);
+      if (originalImage == null) {
+        throw Exception('Failed to decode image');
+      }
+
+      // Get the screen dimensions to calculate the actual crop coordinates
+      final screenSize = MediaQuery.of(context).size;
+      final imageAspectRatio = originalImage.width / originalImage.height;
+      final screenAspectRatio = screenSize.width / screenSize.height;
+
+      double displayWidth, displayHeight;
+      double offsetX = 0, offsetY = 0;
+
+      // Calculate how the image is displayed (BoxFit.cover behavior)
+      if (imageAspectRatio > screenAspectRatio) {
+        // Image is wider than screen
+        displayHeight = screenSize.height;
+        displayWidth = displayHeight * imageAspectRatio;
+        offsetX = (displayWidth - screenSize.width) / 2;
+      } else {
+        // Image is taller than screen
+        displayWidth = screenSize.width;
+        displayHeight = displayWidth / imageAspectRatio;
+        offsetY = (displayHeight - screenSize.height) / 2;
+      }
+
+      // Convert screen coordinates to image coordinates
+      final scaleX = originalImage.width / displayWidth;
+      final scaleY = originalImage.height / displayHeight;
+
+      final cropX = ((_cropRect!.left + offsetX) * scaleX).round().clamp(0, originalImage.width);
+      final cropY = ((_cropRect!.top + offsetY) * scaleY).round().clamp(0, originalImage.height);
+      final cropWidth = (_cropRect!.width * scaleX).round().clamp(1, originalImage.width - cropX);
+      final cropHeight = (_cropRect!.height * scaleY).round().clamp(1, originalImage.height - cropY);
+
+      // Crop the image
+      final croppedImage = img.copyCrop(
+        originalImage,
+        x: cropX,
+        y: cropY,
+        width: cropWidth,
+        height: cropHeight,
+      );
+
+      // Encode to bytes
+      _croppedImageBytes = Uint8List.fromList(img.encodeJpg(croppedImage, quality: 90));
+
+      print('Crop applied successfully');
+    } catch (e) {
+      print('Error applying crop: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to crop image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _startDetection() async {
     print('Starting detection process...');
 
     try {
       XFile imageToAnalyze;
 
-      if (widget.imageUrl != null) {
+      // Use cropped image if available
+      if (_croppedImageBytes != null) {
+        print('Using cropped image for analysis');
+        final tempDir = Directory.systemTemp;
+        final fileName = 'cropped_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final file = File('${tempDir.path}/$fileName');
+        await file.writeAsBytes(_croppedImageBytes!);
+        imageToAnalyze = XFile(file.path);
+      } else if (widget.imageUrl != null) {
         // Network image from scan button - download and create XFile
         print('Downloading network image: ${widget.imageUrl}');
         final response = await http.get(Uri.parse(widget.imageUrl!));

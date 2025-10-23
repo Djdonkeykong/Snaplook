@@ -7,6 +7,7 @@ import '../../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/trusted_domains.dart';
 import '../models/detection_result.dart';
 import '../../../../core/constants/category_rules.dart';
+import '../../../../services/cloudinary_service.dart';
 
 /// Detection pipeline powered by the backend SearchAPI service (with optional SerpAPI fallback).
 class DetectionService {
@@ -52,11 +53,24 @@ class DetectionService {
   Future<List<DetectionResult>> _analyzeViaDetectorServer(XFile image) async {
     final endpoint = AppConstants.serpDetectAndSearchEndpoint;
     final bytes = await image.readAsBytes();
+
+    // Upload to Cloudinary first
+    final cloudinaryService = CloudinaryService();
+    final imageUrl = await cloudinaryService.uploadImage(bytes);
+
     final payload = <String, dynamic>{
-      'image_base64': base64Encode(bytes),
       'max_crops': _maxGarments,
       'max_results_per_garment': _maxResultsPerGarment,
     };
+
+    // Send image URL if Cloudinary upload succeeded, otherwise fallback to base64
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      debugPrint('Cloudinary upload successful: $imageUrl');
+      payload['image_url'] = imageUrl;
+    } else {
+      debugPrint('Cloudinary upload failed, using base64 fallback');
+      payload['image_base64'] = base64Encode(bytes);
+    }
 
     final location = AppConstants.searchApiLocation;
     if (location != null && location.isNotEmpty) {
