@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -23,10 +24,12 @@ class ProductDetailPage extends ConsumerStatefulWidget {
 
 class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   final _inspirationService = InspirationService();
+  final _random = Random();
   late PageController _pageController;
   late List<Map<String, dynamic>> _products;
   int _currentIndex = 0;
   final Map<int, bool> _likedProducts = {};
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -45,20 +48,36 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     super.dispose();
   }
 
-  void _loadMoreProducts() {
+  void _loadMoreProducts() async {
+    if (_isLoadingMore) return;
+
+    _isLoadingMore = true;
     final inspirationState = ref.read(inspirationProvider);
+
     if (!inspirationState.isLoading && inspirationState.images.isNotEmpty) {
-      final newProducts = inspirationState.images
+      final filteredProducts = inspirationState.images
           .where((p) {
             final imageUrl = p['image_url'] as String?;
             return imageUrl != null && _inspirationService.isHighQualityImage(imageUrl);
           })
-          .take(50)
           .toList();
 
+      final shuffledProducts = List<Map<String, dynamic>>.from(filteredProducts)
+        ..shuffle(_random);
+
       setState(() {
-        _products = [widget.product, ...newProducts];
+        if (_products.length == 1) {
+          _products = [widget.product, ...shuffledProducts.take(100).toList()];
+        } else {
+          _products.addAll(shuffledProducts.take(50).toList());
+        }
       });
+    }
+
+    _isLoadingMore = false;
+
+    if (inspirationState.images.isEmpty || inspirationState.hasReachedEnd == false) {
+      ref.read(inspirationProvider.notifier).loadImages();
     }
   }
 
@@ -67,8 +86,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       _currentIndex = index;
     });
 
-    if (index >= _products.length - 3) {
-      ref.read(inspirationProvider.notifier).loadImages();
+    if (index >= _products.length - 10 && !_isLoadingMore) {
+      _loadMoreProducts();
     }
   }
 
@@ -82,8 +101,18 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             controller: _pageController,
             scrollDirection: Axis.vertical,
             onPageChanged: _onPageChanged,
-            itemCount: _products.length,
             itemBuilder: (context, index) {
+              if (index >= _products.length) {
+                return Container(
+                  color: Colors.white,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFf2003c),
+                    ),
+                  ),
+                );
+              }
+
               return _ProductDetailCard(
                 product: _products[index],
                 heroTag: index == 0 ? widget.heroTag : 'product_${_products[index]['id']}_$index',
