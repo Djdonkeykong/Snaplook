@@ -383,8 +383,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
         loadingHideWorkItem?.cancel()
 
-        // Set up a blank overlay to hide default UI immediately (no text/spinner)
-        setupBlankOverlay()
+        // Don't show any overlay yet - wait for auth check in viewDidAppear
     }
 
     private func setupBlankOverlay() {
@@ -555,14 +554,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self?.applySheetCornerRadius(12)
         }
 
-        // Check authentication first before processing anything
+        // Check authentication first before showing any UI
         if !isUserAuthenticated() {
             shareLog("❌ User not authenticated - showing login required modal")
             showLoginRequiredModal()
             return
         }
 
-        // Show choice buttons after authentication passes
+        // User is authenticated - show blank overlay with choice buttons
+        setupBlankOverlay()
         showChoiceButtons()
 
         // Prevent re-processing attachments if already done (e.g., sheet bounce-back)
@@ -2504,37 +2504,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return false
         }
 
-        // Log all keys for debugging
-        let allKeys = Array(defaults.dictionaryRepresentation().keys).sorted()
-        shareLog("📋 All UserDefaults keys: \(allKeys)")
+        // Check for our custom authentication flag
+        // The main app will set this when user logs in
+        let isAuthenticated = defaults.bool(forKey: "user_authenticated")
 
-        // Check for Supabase session
-        // Supabase Flutter stores the session with the key format:
-        // "flutter.supabase_flutter.persist_session_key" or similar
-        // Also check for the actual Supabase project-specific keys
-        let hasSupabaseSession = allKeys.contains { key in
-            key.contains("persist_session") ||
-            key.contains("supabase") ||
-            key.hasPrefix("sb-") ||
-            key.contains("auth") && key.contains("token")
-        }
-
-        if hasSupabaseSession {
-            shareLog("✅ User authenticated - found Supabase session")
-            // Log which key matched
-            if let matchedKey = allKeys.first(where: { key in
-                key.contains("persist_session") ||
-                key.contains("supabase") ||
-                key.hasPrefix("sb-") ||
-                key.contains("auth") && key.contains("token")
-            }) {
-                shareLog("📍 Matched key: \(matchedKey)")
-            }
+        if isAuthenticated {
+            shareLog("✅ User authenticated")
         } else {
-            shareLog("❌ No Supabase session found - user not authenticated")
+            shareLog("❌ User not authenticated")
         }
 
-        return hasSupabaseSession
+        return isAuthenticated
     }
 
     private func showLoginRequiredModal() {
