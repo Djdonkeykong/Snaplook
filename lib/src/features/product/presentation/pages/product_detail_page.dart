@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
@@ -215,10 +216,13 @@ class _ProductDetailCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             final productUrl = product['product_url'] as String?;
                             if (productUrl != null) {
-                              // TODO: Open URL
+                              final uri = Uri.parse(productUrl);
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(
