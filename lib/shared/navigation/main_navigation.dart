@@ -261,18 +261,18 @@ class _NavigationItemState extends State<_NavigationItem>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 350),
       vsync: this,
     );
 
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.15)
+        tween: Tween<double>(begin: 1.0, end: 1.08)
             .chain(CurveTween(curve: Curves.easeOut)),
         weight: 40,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.15, end: 1.0)
+        tween: Tween<double>(begin: 1.08, end: 1.0)
             .chain(CurveTween(curve: Curves.easeInOut)),
         weight: 60,
       ),
@@ -296,7 +296,7 @@ class _NavigationItemState extends State<_NavigationItem>
     if (widget.isSelected && !oldWidget.isSelected) {
       _controller.forward(from: 0.0);
     } else if (!widget.isSelected && oldWidget.isSelected) {
-      _controller.reverse(from: 1.0);
+      _controller.value = 0.0;
     }
   }
 
