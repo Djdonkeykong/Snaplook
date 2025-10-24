@@ -211,8 +211,19 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     return Positioned.fill(
       child: Stack(
         children: [
-          // Smooth up-and-down scanning beam
-          _ScanningBeam(),
+          // Smooth up-and-down scanning beam (clipped to crop area if active)
+          if (_isCropMode && _cropRect != null)
+            Positioned(
+              left: _cropRect!.left,
+              top: _cropRect!.top,
+              width: _cropRect!.width,
+              height: _cropRect!.height,
+              child: ClipRect(
+                child: _ScanningBeam(),
+              ),
+            )
+          else
+            _ScanningBeam(),
           // "Analyzing..." text at bottom with red accent
           Positioned(
             bottom: 140,
