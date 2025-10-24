@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
-import 'package:shimmer/shimmer.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/pages/results_page.dart';
 import '../../../../../core/constants/app_constants.dart';
@@ -218,28 +217,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               color: Colors.black.withOpacity(0.15),
             ),
           ),
-          // Visible shimmer scanning effect
-          Shimmer.fromColors(
-            baseColor: Colors.transparent,
-            highlightColor: const Color(0xFFf2003c).withOpacity(0.7),
-            direction: ShimmerDirection.ttb,
-            period: const Duration(milliseconds: 2000),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    const Color(0xFFf2003c).withOpacity(0.5),
-                    const Color(0xFFf2003c).withOpacity(0.8),
-                    const Color(0xFFf2003c).withOpacity(0.5),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
+          // Smooth up-and-down scanning beam
+          _ScanningBeam(),
           // "Analyzing..." text at bottom with red accent
           Positioned(
             bottom: 140,
@@ -842,5 +821,88 @@ class _CornerBracketPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CornerBracketPainter oldDelegate) {
     return oldDelegate.alignment != alignment;
+  }
+}
+
+// Custom scanning beam that animates up and down smoothly
+class _ScanningBeam extends StatefulWidget {
+  const _ScanningBeam();
+
+  @override
+  State<_ScanningBeam> createState() => _ScanningBeamState();
+}
+
+class _ScanningBeamState extends State<_ScanningBeam>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _ScanningBeamPainter(_animation.value),
+          child: Container(),
+        );
+      },
+    );
+  }
+}
+
+class _ScanningBeamPainter extends CustomPainter {
+  final double progress;
+
+  _ScanningBeamPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final beamHeight = 60.0;
+    final beamY = size.height * progress - beamHeight / 2;
+
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.transparent,
+          const Color(0xFFf2003c).withOpacity(0.3),
+          const Color(0xFFf2003c).withOpacity(0.8),
+          const Color(0xFFf2003c).withOpacity(0.3),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
+      ).createShader(Rect.fromLTWH(0, beamY, size.width, beamHeight));
+
+    canvas.drawRect(
+      Rect.fromLTWH(0, beamY, size.width, beamHeight),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ScanningBeamPainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }
