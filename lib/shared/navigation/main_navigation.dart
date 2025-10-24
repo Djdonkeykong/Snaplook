@@ -218,7 +218,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   }
 }
 
-class _NavigationItem extends StatelessWidget {
+class _NavigationItem extends StatefulWidget {
   final IconData? icon;
   final IconData? selectedIcon;
   final String? svgIcon;
@@ -248,20 +248,87 @@ class _NavigationItem extends StatelessWidget {
   });
 
   @override
+  State<_NavigationItem> createState() => _NavigationItemState();
+}
+
+class _NavigationItemState extends State<_NavigationItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.15)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.15, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 60,
+      ),
+    ]).animate(_controller);
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
+    );
+
+    if (widget.isSelected) {
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(_NavigationItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isSelected && !oldWidget.isSelected) {
+      _controller.forward(from: 0.0);
+    } else if (!widget.isSelected && oldWidget.isSelected) {
+      _controller.reverse(from: 1.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      behavior: HitTestBehavior.opaque, // ✅ expand tap area even if transparent
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         HapticFeedback.mediumImpact();
-        onTap();
+        widget.onTap();
       },
       child: SizedBox(
-        width: 80, // wider hitbox
-        height: 56, // fits bottom bar
+        width: 80,
+        height: 56,
         child: Center(
           child: Padding(
-            padding: EdgeInsets.only(top: topPadding ?? 0.0),
-            child: _buildIcon(),
+            padding: EdgeInsets.only(top: widget.topPadding ?? 0.0),
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: widget.isSelected ? _scaleAnimation.value : 1.0,
+                  child: _buildIcon(),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -269,35 +336,60 @@ class _NavigationItem extends StatelessWidget {
   }
 
   Widget _buildIcon() {
-    final color =
-        isSelected ? AppColors.secondary : AppColors.black;
+    final color = widget.isSelected ? AppColors.secondary : AppColors.black;
 
-    final size = isSelected && selectedIconSize != null
-        ? selectedIconSize!
-        : (iconSize ?? 28.0);
+    final size = widget.isSelected && widget.selectedIconSize != null
+        ? widget.selectedIconSize!
+        : (widget.iconSize ?? 28.0);
 
     Widget iconWidget;
 
-    if (svgIcon != null && selectedSvgIcon != null) {
-      iconWidget = SvgPicture.asset(
-        isSelected ? selectedSvgIcon! : svgIcon!,
-        width: size,
-        height: size,
-        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+    if (widget.svgIcon != null && widget.selectedSvgIcon != null) {
+      iconWidget = AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.8, end: 1.0).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: SvgPicture.asset(
+          widget.isSelected ? widget.selectedSvgIcon! : widget.svgIcon!,
+          key: ValueKey(widget.isSelected),
+          width: size,
+          height: size,
+          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+        ),
       );
-    } else if (icon != null && selectedIcon != null) {
-      iconWidget = Icon(
-        isSelected ? selectedIcon! : icon!,
-        color: color,
-        size: size,
+    } else if (widget.icon != null && widget.selectedIcon != null) {
+      iconWidget = AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.8, end: 1.0).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: Icon(
+          widget.isSelected ? widget.selectedIcon! : widget.icon!,
+          key: ValueKey(widget.isSelected),
+          color: color,
+          size: size,
+        ),
       );
     } else {
       iconWidget = const SizedBox.shrink();
     }
 
-    if (isSelected && selectedIconOffset != null) {
+    if (widget.isSelected && widget.selectedIconOffset != null) {
       return Transform.translate(
-        offset: selectedIconOffset!,
+        offset: widget.selectedIconOffset!,
         child: iconWidget,
       );
     }
