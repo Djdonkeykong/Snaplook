@@ -878,28 +878,28 @@ class _ScanningBeamPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final beamHeight = 120.0; // Taller for softer gradient
-    final beamY = size.height * progress - beamHeight / 2;
+    final beamHeight = 200.0; // Taller for longer trail
+    final beamY = size.height * progress - beamHeight * 0.2; // Offset so bright part leads
 
-    // Create softer, more diffused gradient
+    // Create gradient with bright leading edge and trailing fade
     final paint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
           Colors.transparent,
-          const Color(0xFFf2003c).withOpacity(0.05),
+          const Color(0xFFf2003c).withOpacity(0.6), // Bright leading edge
+          const Color(0xFFf2003c).withOpacity(0.4),
+          const Color(0xFFf2003c).withOpacity(0.25),
           const Color(0xFFf2003c).withOpacity(0.15),
-          const Color(0xFFf2003c).withOpacity(0.3),
-          const Color(0xFFf2003c).withOpacity(0.5),
-          const Color(0xFFf2003c).withOpacity(0.3),
-          const Color(0xFFf2003c).withOpacity(0.15),
-          const Color(0xFFf2003c).withOpacity(0.05),
+          const Color(0xFFf2003c).withOpacity(0.08),
+          const Color(0xFFf2003c).withOpacity(0.04),
+          const Color(0xFFf2003c).withOpacity(0.02),
           Colors.transparent,
         ],
-        stops: const [0.0, 0.15, 0.25, 0.35, 0.5, 0.65, 0.75, 0.85, 1.0],
+        stops: const [0.0, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 1.0],
       ).createShader(Rect.fromLTWH(0, beamY, size.width, beamHeight))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
 
     canvas.drawRect(
       Rect.fromLTWH(0, beamY, size.width, beamHeight),
