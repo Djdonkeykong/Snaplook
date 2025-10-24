@@ -147,7 +147,7 @@ class AccountCreationPage extends ConsumerWidget {
               backgroundColor: Colors.white,
               textColor: Colors.black,
               borderColor: const Color(0xFFE5E7EB),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const EmailSignInPage(),
@@ -231,7 +231,7 @@ class _AuthButton extends StatefulWidget {
   final Color backgroundColor;
   final Color textColor;
   final Color? borderColor;
-  final VoidCallback onPressed;
+  final Future<void> Function() onPressed;
 
   const _AuthButton({
     required this.icon,
@@ -257,7 +257,7 @@ class _AuthButtonState extends State<_AuthButton> {
     HapticFeedback.mediumImpact();
 
     try {
-      widget.onPressed();
+      await widget.onPressed();
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -332,7 +332,7 @@ class _AuthButtonWithSvg extends StatefulWidget {
   final Color backgroundColor;
   final Color textColor;
   final Color? borderColor;
-  final VoidCallback onPressed;
+  final Future<void> Function() onPressed;
 
   const _AuthButtonWithSvg({
     required this.svgAsset,
@@ -358,7 +358,7 @@ class _AuthButtonWithSvgState extends State<_AuthButtonWithSvg> {
     HapticFeedback.mediumImpact();
 
     try {
-      widget.onPressed();
+      await widget.onPressed();
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
