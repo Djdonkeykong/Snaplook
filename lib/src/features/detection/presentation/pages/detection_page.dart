@@ -225,7 +225,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
             delay: const Duration(milliseconds: 800),
             duration: const Duration(milliseconds: 1500),
             scanningHeightOffset: 0.25,
-            scanningLinePadding: 0,
+            scanningLinePadding: EdgeInsets.zero,
             child: Container(),
           ),
           // "Analyzing..." text at bottom with red accent
