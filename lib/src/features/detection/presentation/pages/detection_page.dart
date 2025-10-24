@@ -918,8 +918,7 @@ class _ScanningBeamPainter extends CustomPainter {
         end: Alignment.bottomCenter,
         colors: colors,
         stops: const [0.0, 0.15, 0.25, 0.4, 0.6, 0.75, 0.85, 1.0],
-      ).createShader(Rect.fromLTWH(0, beamY, size.width, beamHeight))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+      ).createShader(Rect.fromLTWH(0, beamY, size.width, beamHeight));
 
     canvas.drawRect(
       Rect.fromLTWH(0, beamY, size.width, beamHeight),
