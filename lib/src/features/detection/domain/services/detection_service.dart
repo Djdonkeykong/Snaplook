@@ -75,9 +75,7 @@ class DetectionService {
       final cloudinaryService = CloudinaryService();
       imageUrl = await cloudinaryService.uploadImage(bytes);
 
-      if (imageUrl != null && imageUrl.isNotEmpty) {
-        debugPrint('Cloudinary upload successful: $imageUrl');
-      } else {
+      if (imageUrl == null || imageUrl.isEmpty) {
         debugPrint('Cloudinary upload failed, using base64 fallback');
         // Fallback to base64 if upload fails
       }

@@ -1265,34 +1265,35 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         source_desc = req.image_url[:80] if req.image_url else f"<base64:{len(req.image_base64 or '')} chars>"
         print(f"\U0001f680 Starting detect-and-search pipeline for: {source_desc}...")
 
-        # Step 1: Acquire image
-        if req.image_base64:
-            try:
-                img_bytes = base64.b64decode(req.image_base64)
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Invalid image_base64 payload: {e}")
-            try:
-                image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Unable to decode base64 image: {e}")
-            print(f"\u2705 Image decoded from base64: {image.width}x{image.height} ({time.time()-t0:.2f}s)")
-        else:
-            image = download_image_from_url(req.image_url)
-            print(f"\u2705 Image downloaded: {image.width}x{image.height} ({time.time()-t0:.2f}s)")
-
-        # Step 2: YOLOS detection (skip if user manually cropped)
-        t_detect = time.time()
-        if req.skip_detection:
-            print("βœ‚οΈ User cropped image - skipping YOLO detection, treating entire image as one garment")
-            # Create a single "garment" representing the entire image
+        # Step 1: Acquire image (skip if user provided pre-cropped URL)
+        image = None
+        if req.skip_detection and req.image_url:
+            print("βœ‚οΈ User cropped image - skipping download and detection")
+            # Create a single "garment" representing the pre-cropped image
             filtered = [{
                 "id": "user_crop_1",
                 "label": "garment",
                 "score": 1.0,
-                "bbox": [0, 0, image.width, image.height],
-                "expanded_bbox": [0, 0, image.width, image.height]
+                "bbox": [0, 0, 1, 1],  # Dummy bbox
+                "expanded_bbox": [0, 0, 1, 1]  # Dummy bbox
             }]
         else:
+            if req.image_base64:
+                try:
+                    img_bytes = base64.b64decode(req.image_base64)
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=f"Invalid image_base64 payload: {e}")
+                try:
+                    image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                except Exception as e:
+                    raise HTTPException(status_code=400, detail=f"Unable to decode base64 image: {e}")
+                print(f"\u2705 Image decoded from base64: {image.width}x{image.height} ({time.time()-t0:.2f}s)")
+            else:
+                image = download_image_from_url(req.image_url)
+                print(f"\u2705 Image downloaded: {image.width}x{image.height} ({time.time()-t0:.2f}s)")
+
+            # Step 2: YOLOS detection
+            t_detect = time.time()
             filtered = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
             print(f"🧠 Detection completed in {time.time()-t_detect:.2f}s with {len(filtered)} garments")
 
@@ -1300,42 +1301,54 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
             return {'success': False, 'message': 'No garments detected', 'results': []}
 
         # Step 3: Crop & upload garments to Cloudinary (parallel)
-        crop_data = []
-        for det in filtered:
-            ratio = resolve_expand_ratio(det["label"], req.expand_ratio)
-            expanded = expand_bbox(det["bbox"], image.width, image.height, ratio)
-            det["expanded_bbox"] = expanded
-            crop_data.append((det, image.crop(tuple(expanded))))
+        # Skip upload if user provided a pre-cropped image URL
+        if req.skip_detection and req.image_url:
+            print(f"[Cloudinary] Using pre-uploaded image URL (skip_detection=true)")
+            crops_with_urls = [{"garment": filtered[0], "crop_url": req.image_url}]
+        elif image is not None:
+            crop_data = []
+            for det in filtered:
+                ratio = resolve_expand_ratio(det["label"], req.expand_ratio)
+                expanded = expand_bbox(det["bbox"], image.width, image.height, ratio)
+                det["expanded_bbox"] = expanded
+                crop_data.append((det, image.crop(tuple(expanded))))
 
-        def upload_crop_safe(crop_tuple):
-            det, crop = crop_tuple
-            try:
-                url = upload_to_cloudinary(crop, det.get('label'))
-                if url:
-                    return det, url
-                print(f"[Cloudinary] Empty response for {det.get('label') or 'unknown'}")
-            except Exception as e:
-                print(f"[Cloudinary] Upload failed for {det['label']}: {e}")
-            return det, None
+            def upload_crop_safe(crop_tuple):
+                det, crop = crop_tuple
+                try:
+                    url = upload_to_cloudinary(crop, det.get('label'))
+                    if url:
+                        return det, url
+                    print(f"[Cloudinary] Empty response for {det.get('label') or 'unknown'}")
+                except Exception as e:
+                    print(f"[Cloudinary] Upload failed for {det['label']}: {e}")
+                return det, None
 
-        print(f"[Cloudinary] Uploading {len(crop_data)} crops in parallel...")
-        t_upload = time.time()
-        with ThreadPoolExecutor(max_workers=min(6, len(crop_data))) as ex:
-            results = list(ex.map(upload_crop_safe, crop_data))
-        print(f"[Cloudinary] Uploads complete in {time.time()-t_upload:.2f}s")
+            print(f"[Cloudinary] Uploading {len(crop_data)} crops in parallel...")
+            t_upload = time.time()
+            with ThreadPoolExecutor(max_workers=min(6, len(crop_data))) as ex:
+                results = list(ex.map(upload_crop_safe, crop_data))
+            print(f"[Cloudinary] Uploads complete in {time.time()-t_upload:.2f}s")
 
-        crops_with_urls = [
-            {"garment": det, "crop_url": url}
-            for det, url in results if url
-        ]
+            crops_with_urls = [
+                {"garment": det, "crop_url": url}
+                for det, url in results if url
+            ]
+        else:
+            print("[Cloudinary] No image available for cropping")
+            crops_with_urls = []
         if not crops_with_urls:
-            print("[Cloudinary] All crop uploads failed - attempting fallback with entire image")
-            fallback_url = upload_to_cloudinary(image, filtered[0].get('label'))
-            if fallback_url:
-                crops_with_urls = [{"garment": filtered[0], "crop_url": fallback_url}]
-                print("[Cloudinary] Fallback: Using entire image for search")
+            if image is not None:
+                print("[Cloudinary] All crop uploads failed - attempting fallback with entire image")
+                fallback_url = upload_to_cloudinary(image, filtered[0].get('label'))
+                if fallback_url:
+                    crops_with_urls = [{"garment": filtered[0], "crop_url": fallback_url}]
+                    print("[Cloudinary] Fallback: Using entire image for search")
+                else:
+                    print("[Cloudinary] Fallback failed - aborting search")
+                    return {'success': False, 'message': 'Failed to upload garment crops to CDN', 'results': []}
             else:
-                print("[Cloudinary] Fallback failed - aborting search")
+                print("[Cloudinary] No crops and no image available - aborting search")
                 return {'success': False, 'message': 'Failed to upload garment crops to CDN', 'results': []}
 
         # Step 4: Visual product search (parallel, no timeout)

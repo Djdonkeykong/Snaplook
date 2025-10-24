@@ -697,9 +697,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       // Skip YOLO detection if user manually cropped the image
       final skipDetection = _croppedImageBytes != null || (_isCropMode && _cropRect != null);
 
-      print('DEBUG: _isCropMode=$_isCropMode, _cropRect=$_cropRect, _croppedImageBytes=${_croppedImageBytes != null}');
-      print('DEBUG: skipDetection=$skipDetection');
-
       final results = await ref
           .read(detectionProvider.notifier)
           .analyzeImage(
