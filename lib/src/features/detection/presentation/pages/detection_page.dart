@@ -221,7 +221,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           // Scanning animation with brighter Munsell Red
           Transform(
             alignment: Alignment.center,
-            transform: Matrix4.rotationX(3.14159), // Flip vertically to reverse gradient
+            transform: Matrix4.diagonal3Values(1, -1, 1), // Flip upside down to reverse gradient
             child: ScanningEffect(
               scanningColor: const Color(0xFFf2003c).withOpacity(0.6),
               borderLineColor: Colors.transparent,
