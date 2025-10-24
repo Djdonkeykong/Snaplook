@@ -219,14 +219,18 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
             ),
           ),
           // Scanning animation with brighter Munsell Red
-          ScanningEffect(
-            scanningColor: const Color(0xFFf2003c).withOpacity(0.6),
-            borderLineColor: Colors.transparent,
-            delay: const Duration(milliseconds: 600),
-            duration: const Duration(milliseconds: 2500),
-            scanningHeightOffset: 0.15,
-            scanningLinePadding: EdgeInsets.zero,
-            child: Container(),
+          Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.rotationX(3.14159), // Flip vertically to reverse gradient
+            child: ScanningEffect(
+              scanningColor: const Color(0xFFf2003c).withOpacity(0.6),
+              borderLineColor: Colors.transparent,
+              delay: const Duration(milliseconds: 400),
+              duration: const Duration(milliseconds: 1800),
+              scanningHeightOffset: 0.15,
+              scanningLinePadding: EdgeInsets.zero,
+              child: Container(),
+            ),
           ),
           // "Analyzing..." text at bottom with red accent
           Positioned(
