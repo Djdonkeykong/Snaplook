@@ -228,66 +228,65 @@ class _ProductDetailCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              final productUrl = product['url'] as String?;
+                      ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            final productUrl = product['url'] as String?;
 
-                              if (productUrl == null || productUrl.isEmpty) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('No product link available'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                                return;
-                              }
-
-                              final uri = Uri.parse(productUrl);
-                              if (await canLaunchUrl(uri)) {
-                                await launchUrl(uri, mode: LaunchMode.externalApplication);
-                              } else {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Cannot open product link'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              }
-                            } catch (e) {
+                            if (productUrl == null || productUrl.isEmpty) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error opening link: $e'),
+                                  const SnackBar(
+                                    content: Text('No product link available'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                              return;
+                            }
+
+                            final uri = Uri.parse(productUrl);
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Cannot open product link'),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
                               }
                             }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFf2003c),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28),
-                            ),
-                            elevation: 0,
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error opening link: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFf2003c),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 32),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
                           ),
-                          child: const Text(
-                            'View product',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'View product',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
+                      const Spacer(),
                       const SizedBox(width: 12),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -303,45 +302,47 @@ class _ProductDetailCard extends StatelessWidget {
                               );
                             },
                             child: SizedBox(
-                              width: 40,
+                              width: 44,
                               height: 48,
                               child: Center(
                                 child: Transform.translate(
                                   offset: const Offset(0, -0.5),
                                   child: Icon(
                                     SnaplookAiIcon.aiSearchIcon,
-                                    size: 19,
+                                    size: 21,
                                     color: Colors.black,
                                   ),
                                 ),
                               ),
                             ),
                           ),
+                          const SizedBox(width: 4),
                           GestureDetector(
                             onTap: onLikeToggle,
                             child: SizedBox(
-                              width: 40,
+                              width: 44,
                               height: 48,
                               child: Center(
                                 child: Transform.translate(
                                   offset: isLiked ? Offset.zero : const Offset(-1, 1),
                                   child: Icon(
                                     isLiked ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
-                                    size: isLiked ? 22 * 0.85 : 22 * 0.75,
+                                    size: isLiked ? 24 * 0.85 : 24 * 0.75,
                                     color: isLiked ? const Color(0xFFf2003c) : Colors.black,
                                   ),
                                 ),
                               ),
                             ),
                           ),
+                          const SizedBox(width: 4),
                           SizedBox(
-                            width: 40,
+                            width: 44,
                             height: 48,
                             child: Center(
                               child: Icon(
                                 Icons.more_horiz,
                                 color: Colors.black,
-                                size: 22,
+                                size: 24,
                               ),
                             ),
                           ),
