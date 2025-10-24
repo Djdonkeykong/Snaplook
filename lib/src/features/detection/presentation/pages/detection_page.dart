@@ -212,16 +212,16 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     return Positioned.fill(
       child: Stack(
         children: [
-          // Darker overlay for better contrast
+          // Light overlay for subtle contrast
           Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.4),
+              color: Colors.black.withOpacity(0.15),
             ),
           ),
-          // Elegant shimmer scanning effect
+          // Visible shimmer scanning effect
           Shimmer.fromColors(
             baseColor: Colors.transparent,
-            highlightColor: const Color(0xFFf2003c).withOpacity(0.3),
+            highlightColor: const Color(0xFFf2003c).withOpacity(0.7),
             direction: ShimmerDirection.ttb,
             period: const Duration(milliseconds: 2000),
             child: Container(
@@ -231,7 +231,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    const Color(0xFFf2003c).withOpacity(0.2),
+                    const Color(0xFFf2003c).withOpacity(0.5),
+                    const Color(0xFFf2003c).withOpacity(0.8),
+                    const Color(0xFFf2003c).withOpacity(0.5),
                     Colors.transparent,
                   ],
                 ),
