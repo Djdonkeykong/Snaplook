@@ -346,7 +346,9 @@ class _NavigationItemState extends State<_NavigationItem>
 
     if (widget.svgIcon != null && widget.selectedSvgIcon != null) {
       iconWidget = AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
+        duration: widget.isSelected
+            ? const Duration(milliseconds: 300)
+            : Duration.zero,
         transitionBuilder: (child, animation) {
           return FadeTransition(
             opacity: animation,
@@ -366,7 +368,9 @@ class _NavigationItemState extends State<_NavigationItem>
       );
     } else if (widget.icon != null && widget.selectedIcon != null) {
       iconWidget = AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
+        duration: widget.isSelected
+            ? const Duration(milliseconds: 300)
+            : Duration.zero,
         transitionBuilder: (child, animation) {
           return FadeTransition(
             opacity: animation,
