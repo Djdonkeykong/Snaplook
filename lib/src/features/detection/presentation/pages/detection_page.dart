@@ -221,7 +221,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           // Scanning animation
           ScanningEffect(
             scanningColor: const Color(0xFFf2003c).withOpacity(0.3),
-            borderLineColor: const Color(0xFFf2003c),
+            borderLineColor: Colors.transparent,
             delay: const Duration(milliseconds: 500),
             duration: const Duration(seconds: 2),
             scanningHeightOffset: 0.3,
@@ -337,45 +337,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   }
 
   Widget _buildAnalyzingButton() {
-    return Container(
-      width: 200,
-      height: 56,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: const Center(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.black,
-              ),
-            ),
-            SizedBox(width: 12),
-            Text(
-              'Analyzing...',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    // Return empty widget - the overlay now handles the "Analyzing" text
+    return const SizedBox.shrink();
   }
 
   Widget _buildCropOverlay() {
