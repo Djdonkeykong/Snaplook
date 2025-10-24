@@ -1305,6 +1305,9 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         if req.skip_detection and req.image_url:
             print(f"[Cloudinary] Using pre-uploaded image URL (skip_detection=true)")
             crops_with_urls = [{"garment": filtered[0], "crop_url": req.image_url}]
+        elif len(filtered) == 1 and req.image_url:
+            print(f"[Cloudinary] Only 1 garment detected - using full image instead of cropping")
+            crops_with_urls = [{"garment": filtered[0], "crop_url": req.image_url}]
         elif image is not None:
             crop_data = []
             for det in filtered:
