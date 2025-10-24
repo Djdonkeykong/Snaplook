@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
+import 'package:scanning_effect/scanning_effect.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/pages/results_page.dart';
 import '../../../../../core/constants/app_constants.dart';
@@ -209,27 +210,61 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
   Widget _buildDetectionOverlay() {
     return Positioned.fill(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.2),
-        ),
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.all(20),
+      child: Stack(
+        children: [
+          // Slight dark overlay
+          Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
-              shape: BoxShape.circle,
+              color: Colors.black.withOpacity(0.15),
             ),
-            child: const SizedBox(
-              width: 40,
-              height: 40,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 3,
+          ),
+          // Scanning animation
+          ScanningEffect(
+            scanningColor: const Color(0xFFf2003c).withOpacity(0.3),
+            borderLineColor: const Color(0xFFf2003c),
+            delay: const Duration(milliseconds: 500),
+            duration: const Duration(seconds: 2),
+            scanningHeightOffset: 0.3,
+            child: Container(),
+          ),
+          // "Analyzing..." text at bottom
+          Positioned(
+            bottom: 140,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Analyzing...',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

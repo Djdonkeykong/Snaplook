@@ -76,6 +76,13 @@ UPPER_IOU_MERGE = 0.35          # area IoU to consider same
 UPPER_OVERLAP_MERGE = 0.60      # inner-overlap fraction to consider same
 UPPER_CENTER_DIST_FRAC = 0.30   # centers closer than ~30% of avg width → same region
 
+# Bottom garments for dress conflict resolution
+BOTTOM_GARMENTS = {
+    "pants",
+    "shorts",
+    "skirt",
+}
+
 # Slightly promote bottoms so we keep 1 upper + 1 lower when ties happen
 CATEGORY_PRIORITY = {
     "coat": 5, "jacket": 5, "dress": 5,
@@ -913,6 +920,61 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
         x1, y1, x2, y2 = d["bbox"]
         print(f"   - {d['label']} ({d['score']:.3f}) bbox=({x1},{y1},{x2},{y2})")
 
+    # === Smart Dress vs Separates Conflict Resolution ===
+    # If a "dress" contains both a top AND bottom, it might be a misclassification
+    dress_detections = [d for d in detections if d["label"] == "dress"]
+    for dress in dress_detections:
+        tops = [d for d in detections if d["label"] in UPPER_GARMENTS]
+        bottoms = [d for d in detections if d["label"] in BOTTOM_GARMENTS]
+
+        # Check if dress contains both a top and bottom
+        has_top = any(overlap_ratio(t["bbox"], dress["bbox"]) > 0.5 for t in tops)
+        has_bottom = any(overlap_ratio(b["bbox"], dress["bbox"]) > 0.5 for b in bottoms)
+
+        if has_top and has_bottom:
+            # Find the best top and bottom
+            best_top = max(tops, key=lambda d: d["score"]) if tops else None
+            best_bottom = max(bottoms, key=lambda d: d["score"]) if bottoms else None
+
+            if best_top and best_bottom:
+                separates_avg = (best_top["score"] + best_bottom["score"]) / 2
+
+                # Smart confidence-based decision:
+                # 1. High-confidence dress (>0.75) → trust it, don't demote
+                # 2. Medium dress (0.50-0.75) → demote only if separates are stronger
+                # 3. Low dress (<0.50) → demote if separates are reasonable (>0.35)
+
+                should_demote = False
+                reason = ""
+
+                if dress["score"] > 0.75:
+                    # High confidence dress - likely a real dress
+                    reason = "dress has high confidence, keeping it"
+                elif dress["score"] >= 0.50:
+                    # Medium confidence - prefer separates if they're reasonable
+                    # The presence of BOTH top AND bottom is strong evidence
+                    if separates_avg > 0.45:
+                        should_demote = True
+                        reason = f"separates avg ({separates_avg:.3f}) reasonable, preferring top+bottom"
+                else:
+                    # Low confidence dress - prefer separates if reasonable
+                    if separates_avg > 0.35:
+                        should_demote = True
+                        reason = f"low dress confidence + reasonable separates ({separates_avg:.3f})"
+
+                if should_demote:
+                    print(f"👗❌ Dress ({dress['score']:.3f}) contains {best_top['label']} ({best_top['score']:.3f}) + {best_bottom['label']} ({best_bottom['score']:.3f}) - demoting dress ({reason})")
+                    dress["score"] = dress["score"] * 0.5
+                else:
+                    print(f"👗✅ Dress ({dress['score']:.3f}) contains separates but {reason}")
+
+    # Re-sort after potential score adjustments
+    detections = sorted(
+        detections,
+        key=lambda d: (CATEGORY_PRIORITY.get(d["label"], 0), d["score"]),
+        reverse=True,
+    )
+
     # === Smart Containment Filtering (v5) ===
     filtered = []
     for det in detections:
@@ -1024,8 +1086,12 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
         acc = [d for d in detections if d["label"] in ACCESSORIES]
         if acc:
             best = max(acc, key=lambda d: d["score"])
-            filtered.append(best)
-            print(f"🎒 Added accessory '{best['label']}' to ensure coverage.")
+            # Require higher confidence for bags (0.40) to reduce false positives
+            if best["label"] == "bag, wallet" and best["score"] < 0.40:
+                print(f"🎒 Skipping weak accessory '{best['label']}' (score {best['score']:.3f})")
+            else:
+                filtered.append(best)
+                print(f"🎒 Added accessory '{best['label']}' to ensure coverage.")
 
     # Deduplication by label (keep strongest), but preserve best shoe
     deduped = {}
