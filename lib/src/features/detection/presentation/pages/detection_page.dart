@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
-import 'package:scanning_effect/scanning_effect.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/pages/results_page.dart';
 import '../../../../../core/constants/app_constants.dart';
@@ -218,18 +218,24 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               color: Colors.black.withOpacity(0.4),
             ),
           ),
-          // Scanning animation with brighter Munsell Red
-          Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.diagonal3Values(1, -1, 1), // Flip upside down to reverse gradient
-            child: ScanningEffect(
-              scanningColor: const Color(0xFFf2003c).withOpacity(0.6),
-              borderLineColor: Colors.transparent,
-              delay: const Duration(milliseconds: 400),
-              duration: const Duration(milliseconds: 1800),
-              scanningHeightOffset: 0.15,
-              scanningLinePadding: EdgeInsets.zero,
-              child: Container(),
+          // Elegant shimmer scanning effect
+          Shimmer.fromColors(
+            baseColor: Colors.transparent,
+            highlightColor: const Color(0xFFf2003c).withOpacity(0.3),
+            direction: ShimmerDirection.ttb,
+            period: const Duration(milliseconds: 2000),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    const Color(0xFFf2003c).withOpacity(0.2),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
             ),
           ),
           // "Analyzing..." text at bottom with red accent
