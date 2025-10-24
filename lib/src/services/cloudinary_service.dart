@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
-import '../core/constants/app_constants.dart';
+import '../../core/constants/app_constants.dart';
 
 class CloudinaryService {
   static const _uploadUrl = 'https://api.cloudinary.com/v1_1';
