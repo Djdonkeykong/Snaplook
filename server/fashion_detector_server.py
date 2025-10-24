@@ -389,6 +389,7 @@ class DetectAndSearchRequest(BaseModel):
     max_crops: Optional[int] = Field(default=MAX_GARMENTS)
     max_results_per_garment: Optional[int] = Field(default=10)
     location: Optional[str] = Field(default=None)  # Country code for search results (e.g., 'us', 'uk', 'ca')
+    skip_detection: Optional[bool] = Field(default=False)  # Skip YOLO detection for user-cropped images
 
     @model_validator(mode="after")
     def validate_image_source(self) -> "DetectAndSearchRequest":
@@ -1279,10 +1280,21 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
             image = download_image_from_url(req.image_url)
             print(f"\u2705 Image downloaded: {image.width}x{image.height} ({time.time()-t0:.2f}s)")
 
-        # Step 2: YOLOS detection
+        # Step 2: YOLOS detection (skip if user manually cropped)
         t_detect = time.time()
-        filtered = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
-        print(f"🧠 Detection completed in {time.time()-t_detect:.2f}s with {len(filtered)} garments")
+        if req.skip_detection:
+            print("βœ‚οΈ User cropped image - skipping YOLO detection, treating entire image as one garment")
+            # Create a single "garment" representing the entire image
+            filtered = [{
+                "id": "user_crop_1",
+                "label": "garment",
+                "score": 1.0,
+                "bbox": [0, 0, image.width, image.height],
+                "expanded_bbox": [0, 0, image.width, image.height]
+            }]
+        else:
+            filtered = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
+            print(f"🧠 Detection completed in {time.time()-t_detect:.2f}s with {len(filtered)} garments")
 
         if not filtered:
             return {'success': False, 'message': 'No garments detected', 'results': []}
