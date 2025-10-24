@@ -878,22 +878,28 @@ class _ScanningBeamPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final beamHeight = 60.0;
+    final beamHeight = 120.0; // Taller for softer gradient
     final beamY = size.height * progress - beamHeight / 2;
 
+    // Create softer, more diffused gradient
     final paint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
           Colors.transparent,
+          const Color(0xFFf2003c).withOpacity(0.05),
+          const Color(0xFFf2003c).withOpacity(0.15),
           const Color(0xFFf2003c).withOpacity(0.3),
-          const Color(0xFFf2003c).withOpacity(0.8),
+          const Color(0xFFf2003c).withOpacity(0.5),
           const Color(0xFFf2003c).withOpacity(0.3),
+          const Color(0xFFf2003c).withOpacity(0.15),
+          const Color(0xFFf2003c).withOpacity(0.05),
           Colors.transparent,
         ],
-        stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
-      ).createShader(Rect.fromLTWH(0, beamY, size.width, beamHeight));
+        stops: const [0.0, 0.15, 0.25, 0.35, 0.5, 0.65, 0.75, 0.85, 1.0],
+      ).createShader(Rect.fromLTWH(0, beamY, size.width, beamHeight))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
 
     canvas.drawRect(
       Rect.fromLTWH(0, beamY, size.width, beamHeight),
