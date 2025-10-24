@@ -222,9 +222,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           ScanningEffect(
             scanningColor: const Color(0xFFf2003c).withOpacity(0.6),
             borderLineColor: Colors.transparent,
-            delay: const Duration(milliseconds: 800),
-            duration: const Duration(milliseconds: 1500),
-            scanningHeightOffset: 0.25,
+            delay: const Duration(milliseconds: 600),
+            duration: const Duration(milliseconds: 2500),
+            scanningHeightOffset: 0.15,
             scanningLinePadding: EdgeInsets.zero,
             child: Container(),
           ),
