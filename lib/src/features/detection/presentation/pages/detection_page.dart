@@ -885,7 +885,9 @@ class _ScanningBeamPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final beamHeight = 200.0;
-    final beamY = size.height * progress - beamHeight * (isMovingDown ? 0.2 : 0.8);
+    // Position beam so bright edge goes from 0 to size.height
+    // Bright edge is at 85% when moving down, 15% when moving up
+    final beamY = size.height * progress - beamHeight * (isMovingDown ? 0.85 : 0.15);
 
     // Gradient direction changes based on movement (subtle opacities)
     final colors = isMovingDown
