@@ -65,24 +65,6 @@ class DetectionService {
   }) async {
     final endpoint = AppConstants.serpDetectAndSearchEndpoint;
 
-    String? imageUrl = cloudinaryUrl;
-
-    // Only upload if we don't already have a Cloudinary URL
-    if (imageUrl == null && image != null) {
-      final bytes = await image.readAsBytes();
-
-      // Upload to Cloudinary
-      final cloudinaryService = CloudinaryService();
-      imageUrl = await cloudinaryService.uploadImage(bytes);
-
-      if (imageUrl == null || imageUrl.isEmpty) {
-        debugPrint('Cloudinary upload failed, using base64 fallback');
-        // Fallback to base64 if upload fails
-      }
-    } else if (cloudinaryUrl != null) {
-      debugPrint('Using Cloudinary transformation URL: $cloudinaryUrl');
-    }
-
     final payload = <String, dynamic>{
       'max_crops': _maxGarments,
       'max_results_per_garment': _maxResultsPerGarment,
@@ -94,11 +76,15 @@ class DetectionService {
       debugPrint('βœ‚οΈ User cropped image - skipping YOLO detection, direct search');
     }
 
-    // Send image URL if available
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      payload['image_url'] = imageUrl;
+    // Strategy for sending image to backend:
+    // 1. If user manually cropped (cloudinaryUrl provided) β†' send URL (already uploaded)
+    // 2. If normal detection β†' send base64 (backend will upload crops as needed)
+    if (cloudinaryUrl != null) {
+      debugPrint('Using pre-uploaded Cloudinary URL: $cloudinaryUrl');
+      payload['image_url'] = cloudinaryUrl;
     } else if (image != null) {
-      // Fallback to base64 if no URL available
+      // Send base64 for detection - backend will upload crops as needed
+      debugPrint('Sending base64 image for detection');
       final bytes = await image.readAsBytes();
       payload['image_base64'] = base64Encode(bytes);
     } else {
