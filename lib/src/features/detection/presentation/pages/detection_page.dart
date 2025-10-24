@@ -212,22 +212,23 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     return Positioned.fill(
       child: Stack(
         children: [
-          // Slight dark overlay
+          // Darker overlay for better contrast
           Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withOpacity(0.4),
             ),
           ),
-          // Scanning animation
+          // Scanning animation with brighter Munsell Red
           ScanningEffect(
-            scanningColor: const Color(0xFFf2003c).withOpacity(0.3),
+            scanningColor: const Color(0xFFf2003c).withOpacity(0.6),
             borderLineColor: Colors.transparent,
-            delay: const Duration(milliseconds: 500),
-            duration: const Duration(seconds: 2),
-            scanningHeightOffset: 0.3,
+            delay: const Duration(milliseconds: 800),
+            duration: const Duration(milliseconds: 1500),
+            scanningHeightOffset: 0.25,
+            scanningLinePadding: 0,
             child: Container(),
           ),
-          // "Analyzing..." text at bottom
+          // "Analyzing..." text at bottom with red accent
           Positioned(
             bottom: 140,
             left: 0,
@@ -236,8 +237,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
+                  color: const Color(0xFFf2003c),
                   borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFf2003c).withOpacity(0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
