@@ -29,13 +29,15 @@ class DetectionService {
 
   /// Main entrypoint ΓÇö prefer the backend SearchAPI pipeline, with optional legacy fallback.
   Future<List<DetectionResult>> analyzeImage(
-    XFile image, {
+    XFile? image, {
     bool skipDetection = false,
+    String? cloudinaryUrl,
   }) async {
     try {
       final serverResults = await _analyzeViaDetectorServer(
         image,
         skipDetection: skipDetection,
+        cloudinaryUrl: cloudinaryUrl,
       );
       if (serverResults.isNotEmpty) {
         debugPrint(
@@ -50,22 +52,38 @@ class DetectionService {
         debugPrint(
           'Γå⌐∩╕Å Falling back to legacy SerpAPI pipeline (strictMode=false).',
         );
-        return _analyzeImageLegacy(image);
+        return _analyzeImageLegacy(image!);
       }
       rethrow;
     }
   }
 
   Future<List<DetectionResult>> _analyzeViaDetectorServer(
-    XFile image, {
+    XFile? image, {
     bool skipDetection = false,
+    String? cloudinaryUrl,
   }) async {
     final endpoint = AppConstants.serpDetectAndSearchEndpoint;
-    final bytes = await image.readAsBytes();
 
-    // Upload to Cloudinary first
-    final cloudinaryService = CloudinaryService();
-    final imageUrl = await cloudinaryService.uploadImage(bytes);
+    String? imageUrl = cloudinaryUrl;
+
+    // Only upload if we don't already have a Cloudinary URL
+    if (imageUrl == null && image != null) {
+      final bytes = await image.readAsBytes();
+
+      // Upload to Cloudinary
+      final cloudinaryService = CloudinaryService();
+      imageUrl = await cloudinaryService.uploadImage(bytes);
+
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        debugPrint('Cloudinary upload successful: $imageUrl');
+      } else {
+        debugPrint('Cloudinary upload failed, using base64 fallback');
+        // Fallback to base64 if upload fails
+      }
+    } else if (cloudinaryUrl != null) {
+      debugPrint('Using Cloudinary transformation URL: $cloudinaryUrl');
+    }
 
     final payload = <String, dynamic>{
       'max_crops': _maxGarments,
@@ -78,13 +96,15 @@ class DetectionService {
       debugPrint('βœ‚οΈ User cropped image - skipping YOLO detection, direct search');
     }
 
-    // Send image URL if Cloudinary upload succeeded, otherwise fallback to base64
+    // Send image URL if available
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      debugPrint('Cloudinary upload successful: $imageUrl');
       payload['image_url'] = imageUrl;
-    } else {
-      debugPrint('Cloudinary upload failed, using base64 fallback');
+    } else if (image != null) {
+      // Fallback to base64 if no URL available
+      final bytes = await image.readAsBytes();
       payload['image_base64'] = base64Encode(bytes);
+    } else {
+      throw Exception('No image or URL provided');
     }
 
     final location = AppConstants.searchApiLocation;

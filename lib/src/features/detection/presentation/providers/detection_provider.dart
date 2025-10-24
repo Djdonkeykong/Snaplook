@@ -40,8 +40,9 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
 
   // === Core image analysis ===
   Future<List<DetectionResult>> analyzeImage(
-    XFile image, {
+    XFile? image, {
     bool skipDetection = false,
+    String? cloudinaryUrl,
   }) async {
     print('DetectionProvider: Starting image analysis');
     state = state.copyWith(isAnalyzing: true, error: null);
@@ -51,6 +52,7 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
       final results = await _detectionService.analyzeImage(
         image,
         skipDetection: skipDetection,
+        cloudinaryUrl: cloudinaryUrl,
       );
       print('DetectionProvider: Analysis completed, ${results.length} results');
 

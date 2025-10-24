@@ -107,26 +107,23 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               ),
               child: IconButton(
                 padding: EdgeInsets.zero,
-                onPressed: () async {
-                  if (_isCropMode) {
-                    // Lock in the crop when exiting crop mode
-                    await _applyCrop();
-                  } else {
-                    // Entering crop mode - initialize crop rect if needed
-                    if (_cropRect == null) {
-                      final screenSize = MediaQuery.of(context).size;
-                      final cropSize = screenSize.width * 0.7;
-                      final left = (screenSize.width - cropSize) / 2;
-                      final top = (screenSize.height - cropSize) / 2;
-                      _cropRect = Rect.fromLTWH(left, top, cropSize, cropSize);
-                    }
-                  }
+                onPressed: () {
                   setState(() {
+                    if (!_isCropMode) {
+                      // Entering crop mode - initialize crop rect if needed
+                      if (_cropRect == null) {
+                        final screenSize = MediaQuery.of(context).size;
+                        final cropSize = screenSize.width * 0.7;
+                        final left = (screenSize.width - cropSize) / 2;
+                        final top = (screenSize.height - cropSize) / 2;
+                        _cropRect = Rect.fromLTWH(left, top, cropSize, cropSize);
+                      }
+                    }
                     _isCropMode = !_isCropMode;
                   });
                 },
                 icon: Icon(
-                  _isCropMode ? Icons.check : Icons.crop_free,
+                  _isCropMode ? Icons.close : Icons.crop_free,
                   color: _isCropMode ? Colors.white : Colors.black,
                   size: 20,
                 ),
@@ -186,8 +183,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                     right: 0,
                     child: _buildDotsIndicator(imagesState),
                   ),
-                if (_isCropMode && !detectionState.isAnalyzing)
-                  _buildCropOverlay(),
+                if (_isCropMode) _buildCropOverlay(),
                 Positioned(
                   bottom: 80,
                   left: 0,
@@ -257,12 +253,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           onTap: () async {
             HapticFeedback.mediumImpact();
 
-            // If crop mode is active, apply the crop first
+            // If crop mode is active, apply the crop first but keep crop mode active
             if (_isCropMode && _cropRect != null) {
               await _applyCrop();
-              setState(() {
-                _isCropMode = false;
-              });
             }
 
             _startDetection();
@@ -401,44 +394,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           ),
         ),
 
-        // Action buttons
-        Positioned(
-          bottom: 100,
-          left: 0,
-          right: 0,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // Cancel button
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _isCropMode = false;
-                    });
-                  },
-                  icon: const Icon(Icons.close, color: Colors.white, size: 24),
-                ),
-              ),
-
-              // Crop & Analyze button
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFf2003c),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: IconButton(
-                  onPressed: _performCrop,
-                  icon: const Icon(Icons.check, color: Colors.white, size: 24),
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -551,67 +506,60 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     ];
   }
 
-  void _performCrop() async {
+  Future<String> _generateCloudinaryCropUrl(String originalUrl, Rect cropRect) async {
     try {
-      // Exit crop mode
-      setState(() {
-        _isCropMode = false;
-      });
+      // Download image to get actual dimensions
+      final response = await http.get(Uri.parse(originalUrl));
+      if (response.statusCode != 200) return originalUrl;
 
-      // For now, just proceed with the original image since we're focusing on the UI
-      // The crop rect information is available in _cropRect if needed for actual cropping
-      XFile imageToAnalyze;
+      final imageBytes = response.bodyBytes;
+      final originalImage = img.decodeImage(imageBytes);
+      if (originalImage == null) return originalUrl;
 
-      if (widget.imageUrl != null) {
-        // Network image - download and create XFile
-        final response = await http.get(Uri.parse(widget.imageUrl!));
-        if (response.statusCode == 200) {
-          final tempDir = Directory.systemTemp;
-          final fileName = 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
-          final file = File('${tempDir.path}/$fileName');
-          await file.writeAsBytes(response.bodyBytes);
-          imageToAnalyze = XFile(file.path);
-        } else {
-          throw Exception('Failed to download image');
-        }
+      // Calculate crop coordinates (same logic as _applyCrop)
+      final screenSize = MediaQuery.of(context).size;
+      final imageAspectRatio = originalImage.width / originalImage.height;
+      final screenAspectRatio = screenSize.width / screenSize.height;
+
+      double displayWidth, displayHeight;
+      double offsetX = 0, offsetY = 0;
+
+      if (imageAspectRatio > screenAspectRatio) {
+        displayHeight = screenSize.height;
+        displayWidth = displayHeight * imageAspectRatio;
+        offsetX = (displayWidth - screenSize.width) / 2;
       } else {
-        // Local image
-        final imagesState = ref.read(selectedImagesProvider);
-        final selectedImage = imagesState.currentImage;
-        if (selectedImage == null) return;
-        imageToAnalyze = selectedImage;
+        displayWidth = screenSize.width;
+        displayHeight = displayWidth / imageAspectRatio;
+        offsetY = (displayHeight - screenSize.height) / 2;
       }
 
-      // Skip YOLO detection if user manually cropped the image
-      final skipDetection = _croppedImageBytes != null;
+      final scaleX = originalImage.width / displayWidth;
+      final scaleY = originalImage.height / displayHeight;
 
-      final results = await ref
-          .read(detectionProvider.notifier)
-          .analyzeImage(imageToAnalyze, skipDetection: skipDetection);
+      final cropX = ((cropRect.left + offsetX) * scaleX).round().clamp(0, originalImage.width);
+      final cropY = ((cropRect.top + offsetY) * scaleY).round().clamp(0, originalImage.height);
+      final cropWidth = (cropRect.width * scaleX).round().clamp(1, originalImage.width - cropX);
+      final cropHeight = (cropRect.height * scaleY).round().clamp(1, originalImage.height - cropY);
 
-      if (mounted && results.isNotEmpty) {
-        // Haptic feedback for successful detection
-        HapticFeedback.mediumImpact();
+      // Build Cloudinary transformation URL
+      final uri = Uri.parse(originalUrl);
+      final pathSegments = uri.pathSegments.toList();
+      final uploadIndex = pathSegments.indexOf('upload');
+      if (uploadIndex == -1) return originalUrl;
 
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => ResultsPage(
-              results: results,
-              originalImageUrl: widget.imageUrl,
-            ),
-          ),
-        );
-      }
+      // Insert crop transformation
+      final cropTransform = 'c_crop,w_$cropWidth,h_$cropHeight,x_$cropX,y_$cropY';
+      pathSegments.insert(uploadIndex + 1, cropTransform);
+
+      return Uri(
+        scheme: uri.scheme,
+        host: uri.host,
+        pathSegments: pathSegments,
+      ).toString();
     } catch (e) {
-      print('Error performing crop: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Analysis failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      print('Error generating Cloudinary crop URL: $e');
+      return originalUrl;
     }
   }
 
@@ -701,11 +649,31 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     print('Starting detection process...');
 
     try {
-      XFile imageToAnalyze;
+      XFile? imageToAnalyze;
+      String? imageUrl;
 
-      // Use cropped image if available
-      if (_croppedImageBytes != null) {
-        print('Using cropped image for analysis');
+      // Handle cropped images differently based on source
+      if (_isCropMode && _cropRect != null && widget.imageUrl != null) {
+        // For Cloudinary URLs, use transformation API instead of downloading/re-uploading
+        if (widget.imageUrl!.contains('cloudinary.com')) {
+          print('Using Cloudinary transformation for crop');
+          imageUrl = await _generateCloudinaryCropUrl(widget.imageUrl!, _cropRect!);
+          print('Cloudinary crop URL: $imageUrl');
+          // Don't create XFile - we'll pass URL directly
+        } else {
+          // For non-Cloudinary URLs, crop locally
+          await _applyCrop();
+          if (_croppedImageBytes != null) {
+            final tempDir = Directory.systemTemp;
+            final fileName = 'cropped_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            final file = File('${tempDir.path}/$fileName');
+            await file.writeAsBytes(_croppedImageBytes!);
+            imageToAnalyze = XFile(file.path);
+          }
+        }
+      } else if (_croppedImageBytes != null) {
+        // Local image was cropped
+        print('Using locally cropped image for analysis');
         final tempDir = Directory.systemTemp;
         final fileName = 'cropped_${DateTime.now().millisecondsSinceEpoch}.jpg';
         final file = File('${tempDir.path}/$fileName');
@@ -733,11 +701,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       }
 
       // Skip YOLO detection if user manually cropped the image
-      final skipDetection = _croppedImageBytes != null;
+      final skipDetection = _croppedImageBytes != null || (_isCropMode && _cropRect != null);
 
       final results = await ref
           .read(detectionProvider.notifier)
-          .analyzeImage(imageToAnalyze, skipDetection: skipDetection);
+          .analyzeImage(
+            imageToAnalyze,
+            skipDetection: skipDetection,
+            cloudinaryUrl: imageUrl,
+          );
 
       if (mounted && results.isNotEmpty) {
         // Haptic feedback for successful detection
