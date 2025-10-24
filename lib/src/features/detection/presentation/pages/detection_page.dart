@@ -211,12 +211,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     return Positioned.fill(
       child: Stack(
         children: [
-          // Light overlay for subtle contrast
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.15),
-            ),
-          ),
           // Smooth up-and-down scanning beam
           _ScanningBeam(),
           // "Analyzing..." text at bottom with red accent
@@ -836,7 +830,7 @@ class _ScanningBeamState extends State<_ScanningBeam>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
-  double _previousValue = 0.0;
+  double? _previousValue;
 
   @override
   void initState() {
@@ -864,7 +858,7 @@ class _ScanningBeamState extends State<_ScanningBeam>
       animation: _animation,
       builder: (context, child) {
         final currentValue = _animation.value;
-        final isMovingDown = currentValue > _previousValue;
+        final isMovingDown = _previousValue == null ? true : currentValue > _previousValue!;
         _previousValue = currentValue;
 
         return CustomPaint(
