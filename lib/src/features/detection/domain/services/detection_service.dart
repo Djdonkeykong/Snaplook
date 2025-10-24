@@ -28,9 +28,15 @@ class DetectionService {
   static final Map<String, List<Map<String, dynamic>>> _serpCache = {};
 
   /// Main entrypoint ΓÇö prefer the backend SearchAPI pipeline, with optional legacy fallback.
-  Future<List<DetectionResult>> analyzeImage(XFile image) async {
+  Future<List<DetectionResult>> analyzeImage(
+    XFile image, {
+    bool skipDetection = false,
+  }) async {
     try {
-      final serverResults = await _analyzeViaDetectorServer(image);
+      final serverResults = await _analyzeViaDetectorServer(
+        image,
+        skipDetection: skipDetection,
+      );
       if (serverResults.isNotEmpty) {
         debugPrint(
           'Γ£à Returning ${serverResults.length} results from SearchAPI pipeline.',
@@ -50,7 +56,10 @@ class DetectionService {
     }
   }
 
-  Future<List<DetectionResult>> _analyzeViaDetectorServer(XFile image) async {
+  Future<List<DetectionResult>> _analyzeViaDetectorServer(
+    XFile image, {
+    bool skipDetection = false,
+  }) async {
     final endpoint = AppConstants.serpDetectAndSearchEndpoint;
     final bytes = await image.readAsBytes();
 
@@ -62,6 +71,12 @@ class DetectionService {
       'max_crops': _maxGarments,
       'max_results_per_garment': _maxResultsPerGarment,
     };
+
+    // Add skip_detection flag for user-cropped images
+    if (skipDetection) {
+      payload['skip_detection'] = true;
+      debugPrint('βœ‚οΈ User cropped image - skipping YOLO detection, direct search');
+    }
 
     // Send image URL if Cloudinary upload succeeded, otherwise fallback to base64
     if (imageUrl != null && imageUrl.isNotEmpty) {

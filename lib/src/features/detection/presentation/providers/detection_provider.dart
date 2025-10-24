@@ -39,13 +39,19 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
   DetectionNotifier(this._detectionService) : super(const DetectionState());
 
   // === Core image analysis ===
-  Future<List<DetectionResult>> analyzeImage(XFile image) async {
+  Future<List<DetectionResult>> analyzeImage(
+    XFile image, {
+    bool skipDetection = false,
+  }) async {
     print('DetectionProvider: Starting image analysis');
     state = state.copyWith(isAnalyzing: true, error: null);
 
     try {
       print('DetectionProvider: Calling detection service...');
-      final results = await _detectionService.analyzeImage(image);
+      final results = await _detectionService.analyzeImage(
+        image,
+        skipDetection: skipDetection,
+      );
       print('DetectionProvider: Analysis completed, ${results.length} results');
 
       // ✅ Ensure category resets to "All" on each new detection

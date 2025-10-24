@@ -254,8 +254,17 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(40),
-          onTap: () {
+          onTap: () async {
             HapticFeedback.mediumImpact();
+
+            // If crop mode is active, apply the crop first
+            if (_isCropMode && _cropRect != null) {
+              await _applyCrop();
+              setState(() {
+                _isCropMode = false;
+              });
+            }
+
             _startDetection();
           },
           child: Center(
@@ -573,9 +582,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         imageToAnalyze = selectedImage;
       }
 
+      // Skip YOLO detection if user manually cropped the image
+      final skipDetection = _croppedImageBytes != null;
+
       final results = await ref
           .read(detectionProvider.notifier)
-          .analyzeImage(imageToAnalyze);
+          .analyzeImage(imageToAnalyze, skipDetection: skipDetection);
 
       if (mounted && results.isNotEmpty) {
         // Haptic feedback for successful detection
@@ -720,9 +732,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         imageToAnalyze = selectedImage;
       }
 
+      // Skip YOLO detection if user manually cropped the image
+      final skipDetection = _croppedImageBytes != null;
+
       final results = await ref
           .read(detectionProvider.notifier)
-          .analyzeImage(imageToAnalyze);
+          .analyzeImage(imageToAnalyze, skipDetection: skipDetection);
 
       if (mounted && results.isNotEmpty) {
         // Haptic feedback for successful detection
