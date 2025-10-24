@@ -252,12 +252,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           borderRadius: BorderRadius.circular(40),
           onTap: () async {
             HapticFeedback.mediumImpact();
-
-            // If crop mode is active, apply the crop first but keep crop mode active
-            if (_isCropMode && _cropRect != null) {
-              await _applyCrop();
-            }
-
             _startDetection();
           },
           child: Center(
@@ -702,6 +696,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
       // Skip YOLO detection if user manually cropped the image
       final skipDetection = _croppedImageBytes != null || (_isCropMode && _cropRect != null);
+
+      print('DEBUG: _isCropMode=$_isCropMode, _cropRect=$_cropRect, _croppedImageBytes=${_croppedImageBytes != null}');
+      print('DEBUG: skipDetection=$skipDetection');
 
       final results = await ref
           .read(detectionProvider.notifier)
