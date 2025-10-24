@@ -836,6 +836,7 @@ class _ScanningBeamState extends State<_ScanningBeam>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  double _previousValue = 0.0;
 
   @override
   void initState() {
@@ -862,8 +863,12 @@ class _ScanningBeamState extends State<_ScanningBeam>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
+        final currentValue = _animation.value;
+        final isMovingDown = currentValue > _previousValue;
+        _previousValue = currentValue;
+
         return CustomPaint(
-          painter: _ScanningBeamPainter(_animation.value),
+          painter: _ScanningBeamPainter(currentValue, isMovingDown),
           child: Container(),
         );
       },
@@ -873,31 +878,44 @@ class _ScanningBeamState extends State<_ScanningBeam>
 
 class _ScanningBeamPainter extends CustomPainter {
   final double progress;
+  final bool isMovingDown;
 
-  _ScanningBeamPainter(this.progress);
+  _ScanningBeamPainter(this.progress, this.isMovingDown);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final beamHeight = 200.0; // Taller for longer trail
-    final beamY = size.height * progress - beamHeight * 0.2; // Offset so bright part leads
+    final beamHeight = 200.0;
+    final beamY = size.height * progress - beamHeight * (isMovingDown ? 0.2 : 0.8);
 
-    // Create gradient with bright leading edge and trailing fade
+    // Gradient direction changes based on movement (subtle opacities)
+    final colors = isMovingDown
+        ? [
+            Colors.transparent,
+            const Color(0xFFf2003c).withOpacity(0.01),
+            const Color(0xFFf2003c).withOpacity(0.03),
+            const Color(0xFFf2003c).withOpacity(0.08),
+            const Color(0xFFf2003c).withOpacity(0.15),
+            const Color(0xFFf2003c).withOpacity(0.3),
+            const Color(0xFFf2003c).withOpacity(0.4), // Bright at bottom when moving down
+            Colors.transparent,
+          ]
+        : [
+            Colors.transparent,
+            const Color(0xFFf2003c).withOpacity(0.4), // Bright at top when moving up
+            const Color(0xFFf2003c).withOpacity(0.3),
+            const Color(0xFFf2003c).withOpacity(0.15),
+            const Color(0xFFf2003c).withOpacity(0.08),
+            const Color(0xFFf2003c).withOpacity(0.03),
+            const Color(0xFFf2003c).withOpacity(0.01),
+            Colors.transparent,
+          ];
+
     final paint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          Colors.transparent,
-          const Color(0xFFf2003c).withOpacity(0.6), // Bright leading edge
-          const Color(0xFFf2003c).withOpacity(0.4),
-          const Color(0xFFf2003c).withOpacity(0.25),
-          const Color(0xFFf2003c).withOpacity(0.15),
-          const Color(0xFFf2003c).withOpacity(0.08),
-          const Color(0xFFf2003c).withOpacity(0.04),
-          const Color(0xFFf2003c).withOpacity(0.02),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 1.0],
+        colors: colors,
+        stops: const [0.0, 0.15, 0.25, 0.4, 0.6, 0.75, 0.85, 1.0],
       ).createShader(Rect.fromLTWH(0, beamY, size.width, beamHeight))
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
 
@@ -909,6 +927,6 @@ class _ScanningBeamPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ScanningBeamPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+    return oldDelegate.progress != progress || oldDelegate.isMovingDown != isMovingDown;
   }
 }
