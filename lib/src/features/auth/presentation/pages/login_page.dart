@@ -376,7 +376,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 }
 
-class _AuthButton extends StatelessWidget {
+class _AuthButton extends StatefulWidget {
   final IconData icon;
   final double iconSize;
   final String label;
@@ -396,27 +396,48 @@ class _AuthButton extends StatelessWidget {
   });
 
   @override
+  State<_AuthButton> createState() => _AuthButtonState();
+}
+
+class _AuthButtonState extends State<_AuthButton> {
+  bool _isLoading = false;
+
+  Future<void> _handlePress() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      widget.onPressed();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: widget.backgroundColor,
         borderRadius: BorderRadius.circular(28),
-        border: borderColor != null
-            ? Border.all(color: borderColor!, width: 1.5)
+        border: widget.borderColor != null
+            ? Border.all(color: widget.borderColor!, width: 1.5)
             : null,
       ),
       child: ElevatedButton(
-        onPressed: () {
-          HapticFeedback.mediumImpact();
-          onPressed();
-        },
+        onPressed: _isLoading ? null : _handlePress,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          foregroundColor: textColor,
+          backgroundColor: widget.backgroundColor,
+          foregroundColor: widget.textColor,
           elevation: 0,
           shadowColor: Colors.transparent,
+          disabledBackgroundColor: widget.backgroundColor,
+          disabledForegroundColor: widget.textColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
@@ -424,19 +445,29 @@ class _AuthButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Transform.translate(
-              offset: icon == Icons.apple ? const Offset(0, -2) : Offset.zero,
-              child: Icon(icon, size: iconSize),
-            ),
+            if (_isLoading)
+              SizedBox(
+                width: widget.iconSize,
+                height: widget.iconSize,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(widget.textColor),
+                ),
+              )
+            else
+              Transform.translate(
+                offset: widget.icon == Icons.apple ? const Offset(0, -2) : Offset.zero,
+                child: Icon(widget.icon, size: widget.iconSize),
+              ),
             const SizedBox(width: 12),
             Text(
-              label,
+              widget.label,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
-                color: textColor,
+                color: widget.textColor,
               ),
             ),
           ],
@@ -446,7 +477,7 @@ class _AuthButton extends StatelessWidget {
   }
 }
 
-class _AuthButtonWithSvg extends StatelessWidget {
+class _AuthButtonWithSvg extends StatefulWidget {
   final String svgAsset;
   final double iconSize;
   final String label;
@@ -466,27 +497,48 @@ class _AuthButtonWithSvg extends StatelessWidget {
   });
 
   @override
+  State<_AuthButtonWithSvg> createState() => _AuthButtonWithSvgState();
+}
+
+class _AuthButtonWithSvgState extends State<_AuthButtonWithSvg> {
+  bool _isLoading = false;
+
+  Future<void> _handlePress() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
+
+    try {
+      widget.onPressed();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: widget.backgroundColor,
         borderRadius: BorderRadius.circular(28),
-        border: borderColor != null
-            ? Border.all(color: borderColor!, width: 1.5)
+        border: widget.borderColor != null
+            ? Border.all(color: widget.borderColor!, width: 1.5)
             : null,
       ),
       child: ElevatedButton(
-        onPressed: () {
-          HapticFeedback.mediumImpact();
-          onPressed();
-        },
+        onPressed: _isLoading ? null : _handlePress,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor,
-          foregroundColor: textColor,
+          backgroundColor: widget.backgroundColor,
+          foregroundColor: widget.textColor,
           elevation: 0,
           shadowColor: Colors.transparent,
+          disabledBackgroundColor: widget.backgroundColor,
+          disabledForegroundColor: widget.textColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
@@ -494,20 +546,30 @@ class _AuthButtonWithSvg extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SvgPicture.asset(
-              svgAsset,
-              width: iconSize,
-              height: iconSize,
-            ),
+            if (_isLoading)
+              SizedBox(
+                width: widget.iconSize,
+                height: widget.iconSize,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(widget.textColor),
+                ),
+              )
+            else
+              SvgPicture.asset(
+                widget.svgAsset,
+                width: widget.iconSize,
+                height: widget.iconSize,
+              ),
             const SizedBox(width: 12),
             Text(
-              label,
+              widget.label,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
-                color: textColor,
+                color: widget.textColor,
               ),
             ),
           ],
