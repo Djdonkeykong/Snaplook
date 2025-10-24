@@ -288,82 +288,64 @@ class _ProductDetailCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      SizedBox(width: spacing.m),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.of(context, rootNavigator: true).push(
-                            MaterialPageRoute(
-                              builder: (context) => DetectionPage(
-                                imageUrl: product['image_url'] ?? '',
+                      const SizedBox(width: 12),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context, rootNavigator: true).push(
+                                MaterialPageRoute(
+                                  builder: (context) => DetectionPage(
+                                    imageUrl: product['image_url'] ?? '',
+                                  ),
+                                ),
+                              );
+                            },
+                            child: SizedBox(
+                              width: 40,
+                              height: 48,
+                              child: Center(
+                                child: Transform.translate(
+                                  offset: const Offset(0, -0.5),
+                                  child: Icon(
+                                    SnaplookAiIcon.aiSearchIcon,
+                                    size: 19,
+                                    color: Colors.black,
+                                  ),
+                                ),
                               ),
                             ),
-                          );
-                        },
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: const Color(0xFFE5E7EB),
-                              width: 1,
-                            ),
-                            borderRadius: BorderRadius.circular(24),
                           ),
-                          child: Center(
-                            child: Transform.translate(
-                              offset: const Offset(0, -0.5),
+                          GestureDetector(
+                            onTap: onLikeToggle,
+                            child: SizedBox(
+                              width: 40,
+                              height: 48,
+                              child: Center(
+                                child: Transform.translate(
+                                  offset: isLiked ? Offset.zero : const Offset(-1, 1),
+                                  child: Icon(
+                                    isLiked ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
+                                    size: isLiked ? 22 * 0.85 : 22 * 0.75,
+                                    color: isLiked ? const Color(0xFFf2003c) : Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 40,
+                            height: 48,
+                            child: Center(
                               child: Icon(
-                                SnaplookAiIcon.aiSearchIcon,
-                                size: 19,
+                                Icons.more_horiz,
                                 color: Colors.black,
+                                size: 22,
                               ),
                             ),
                           ),
-                        ),
-                      ),
-                      SizedBox(width: spacing.sm),
-                      GestureDetector(
-                        onTap: onLikeToggle,
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: const Color(0xFFE5E7EB),
-                              width: 1,
-                            ),
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: Center(
-                            child: Transform.translate(
-                              offset: isLiked ? Offset.zero : const Offset(-1, 1),
-                              child: Icon(
-                                isLiked ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
-                                size: isLiked ? 22 * 0.85 : 22 * 0.75,
-                                color: isLiked ? const Color(0xFFf2003c) : Colors.black,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: spacing.sm),
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: const Color(0xFFE5E7EB),
-                            width: 1,
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.more_horiz,
-                            color: Colors.black,
-                            size: 22,
-                          ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
