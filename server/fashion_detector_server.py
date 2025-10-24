@@ -907,7 +907,8 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
         reverse=True,
     )
 
-    print(f"✨ Found {len(detections)} initial garment candidates:")
+    initial_detection_count = len(detections)
+    print(f"✨ Found {initial_detection_count} initial garment candidates:")
     for d in detections:
         x1, y1, x2, y2 = d["bbox"]
         print(f"   - {d['label']} ({d['score']:.3f}) bbox=({x1},{y1},{x2},{y2})")
@@ -1057,7 +1058,7 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
 
     print(f"🧠 Summary: {', '.join(d['label'] for d in filtered)}")
     print(f"🧹 After hierarchical filtering: {len(filtered)} garments kept.")
-    return filtered
+    return filtered, initial_detection_count
 
 # === SERP API SEARCH HELPERS ===
 def download_image_from_url(image_url: str) -> Image.Image:
@@ -1192,7 +1193,7 @@ def detect(req: DetectRequest):
         image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 
         # Step 1 — Run YOLOS detection
-        filtered = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
+        filtered, initial_count = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
 
         # Step 2 — Prepare crops
         crops = []
@@ -1267,6 +1268,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
 
         # Step 1: Acquire image (skip if user provided pre-cropped URL)
         image = None
+        initial_count = 0
         if req.skip_detection and req.image_url:
             print("βœ‚οΈ User cropped image - skipping download and detection")
             # Create a single "garment" representing the pre-cropped image
@@ -1277,6 +1279,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 "bbox": [0, 0, 1, 1],  # Dummy bbox
                 "expanded_bbox": [0, 0, 1, 1]  # Dummy bbox
             }]
+            initial_count = 1  # User manually cropped, treat as 1 initial detection
         else:
             if req.image_base64:
                 try:
@@ -1294,7 +1297,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
 
             # Step 2: YOLOS detection
             t_detect = time.time()
-            filtered = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
+            filtered, initial_count = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
             print(f"🧠 Detection completed in {time.time()-t_detect:.2f}s with {len(filtered)} garments")
 
         if not filtered:
@@ -1305,8 +1308,8 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         if req.skip_detection and req.image_url:
             print(f"[Cloudinary] Using pre-uploaded image URL (skip_detection=true)")
             crops_with_urls = [{"garment": filtered[0], "crop_url": req.image_url}]
-        elif len(filtered) == 1 and req.image_url:
-            print(f"[Cloudinary] Only 1 garment detected - using full image instead of cropping")
+        elif initial_count == 1 and req.image_url:
+            print(f"[Cloudinary] Only 1 garment initially detected - using full image instead of cropping")
             crops_with_urls = [{"garment": filtered[0], "crop_url": req.image_url}]
         elif image is not None:
             crop_data = []
@@ -1544,7 +1547,7 @@ def debug_detect(req: DetectRequest):
     out_dir = Path(f"./debug_{timestamp}")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    filtered = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
+    filtered, initial_count = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
 
     debug_image = image.copy()
     draw = ImageDraw.Draw(debug_image)
