@@ -218,7 +218,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               top: _cropRect!.top,
               width: _cropRect!.width,
               height: _cropRect!.height,
-              child: ClipRect(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
                 child: _ScanningBeam(),
               ),
             )
@@ -853,7 +854,7 @@ class _ScanningBeamState extends State<_ScanningBeam>
 
     _animation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeInOut,
+      curve: Curves.linear, // Linear for continuous smooth motion
     );
   }
 
