@@ -118,6 +118,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                         final top = (screenSize.height - cropSize) / 2;
                         _cropRect = Rect.fromLTWH(left, top, cropSize, cropSize);
                       }
+                    } else {
+                      // Exiting crop mode - clear cropped bytes
+                      _croppedImageBytes = null;
                     }
                     _isCropMode = !_isCropMode;
                   });
