@@ -198,26 +198,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
           ),
-          // Info icon on the right
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            right: 16,
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                // TODO: Show info dialog or navigate to info page
-              },
-              child: const SizedBox(
-                width: 32,
-                height: 32,
-                child: Icon(
-                  Icons.info,
-                  size: 22,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ),
           // Floating Action Bar
           Positioned(
             left: MediaQuery.of(context).size.width * 0.125,
@@ -226,7 +206,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: _FloatingActionBar(
               onSnapTap: () => _pickImage(ImageSource.camera),
               onUploadTap: () => _pickImage(ImageSource.gallery),
-              onShareTap: _shareApp,
+              onInfoTap: () {
+                // TODO: Show info dialog or navigate to info page
+              },
             ),
           ),
         ],
@@ -1279,12 +1261,12 @@ class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
 class _FloatingActionBar extends StatelessWidget {
   final VoidCallback onSnapTap;
   final VoidCallback onUploadTap;
-  final VoidCallback onShareTap;
+  final VoidCallback onInfoTap;
 
   const _FloatingActionBar({
     required this.onSnapTap,
     required this.onUploadTap,
-    required this.onShareTap,
+    required this.onInfoTap,
   });
 
   @override
@@ -1327,10 +1309,10 @@ class _FloatingActionBar extends StatelessWidget {
               label: 'Tutorials',
               onTap: () {},
             ),
-            _FloatingActionButtonSvg(
-              svgIcon: 'assets/icons/share_filled.svg',
-              label: 'Share',
-              onTap: onShareTap,
+            _FloatingActionButton(
+              icon: Icons.info,
+              label: 'Info',
+              onTap: onInfoTap,
             ),
           ],
         ),
@@ -1369,6 +1351,52 @@ class _FloatingActionButtonSvg extends StatelessWidget {
                 height: 24,
                 colorFilter:
                     const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _FloatingActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 24,
+                color: Colors.white,
               ),
               const SizedBox(height: 4),
               Text(
