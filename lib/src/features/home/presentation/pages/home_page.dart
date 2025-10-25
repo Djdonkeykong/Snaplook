@@ -5,6 +5,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import '../../domain/providers/image_provider.dart';
 import '../../domain/providers/inspiration_provider.dart';
 import '../../domain/providers/pending_share_provider.dart';
@@ -640,19 +641,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   void _showInfoBottomSheet(BuildContext context) {
-    Navigator.of(context).push(
-      _IOSStyleModalRoute(
-        builder: (context) => const _InfoBottomSheet(),
-      ),
-    );
-  }
-}
-
-class _InfoBottomSheet extends ConsumerWidget {
-  const _InfoBottomSheet();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
     final spacing = context.spacing;
 
     // TODO: Replace with actual user data from provider
@@ -661,19 +649,22 @@ class _InfoBottomSheet extends ConsumerWidget {
     final maxCredits = 50;
     final creditsPercentage = creditsRemaining / maxCredits;
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
+    showCupertinoModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(20),
+          ),
         ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(spacing.l),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.all(spacing.l),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 // Handle bar
                 Container(
                   width: 40,
@@ -833,109 +824,9 @@ class _InfoBottomSheet extends ConsumerWidget {
                 ),
 
                 SizedBox(height: spacing.m),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _IOSStyleModalRoute<T> extends PageRoute<T> {
-  final WidgetBuilder builder;
-
-  _IOSStyleModalRoute({
-    required this.builder,
-  });
-
-  @override
-  Color? get barrierColor => Colors.black.withOpacity(0.3);
-
-  @override
-  String? get barrierLabel => 'Dismiss';
-
-  @override
-  bool get maintainState => true;
-
-  @override
-  Duration get transitionDuration => const Duration(milliseconds: 350);
-
-  @override
-  bool get opaque => false;
-
-  @override
-  bool get barrierDismissible => true;
-
-  @override
-  Widget buildPage(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-  ) {
-    return builder(context);
-  }
-
-  @override
-  Widget buildTransitions(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    // Modal slide up animation
-    final modalSlide = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-      ),
-    );
-
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: SlideTransition(
-        position: modalSlide,
-        child: child,
-      ),
-    );
-  }
-
-  @override
-  Widget buildSecondaryTransitions(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    // Background scale and translate animation for the page underneath
-    final backgroundScale = Tween<double>(begin: 1.0, end: 0.92).animate(
-      CurvedAnimation(
-        parent: secondaryAnimation,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    final backgroundTranslate = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0, -0.08),
-    ).animate(
-      CurvedAnimation(
-        parent: secondaryAnimation,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    return SlideTransition(
-      position: backgroundTranslate,
-      child: ScaleTransition(
-        scale: backgroundScale,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(
-            secondaryAnimation.value * 16,
-          ),
-          child: child,
         ),
       ),
     );
