@@ -1298,6 +1298,7 @@ class _FloatingActionBar extends StatelessWidget {
               svgIcon: 'assets/icons/camera_filled.svg',
               label: 'Snap',
               onTap: onSnapTap,
+              iconSize: 25,
             ),
             _FloatingActionButtonSvg(
               svgIcon: 'assets/icons/upload_filled.svg',
@@ -1325,11 +1326,13 @@ class _FloatingActionButtonSvg extends StatelessWidget {
   final String svgIcon;
   final String label;
   final VoidCallback onTap;
+  final double iconSize;
 
   const _FloatingActionButtonSvg({
     required this.svgIcon,
     required this.label,
     required this.onTap,
+    this.iconSize = 24,
   });
 
   @override
@@ -1347,8 +1350,8 @@ class _FloatingActionButtonSvg extends StatelessWidget {
             children: [
               SvgPicture.asset(
                 svgIcon,
-                width: 24,
-                height: 24,
+                width: iconSize,
+                height: iconSize,
                 colorFilter:
                     const ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
