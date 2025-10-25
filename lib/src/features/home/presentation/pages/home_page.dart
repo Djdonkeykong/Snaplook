@@ -639,13 +639,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  void _shareApp() {
-    Share.share(
-      'Check out Snaplook - AI-powered fashion discovery app!',
-      subject: 'Try Snaplook',
-    );
-  }
-
   void _showInfoBottomSheet(BuildContext context) {
     final spacing = context.spacing;
 
