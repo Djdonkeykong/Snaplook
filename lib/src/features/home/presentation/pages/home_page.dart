@@ -5,7 +5,6 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import '../../domain/providers/image_provider.dart';
 import '../../domain/providers/inspiration_provider.dart';
 import '../../domain/providers/pending_share_provider.dart';
@@ -640,6 +639,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  void _shareApp() {
+    Share.share(
+      'Check out Snaplook - AI-powered fashion discovery app!',
+      subject: 'Try Snaplook',
+    );
+  }
+
   void _showInfoBottomSheet(BuildContext context) {
     final spacing = context.spacing;
 
@@ -649,9 +655,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     final maxCredits = 50;
     final creditsPercentage = creditsRemaining / maxCredits;
 
-    showCupertinoModalBottomSheet(
+    showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      useRootNavigator: true,
       builder: (context) => Container(
         decoration: const BoxDecoration(
           color: Colors.white,
