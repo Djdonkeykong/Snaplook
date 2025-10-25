@@ -198,6 +198,37 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
           ),
+          // Info icon on the right
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 16,
+            right: 16,
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                // TODO: Show info dialog or navigate to info page
+              },
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ),
           // Floating Action Bar
           Positioned(
             left: MediaQuery.of(context).size.width * 0.125,
