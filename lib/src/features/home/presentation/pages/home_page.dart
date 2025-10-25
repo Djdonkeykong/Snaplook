@@ -175,15 +175,27 @@ class _HomePageState extends ConsumerState<HomePage> {
       body: Stack(
         children: [
           // Main content - full screen
-          RefreshIndicator(
-            onRefresh: () async {
-              // Haptic feedback for pull-to-refresh
-              HapticFeedback.mediumImpact();
-              await ref.read(inspirationProvider.notifier).refreshImages();
+          NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is OverscrollNotification) {
+                if (notification.overscroll < 0 && notification.dragDetails != null) {
+                  // Trigger haptic when pulling down past the edge
+                  if (notification.overscroll.abs() > 20) {
+                    HapticFeedback.selectionClick();
+                  }
+                }
+              }
+              return false;
             },
-            backgroundColor: AppColors.surface,
-            color: AppColors.secondary,
-            child: _buildInspirationGrid(inspirationState),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await ref.read(inspirationProvider.notifier).refreshImages();
+              },
+              backgroundColor: Colors.white,
+              color: const Color(0xFFf2003c),
+              strokeWidth: 2.5,
+              child: _buildInspirationGrid(inspirationState),
+            ),
           ),
           // Floating logo overlay
           Positioned(
@@ -758,25 +770,10 @@ class _HomePageState extends ConsumerState<HomePage> {
               Positioned(
                 top: 12,
                 left: 12,
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.9),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                  ),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, color: Colors.black, size: 24),
                 ),
               ),
             ],
