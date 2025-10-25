@@ -207,23 +207,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                 HapticFeedback.mediumImpact();
                 // TODO: Show info dialog or navigate to info page
               },
-              child: Container(
+              child: const SizedBox(
                 width: 32,
                 height: 32,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.info_outline,
-                  size: 18,
+                child: Icon(
+                  Icons.info,
+                  size: 22,
                   color: Colors.black,
                 ),
               ),
