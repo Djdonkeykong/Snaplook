@@ -5,6 +5,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:easy_refresh/easy_refresh.dart';
 import '../../domain/providers/image_provider.dart';
 import '../../domain/providers/inspiration_provider.dart';
 import '../../domain/providers/pending_share_provider.dart';
@@ -175,27 +176,30 @@ class _HomePageState extends ConsumerState<HomePage> {
       body: Stack(
         children: [
           // Main content - full screen
-          NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification is OverscrollNotification) {
-                if (notification.overscroll < 0 && notification.dragDetails != null) {
-                  // Trigger haptic when pulling down past the edge
-                  if (notification.overscroll.abs() > 20) {
-                    HapticFeedback.selectionClick();
-                  }
-                }
-              }
-              return false;
+          EasyRefresh(
+            onRefresh: () async {
+              HapticFeedback.selectionClick();
+              await ref.read(inspirationProvider.notifier).refreshImages();
             },
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await ref.read(inspirationProvider.notifier).refreshImages();
-              },
+            header: ClassicHeader(
+              dragText: '',
+              armedText: '',
+              readyText: '',
+              processingText: '',
+              processedText: '',
+              noMoreText: '',
+              failedText: '',
+              messageText: '',
+              safeArea: false,
+              showMessage: false,
+              showText: false,
+              iconTheme: const IconThemeData(
+                color: Color(0xFFf2003c),
+                size: 24,
+              ),
               backgroundColor: Colors.white,
-              color: const Color(0xFFf2003c),
-              strokeWidth: 2.5,
-              child: _buildInspirationGrid(inspirationState),
             ),
+            child: _buildInspirationGrid(inspirationState),
           ),
           // Floating logo overlay
           Positioned(
