@@ -643,7 +643,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final spacing = context.spacing;
 
     // TODO: Replace with actual user data from provider
-    final membershipType = 'Trial'; // or 'Premium'
+    final membershipType = 'Trial';
     final creditsRemaining = 42;
     final maxCredits = 50;
     final creditsPercentage = creditsRemaining / maxCredits;
@@ -661,172 +661,121 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(spacing.l),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle bar
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: EdgeInsets.only(bottom: spacing.l),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: EdgeInsets.all(spacing.l),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(height: spacing.m),
 
-                // Title
-                const Text(
-                  'Account Info',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -0.5,
-                  ),
-                ),
-
-                SizedBox(height: spacing.xl),
-
-                // Membership card
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(spacing.l),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFFf2003c),
-                        Color(0xFFd00034),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFf2003c).withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Membership',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white70,
-                              fontFamily: 'PlusJakartaSans',
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              membershipType,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                fontFamily: 'PlusJakartaSans',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: spacing.m),
-                      const Text(
-                        'Monthly Credits',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontFamily: 'PlusJakartaSans',
-                        ),
-                      ),
-                      SizedBox(height: spacing.xs),
-                      Text(
-                        '$creditsRemaining / $maxCredits remaining',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -1,
-                        ),
-                      ),
-                      SizedBox(height: spacing.m),
-                      // Progress bar
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: creditsPercentage,
-                          minHeight: 8,
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: spacing.l),
-
-                // Info text
-                Text(
-                  'Credits reset on the 1st of each month',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
-                    fontFamily: 'PlusJakartaSans',
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                SizedBox(height: spacing.l),
-
-                // Close button
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.grey.shade100,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(28),
-                      ),
-                    ),
-                    child: const Text(
-                      'Close',
-                      style: TextStyle(
-                        fontSize: 16,
+                    // Membership type
+                    Text(
+                      '$membershipType Membership',
+                      style: const TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                         fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -0.3,
                       ),
+                    ),
+
+                    SizedBox(height: spacing.l),
+
+                    // Credits display
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '$creditsRemaining',
+                          style: const TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFf2003c),
+                            fontFamily: 'PlusJakartaSans',
+                            letterSpacing: -2,
+                          ),
+                        ),
+                        Text(
+                          ' / $maxCredits',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey.shade400,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: spacing.xs),
+
+                    // Credits label
+                    Text(
+                      'Credits Remaining',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                    ),
+
+                    SizedBox(height: spacing.l),
+
+                    // Progress bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: creditsPercentage,
+                        minHeight: 6,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFf2003c)),
+                      ),
+                    ),
+
+                    SizedBox(height: spacing.m),
+
+                    // Info text
+                    Text(
+                      'Resets monthly on the 1st',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                    ),
+
+                    SizedBox(height: spacing.m),
+                  ],
+                ),
+              ),
+
+              // Close button at top left
+              Positioned(
+                top: 12,
+                left: 12,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      size: 18,
+                      color: Colors.black,
                     ),
                   ),
                 ),
-
-                SizedBox(height: spacing.m),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
