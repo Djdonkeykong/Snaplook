@@ -762,7 +762,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.black.withOpacity(0.9),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -775,7 +775,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   child: IconButton(
                     padding: EdgeInsets.zero,
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Colors.black, size: 20),
+                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
                   ),
                 ),
               ),
