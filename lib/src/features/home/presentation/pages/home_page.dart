@@ -1299,6 +1299,7 @@ class _FloatingActionBar extends StatelessWidget {
               label: 'Snap',
               onTap: onSnapTap,
               iconSize: 25,
+              spacing: 3,
             ),
             _FloatingActionButtonSvg(
               svgIcon: 'assets/icons/upload_filled.svg',
@@ -1327,12 +1328,14 @@ class _FloatingActionButtonSvg extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final double iconSize;
+  final double spacing;
 
   const _FloatingActionButtonSvg({
     required this.svgIcon,
     required this.label,
     required this.onTap,
     this.iconSize = 24,
+    this.spacing = 4,
   });
 
   @override
@@ -1355,7 +1358,7 @@ class _FloatingActionButtonSvg extends StatelessWidget {
                 colorFilter:
                     const ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: spacing),
               Text(
                 label,
                 style: const TextStyle(
