@@ -1309,8 +1309,8 @@ class _FloatingActionBar extends StatelessWidget {
               label: 'Tutorials',
               onTap: () {},
             ),
-            _FloatingActionButton(
-              icon: Icons.info,
+            _FloatingActionButtonSvg(
+              svgIcon: 'assets/icons/info_icon.svg',
               label: 'Info',
               onTap: onInfoTap,
             ),
@@ -1369,48 +1369,3 @@ class _FloatingActionButtonSvg extends StatelessWidget {
   }
 }
 
-class _FloatingActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _FloatingActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          onTap();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: Colors.white,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
