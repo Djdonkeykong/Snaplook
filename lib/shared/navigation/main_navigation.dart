@@ -308,12 +308,13 @@ class _NavigationItemState extends State<_NavigationItem>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return InkWell(
       onTap: () {
         HapticFeedback.mediumImpact();
         widget.onTap();
       },
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
       child: SizedBox(
         width: 80,
         height: 56,
