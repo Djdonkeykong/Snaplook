@@ -207,7 +207,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               onSnapTap: () => _pickImage(ImageSource.camera),
               onUploadTap: () => _pickImage(ImageSource.gallery),
               onInfoTap: () {
-                // TODO: Show info dialog or navigate to info page
+                _showInfoBottomSheet(context);
               },
             ),
           ),
@@ -636,6 +636,199 @@ class _HomePageState extends ConsumerState<HomePage> {
     Share.share(
       'Check out Snaplook - The AI-powered fashion discovery app! Find similar clothing items by taking photos. Download now!',
       subject: 'Discover Fashion with Snaplook',
+    );
+  }
+
+  void _showInfoBottomSheet(BuildContext context) {
+    final spacing = context.spacing;
+
+    // TODO: Replace with actual user data from provider
+    final membershipType = 'Trial'; // or 'Premium'
+    final creditsRemaining = 42;
+    final maxCredits = 50;
+    final creditsPercentage = creditsRemaining / maxCredits;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(20),
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.all(spacing.l),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: EdgeInsets.only(bottom: spacing.l),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Title
+                const Text(
+                  'Account Info',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -0.5,
+                  ),
+                ),
+
+                SizedBox(height: spacing.xl),
+
+                // Membership card
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(spacing.l),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFFf2003c),
+                        Color(0xFFd00034),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFf2003c).withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Membership',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white70,
+                              fontFamily: 'PlusJakartaSans',
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              membershipType,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: spacing.m),
+                      const Text(
+                        'Monthly Credits',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                      SizedBox(height: spacing.xs),
+                      Text(
+                        '$creditsRemaining / $maxCredits remaining',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -1,
+                        ),
+                      ),
+                      SizedBox(height: spacing.m),
+                      // Progress bar
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: creditsPercentage,
+                          minHeight: 8,
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: spacing.l),
+
+                // Info text
+                Text(
+                  'Credits reset on the 1st of each month',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                    fontFamily: 'PlusJakartaSans',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                SizedBox(height: spacing.l),
+
+                // Close button
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.grey.shade100,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                    child: const Text(
+                      'Close',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: spacing.m),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
