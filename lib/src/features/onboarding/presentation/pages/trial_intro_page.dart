@@ -26,6 +26,8 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage> with WidgetsBin
       await VideoPreloader.instance.preloadTrialVideo();
       if (mounted) {
         setState(() {});
+        // Ensure video plays when returning to this page
+        VideoPreloader.instance.playTrialVideo();
       }
     });
   }

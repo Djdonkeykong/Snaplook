@@ -22,8 +22,8 @@ import receive_sharing_intent
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
 
-    // Keep the initial Flutter surface background identical to the launch screen tint
-    window?.backgroundColor = UIColor(red: 242.0/255.0, green: 0, blue: 60.0/255.0, alpha: 1.0)
+    // Set window background to black (shows when app is backgrounded)
+    window?.backgroundColor = UIColor.black
 
     if let controller = window?.rootViewController as? FlutterViewController {
       // Share status channel

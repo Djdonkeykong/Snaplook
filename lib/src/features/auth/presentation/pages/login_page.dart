@@ -31,6 +31,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
       await VideoPreloader.instance.preloadLoginVideo();
       if (mounted) {
         setState(() {});
+        // Ensure video plays when returning to this page
+        VideoPreloader.instance.playLoginVideo();
       }
     });
   }

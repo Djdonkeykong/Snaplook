@@ -45,13 +45,11 @@ class SafariTutorialPage extends ConsumerWidget {
                   notifier.state = SafariTutorialStep.step3;
                 } else {
                   Navigator.of(context).pushReplacement(
-                    PageRouteBuilder(
-                      pageBuilder: (context, animation, secondaryAnimation) => const TutorialAnalysisPage(
+                    MaterialPageRoute(
+                      builder: (context) => const TutorialAnalysisPage(
                         imagePath: 'assets/images/safari_tutorial.webp',
                         scenario: 'Safari',
                       ),
-                      transitionDuration: Duration.zero,
-                      reverseTransitionDuration: Duration.zero,
                     ),
                   );
                 }

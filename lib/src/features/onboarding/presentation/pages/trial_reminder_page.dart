@@ -1,16 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lottie/lottie.dart';
+import 'package:video_player/video_player.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../paywall/presentation/pages/paywall_page.dart';
 
-class TrialReminderPage extends ConsumerWidget {
+class TrialReminderPage extends ConsumerStatefulWidget {
   const TrialReminderPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TrialReminderPage> createState() => _TrialReminderPageState();
+}
+
+class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
+  VideoPlayerController? _controller;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    try {
+      _controller = VideoPlayerController.asset(
+        'assets/videos/bell-new.mp4',
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+        ),
+      );
+      await _controller!.initialize();
+      _controller!.setLooping(true);
+      _controller!.setVolume(0.0);
+      _controller!.play();
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      print('Error initializing bell video: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final spacing = context.spacing;
 
     return Scaffold(
@@ -65,11 +109,12 @@ class TrialReminderPage extends ConsumerWidget {
               child: SizedBox(
                 width: 180,
                 height: 180,
-                child: Lottie.asset(
-                  'assets/animations/notification_bell_new.json',
-                  repeat: true,
-                  animate: true,
-                ),
+                child: _isInitialized && _controller != null
+                    ? AspectRatio(
+                        aspectRatio: _controller!.value.aspectRatio,
+                        child: VideoPlayer(_controller!),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ),
 

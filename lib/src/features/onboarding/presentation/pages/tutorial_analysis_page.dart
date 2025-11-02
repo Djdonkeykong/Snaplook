@@ -48,13 +48,11 @@ class _TutorialAnalysisPageState extends State<TutorialAnalysisPage> with Single
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => TutorialImageAnalysisPage(
+          MaterialPageRoute(
+            builder: (context) => TutorialImageAnalysisPage(
               imagePath: widget.imagePath,
               scenario: widget.scenario,
             ),
-            transitionDuration: Duration.zero,
-            reverseTransitionDuration: Duration.zero,
           ),
         );
       }
