@@ -222,30 +222,9 @@ class _WishlistPageState extends ConsumerState<WishlistPage> with SingleTickerPr
 
               // Show snackbar
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: const [
-                      Icon(
-                        Icons.check_circle,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        'Removed from favorites',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+                const SnackBar(
+                  content: Text('Removed from favorites'),
                   backgroundColor: Colors.black,
-                  duration: const Duration(seconds: 2),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
               );
             },
@@ -363,7 +342,10 @@ class _FavoriteCard extends ConsumerWidget {
                     Navigator.pop(context);
                     // TODO: Show collection selector
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Collections feature coming soon!')),
+                      const SnackBar(
+                        content: Text('Collections feature coming soon!'),
+                        backgroundColor: Colors.black,
+                      ),
                     );
                   },
                 ),

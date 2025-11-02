@@ -136,11 +136,13 @@ class TikTokTutorialPage extends ConsumerWidget {
                 } else {
                   // Navigate to analysis page with TikTok image
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => const TutorialAnalysisPage(
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) => const TutorialAnalysisPage(
                         imagePath: 'assets/images/tiktok_tutorial.jpg',
                         scenario: 'TikTok',
                       ),
+                      transitionDuration: Duration.zero,
+                      reverseTransitionDuration: Duration.zero,
                     ),
                   );
                 }

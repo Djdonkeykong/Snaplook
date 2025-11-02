@@ -15,12 +15,13 @@ class TrialIntroPage extends ConsumerStatefulWidget {
   ConsumerState<TrialIntroPage> createState() => _TrialIntroPageState();
 }
 
-class _TrialIntroPageState extends ConsumerState<TrialIntroPage> {
+class _TrialIntroPageState extends ConsumerState<TrialIntroPage> with WidgetsBindingObserver {
   VideoPlayerController? get _controller => VideoPreloader.instance.trialVideoController;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await VideoPreloader.instance.preloadTrialVideo();
       if (mounted) {
@@ -31,8 +32,21 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     VideoPreloader.instance.pauseTrialVideo();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Resume video when app comes back to foreground
+      VideoPreloader.instance.playTrialVideo();
+    } else if (state == AppLifecycleState.paused) {
+      // Pause video when app goes to background
+      VideoPreloader.instance.pauseTrialVideo();
+    }
   }
 
   @override
@@ -185,10 +199,10 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey,
+                  color: Color(0xFF6B7280),
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.w500,
-                  letterSpacing: -0.2,
+                  height: 1.5,
                 ),
               ),
             ),

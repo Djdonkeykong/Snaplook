@@ -85,16 +85,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.error, color: Colors.white, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text('Error logging out: ${e.toString()}')),
-                ],
-              ),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              content: Text('Error logging out: ${e.toString()}'),
+              backgroundColor: Colors.black,
             ),
           );
         }

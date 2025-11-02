@@ -20,12 +20,13 @@ class LoginPage extends ConsumerStatefulWidget {
   ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserver {
   VideoPlayerController? get _controller => VideoPreloader.instance.loginVideoController;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await VideoPreloader.instance.preloadLoginVideo();
       if (mounted) {
@@ -36,8 +37,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     VideoPreloader.instance.pauseLoginVideo();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Resume video when app comes back to foreground
+      VideoPreloader.instance.playLoginVideo();
+    } else if (state == AppLifecycleState.paused) {
+      // Pause video when app goes to background
+      VideoPreloader.instance.pauseLoginVideo();
+    }
   }
 
   @override
@@ -159,11 +173,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   text: const TextSpan(
                     text: 'Already have an account? ',
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: Color(0xFF6B7280),
                       fontSize: 14,
                       fontFamily: 'PlusJakartaSans',
                       fontWeight: FontWeight.w400,
-                      letterSpacing: -0.2,
+                      height: 1.5,
                     ),
                     children: [
                       TextSpan(

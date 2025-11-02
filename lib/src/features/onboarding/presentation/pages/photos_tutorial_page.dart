@@ -102,11 +102,13 @@ class PhotosTutorialPage extends ConsumerWidget {
                 } else {
                   // Navigate to analysis page with Photos image
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => const TutorialAnalysisPage(
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) => const TutorialAnalysisPage(
                         imagePath: 'assets/images/photos_tutorial.jpg',
                         scenario: 'Photos',
                       ),
+                      transitionDuration: Duration.zero,
+                      reverseTransitionDuration: Duration.zero,
                     ),
                   );
                 }

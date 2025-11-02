@@ -231,9 +231,9 @@ class PaywallPage extends ConsumerWidget {
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 14,
-                  color: Colors.grey,
+                  color: Color(0xFF6B7280),
                   fontWeight: FontWeight.w500,
-                  letterSpacing: -0.2,
+                  height: 1.5,
                 ),
               ),
             ),
@@ -441,7 +441,7 @@ class _PlanOption extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontSize: 14,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w500,
                     color: isSelected ? Colors.white : Colors.black,
                     letterSpacing: -0.3,
                   ),
@@ -452,24 +452,11 @@ class _PlanOption extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontSize: 16,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w600,
                     color: isSelected ? Colors.white : Colors.black,
                     letterSpacing: -0.3,
                   ),
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle!,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 12,
-                      color: isSelected ? Colors.white.withOpacity(0.8) : Colors.black,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -477,7 +464,7 @@ class _PlanOption extends StatelessWidget {
           if (isPopular)
             Positioned(
               top: -6,
-              right: 6,
+              right: 12,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(

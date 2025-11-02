@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lottie/lottie.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../paywall/presentation/pages/paywall_page.dart';
@@ -59,48 +60,16 @@ class TrialReminderPage extends ConsumerWidget {
             // Spacer to push bell icon to center
             const Spacer(flex: 2),
 
-            // Bell icon with notification badge
+            // Bell animation
             Center(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.notifications,
-                      size: 60,
-                      color: Colors.grey.shade400,
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFf2003c),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Center(
-                        child: Text(
-                          '1',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              child: SizedBox(
+                width: 180,
+                height: 180,
+                child: Lottie.asset(
+                  'assets/animations/notification_bell_new.json',
+                  repeat: true,
+                  animate: true,
+                ),
               ),
             ),
 
@@ -174,10 +143,10 @@ class TrialReminderPage extends ConsumerWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey,
+                  color: Color(0xFF6B7280),
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.w500,
-                  letterSpacing: -0.2,
+                  height: 1.5,
                 ),
               ),
             ),

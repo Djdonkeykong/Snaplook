@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -49,6 +50,7 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
     // Start confetti animation after a short delay and hide overlay after 4-5 seconds
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
+        HapticFeedback.mediumImpact();
         _launchConfetti();
       }
     });

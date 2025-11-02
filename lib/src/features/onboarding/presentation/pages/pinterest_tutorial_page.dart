@@ -154,11 +154,13 @@ class PinterestTutorialPage extends ConsumerWidget {
                 } else {
                   // Navigate to analysis page with Pinterest image
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => const TutorialAnalysisPage(
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) => const TutorialAnalysisPage(
                         imagePath: 'assets/images/pinterest_tutorial.jpg',
                         scenario: 'Pinterest',
                       ),
+                      transitionDuration: Duration.zero,
+                      reverseTransitionDuration: Duration.zero,
                     ),
                   );
                 }

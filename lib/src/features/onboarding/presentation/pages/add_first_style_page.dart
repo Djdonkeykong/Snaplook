@@ -255,7 +255,6 @@ class _AppCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.mediumImpact();
         if (hasTutorial) {
           if (isPinterest) {
             // Reset Pinterest tutorial to beginning before navigating

@@ -227,29 +227,8 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                const Icon(
-                  Icons.check_circle,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  wasAlreadyFavorited ? 'Removed from favorites' : 'Added to favorites',
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+            content: Text(wasAlreadyFavorited ? 'Removed from favorites' : 'Added to favorites'),
             backgroundColor: Colors.black,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
           ),
         );
       }
@@ -258,7 +237,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to update favorites: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.black,
           ),
         );
       }
@@ -330,7 +309,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('No product link available'),
-                                    backgroundColor: Colors.red,
+                                    backgroundColor: Colors.black,
                                   ),
                                 );
                               }
@@ -339,13 +318,13 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
 
                             final uri = Uri.parse(productUrl);
                             if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              await launchUrl(uri);
                             } else {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Cannot open product link'),
-                                    backgroundColor: Colors.red,
+                                    backgroundColor: Colors.black,
                                   ),
                                 );
                               }
@@ -355,7 +334,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Error opening link: $e'),
-                                  backgroundColor: Colors.red,
+                                  backgroundColor: Colors.black,
                                 ),
                               );
                             }

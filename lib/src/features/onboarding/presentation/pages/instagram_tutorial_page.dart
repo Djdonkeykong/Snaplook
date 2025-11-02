@@ -159,10 +159,12 @@ class InstagramTutorialPage extends ConsumerWidget {
                 onTap: () {
                   print("Step 4 tap detected! Moving to analysis page");
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => const TutorialAnalysisPage(
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) => const TutorialAnalysisPage(
                         scenario: 'Instagram',
                       ),
+                      transitionDuration: Duration.zero,
+                      reverseTransitionDuration: Duration.zero,
                     ),
                   );
                 },
