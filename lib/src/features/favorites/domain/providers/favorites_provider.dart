@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/favorite_item.dart';
 import '../services/favorites_service.dart';
 import '../../../detection/domain/models/detection_result.dart';
@@ -33,6 +35,17 @@ class FavoritesNotifier extends StateNotifier<AsyncValue<List<FavoriteItem>>> {
   Future<void> addFavorite(DetectionResult product) async {
     // Optimistic update - add to local state immediately
     _favoriteIds.add(product.id);
+
+    // Precache the image immediately so it's ready when user navigates to favorites
+    if (product.imageUrl.isNotEmpty) {
+      try {
+        // Preload image into cache in background
+        final imageProvider = CachedNetworkImageProvider(product.imageUrl);
+        imageProvider.resolve(const ImageConfiguration());
+      } catch (e) {
+        // Ignore cache errors
+      }
+    }
 
     state.whenData((favorites) {
       // Create a temporary favorite item for immediate UI update
@@ -114,9 +127,15 @@ class FavoritesNotifier extends StateNotifier<AsyncValue<List<FavoriteItem>>> {
     return _favoriteIds.contains(productId);
   }
 
-  /// Refresh favorites from server
+  /// Refresh favorites from server (without losing current data)
   Future<void> refresh() async {
-    await loadFavorites();
+    // Don't set state to loading - keep existing data visible
+    final result = await AsyncValue.guard(() async {
+      final favorites = await _service.getFavorites();
+      _favoriteIds = favorites.map((f) => f.productId).toSet();
+      return favorites;
+    });
+    state = result;
   }
 }
 

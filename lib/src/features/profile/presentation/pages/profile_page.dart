@@ -5,7 +5,11 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
-import '../../../../shared/widgets/share_logs_page.dart';
+import 'premium_page.dart';
+import 'help_faq_page.dart';
+import 'contact_support_page.dart';
+import 'privacy_policy_page.dart';
+import 'terms_page.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -81,8 +85,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error logging out: ${e.toString()}'),
+              content: Row(
+                children: [
+                  const Icon(Icons.error, color: Colors.white, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text('Error logging out: ${e.toString()}')),
+                ],
+              ),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
         }
@@ -110,13 +122,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       body: SafeArea(
         child: SingleChildScrollView(
           controller: _scrollController,
-          child: Padding(
-            padding: EdgeInsets.all(spacing.l),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title
-                const Text(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.all(spacing.l),
+                child: const Text(
                   'Settings',
                   style: TextStyle(
                     fontSize: 38,
@@ -127,250 +138,171 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     height: 1.3,
                   ),
                 ),
+              ),
 
-                SizedBox(height: spacing.xl),
+              SizedBox(height: spacing.m),
 
-                // Account Section
-                _SectionCard(
-                  title: 'Account',
-                  children: [
-                    _SettingItem(
-                      icon: Icons.person_outline,
-                      title: 'Profile',
-                      subtitle: 'Enter your name',
-                      trailing: const Text(
-                        '30 years old',
+              // Account Section
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: spacing.l),
+                child: _SectionTitle(title: 'Account'),
+              ),
+              SizedBox(height: spacing.m),
+              _SettingItem(
+                  icon: Icons.workspace_premium_outlined,
+                  title: 'Premium',
+                  subtitle: 'Unlock all features',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PremiumPage()),
+                    );
+                  },
+                ),
+
+              SizedBox(height: spacing.xl),
+
+              // Notifications Section
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: spacing.l),
+                child: _SectionTitle(title: 'Preferences'),
+              ),
+              SizedBox(height: spacing.m),
+              _SettingItem(
+                icon: Icons.notifications_outlined,
+                title: 'Notifications',
+                subtitle: 'Product updates and new features',
+                trailing: Switch(
+                  value: true,
+                  onChanged: (value) {},
+                  activeColor: AppColors.secondary,
+                ),
+                onTap: null,
+              ),
+
+              SizedBox(height: spacing.xl),
+
+              // Support Section
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: spacing.l),
+                child: _SectionTitle(title: 'Support & Legal'),
+              ),
+              SizedBox(height: spacing.m),
+              _SettingItem(
+                icon: Icons.help_outline,
+                title: 'Help & FAQ',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const HelpFaqPage()),
+                  );
+                },
+              ),
+              Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
+              _SettingItem(
+                icon: Icons.email_outlined,
+                title: 'Contact Support',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ContactSupportPage()),
+                  );
+                },
+              ),
+              Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
+              _SettingItem(
+                icon: Icons.shield_outlined,
+                title: 'Privacy Policy',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
+                  );
+                },
+              ),
+              Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
+              _SettingItem(
+                icon: Icons.description_outlined,
+                title: 'Terms and Conditions',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TermsPage()),
+                  );
+                },
+              ),
+
+              SizedBox(height: spacing.xl),
+
+              // Logout Button
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: spacing.l),
+                child: GestureDetector(
+                  onTap: _handleLogout,
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Logout',
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF6B7280),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'PlusJakartaSans',
+                          color: Colors.white,
                         ),
                       ),
-                      onTap: () {},
                     ),
-                    _SettingItem(
-                      icon: Icons.workspace_premium_outlined,
-                      title: 'Premium',
-                      subtitle: 'Upgrade to unlock all features',
-                      onTap: () {},
-                    ),
-                  ],
+                  ),
                 ),
+              ),
 
-                SizedBox(height: spacing.l),
+              SizedBox(height: spacing.m),
 
-                // Preferences Section
-                _SectionCard(
-                  title: 'Preferences',
-                  children: [
-                    _SettingItem(
-                      icon: Icons.palette_outlined,
-                      title: 'Appearance',
-                      subtitle: 'Choose light, dark, or system appearance',
-                      trailing: const Text(
-                        'Light',
+              // Delete Account Button
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: spacing.l),
+                child: GestureDetector(
+                  onTap: () {},
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: AppColors.secondary, width: 2),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Delete Account',
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF6B7280),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'PlusJakartaSans',
+                          color: AppColors.secondary,
                         ),
                       ),
-                      onTap: () {},
                     ),
-                    _SettingItem(
-                      icon: Icons.notifications_outlined,
-                      title: 'Notifications',
-                      subtitle: 'Product updates and new features',
-                      trailing: Switch(
-                        value: true,
-                        onChanged: (value) {},
-                        activeColor: AppColors.secondary,
-                      ),
-                      onTap: null,
-                    ),
-                    _SettingItem(
-                      icon: Icons.language_outlined,
-                      title: 'Language',
-                      subtitle: 'Select your preferred language',
-                      trailing: const Text(
-                        'English',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                      onTap: () {},
-                    ),
-                  ],
+                  ),
                 ),
+              ),
 
-                SizedBox(height: spacing.l),
+              SizedBox(height: spacing.xxl),
 
-                // Fashion Preferences Section
-                _SectionCard(
-                  title: 'Fashion Preferences',
-                  children: [
-                    _SettingItem(
-                      icon: Icons.style_outlined,
-                      title: 'Style preferences',
-                      subtitle: 'Casual, formal, streetwear',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.straighten_outlined,
-                      title: 'Size preferences',
-                      subtitle: 'Save your sizes for quick reference',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.attach_money_outlined,
-                      title: 'Budget range',
-                      subtitle: 'Filter products by price',
-                      onTap: () {},
-                    ),
-                  ],
+              // Version info
+              Center(
+                child: Text(
+                  'Version 1.0.0',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade500,
+                    fontFamily: 'PlusJakartaSans',
+                  ),
                 ),
+              ),
 
-                SizedBox(height: spacing.l),
-
-                // Data & Privacy Section
-                _SectionCard(
-                  title: 'Data & Privacy',
-                  children: [
-                    _SettingItem(
-                      icon: Icons.history_outlined,
-                      title: 'Clear search history',
-                      subtitle: 'Remove all search data',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.favorite_outline,
-                      title: 'Clear favorites',
-                      subtitle: 'Remove all saved items',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.download_outlined,
-                      title: 'Export data',
-                      subtitle: 'Download your personal data',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.shield_outlined,
-                      title: 'Privacy Policy',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.description_outlined,
-                      title: 'Terms and Conditions',
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: spacing.l),
-
-                // Support Section
-                _SectionCard(
-                  title: 'Support',
-                  children: [
-                    _SettingItem(
-                      icon: Icons.help_outline,
-                      title: 'Help & FAQ',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.email_outlined,
-                      title: 'Support Email',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.bug_report_outlined,
-                      title: 'Report a bug',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.school_outlined,
-                      title: 'Tutorial',
-                      subtitle: 'Learn how to use the app',
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: spacing.l),
-
-                _SectionCard(
-                  title: 'Diagnostics',
-                  children: [
-                    _SettingItem(
-                      icon: Icons.list_alt_outlined,
-                      title: 'Share Extension Logs',
-                      subtitle: 'View recent share extension activity',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ShareLogsPage(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: spacing.l),
-
-                // Social Section
-                _SectionCard(
-                  title: 'Social',
-                  children: [
-                    _SettingItem(
-                      icon: Icons.share_outlined,
-                      title: 'Share app',
-                      subtitle: 'Tell your friends about Snaplook',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.star_outline,
-                      title: 'Rate the app',
-                      onTap: () {},
-                    ),
-                    _SettingItem(
-                      icon: Icons.sync_outlined,
-                      title: 'Sync Data',
-                      trailing: const Text(
-                        'Last Synced: 1:35 PM',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: spacing.l),
-
-                // Account Actions Section
-                _SectionCard(
-                  children: [
-                    _SettingItem(
-                      icon: Icons.logout_outlined,
-                      title: 'Logout',
-                      titleColor: AppColors.secondary,
-                      onTap: _handleLogout,
-                    ),
-                    _SettingItem(
-                      icon: Icons.person_remove_outlined,
-                      title: 'Delete Account',
-                      titleColor: Colors.red.shade600,
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: spacing.xxl),
-              ],
-            ),
+              SizedBox(height: spacing.xl),
+            ],
           ),
         ),
       ),
@@ -378,54 +310,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  final String? title;
-  final List<Widget> children;
+class _SectionTitle extends StatelessWidget {
+  final String title;
 
-  const _SectionCard({this.title, required this.children});
+  const _SectionTitle({required this.title});
 
   @override
   Widget build(BuildContext context) {
-    final spacing = context.spacing;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (title != null) ...[
-          Padding(
-            padding: EdgeInsets.only(left: spacing.m, bottom: spacing.sm),
-            child: Text(
-              title!,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ),
-        ],
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
-          ),
-          child: Column(
-            children: [
-              for (int i = 0; i < children.length; i++) ...[
-                children[i],
-                if (i < children.length - 1)
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: const Color(0xFFF3F4F6),
-                    indent: 60,
-                  ),
-              ],
-            ],
-          ),
-        ),
-      ],
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Colors.black,
+        fontFamily: 'PlusJakartaSans',
+      ),
     );
   }
 }
@@ -436,7 +335,6 @@ class _SettingItem extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
-  final Color? titleColor;
 
   const _SettingItem({
     required this.icon,
@@ -444,63 +342,61 @@ class _SettingItem extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
-    this.titleColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.all(spacing.m),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF9F9F9),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 18, color: Colors.black),
-            ),
-            SizedBox(width: spacing.m),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: titleColor ?? Colors.black,
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 4),
+    return Material(
+      color: Colors.white,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 68),
+          padding: EdgeInsets.symmetric(vertical: spacing.m, horizontal: spacing.l),
+          child: Row(
+            children: [
+              Icon(icon, size: 22, color: Colors.black),
+              SizedBox(width: spacing.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                     Text(
-                      subtitle!,
+                      title,
                       style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF6B7280),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
                       ),
                     ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            if (trailing != null)
-              trailing!
-            else if (onTap != null)
-              const Icon(
-                Icons.chevron_right,
-                color: Color(0xFF9CA3AF),
-                size: 20,
-              ),
-          ],
+              if (trailing != null)
+                trailing!
+              else if (onTap != null)
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey.shade400,
+                  size: 20,
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -4,13 +4,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
-import 'share_extension_page.dart';
+import 'add_first_style_page.dart';
+import 'trial_intro_page.dart';
 
-class AwesomeIntroPage extends ConsumerWidget {
+class AwesomeIntroPage extends ConsumerStatefulWidget {
   const AwesomeIntroPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AwesomeIntroPage> createState() => _AwesomeIntroPageState();
+}
+
+class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Precache image for instant loading
+    precacheImage(const AssetImage('assets/images/social_media_share_mobile_screen.png'), context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final spacing = context.spacing;
 
     return Scaffold(
@@ -74,6 +87,7 @@ class AwesomeIntroPage extends ConsumerWidget {
                       'assets/images/social_media_share_mobile_screen.png',
                       fit: BoxFit.contain,
                       scale: 0.77,
+                      gaplessPlayback: true,
                     ),
                     // White gradient overlay for fade effect
                     Positioned.fill(
@@ -128,13 +142,13 @@ class AwesomeIntroPage extends ConsumerWidget {
             Container(
               width: double.infinity,
               height: 56,
-              margin: EdgeInsets.only(bottom: spacing.xxl),
+              margin: EdgeInsets.only(bottom: spacing.m),
               child: ElevatedButton(
                 onPressed: () {
                   HapticFeedback.mediumImpact();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const ShareExtensionPage(),
+                      builder: (context) => const AddFirstStylePage(),
                     ),
                   );
                 },
@@ -153,6 +167,37 @@ class AwesomeIntroPage extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                     fontFamily: 'PlusJakartaSans',
                     letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+            ),
+
+            // Skip Button
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const TrialIntroPage(),
+                  ),
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                margin: EdgeInsets.only(bottom: spacing.xxl),
+                child: const Center(
+                  child: Text(
+                    'Skip',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black,
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.2,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.black,
+                      decorationThickness: 1.5,
+                    ),
                   ),
                 ),
               ),

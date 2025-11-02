@@ -11,10 +11,18 @@ class VideoPreloader {
   VideoPreloader._();
 
   VideoPlayerController? _shareVideoController;
+  VideoPlayerController? _loginVideoController;
+  VideoPlayerController? _trialVideoController;
   bool _isInitialized = false;
+  bool _isLoginVideoInitialized = false;
+  bool _isTrialVideoInitialized = false;
 
   VideoPlayerController? get shareVideoController => _shareVideoController;
+  VideoPlayerController? get loginVideoController => _loginVideoController;
+  VideoPlayerController? get trialVideoController => _trialVideoController;
   bool get isInitialized => _isInitialized;
+  bool get isLoginVideoInitialized => _isLoginVideoInitialized;
+  bool get isTrialVideoInitialized => _isTrialVideoInitialized;
 
   Future<void> preloadShareVideo() async {
     if (_shareVideoController != null) return;
@@ -53,9 +61,87 @@ class VideoPreloader {
     }
   }
 
+  Future<void> preloadLoginVideo() async {
+    if (_loginVideoController != null) return;
+
+    try {
+      _loginVideoController = VideoPlayerController.asset(
+        'assets/videos/login-intro-new.mp4',
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+        ),
+        closedCaptionFile: null,
+      );
+
+      await _loginVideoController!.initialize();
+      _loginVideoController!.setLooping(true);
+      _loginVideoController!.setVolume(0.0);
+      _isLoginVideoInitialized = true;
+
+      _loginVideoController!.play();
+    } catch (e) {
+      print('Error preloading login video: $e');
+    }
+  }
+
+  void playLoginVideo() {
+    if (_loginVideoController != null && _isLoginVideoInitialized) {
+      _loginVideoController!.play();
+    }
+  }
+
+  void pauseLoginVideo() {
+    if (_loginVideoController != null && _isLoginVideoInitialized) {
+      _loginVideoController!.pause();
+    }
+  }
+
+  Future<void> preloadTrialVideo() async {
+    if (_trialVideoController != null) return;
+
+    try {
+      _trialVideoController = VideoPlayerController.asset(
+        'assets/videos/login-intro-new.mp4',
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+        ),
+        closedCaptionFile: null,
+      );
+
+      await _trialVideoController!.initialize();
+      _trialVideoController!.setLooping(true);
+      _trialVideoController!.setVolume(0.0);
+      _isTrialVideoInitialized = true;
+
+      _trialVideoController!.play();
+    } catch (e) {
+      print('Error preloading trial video: $e');
+    }
+  }
+
+  void playTrialVideo() {
+    if (_trialVideoController != null && _isTrialVideoInitialized) {
+      _trialVideoController!.play();
+    }
+  }
+
+  void pauseTrialVideo() {
+    if (_trialVideoController != null && _isTrialVideoInitialized) {
+      _trialVideoController!.pause();
+    }
+  }
+
   void dispose() {
     _shareVideoController?.dispose();
     _shareVideoController = null;
     _isInitialized = false;
+    _loginVideoController?.dispose();
+    _loginVideoController = null;
+    _isLoginVideoInitialized = false;
+    _trialVideoController?.dispose();
+    _trialVideoController = null;
+    _isTrialVideoInitialized = false;
   }
 }

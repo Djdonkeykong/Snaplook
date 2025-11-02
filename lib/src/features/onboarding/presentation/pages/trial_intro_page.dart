@@ -1,16 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:video_player/video_player.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../src/shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
-import '../../../paywall/presentation/pages/paywall_page.dart';
+import 'trial_reminder_page.dart';
 
-class TrialIntroPage extends ConsumerWidget {
+class TrialIntroPage extends ConsumerStatefulWidget {
   const TrialIntroPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TrialIntroPage> createState() => _TrialIntroPageState();
+}
+
+class _TrialIntroPageState extends ConsumerState<TrialIntroPage> {
+  VideoPlayerController? get _controller => VideoPreloader.instance.trialVideoController;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await VideoPreloader.instance.preloadTrialVideo();
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    VideoPreloader.instance.pauseTrialVideo();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final spacing = context.spacing;
 
     return Scaffold(
@@ -35,11 +61,6 @@ class TrialIntroPage extends ConsumerWidget {
             ),
           ),
         ),
-        centerTitle: true,
-        title: const OnboardingProgressIndicator(
-          currentStep: 6,
-          totalSteps: 6,
-        ),
       ),
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: spacing.l),
@@ -62,15 +83,39 @@ class TrialIntroPage extends ConsumerWidget {
               ),
             ),
 
-            SizedBox(height: spacing.l),
+            SizedBox(height: spacing.xl),
 
-            // Empty space to maintain layout
+            // Video player
             Expanded(
-              flex: 3,
-              child: Container(),
+              child: Center(
+                child: _controller != null && VideoPreloader.instance.isTrialVideoInitialized
+                    ? Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Center(
+                            child: AspectRatio(
+                              aspectRatio: _controller!.value.aspectRatio,
+                              child: VideoPlayer(_controller!),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+              ),
             ),
 
-            SizedBox(height: spacing.l),
+            SizedBox(height: spacing.xl),
 
             // No Payment Due Now
             Row(
@@ -106,7 +151,7 @@ class TrialIntroPage extends ConsumerWidget {
                   HapticFeedback.mediumImpact();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const PaywallPage(),
+                      builder: (context) => const TrialReminderPage(),
                     ),
                   );
                 },

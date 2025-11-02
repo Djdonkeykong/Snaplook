@@ -133,148 +133,160 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
           totalSteps: 5,
         ),
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: spacing.l),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: spacing.l),
-
-            // Title
-            const Text(
-              'Choose your style',
-              style: TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -1.0,
-                height: 1.3,
-              ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: spacing.l),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height -
+                         MediaQuery.of(context).padding.top -
+                         MediaQuery.of(context).padding.bottom -
+                         kToolbarHeight,
             ),
-
-            SizedBox(height: spacing.m),
-
-            // Subtitle
-            const Text(
-              'Select your style preference to personalize\nyour experience.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black,
-                fontFamily: 'PlusJakartaSans',
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.3,
-              ),
-            ),
-
-            SizedBox(height: spacing.l),
-
-            // Gender Options
-            Expanded(
+            child: IntrinsicHeight(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Men's Clothing
-                  AnimatedBuilder(
-                    animation: _animationControllers[0],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[0],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[0],
-                          child: _GenderOption(
-                            gender: Gender.male,
-                            label: "Men's Clothing",
-                            isSelected: selectedGender == Gender.male,
-                            onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.male,
-                          ),
-                        ),
-                      );
-                    },
+                  SizedBox(height: spacing.l),
+
+                  // Title
+                  const Text(
+                    'Choose your style',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -1.0,
+                      height: 1.3,
+                    ),
+                  ),
+
+                  SizedBox(height: spacing.m),
+
+                  // Subtitle
+                  const Text(
+                    'Select your style preference to personalize\nyour experience.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.3,
+                    ),
                   ),
 
                   SizedBox(height: spacing.l),
 
-                  // Women's Clothing
-                  AnimatedBuilder(
-                    animation: _animationControllers[1],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[1],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[1],
-                          child: _GenderOption(
-                            gender: Gender.female,
-                            label: "Women's Clothing",
-                            isSelected: selectedGender == Gender.female,
-                            onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.female,
-                          ),
+                  // Gender Options
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Men's Clothing
+                        AnimatedBuilder(
+                          animation: _animationControllers[0],
+                          builder: (context, child) {
+                            return FadeTransition(
+                              opacity: _fadeAnimations[0],
+                              child: ScaleTransition(
+                                scale: _scaleAnimations[0],
+                                child: _GenderOption(
+                                  gender: Gender.male,
+                                  label: "Men's Clothing",
+                                  isSelected: selectedGender == Gender.male,
+                                  onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.male,
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
+
+                        SizedBox(height: spacing.l),
+
+                        // Women's Clothing
+                        AnimatedBuilder(
+                          animation: _animationControllers[1],
+                          builder: (context, child) {
+                            return FadeTransition(
+                              opacity: _fadeAnimations[1],
+                              child: ScaleTransition(
+                                scale: _scaleAnimations[1],
+                                child: _GenderOption(
+                                  gender: Gender.female,
+                                  label: "Women's Clothing",
+                                  isSelected: selectedGender == Gender.female,
+                                  onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.female,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        SizedBox(height: spacing.l),
+
+                        // Both
+                        AnimatedBuilder(
+                          animation: _animationControllers[2],
+                          builder: (context, child) {
+                            return FadeTransition(
+                              opacity: _fadeAnimations[2],
+                              child: ScaleTransition(
+                                scale: _scaleAnimations[2],
+                                child: _GenderOption(
+                                  gender: Gender.other,
+                                  label: 'Both',
+                                  isSelected: selectedGender == Gender.other,
+                                  onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.other,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
 
-                  SizedBox(height: spacing.l),
-
-                  // Both
-                  AnimatedBuilder(
-                    animation: _animationControllers[2],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[2],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[2],
-                          child: _GenderOption(
-                            gender: Gender.other,
-                            label: 'Both',
-                            isSelected: selectedGender == Gender.other,
-                            onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.other,
-                          ),
+                  // Next Button
+                  Container(
+                    width: double.infinity,
+                    height: 56,
+                    margin: EdgeInsets.only(bottom: spacing.xxl),
+                    child: ElevatedButton(
+                      onPressed: selectedGender != null
+                          ? () {
+                              HapticFeedback.mediumImpact();
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const DiscoverySourcePage(),
+                                ),
+                              );
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: selectedGender != null ? const Color(0xFFf2003c) : Colors.grey.shade300,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
                         ),
-                      );
-                    },
+                      ),
+                      child: Text(
+                        'Next',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -0.2,
+                          color: selectedGender != null ? Colors.white : Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-
-            // Next Button
-            Container(
-              width: double.infinity,
-              height: 56,
-              margin: EdgeInsets.only(bottom: spacing.xxl),
-              child: ElevatedButton(
-                onPressed: selectedGender != null
-                    ? () {
-                        HapticFeedback.mediumImpact();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const DiscoverySourcePage(),
-                          ),
-                        );
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedGender != null ? const Color(0xFFf2003c) : Colors.grey.shade300,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: Text(
-                  'Next',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -0.2,
-                    color: selectedGender != null ? Colors.white : Colors.grey.shade600,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

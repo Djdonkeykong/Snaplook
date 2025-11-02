@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,6 +10,8 @@ import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../home/domain/services/inspiration_service.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
+import '../../../detection/domain/models/detection_result.dart';
+import '../../../favorites/domain/providers/favorites_provider.dart';
 import 'visual_search_page.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -31,7 +34,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   late PageController _pageController;
   late List<Map<String, dynamic>> _products;
   int _currentIndex = 0;
-  final Map<int, bool> _likedProducts = {};
   bool _isLoadingMore = false;
 
   @override
@@ -111,6 +113,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   child: const Center(
                     child: CircularProgressIndicator(
                       color: Color(0xFFf2003c),
+                      strokeWidth: 2,
                     ),
                   ),
                 );
@@ -119,12 +122,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               return _ProductDetailCard(
                 product: _products[index],
                 heroTag: index == 0 ? widget.heroTag : 'product_${_products[index]['id']}_$index',
-                isLiked: _likedProducts[index] ?? false,
-                onLikeToggle: () {
-                  setState(() {
-                    _likedProducts[index] = !(_likedProducts[index] ?? false);
-                  });
-                },
               );
             },
           ),
@@ -162,22 +159,117 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   }
 }
 
-class _ProductDetailCard extends StatelessWidget {
+class _ProductDetailCard extends ConsumerStatefulWidget {
   final Map<String, dynamic> product;
   final String heroTag;
-  final bool isLiked;
-  final VoidCallback onLikeToggle;
 
   const _ProductDetailCard({
     required this.product,
     required this.heroTag,
-    required this.isLiked,
-    required this.onLikeToggle,
   });
+
+  @override
+  ConsumerState<_ProductDetailCard> createState() => _ProductDetailCardState();
+}
+
+class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onLikeToggle() async {
+    HapticFeedback.mediumImpact();
+
+    _controller.forward().then((_) {
+      _controller.reverse();
+    });
+
+    final productId = widget.product['id']?.toString() ?? '';
+    final wasAlreadyFavorited = ref.read(isFavoriteProvider(productId));
+
+    final productResult = DetectionResult(
+      id: productId,
+      productName: widget.product['title'] ?? 'Unknown',
+      brand: widget.product['brand'] ?? 'Unknown',
+      price: double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0.0,
+      imageUrl: widget.product['image_url'] ?? '',
+      purchaseUrl: widget.product['url'],
+      category: widget.product['category'] ?? 'Unknown',
+      confidence: 1.0,
+    );
+
+    try {
+      await ref.read(favoritesProvider.notifier).toggleFavorite(productResult);
+
+      // Show snackbar based on action
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  wasAlreadyFavorited ? 'Removed from favorites' : 'Added to favorites',
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.black,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update favorites: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final productId = widget.product['id']?.toString() ?? '';
+    final isFavorite = ref.watch(isFavoriteProvider(productId));
 
     return Stack(
       children: [
@@ -186,11 +278,11 @@ class _ProductDetailCard extends StatelessWidget {
             Expanded(
               child: GestureDetector(
                 onTap: () {
-                  if (product['image_url'] != null) {
+                  if (widget.product['image_url'] != null) {
                     Navigator.of(context, rootNavigator: true).push(
                       MaterialPageRoute(
                         builder: (context) => DetectionPage(
-                          imageUrl: product['image_url'],
+                          imageUrl: widget.product['image_url'],
                         ),
                       ),
                     );
@@ -200,12 +292,12 @@ class _ProductDetailCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                   ),
-                  child: product['image_url'] != null
+                  child: widget.product['image_url'] != null
                       ? Hero(
-                          tag: heroTag,
+                          tag: widget.heroTag,
                           child: _AdaptiveMainProductImage(
-                            imageUrl: product['image_url'],
-                            category: (product['category'] as String?)?.toLowerCase() ?? '',
+                            imageUrl: widget.product['image_url'],
+                            category: (widget.product['category'] as String?)?.toLowerCase() ?? '',
                           ),
                         )
                       : Container(
@@ -231,7 +323,7 @@ class _ProductDetailCard extends StatelessWidget {
                       ElevatedButton(
                         onPressed: () async {
                           try {
-                            final productUrl = product['url'] as String?;
+                            final productUrl = widget.product['url'] as String?;
 
                             if (productUrl == null || productUrl.isEmpty) {
                               if (context.mounted) {
@@ -296,7 +388,7 @@ class _ProductDetailCard extends StatelessWidget {
                               Navigator.of(context, rootNavigator: true).push(
                                 MaterialPageRoute(
                                   builder: (context) => DetectionPage(
-                                    imageUrl: product['image_url'] ?? '',
+                                    imageUrl: widget.product['image_url'] ?? '',
                                   ),
                                 ),
                               );
@@ -318,20 +410,28 @@ class _ProductDetailCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           GestureDetector(
-                            onTap: onLikeToggle,
-                            child: SizedBox(
-                              width: 44,
-                              height: 48,
-                              child: Center(
-                                child: Transform.translate(
-                                  offset: isLiked ? Offset.zero : const Offset(-1, 1),
-                                  child: Icon(
-                                    isLiked ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
-                                    size: isLiked ? 24 * 0.85 : 24 * 0.75,
-                                    color: isLiked ? const Color(0xFFf2003c) : Colors.black,
+                            onTap: _onLikeToggle,
+                            child: AnimatedBuilder(
+                              animation: _scaleAnimation,
+                              builder: (context, child) {
+                                return Transform.scale(
+                                  scale: _scaleAnimation.value,
+                                  child: SizedBox(
+                                    width: 44,
+                                    height: 48,
+                                    child: Center(
+                                      child: Transform.translate(
+                                        offset: isFavorite ? Offset.zero : const Offset(-1, 1),
+                                        child: Icon(
+                                          isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
+                                          size: isFavorite ? 24 * 0.85 : 24 * 0.75,
+                                          color: isFavorite ? const Color(0xFFf2003c) : Colors.black,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -351,9 +451,9 @@ class _ProductDetailCard extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: spacing.l),
-                  if (product['brand'] != null) ...[
+                  if (widget.product['brand'] != null) ...[
                     Text(
-                      product['brand'],
+                      widget.product['brand'],
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
@@ -362,9 +462,9 @@ class _ProductDetailCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                   ],
-                  if (product['title'] != null) ...[
+                  if (widget.product['title'] != null) ...[
                     Text(
-                      product['title'],
+                      widget.product['title'],
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -429,6 +529,7 @@ class _AdaptiveMainProductImageState extends State<_AdaptiveMainProductImage> {
         return Center(
           child: CircularProgressIndicator(
             color: Color(0xFFf2003c),
+            strokeWidth: 2,
             value: loadingProgress.expectedTotalBytes != null
                 ? loadingProgress.cumulativeBytesLoaded /
                     loadingProgress.expectedTotalBytes!

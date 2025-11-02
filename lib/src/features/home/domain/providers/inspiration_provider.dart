@@ -133,10 +133,40 @@ class InspirationNotifier extends StateNotifier<InspirationState> {
 
   /// Refresh images (pull-to-refresh)
   Future<void> refreshImages() async {
+    // Keep existing data visible during refresh
     _currentPage = 0;
     _seenImageUrls.clear(); // Clear seen images on refresh
-    state = const InspirationState(); // Reset state
-    await loadImages();
+
+    try {
+      final images = await _service.fetchInspirationImages(
+        page: 0,
+        excludeImageUrls: _seenImageUrls,
+      );
+
+      // Track new images
+      for (final image in images) {
+        final imageUrl = image['image_url'] as String?;
+        if (imageUrl != null) {
+          _seenImageUrls.add(imageUrl);
+        }
+      }
+
+      final hasMore = images.isNotEmpty;
+
+      state = state.copyWith(
+        images: images,
+        isLoading: false,
+        hasMore: hasMore,
+        error: null,
+      );
+
+      _currentPage = 1;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
   }
 
   /// Clear error

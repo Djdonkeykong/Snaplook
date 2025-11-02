@@ -94,8 +94,8 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
             panelSnapping: true,
             snapPoint: (sheetInitialHeight / sheetMaxHeight).clamp(0.0, 1.0),
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(radius.large),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(12),
             ),
             boxShadow: [
               BoxShadow(
@@ -182,7 +182,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                                 style: TextStyle(
                                   fontFamily: 'PlusJakartaSans',
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 15,
+                                  fontSize: 14,
                                   color: isSelected ? Colors.white : Colors.black,
                                 ),
                               ),
@@ -199,11 +199,11 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                                   color: isSelected
                                       ? const Color(0xFFf2003c)
                                       : const Color(0xFFD1D5DB),
-                                  width: isSelected ? 0 : 1.5,
+                                  width: 1,
                                 ),
                               ),
                               side: BorderSide.none,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               visualDensity: VisualDensity.compact,
                             ),
@@ -301,7 +301,7 @@ class _ProductCard extends StatelessWidget {
                     height: 80,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(radius.small),
-                      color: Colors.grey[200],
+                      color: Colors.grey[100],
                       image: DecorationImage(
                         image: CachedNetworkImageProvider(result.imageUrl),
                         fit: BoxFit.cover,
@@ -309,7 +309,7 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    top: 4,
+                    bottom: 4,
                     right: 4,
                     child: FavoriteButton(
                       product: result,
@@ -348,15 +348,12 @@ class _ProductCard extends StatelessWidget {
                     Text(
                       result.price > 0
                           ? '\$${result.price.toStringAsFixed(2)}'
-                          : (result.purchaseUrl != null
-                              ? 'See store'
-                              : 'Price unavailable'),
+                          : 'See store',
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: Color(0xFFf2003c),
                         fontFamily: 'PlusJakartaSans',
-                        letterSpacing: 0.2,
                       ),
                     ),
                   ],

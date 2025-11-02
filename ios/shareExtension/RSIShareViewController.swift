@@ -1575,9 +1575,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         for category in categories {
             let button = UIButton(type: .system)
             button.setTitle(category, for: .normal)
-            button.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
-            button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
-            button.layer.cornerRadius = 16
+            button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
+            button.contentEdgeInsets = UIEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
+            button.layer.cornerRadius = 28
             button.layer.borderWidth = 1
             button.layer.borderColor = UIColor.systemGray4.cgColor
             button.backgroundColor = category == "All" ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
@@ -3111,6 +3111,19 @@ class ResultCell: UITableViewCell {
         return label
     }()
 
+    private let favoriteButton: UIButton = {
+        let button = UIButton(type: .custom)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        button.setImage(UIImage(systemName: "heart", withConfiguration: config), for: .normal)
+        button.setImage(UIImage(systemName: "heart.fill", withConfiguration: config), for: .selected)
+        button.tintColor = .white
+        button.backgroundColor = UIColor(white: 0, alpha: 0.3)
+        button.layer.cornerRadius = 12
+        button.clipsToBounds = true
+        return button
+    }()
+
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupUI()
@@ -3128,6 +3141,7 @@ class ResultCell: UITableViewCell {
         textStackView.translatesAutoresizingMaskIntoConstraints = false
 
         contentView.addSubview(productImageView)
+        contentView.addSubview(favoriteButton)
         contentView.addSubview(textStackView)
 
         NSLayoutConstraint.activate([
@@ -3135,6 +3149,11 @@ class ResultCell: UITableViewCell {
             productImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             productImageView.widthAnchor.constraint(equalToConstant: 80),
             productImageView.heightAnchor.constraint(equalToConstant: 80),
+
+            favoriteButton.bottomAnchor.constraint(equalTo: productImageView.bottomAnchor, constant: -4),
+            favoriteButton.trailingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: -4),
+            favoriteButton.widthAnchor.constraint(equalToConstant: 24),
+            favoriteButton.heightAnchor.constraint(equalToConstant: 24),
 
             textStackView.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
             textStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),

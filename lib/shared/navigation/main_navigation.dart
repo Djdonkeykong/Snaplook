@@ -9,6 +9,7 @@ import '../../src/features/wardrobe/presentation/pages/wishlist_page.dart';
 import '../../src/features/profile/presentation/pages/profile_page.dart';
 import '../../src/features/home/domain/providers/image_provider.dart';
 import '../../src/features/detection/presentation/pages/detection_page.dart';
+import '../../src/features/favorites/domain/providers/favorites_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../../core/theme/snaplook_icons.dart';
@@ -69,6 +70,11 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(selectedIndexProvider);
+    final favoritesAsync = ref.watch(favoritesProvider);
+    final favoritesCount = favoritesAsync.maybeWhen(
+      data: (favorites) => favorites.length,
+      orElse: () => 0,
+    );
 
     final pages = [
       Navigator(
@@ -143,16 +149,53 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                 ),
                 Expanded(
                   child: Center(
-                    child: _NavigationItem(
-                      icon: SnaplookIcons.heartOutline,
-                      selectedIcon: SnaplookIcons.heartFilled,
-                      label: 'Wishlist',
-                      index: 1,
-                      isSelected: selectedIndex == 1,
-                      onTap: () => _handleTabTap(1),
-                      iconSize: 25.0,
-                      selectedIconSize: 29.0,
-                      selectedIconOffset: const Offset(2, 0),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        _NavigationItem(
+                          icon: SnaplookIcons.heartOutline,
+                          selectedIcon: SnaplookIcons.heartFilled,
+                          label: 'Wishlist',
+                          index: 1,
+                          isSelected: selectedIndex == 1,
+                          onTap: () => _handleTabTap(1),
+                          iconSize: 25.0,
+                          selectedIconSize: 29.0,
+                          selectedIconOffset: const Offset(2, 0),
+                        ),
+                        if (favoritesCount > 0)
+                          Positioned(
+                            right: 12,
+                            top: 10,
+                            child: IgnorePointer(
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    favoritesCount > 99 ? '99+' : '$favoritesCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'PlusJakartaSans',
+                                      height: 1.0,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),

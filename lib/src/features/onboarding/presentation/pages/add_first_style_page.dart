@@ -1,18 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
 import 'trial_intro_page.dart';
 import 'instagram_tutorial_page.dart';
+import 'pinterest_tutorial_page.dart';
+import 'tiktok_tutorial_page.dart';
+import 'safari_tutorial_page.dart';
+import 'photos_tutorial_page.dart';
 
-class AddFirstStylePage extends ConsumerWidget {
+class AddFirstStylePage extends ConsumerStatefulWidget {
   const AddFirstStylePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AddFirstStylePage> createState() => _AddFirstStylePageState();
+}
+
+class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Precache all images for instant loading
+    precacheImage(const AssetImage('assets/images/tutorial_analysis_image_2.jpg'), context);
+    precacheImage(const AssetImage('assets/images/pinterest_tutorial.jpg'), context);
+    precacheImage(const AssetImage('assets/images/tiktok_tutorial.jpg'), context);
+    precacheImage(const AssetImage('assets/images/safari_tutorial.webp'), context);
+    precacheImage(const AssetImage('assets/images/photos_tutorial.jpg'), context);
+    precacheImage(const AssetImage('assets/icons/insta.png'), context);
+    precacheImage(const AssetImage('assets/icons/tiktok.png'), context);
+    precacheImage(const AssetImage('assets/icons/safari.png'), context);
+    precacheImage(const AssetImage('assets/icons/photos.png'), context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final spacing = context.spacing;
 
     return Scaffold(
@@ -39,8 +63,8 @@ class AddFirstStylePage extends ConsumerWidget {
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 5,
-          totalSteps: 6,
+          currentStep: 4,
+          totalSteps: 5,
         ),
       ),
       body: Padding(
@@ -67,7 +91,7 @@ class AddFirstStylePage extends ConsumerWidget {
 
             // Subtitle
             const Text(
-              'Choose from the options below',
+              'Learn to share from your favorite apps',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.black,
@@ -79,9 +103,9 @@ class AddFirstStylePage extends ConsumerWidget {
 
             SizedBox(height: spacing.xl),
 
-            // Style Options Carousel
+            // App Grid
             Expanded(
-              child: _CarouselSliderWidget(),
+              child: _AppGrid(),
             ),
 
             SizedBox(height: spacing.l),
@@ -104,10 +128,13 @@ class AddFirstStylePage extends ConsumerWidget {
                     'Skip',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey,
+                      color: Colors.black,
                       fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       letterSpacing: -0.2,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.black,
+                      decorationThickness: 1.5,
                     ),
                   ),
                 ),
@@ -120,73 +147,106 @@ class AddFirstStylePage extends ConsumerWidget {
   }
 }
 
-class _CarouselSliderWidget extends ConsumerWidget {
-  const _CarouselSliderWidget();
-
-  final List<Map<String, dynamic>> _cards = const [
-    {
-      'title': 'Evening Wear',
-      'subtitle': 'Special occasions',
-      'hasImage': false,
-      'isInstagramTutorial': false,
-    },
-    {
-      'title': 'Instagram Post',
-      'subtitle': 'Learn to share from Instagram',
-      'hasImage': true,
-      'isInstagramTutorial': true,
-    },
-    {
-      'title': 'Formal Wear',
-      'subtitle': 'Business & Events',
-      'hasImage': false,
-      'isInstagramTutorial': false,
-    },
-    {
-      'title': 'Streetwear',
-      'subtitle': 'Urban fashion',
-      'hasImage': false,
-      'isInstagramTutorial': false,
-    },
-  ];
+class _AppGrid extends ConsumerWidget {
+  const _AppGrid();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return CarouselSlider.builder(
-      itemCount: _cards.length,
-      itemBuilder: (context, index, realIndex) {
-        final card = _cards[index];
-        return _BigStyleCard(
-          title: card['title'],
-          subtitle: card['subtitle'],
-          hasImage: card['hasImage'],
-          isInstagramTutorial: card['isInstagramTutorial'],
-        );
-      },
-      options: CarouselOptions(
-        height: double.infinity,
-        viewportFraction: 0.8,
-        initialPage: 1, // Start with Instagram card (index 1)
-        enableInfiniteScroll: true,
-        enlargeCenterPage: true,
-        enlargeFactor: 0.2,
-        scrollDirection: Axis.horizontal,
+    final spacing = context.spacing;
+
+    return GridView.builder(
+      padding: EdgeInsets.only(bottom: spacing.m),
+      physics: const BouncingScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: spacing.m,
+        mainAxisSpacing: spacing.m,
+        childAspectRatio: 1.0,
       ),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        switch (index) {
+          case 0:
+            return _AppCard(
+              name: 'Instagram',
+              iconWidget:
+                  Image.asset('assets/icons/insta.png', width: 28, height: 28, gaplessPlayback: true),
+              hasTutorial: true,
+              imagePath: 'assets/images/tutorial_analysis_image_2.jpg',
+            );
+          case 1:
+            return _AppCard(
+              name: 'Pinterest',
+              iconWidget: SvgPicture.asset('assets/icons/pinterest.svg',
+                  width: 28, height: 28),
+              hasTutorial: true,
+              imagePath: 'assets/images/pinterest_tutorial.jpg',
+              imageAlignment: Alignment.topCenter,
+              isPinterest: true,
+            );
+          case 2:
+            return _AppCard(
+              name: 'TikTok',
+              iconWidget:
+                  Image.asset('assets/icons/tiktok.png', width: 48, height: 48, gaplessPlayback: true),
+              hasTutorial: true,
+              imagePath: 'assets/images/tiktok_tutorial.jpg',
+              isTikTok: true,
+            );
+          case 3:
+            return _AppCard(
+              name: 'Safari',
+              iconWidget:
+                  Image.asset('assets/icons/safari.png', width: 28, height: 28, gaplessPlayback: true),
+              hasTutorial: true,
+              imagePath: 'assets/images/safari_tutorial.webp',
+              isSafari: true,
+            );
+          case 4:
+            return _AppCard(
+              name: 'Photos',
+              iconWidget:
+                  Image.asset('assets/icons/photos.png', width: 28, height: 28, gaplessPlayback: true),
+              hasTutorial: true,
+              imagePath: 'assets/images/photos_tutorial.jpg',
+              isPhotos: true,
+            );
+          case 5:
+          default:
+            return _AppCard(
+              name: 'Other Apps',
+              iconWidget:
+                  Icon(Icons.apps, size: 28, color: Colors.grey.shade700),
+              hasTutorial: false,
+              imagePath: null,
+            );
+        }
+      },
     );
   }
 }
 
-class _BigStyleCard extends ConsumerWidget {
-  final String title;
-  final String subtitle;
-  final bool hasImage;
-  final bool isInstagramTutorial;
+class _AppCard extends ConsumerWidget {
+  final String name;
+  final Widget iconWidget;
+  final bool hasTutorial;
+  final String? imagePath;
+  final Alignment? imageAlignment;
+  final bool isPinterest;
+  final bool isTikTok;
+  final bool isSafari;
+  final bool isPhotos;
 
-  const _BigStyleCard({
-    required this.title,
-    required this.subtitle,
-    required this.hasImage,
-    this.isInstagramTutorial = false,
+  const _AppCard({
+    required this.name,
+    required this.iconWidget,
+    required this.hasTutorial,
+    this.imagePath,
+    this.imageAlignment,
+    this.isPinterest = false,
+    this.isTikTok = false,
+    this.isSafari = false,
+    this.isPhotos = false,
   });
 
   @override
@@ -195,14 +255,53 @@ class _BigStyleCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        if (isInstagramTutorial) {
-          // Reset tutorial to beginning before navigating
-          ref.read(tutorialStepProvider.notifier).state = TutorialStep.viewPost;
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const InstagramTutorialPage(),
-            ),
-          );
+        HapticFeedback.mediumImpact();
+        if (hasTutorial) {
+          if (isPinterest) {
+            // Reset Pinterest tutorial to beginning before navigating
+            ref.read(pinterestTutorialStepProvider.notifier).state =
+                PinterestTutorialStep.step1;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const PinterestTutorialPage(),
+              ),
+            );
+          } else if (isTikTok) {
+            // Reset TikTok tutorial to beginning before navigating
+            ref.read(tiktokTutorialStepProvider.notifier).state =
+                TikTokTutorialStep.step1;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const TikTokTutorialPage(),
+              ),
+            );
+          } else if (isSafari) {
+            ref.read(safariTutorialStepProvider.notifier).state =
+                SafariTutorialStep.step1;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const SafariTutorialPage(),
+              ),
+            );
+          } else if (isPhotos) {
+            // Reset Photos tutorial to beginning before navigating
+            ref.read(photosTutorialStepProvider.notifier).state =
+                PhotosTutorialStep.step1;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const PhotosTutorialPage(),
+              ),
+            );
+          } else {
+            // Reset Instagram tutorial to beginning before navigating
+            ref.read(tutorialStepProvider.notifier).state =
+                TutorialStep.tapShare;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const InstagramTutorialPage(),
+              ),
+            );
+          }
         } else {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -214,79 +313,128 @@ class _BigStyleCard extends ConsumerWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Column(
-          children: [
-            // Image area
-            Expanded(
-              flex: 4,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: hasImage ? null : Colors.grey.shade100,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                child: hasImage
-                  ? ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(24),
-                        topRight: Radius.circular(24),
-                      ),
-                      child: Image.asset(
-                        'assets/images/tutorial_analysis_image_2.jpg',
-                        fit: BoxFit.cover,
-                      ),
-                    )
-                  : Center(
-                      child: Icon(
-                        Icons.image_outlined,
-                        size: 80,
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-              ),
+          borderRadius: BorderRadius.circular(16),
+          border: imagePath != null
+              ? null
+              : Border.all(color: Colors.grey.shade200, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            // Text area
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(spacing.l),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontFamily: 'PlusJakartaSans',
-                    ),
-                  ),
-                  SizedBox(height: spacing.xs),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                      fontFamily: 'PlusJakartaSans',
-                    ),
-                  ),
-                ],
-              ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: Stack(
+            children: [
+              // Background image (if available)
+              if (imagePath != null)
+                Positioned.fill(
+                  child: Image.asset(
+                    imagePath!,
+                    fit: BoxFit.cover,
+                    alignment: imageAlignment ?? Alignment.center,
+                    gaplessPlayback: true,
+                  ),
+                ),
+
+              // Flat overlay for readability
+              if (imagePath != null)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black.withOpacity(0.4),
+                  ),
+                ),
+
+              // Content
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // App Icon
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: imagePath != null
+                            ? Colors.white.withOpacity(0.95)
+                            : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: imagePath != null
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(child: iconWidget),
+                    ),
+
+                    SizedBox(height: spacing.m),
+
+                    // App Name
+                    Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: imagePath != null ? Colors.white : Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -0.2,
+                        shadows: imagePath != null
+                            ? [
+                                const Shadow(
+                                  offset: Offset(0, 1),
+                                  blurRadius: 3,
+                                  color: Colors.black45,
+                                ),
+                              ]
+                            : null,
+                      ),
+                    ),
+
+                    SizedBox(height: spacing.xs),
+
+                    // Tap to learn hint
+                    Text(
+                      'Tap to learn',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: imagePath != null
+                            ? Colors.white.withOpacity(0.9)
+                            : Colors.grey.shade500,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -0.1,
+                        shadows: imagePath != null
+                            ? [
+                                const Shadow(
+                                  offset: Offset(0, 1),
+                                  blurRadius: 2,
+                                  color: Colors.black45,
+                                ),
+                              ]
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

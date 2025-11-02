@@ -4,23 +4,70 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import 'tutorial_image_analysis_page.dart';
 
-class TutorialAnalysisPage extends ConsumerWidget {
-  const TutorialAnalysisPage({super.key});
+class TutorialAnalysisPage extends StatefulWidget {
+  final String? imagePath;
+  final String scenario;
+
+  const TutorialAnalysisPage({
+    super.key,
+    this.imagePath,
+    this.scenario = 'Instagram',
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final spacing = context.spacing;
+  State<TutorialAnalysisPage> createState() => _TutorialAnalysisPageState();
+}
+
+class _TutorialAnalysisPageState extends State<TutorialAnalysisPage> with SingleTickerProviderStateMixin {
+  late AnimationController _progressController;
+  late Animation<double> _progressAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Create animation controller for smooth progress
+    _progressController = AnimationController(
+      duration: const Duration(milliseconds: 2800),
+      vsync: this,
+    );
+
+    // Animate from 0 to 0.95 (never quite reaches 100%, matching Swift controller)
+    _progressAnimation = Tween<double>(
+      begin: 0.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(
+      parent: _progressController,
+      curve: Curves.easeInOut,
+    ));
+
+    // Start the animation
+    _progressController.forward();
 
     // Auto-navigate to results after 3 seconds
     Future.delayed(const Duration(seconds: 3), () {
-      if (context.mounted) {
+      if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const TutorialImageAnalysisPage(),
+            builder: (context) => TutorialImageAnalysisPage(
+              imagePath: widget.imagePath,
+              scenario: widget.scenario,
+            ),
           ),
         );
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _progressController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -32,45 +79,44 @@ class TutorialAnalysisPage extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Snaplook Logo or Icon
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Icon(
-                    Icons.download,
-                    size: 40,
-                    color: AppColors.secondary,
-                  ),
-                ),
-
-                SizedBox(height: spacing.xl),
-
                 // Importing text
                 const Text(
                   'Importing image...',
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: 16,
                     fontFamily: 'PlusJakartaSans',
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     color: Colors.black,
                   ),
                   textAlign: TextAlign.center,
                 ),
 
-                SizedBox(height: spacing.xl),
+                SizedBox(height: spacing.m),
 
-                // Loading animation
-                Container(
-                  width: 60,
-                  height: 60,
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
-                    strokeWidth: 4,
-                  ),
+                // Linear progress bar matching Swift controller
+                AnimatedBuilder(
+                  animation: _progressAnimation,
+                  builder: (context, child) {
+                    return Container(
+                      width: 180,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(3),
+                        color: Colors.grey.shade300,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: LinearProgressIndicator(
+                          value: _progressAnimation.value,
+                          backgroundColor: Colors.grey.shade300,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFFf2003c), // Munsell red matching Swift controller
+                          ),
+                          minHeight: 6,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

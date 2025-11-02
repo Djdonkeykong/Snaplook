@@ -156,7 +156,7 @@ class PaywallPage extends ConsumerWidget {
 
             SizedBox(height: spacing.m),
 
-            // No Payment Due Now
+            // Dynamic checkbox text based on plan
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -166,9 +166,11 @@ class PaywallPage extends ConsumerWidget {
                   size: 16,
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  'No Payment Due Now',
-                  style: TextStyle(
+                Text(
+                  selectedPlan == SubscriptionPlan.yearly
+                      ? 'No Payment Due Now'
+                      : 'No Commitment - Cancel Anytime',
+                  style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -203,9 +205,11 @@ class PaywallPage extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                child: const Text(
-                  'Start My 3-Day Free Trial',
-                  style: TextStyle(
+                child: Text(
+                  selectedPlan == SubscriptionPlan.yearly
+                      ? 'Start My 3-Day Free Trial'
+                      : 'Subscribe Now',
+                  style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -218,11 +222,13 @@ class PaywallPage extends ConsumerWidget {
             SizedBox(height: spacing.m),
 
             // Bottom pricing text
-            const Center(
+            Center(
               child: Text(
-                '3 days free, then \$59.99 per year (\$4.99/mo)',
+                selectedPlan == SubscriptionPlan.yearly
+                    ? '3 days free, then \$59.99 per year (\$4.99/mo)'
+                    : 'Just \$7.99 per month',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 14,
                   color: Colors.grey,

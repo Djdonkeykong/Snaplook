@@ -279,7 +279,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       width: 80,
       height: 80,
       decoration: BoxDecoration(
-        color: const Color(0xFFf2003c),
+        color: Colors.white,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
@@ -300,10 +300,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           child: Center(
             child: Transform.translate(
               offset: const Offset(0, -1),
-              child: Icon(
+              child: const Icon(
                 SnaplookAiIcon.aiSearchIcon,
                 size: 32,
-                color: Colors.white,
+                color: Colors.black,
               ),
             ),
           ),

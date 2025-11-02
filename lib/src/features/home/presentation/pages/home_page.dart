@@ -193,6 +193,8 @@ class _HomePageState extends ConsumerState<HomePage> {
               safeArea: false,
               showMessage: false,
               showText: false,
+              processedDuration: Duration.zero,
+              succeededIcon: const SizedBox.shrink(),
               iconTheme: const IconThemeData(
                 color: Color(0xFFf2003c),
                 size: 24,
@@ -237,6 +239,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       return const Center(
         child: CircularProgressIndicator(
           color: AppColors.secondary,
+          strokeWidth: 2,
         ),
       );
     }

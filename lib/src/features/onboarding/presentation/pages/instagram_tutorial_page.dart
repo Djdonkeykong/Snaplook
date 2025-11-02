@@ -2,14 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_analysis_page.dart';
 
+const bool _kShowTouchTargets = false;
+
+// Step 2 (tapShare) placements
+const double _shareIndicatorBottomFraction = 0.23;
+const double _shareIndicatorLeftFraction = 0.53;
+const double _shareTapAreaBottomFraction = 0.21;
+const double _shareTapAreaLeftFraction = 0.85;
+const double _shareTapAreaWidthFraction = 0.15;
+const double _shareTapAreaHeightFraction = 0.08;
+
+// Step 3 (selectSnaplook) placements
+const double _selectTapAreaBottomFraction = 0.084;
+const double _selectTapAreaLeftFraction = 0.012077294685990338;
+const double _selectTapAreaWidthFraction = 0.2;
+const double _selectTapAreaHeightFraction = 0.1;
+const double _selectIndicatorBottomFraction = 0.19;
+const double _selectIndicatorLeftFraction = 0.01;
+
+// Step 4 (confirmShare) placements
+const double _confirmTapAreaBottomFraction = 0.17;
+const double _confirmTapAreaRightFraction = 0.315;
+const double _confirmTapAreaWidthFraction = 0.23;
+const double _confirmTapAreaHeightFraction = 0.125;
+const double _confirmIndicatorBottomFraction = 0.315;
+const double _confirmIndicatorRightFraction = 0.315;
+
 enum TutorialStep {
-  viewPost,
   tapShare,
   selectSnaplook,
   confirmShare,
 }
 
-final tutorialStepProvider = StateProvider<TutorialStep>((ref) => TutorialStep.viewPost);
+final tutorialStepProvider = StateProvider<TutorialStep>((ref) => TutorialStep.tapShare);
 
 class InstagramTutorialPage extends ConsumerWidget {
   const InstagramTutorialPage({super.key});
@@ -17,33 +42,47 @@ class InstagramTutorialPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentStep = ref.watch(tutorialStepProvider);
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Full-screen Instagram screenshot - different image based on step
+          // Full-screen Instagram screenshot
           Positioned.fill(
-            child: GestureDetector(
-              onTap: currentStep == TutorialStep.viewPost ? () {
-                ref.read(tutorialStepProvider.notifier).state = TutorialStep.tapShare;
-              } : null,
-              child: Image.asset(
-                'assets/images/instagram_step1_updated.png', // Same image for all steps
-                fit: BoxFit.cover,
-              ),
+            child: Image.asset(
+              'assets/images/instagram_step1_updated.png', // Same image for all steps
+              fit: BoxFit.cover,
             ),
           ),
 
           // Share button tap area for step 2 - user must tap the share button specifically
-          if (currentStep == TutorialStep.tapShare)
+          if (currentStep == TutorialStep.tapShare) ...[
             Positioned(
-              bottom: 218, // Position over the share button
-              right: -15,   // Position over the share button
+              bottom: screenHeight * _shareTapAreaBottomFraction,
+              left: screenWidth * _shareTapAreaLeftFraction,
+              child: GestureDetector(
+                onTap: () {
+                  ref.read(tutorialStepProvider.notifier).state = TutorialStep.selectSnaplook;
+                },
+                child: Container(
+                  width: screenWidth * _shareTapAreaWidthFraction,
+                  height: screenHeight * _shareTapAreaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withOpacity(0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: screenHeight * _shareIndicatorBottomFraction,
+              left: screenWidth * _shareIndicatorLeftFraction,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // "Tap here" indicator - visual only, not tappable
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
@@ -66,8 +105,6 @@ class InstagramTutorialPage extends ConsumerWidget {
                       ),
                     ),
                   ),
-
-                  // Arrow pointing right to the share button
                   Container(
                     margin: const EdgeInsets.only(left: 4),
                     child: const Icon(
@@ -76,30 +113,10 @@ class InstagramTutorialPage extends ConsumerWidget {
                       size: 24,
                     ),
                   ),
-
-                  // Actual tap detection area covering the share button
-                  GestureDetector(
-                    onTap: () {
-                      ref.read(tutorialStepProvider.notifier).state = TutorialStep.selectSnaplook;
-                    },
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      color: Colors.transparent,
-                    ),
-                  ),
                 ],
               ),
             ),
-
-          // Tutorial Overlay Instructions - only show for viewPost step
-          if (currentStep == TutorialStep.viewPost)
-            _TutorialOverlay(
-              currentStep: currentStep,
-              onNext: () {
-                ref.read(tutorialStepProvider.notifier).state = TutorialStep.tapShare;
-              },
-            ),
+          ],
 
           // Dark overlay when popup appears
           if (currentStep == TutorialStep.selectSnaplook || currentStep == TutorialStep.confirmShare)
@@ -136,21 +153,26 @@ class InstagramTutorialPage extends ConsumerWidget {
           // Tap detection area for step 4 (confirmShare)
           if (currentStep == TutorialStep.confirmShare)
             Positioned(
-              bottom: 186, // Default position - adjust as needed
-              right: 142,  // Default position - adjust as needed
+              bottom: screenHeight * _confirmTapAreaBottomFraction,
+              right: screenWidth * _confirmTapAreaRightFraction,
               child: GestureDetector(
                 onTap: () {
                   print("Step 4 tap detected! Moving to analysis page");
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialAnalysisPage(),
+                      builder: (context) => const TutorialAnalysisPage(
+                        scenario: 'Instagram',
+                      ),
                     ),
                   );
                 },
                 child: Container(
-                  width: 80,
-                  height: 80,
-                  color: Colors.transparent,
+                  width: screenWidth * _confirmTapAreaWidthFraction,
+                  height: screenHeight * _confirmTapAreaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withOpacity(0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
                 ),
               ),
             ),
@@ -158,8 +180,8 @@ class InstagramTutorialPage extends ConsumerWidget {
           // "Tap here" indicator for step 4 (confirmShare)
           if (currentStep == TutorialStep.confirmShare)
             Positioned(
-              bottom: 270, // Position above the tap detection area
-              right: 134,
+              bottom: screenHeight * _confirmIndicatorBottomFraction,
+              right: screenWidth * _confirmIndicatorRightFraction,
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -207,17 +229,20 @@ class InstagramTutorialPage extends ConsumerWidget {
           // Tap detection area for the "Share to" button in the popup
           if (currentStep == TutorialStep.selectSnaplook)
             Positioned(
-              bottom: 90, // Position over the green "Share to" button
-              left: 10,  // Position over the green "Share to" button
+              bottom: screenHeight * _selectTapAreaBottomFraction,
+              left: screenWidth * _selectTapAreaLeftFraction,
               child: GestureDetector(
                 onTap: () {
                   print("Tap detected! Moving to confirmShare step");
                   ref.read(tutorialStepProvider.notifier).state = TutorialStep.confirmShare;
                 },
                 child: Container(
-                  width: 80,
-                  height: 80,
-                  color: Colors.transparent,
+                  width: screenWidth * _selectTapAreaWidthFraction,
+                  height: screenHeight * _selectTapAreaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withOpacity(0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
                 ),
               ),
             ),
@@ -225,8 +250,8 @@ class InstagramTutorialPage extends ConsumerWidget {
           // "Tap here" indicator on top of the popup
           if (currentStep == TutorialStep.selectSnaplook)
             Positioned(
-              bottom: 164, // Adjust position to be over the popup
-              left: 20,
+              bottom: screenHeight * _selectIndicatorBottomFraction,
+              left: screenWidth * _selectIndicatorLeftFraction,
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -258,7 +283,7 @@ class InstagramTutorialPage extends ConsumerWidget {
                     Container(
                       margin: const EdgeInsets.only(top: 8),
                       child: Transform.rotate(
-                        angle: 0.5, // Rotation angle in radians
+                        angle: 0, // Rotation angle in radians
                         child: const Icon(
                           Icons.keyboard_arrow_down,
                           color: Color(0xFFf2003c),
@@ -272,78 +297,6 @@ class InstagramTutorialPage extends ConsumerWidget {
             ),
         ],
       ),
-    );
-  }
-}
-
-class _TutorialOverlay extends StatelessWidget {
-  final TutorialStep currentStep;
-  final VoidCallback onNext;
-
-  const _TutorialOverlay({
-    required this.currentStep,
-    required this.onNext,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    String instruction;
-    double top;
-    double left;
-
-    switch (currentStep) {
-      case TutorialStep.viewPost:
-        instruction = "Tap anywhere to continue";
-        top = 150;
-        left = 20;
-        break;
-      case TutorialStep.tapShare:
-        instruction = "Tap the share button";
-        top = MediaQuery.of(context).size.height - 300;
-        left = 250;
-        break;
-      default:
-        return const SizedBox.shrink();
-    }
-
-    return Stack(
-      children: [
-        if (currentStep == TutorialStep.viewPost)
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: onNext,
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.3),
-              ),
-            ),
-          ),
-        Positioned(
-          top: top,
-          left: left,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFf2003c),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Text(
-              instruction,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

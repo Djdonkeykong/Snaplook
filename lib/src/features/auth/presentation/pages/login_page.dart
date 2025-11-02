@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:video_player/video_player.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
+import '../../../../../src/shared/services/video_preloader.dart';
 import '../../../onboarding/presentation/pages/gender_selection_page.dart';
 import '../../domain/providers/auth_provider.dart';
 import 'email_sign_in_page.dart';
@@ -19,9 +21,38 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
+  VideoPlayerController? get _controller => VideoPreloader.instance.loginVideoController;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await VideoPreloader.instance.preloadLoginVideo();
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    VideoPreloader.instance.pauseLoginVideo();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Calculate video height based on available space
+    // Reserve space for: text (90px), button (56px), sign-in (50px), spacings (100px)
+    final reservedBottomSpace = 360.0; // Space needed for bottom content
+    final topSpacing = 24.0; // spacing.l
+    final spacingBelowVideo = 16.0; // spacing.m
+    final availableVideoSpace = screenHeight - reservedBottomSpace - topSpacing - spacingBelowVideo;
+    final videoHeight = availableVideoSpace.clamp(280.0, availableVideoSpace);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -31,20 +62,40 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Top spacing
-              SizedBox(height: spacing.xxl),
+              SizedBox(height: spacing.l),
 
-              // Spacer to maintain positioning
-              Expanded(
-                flex: 3,
-                child: Container(),
-              ),
+              if (_controller != null && VideoPreloader.instance.isLoginVideoInitialized)
+                Container(
+                  height: videoHeight,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Center(
+                      child: AspectRatio(
+                        aspectRatio: _controller!.value.aspectRatio,
+                        child: VideoPlayer(_controller!),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  height: videoHeight,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
 
-              SizedBox(height: spacing.xxl),
+              SizedBox(height: spacing.xl),
 
-              // Main heading
               const Text(
-                'Fashion discovery\nmade easy',
+                'Snap the look\nin seconds.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 34,
@@ -56,9 +107,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
 
-              SizedBox(height: spacing.xxl),
+              const Spacer(),
 
-              // Get Started button
+              SizedBox(height: spacing.m),
+
               Container(
                 width: double.infinity,
                 height: 56,
@@ -97,7 +149,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
               SizedBox(height: spacing.m),
 
-              // Sign in link
               TextButton(
                 onPressed: () {
                   HapticFeedback.mediumImpact();
