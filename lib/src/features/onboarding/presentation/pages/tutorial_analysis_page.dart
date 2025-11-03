@@ -53,6 +53,7 @@ class _TutorialAnalysisPageState extends State<TutorialAnalysisPage> with Single
               imagePath: widget.imagePath,
               scenario: widget.scenario,
             ),
+            allowSnapshotting: false,
           ),
         );
       }

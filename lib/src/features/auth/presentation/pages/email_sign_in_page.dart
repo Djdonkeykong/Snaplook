@@ -78,38 +78,46 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
     }
   }
 
+  Future<void> _handleBackNavigation() async {
+    FocusScope.of(context).unfocus();
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) return;
+        await _handleBackNavigation();
+      },
+      child: Scaffold(
         backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () async {
-            FocusScope.of(context).unfocus();
-            await Future.delayed(const Duration(milliseconds: 150));
-            if (!mounted) return;
-            Navigator.of(context).pop();
-          },
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: IconButton(
+            onPressed: _handleBackNavigation,
+            icon: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_back,
+                color: Colors.black,
+                size: 20,
+              ),
             ),
           ),
         ),
-      ),
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: spacing.l),
         child: Column(
@@ -235,6 +243,7 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
           ],
         ),
       ),
+    ),
     );
   }
 }

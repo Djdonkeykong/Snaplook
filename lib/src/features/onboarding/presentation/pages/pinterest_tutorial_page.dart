@@ -159,6 +159,7 @@ class PinterestTutorialPage extends ConsumerWidget {
                         imagePath: 'assets/images/pinterest_tutorial.jpg',
                         scenario: 'Pinterest',
                       ),
+                      allowSnapshotting: false,
                     ),
                   );
                 }

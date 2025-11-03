@@ -107,6 +107,7 @@ class PhotosTutorialPage extends ConsumerWidget {
                         imagePath: 'assets/images/photos_tutorial.jpg',
                         scenario: 'Photos',
                       ),
+                      allowSnapshotting: false,
                     ),
                   );
                 }

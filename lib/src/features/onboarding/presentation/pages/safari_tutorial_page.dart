@@ -50,6 +50,7 @@ class SafariTutorialPage extends ConsumerWidget {
                         imagePath: 'assets/images/safari_tutorial.webp',
                         scenario: 'Safari',
                       ),
+                      allowSnapshotting: false,
                     ),
                   );
                 }

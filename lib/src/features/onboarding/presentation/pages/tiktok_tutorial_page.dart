@@ -141,6 +141,7 @@ class TikTokTutorialPage extends ConsumerWidget {
                         imagePath: 'assets/images/tiktok_tutorial.jpg',
                         scenario: 'TikTok',
                       ),
+                      allowSnapshotting: false,
                     ),
                   );
                 }

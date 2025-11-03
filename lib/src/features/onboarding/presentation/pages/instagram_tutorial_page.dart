@@ -163,6 +163,7 @@ class InstagramTutorialPage extends ConsumerWidget {
                       builder: (context) => const TutorialAnalysisPage(
                         scenario: 'Instagram',
                       ),
+                      allowSnapshotting: false,
                     ),
                   );
                 },
