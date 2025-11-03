@@ -6,7 +6,6 @@ import 'package:easy_refresh/easy_refresh.dart';
 import '../../../favorites/domain/providers/favorites_provider.dart';
 import '../../../favorites/domain/models/favorite_item.dart';
 import '../../../product/presentation/pages/product_detail_page.dart';
-import '../../../collections/presentation/widgets/add_to_collection_sheet.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
@@ -20,10 +19,10 @@ class WishlistPage extends ConsumerStatefulWidget {
 }
 
 class _WishlistPageState extends ConsumerState<WishlistPage>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
+  final Set<String> _hapticTriggered = {};
   late TabController _tabController;
-  final Map<String, AnimationController> _removeControllers = {};
 
   @override
   void initState() {
@@ -35,9 +34,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
   void dispose() {
     _tabController.dispose();
     _scrollController.dispose();
-    for (var controller in _removeControllers.values) {
-      controller.dispose();
-    }
     super.dispose();
   }
 
@@ -126,43 +122,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     );
   }
 
-  Future<void> _removeItem(String productId) async {
-    final controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    controller.value = 1.0;
-
-    setState(() {
-      _removeControllers[productId] = controller;
-    });
-
-    await controller.reverse();
-
-    if (!mounted) return;
-
-    await ref.read(favoritesProvider.notifier).removeFavorite(productId);
-
-    if (!mounted) return;
-
-    setState(() {
-      _removeControllers.remove(productId);
-    });
-    controller.dispose();
-
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Removed from favorites',
-          style: TextStyle(fontFamily: 'PlusJakartaSans'),
-        ),
-        backgroundColor: Colors.black,
-        duration: Duration(milliseconds: 2500),
-      ),
-    );
-  }
-
   Widget _buildAllFavoritesTab(bool isInitialLoading, bool hasError,
       List<FavoriteItem> favorites, dynamic spacing) {
     if (isInitialLoading) {
@@ -230,28 +189,56 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         itemCount: favorites.length,
         itemBuilder: (context, index) {
           final favorite = favorites[index];
-          final controller = _removeControllers[favorite.productId];
-
-          Widget card = _FavoriteCard(
-            favorite: favorite,
-            spacing: spacing,
-            onDelete: () {
-              HapticFeedback.mediumImpact();
-              _removeItem(favorite.productId);
+          return Dismissible(
+            key: Key(favorite.id),
+            direction: DismissDirection.endToStart,
+            dismissThresholds: const {
+              DismissDirection.endToStart: 0.4,
             },
-          );
-
-          if (controller != null) {
-            return SizeTransition(
-              sizeFactor: controller,
-              child: FadeTransition(
-                opacity: controller,
-                child: card,
+            movementDuration: const Duration(milliseconds: 250),
+            resizeDuration: const Duration(milliseconds: 250),
+            background: Container(
+              alignment: Alignment.centerRight,
+              margin: EdgeInsets.only(bottom: spacing.m),
+              padding: EdgeInsets.only(right: spacing.m),
+              decoration: BoxDecoration(
+                color: const Color(0xFFf2003c),
+                borderRadius: BorderRadius.circular(12),
               ),
-            );
-          }
+              child: const Icon(
+                Icons.delete_outline,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            onUpdate: (details) {
+              // Trigger haptic feedback when swipe crosses threshold
+              if (details.progress > 0.5 &&
+                  !_hapticTriggered.contains(favorite.id)) {
+                HapticFeedback.mediumImpact();
+                _hapticTriggered.add(favorite.id);
+              } else if (details.progress < 0.5 &&
+                  _hapticTriggered.contains(favorite.id)) {
+                // Reset if user swipes back
+                _hapticTriggered.remove(favorite.id);
+              }
+            },
+            onDismissed: (direction) {
+              _hapticTriggered.remove(favorite.id);
+              ref
+                  .read(favoritesProvider.notifier)
+                  .removeFavorite(favorite.productId);
 
-          return card;
+              // Show snackbar
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Removed from favorites'),
+                  backgroundColor: Colors.black,
+                ),
+              );
+            },
+            child: _FavoriteCard(favorite: favorite, spacing: spacing),
+          );
         },
       ),
     );
@@ -303,7 +290,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                 fontWeight: FontWeight.w500,
                 fontFamily: 'PlusJakartaSans',
                 color: Colors.black87,
-                height: 1.35,
+                height: 1.0,
               ),
               textAlign: TextAlign.center,
             ),
@@ -350,12 +337,10 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
 class _FavoriteCard extends ConsumerWidget {
   final FavoriteItem favorite;
   final dynamic spacing;
-  final VoidCallback? onDelete;
 
   const _FavoriteCard({
     required this.favorite,
     required this.spacing,
-    this.onDelete,
   });
 
   void _showOptionsMenu(BuildContext context, WidgetRef ref) {
@@ -384,18 +369,11 @@ class _FavoriteCard extends ConsumerWidget {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) => AddToCollectionSheet(
-                        productId: favorite.productId,
-                        productName: favorite.productName,
-                        brand: favorite.brand,
-                        price: favorite.price,
-                        imageUrl: favorite.imageUrl,
-                        purchaseUrl: favorite.purchaseUrl,
-                        category: favorite.category,
+                    // TODO: Show collection selector
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Collections feature coming soon!'),
+                        backgroundColor: Colors.black,
                       ),
                     );
                   },
@@ -497,55 +475,19 @@ class _FavoriteCard extends ConsumerWidget {
 
             SizedBox(width: spacing.sm),
 
-            // Action Icons (Delete & Menu)
-            SizedBox(
-              height: 100,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Delete Icon
-                  GestureDetector(
-                    onTap: onDelete,
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        SnaplookIcons.trashBin,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                    ),
+            // Three Dots Menu
+            GestureDetector(
+              onTap: () => _showOptionsMenu(context, ref),
+              child: SizedBox(
+                height: 100,
+                width: 44,
+                child: Center(
+                  child: Icon(
+                    Icons.more_horiz,
+                    color: Colors.grey.shade400,
+                    size: 24,
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // Three Dots Menu
-                  GestureDetector(
-                    onTap: () => _showOptionsMenu(context, ref),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.black,
-                          width: 1.0,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.more_horiz,
-                          color: Colors.black,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],

@@ -30,7 +30,7 @@ class TikTokTutorialPage extends ConsumerWidget {
             'tapAreaWidth': screenWidth * 0.18,
             'tapAreaHeight': screenHeight * 0.08,
             'textTop': screenHeight * 0.77,
-            'textLeft': screenWidth * 0.48,
+            'textLeft': screenWidth * 0.51,
             'instruction': 'Tap here',
             'arrowDirection': 'right',
           };
@@ -42,9 +42,10 @@ class TikTokTutorialPage extends ConsumerWidget {
             'tapAreaWidth': screenWidth * 0.21,
             'tapAreaHeight': screenHeight * 0.11,
             'textTop': screenHeight * 0.66,
-            'textLeft': screenWidth * 0.75,
+            'textLeft': screenWidth * 0.77,
             'instruction': 'Tap here',
             'arrowDirection': 'down',
+            'arrowOffset': 10.0,
           };
         case TikTokTutorialStep.step3:
           return {
@@ -54,7 +55,7 @@ class TikTokTutorialPage extends ConsumerWidget {
             'tapAreaWidth': screenWidth * 0.26,
             'tapAreaHeight': screenHeight * 0.12,
             'textTop': screenHeight * 0.66,
-            'textLeft': screenWidth * 0.23,
+            'textLeft': screenWidth * 0.24,
             'instruction': 'Tap here',
             'arrowDirection': 'down',
           };
@@ -226,7 +227,10 @@ class TikTokTutorialPage extends ConsumerWidget {
                         ),
                       ),
                       Container(
-                        margin: const EdgeInsets.only(top: 8),
+                        margin: EdgeInsets.only(
+                          top: 8,
+                          left: config['arrowOffset'] ?? 0.0,
+                        ),
                         child: const Icon(
                           Icons.keyboard_arrow_down,
                           color: Color(0xFFf2003c),

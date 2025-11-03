@@ -302,10 +302,15 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                   } catch (e) {
                     if (context.mounted) {
                       Navigator.pop(context);
+                      ScaffoldMessenger.of(context).clearSnackBars();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Error signing in with Apple: ${e.toString()}'),
+                          content: Text(
+                            'Error signing in with Apple: ${e.toString()}',
+                            style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                          ),
                           backgroundColor: Colors.red,
+                          duration: const Duration(milliseconds: 2500),
                         ),
                       );
                     }
@@ -343,10 +348,15 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                   } catch (e) {
                     if (context.mounted) {
                       Navigator.pop(context);
+                      ScaffoldMessenger.of(context).clearSnackBars();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Error signing in with Google: ${e.toString()}'),
+                          content: Text(
+                            'Error signing in with Google: ${e.toString()}',
+                            style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                          ),
                           backgroundColor: Colors.red,
+                          duration: const Duration(milliseconds: 2500),
                         ),
                       );
                     }

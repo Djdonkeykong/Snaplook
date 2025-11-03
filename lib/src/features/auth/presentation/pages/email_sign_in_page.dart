@@ -68,10 +68,15 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error sending verification code: ${e.toString()}'),
+            content: Text(
+              'Error sending verification code: ${e.toString()}',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
             backgroundColor: Colors.red,
+            duration: const Duration(milliseconds: 2500),
           ),
         );
       }

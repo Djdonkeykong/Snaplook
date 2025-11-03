@@ -635,10 +635,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     } catch (e) {
       print('Error applying crop: $e');
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to crop image: $e'),
+            content: Text(
+              'Failed to crop image: $e',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
             backgroundColor: Colors.red,
+            duration: const Duration(milliseconds: 2500),
           ),
         );
       }
@@ -728,10 +733,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       print('DETECTION ERROR: $e');
       print('Error type: ${e.runtimeType}');
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Detection failed: $e'),
+            content: Text(
+              'Detection failed: $e',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
             backgroundColor: Colors.red,
+            duration: const Duration(milliseconds: 2500),
           ),
         );
       }

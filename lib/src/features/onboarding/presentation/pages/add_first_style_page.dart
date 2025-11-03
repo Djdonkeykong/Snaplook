@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../shared/navigation/route_observer.dart';
 import '../widgets/progress_indicator.dart';
 import 'trial_intro_page.dart';
 import 'instagram_tutorial_page.dart';
@@ -19,20 +20,91 @@ class AddFirstStylePage extends ConsumerStatefulWidget {
   ConsumerState<AddFirstStylePage> createState() => _AddFirstStylePageState();
 }
 
-class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage> {
+class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
+    with TickerProviderStateMixin, RouteAware {
+  late List<AnimationController> _animationControllers;
+  late List<Animation<double>> _fadeAnimations;
+  late List<Animation<double>> _scaleAnimations;
+
+  bool _isRouteAware = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationControllers = List.generate(6, (index) {
+      return AnimationController(
+        duration: const Duration(milliseconds: 400),
+        vsync: this,
+      );
+    });
+
+    _fadeAnimations = _animationControllers.map((controller) {
+      return Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeOut),
+      );
+    }).toList();
+
+    _scaleAnimations = _animationControllers.map((controller) {
+      return Tween<double>(begin: 0.8, end: 1.0).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeOutBack),
+      );
+    }).toList();
+  }
+
+  void _startStaggeredAnimation() {
+    // Reset all controllers first
+    for (var controller in _animationControllers) {
+      controller.reset();
+    }
+
+    // Then start staggered animation
+    for (int i = 0; i < _animationControllers.length; i++) {
+      Future.delayed(Duration(milliseconds: i * 100), () {
+        if (mounted) {
+          _animationControllers[i].forward();
+        }
+      });
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Precache all images for instant loading
-    precacheImage(const AssetImage('assets/images/tutorial_analysis_image_2.jpg'), context);
-    precacheImage(const AssetImage('assets/images/pinterest_tutorial.jpg'), context);
-    precacheImage(const AssetImage('assets/images/tiktok_tutorial.jpg'), context);
-    precacheImage(const AssetImage('assets/images/safari_tutorial.webp'), context);
-    precacheImage(const AssetImage('assets/images/photos_tutorial.jpg'), context);
+    // Only precache icons that are actually shown on this page
     precacheImage(const AssetImage('assets/icons/insta.png'), context);
-    precacheImage(const AssetImage('assets/icons/tiktok.png'), context);
     precacheImage(const AssetImage('assets/icons/safari.png'), context);
     precacheImage(const AssetImage('assets/icons/photos.png'), context);
+
+    final route = ModalRoute.of(context);
+    if (!_isRouteAware && route is PageRoute) {
+      routeObserver.subscribe(this, route);
+      _isRouteAware = true;
+      if (route.isCurrent) {
+        _startStaggeredAnimation();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_isRouteAware) {
+      routeObserver.unsubscribe(this);
+    }
+    for (var controller in _animationControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    _startStaggeredAnimation();
+  }
+
+  @override
+  void didPopNext() {
+    _startStaggeredAnimation();
   }
 
   @override
@@ -101,11 +173,15 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage> {
               ),
             ),
 
-            SizedBox(height: spacing.xl),
+            SizedBox(height: spacing.l),
 
-            // App Grid
+            // App List
             Expanded(
-              child: _AppGrid(),
+              child: _AppList(
+                animationControllers: _animationControllers,
+                fadeAnimations: _fadeAnimations,
+                scaleAnimations: _scaleAnimations,
+              ),
             ),
 
             SizedBox(height: spacing.l),
@@ -147,78 +223,145 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage> {
   }
 }
 
-class _AppGrid extends ConsumerWidget {
-  const _AppGrid();
+class _AppList extends ConsumerWidget {
+  final List<AnimationController> animationControllers;
+  final List<Animation<double>> fadeAnimations;
+  final List<Animation<double>> scaleAnimations;
+
+  const _AppList({
+    required this.animationControllers,
+    required this.fadeAnimations,
+    required this.scaleAnimations,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final spacing = context.spacing;
 
-    return GridView.builder(
-      padding: EdgeInsets.only(bottom: spacing.m),
+    return ListView.separated(
+      padding: EdgeInsets.only(bottom: spacing.l),
       physics: const BouncingScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: spacing.m,
-        mainAxisSpacing: spacing.m,
-        childAspectRatio: 1.0,
-      ),
       itemCount: 6,
+      separatorBuilder: (_, __) => SizedBox(height: spacing.l),
       itemBuilder: (context, index) {
         switch (index) {
           case 0:
-            return _AppCard(
-              name: 'Instagram',
-              iconWidget:
-                  Image.asset('assets/icons/insta.png', width: 28, height: 28, gaplessPlayback: true),
-              hasTutorial: true,
-              imagePath: 'assets/images/tutorial_analysis_image_2.jpg',
+            return AnimatedBuilder(
+              animation: animationControllers[0],
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: fadeAnimations[0],
+                  child: ScaleTransition(
+                    scale: scaleAnimations[0],
+                    child: _AppCard(
+                      name: 'Instagram',
+                      iconWidget:
+                          Image.asset('assets/icons/insta.png', width: 24, height: 24, gaplessPlayback: true),
+                      hasTutorial: true,
+                      accentColor: const Color(0xFFE4405F),
+                    ),
+                  ),
+                );
+              },
             );
           case 1:
-            return _AppCard(
-              name: 'Pinterest',
-              iconWidget: SvgPicture.asset('assets/icons/pinterest.svg',
-                  width: 28, height: 28),
-              hasTutorial: true,
-              imagePath: 'assets/images/pinterest_tutorial.jpg',
-              imageAlignment: Alignment.topCenter,
-              isPinterest: true,
+            return AnimatedBuilder(
+              animation: animationControllers[1],
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: fadeAnimations[1],
+                  child: ScaleTransition(
+                    scale: scaleAnimations[1],
+                    child: _AppCard(
+                      name: 'Pinterest',
+                      iconWidget: SvgPicture.asset('assets/icons/pinterest.svg',
+                          width: 24, height: 24),
+                      hasTutorial: true,
+                      accentColor: const Color(0xFFE60023),
+                      isPinterest: true,
+                    ),
+                  ),
+                );
+              },
             );
           case 2:
-            return _AppCard(
-              name: 'TikTok',
-              iconWidget:
-                  Image.asset('assets/icons/tiktok.png', width: 48, height: 48, gaplessPlayback: true),
-              hasTutorial: true,
-              imagePath: 'assets/images/tiktok_tutorial.jpg',
-              isTikTok: true,
+            return AnimatedBuilder(
+              animation: animationControllers[2],
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: fadeAnimations[2],
+                  child: ScaleTransition(
+                    scale: scaleAnimations[2],
+                    child: _AppCard(
+                      name: 'TikTok',
+                      iconWidget: SvgPicture.asset('assets/icons/4362958_tiktok_logo_social media_icon.svg', width: 24, height: 24),
+                      hasTutorial: true,
+                      accentColor: const Color(0xFF000000),
+                      isTikTok: true,
+                    ),
+                  ),
+                );
+              },
             );
           case 3:
-            return _AppCard(
-              name: 'Safari',
-              iconWidget:
-                  Image.asset('assets/icons/safari.png', width: 28, height: 28, gaplessPlayback: true),
-              hasTutorial: true,
-              imagePath: 'assets/images/safari_tutorial.webp',
-              isSafari: true,
+            return AnimatedBuilder(
+              animation: animationControllers[3],
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: fadeAnimations[3],
+                  child: ScaleTransition(
+                    scale: scaleAnimations[3],
+                    child: _AppCard(
+                      name: 'Safari',
+                      iconWidget:
+                          Image.asset('assets/icons/safari.png', width: 24, height: 24, gaplessPlayback: true),
+                      hasTutorial: true,
+                      accentColor: const Color(0xFF0A84FF),
+                      isSafari: true,
+                    ),
+                  ),
+                );
+              },
             );
           case 4:
-            return _AppCard(
-              name: 'Photos',
-              iconWidget:
-                  Image.asset('assets/icons/photos.png', width: 28, height: 28, gaplessPlayback: true),
-              hasTutorial: true,
-              imagePath: 'assets/images/photos_tutorial.jpg',
-              isPhotos: true,
+            return AnimatedBuilder(
+              animation: animationControllers[4],
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: fadeAnimations[4],
+                  child: ScaleTransition(
+                    scale: scaleAnimations[4],
+                    child: _AppCard(
+                      name: 'Photos',
+                      iconWidget:
+                          Image.asset('assets/icons/photos.png', width: 24, height: 24, gaplessPlayback: true),
+                      hasTutorial: true,
+                      accentColor: const Color(0xFFFF9500),
+                      isPhotos: true,
+                    ),
+                  ),
+                );
+              },
             );
           case 5:
           default:
-            return _AppCard(
-              name: 'Other Apps',
-              iconWidget:
-                  Icon(Icons.apps, size: 28, color: Colors.grey.shade700),
-              hasTutorial: false,
-              imagePath: null,
+            return AnimatedBuilder(
+              animation: animationControllers[5],
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: fadeAnimations[5],
+                  child: ScaleTransition(
+                    scale: scaleAnimations[5],
+                    child: _AppCard(
+                      name: 'Other Apps',
+                      iconWidget:
+                          Icon(Icons.apps, size: 24, color: Colors.grey.shade700),
+                      hasTutorial: false,
+                      accentColor: Colors.grey.shade400,
+                    ),
+                  ),
+                );
+              },
             );
         }
       },
@@ -230,8 +373,7 @@ class _AppCard extends ConsumerWidget {
   final String name;
   final Widget iconWidget;
   final bool hasTutorial;
-  final String? imagePath;
-  final Alignment? imageAlignment;
+  final Color accentColor;
   final bool isPinterest;
   final bool isTikTok;
   final bool isSafari;
@@ -241,8 +383,7 @@ class _AppCard extends ConsumerWidget {
     required this.name,
     required this.iconWidget,
     required this.hasTutorial,
-    this.imagePath,
-    this.imageAlignment,
+    required this.accentColor,
     this.isPinterest = false,
     this.isTikTok = false,
     this.isSafari = false,
@@ -251,13 +392,11 @@ class _AppCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final spacing = context.spacing;
-
     return GestureDetector(
       onTap: () {
+        HapticFeedback.mediumImpact();
         if (hasTutorial) {
           if (isPinterest) {
-            // Reset Pinterest tutorial to beginning before navigating
             ref.read(pinterestTutorialStepProvider.notifier).state =
                 PinterestTutorialStep.step1;
             Navigator.of(context).push(
@@ -266,7 +405,6 @@ class _AppCard extends ConsumerWidget {
               ),
             );
           } else if (isTikTok) {
-            // Reset TikTok tutorial to beginning before navigating
             ref.read(tiktokTutorialStepProvider.notifier).state =
                 TikTokTutorialStep.step1;
             Navigator.of(context).push(
@@ -283,7 +421,6 @@ class _AppCard extends ConsumerWidget {
               ),
             );
           } else if (isPhotos) {
-            // Reset Photos tutorial to beginning before navigating
             ref.read(photosTutorialStepProvider.notifier).state =
                 PhotosTutorialStep.step1;
             Navigator.of(context).push(
@@ -292,7 +429,6 @@ class _AppCard extends ConsumerWidget {
               ),
             );
           } else {
-            // Reset Instagram tutorial to beginning before navigating
             ref.read(tutorialStepProvider.notifier).state =
                 TutorialStep.tapShare;
             Navigator.of(context).push(
@@ -310,127 +446,38 @@ class _AppCard extends ConsumerWidget {
         }
       },
       child: Container(
+        width: double.infinity,
+        height: 56,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(16),
-          border: imagePath != null
-              ? null
-              : Border.all(color: Colors.grey.shade200, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(15),
-          child: Stack(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
             children: [
-              // Background image (if available)
-              if (imagePath != null)
-                Positioned.fill(
-                  child: Image.asset(
-                    imagePath!,
-                    fit: BoxFit.cover,
-                    alignment: imageAlignment ?? Alignment.center,
-                    gaplessPlayback: true,
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: iconWidget,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -0.2,
                   ),
                 ),
-
-              // Flat overlay for readability
-              if (imagePath != null)
-                Positioned.fill(
-                  child: Container(
-                    color: Colors.black.withOpacity(0.4),
-                  ),
-                ),
-
-              // Content
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // App Icon
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: imagePath != null
-                            ? Colors.white.withOpacity(0.95)
-                            : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: imagePath != null
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Center(child: iconWidget),
-                    ),
-
-                    SizedBox(height: spacing.m),
-
-                    // App Name
-                    Text(
-                      name,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: imagePath != null ? Colors.white : Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                        letterSpacing: -0.2,
-                        shadows: imagePath != null
-                            ? [
-                                const Shadow(
-                                  offset: Offset(0, 1),
-                                  blurRadius: 3,
-                                  color: Colors.black45,
-                                ),
-                              ]
-                            : null,
-                      ),
-                    ),
-
-                    SizedBox(height: spacing.xs),
-
-                    // Tap to learn hint
-                    Text(
-                      'Tap to learn',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: imagePath != null
-                            ? Colors.white.withOpacity(0.9)
-                            : Colors.grey.shade500,
-                        fontFamily: 'PlusJakartaSans',
-                        letterSpacing: -0.1,
-                        shadows: imagePath != null
-                            ? [
-                                const Shadow(
-                                  offset: Offset(0, 1),
-                                  blurRadius: 2,
-                                  color: Colors.black45,
-                                ),
-                              ]
-                            : null,
-                      ),
-                    ),
-                  ],
-                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.grey.shade400,
               ),
             ],
           ),

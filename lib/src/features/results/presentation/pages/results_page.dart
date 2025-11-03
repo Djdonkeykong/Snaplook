@@ -253,9 +253,14 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   }
 
   void _shareResults() {
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Share functionality coming soon!'),
+        content: Text(
+          'Share functionality coming soon!',
+          style: TextStyle(fontFamily: 'PlusJakartaSans'),
+        ),
+        duration: Duration(milliseconds: 2500),
       ),
     );
   }

@@ -689,11 +689,24 @@ class _HomePageState extends ConsumerState<HomePage> {
                   children: [
                     SizedBox(height: spacing.m),
 
-                    // Membership type
+                    // Membership label
                     Text(
-                      '$membershipType Membership',
-                      style: const TextStyle(
-                        fontSize: 18,
+                      'Membership',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade500,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    // Membership type
+                    const Text(
+                      'Premium',
+                      style: TextStyle(
+                        fontSize: 22,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                         fontFamily: 'PlusJakartaSans',
@@ -752,7 +765,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                         value: creditsPercentage,
                         minHeight: 6,
                         backgroundColor: Colors.grey.shade200,
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFf2003c)),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFFf2003c)),
                       ),
                     ),
 
@@ -1424,6 +1438,7 @@ class _FloatingActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 70,
+      margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: const Color(0xFFf2003c),
         borderRadius: BorderRadius.circular(35),
@@ -1441,7 +1456,7 @@ class _FloatingActionBar extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -1493,36 +1508,38 @@ class _FloatingActionButtonSvg extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () {
           HapticFeedback.mediumImpact();
           onTap();
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                svgIcon,
-                width: iconSize,
-                height: iconSize,
-                colorFilter:
-                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-              ),
-              SizedBox(height: spacing),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SvgPicture.asset(
+                  svgIcon,
+                  width: iconSize,
+                  height: iconSize,
+                  colorFilter:
+                      const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                 ),
-              ),
-            ],
+                SizedBox(height: spacing),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-

@@ -161,7 +161,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                           onTap: () => _handleTabTap(1),
                           iconSize: 25.0,
                           selectedIconSize: 29.0,
-                          selectedIconOffset: const Offset(2, 0),
+                          selectedIconOffset: const Offset(0, 0),
+                          iconOffset: const Offset(-2, 0),
                         ),
                         if (favoritesCount > 0)
                           Positioned(
@@ -181,7 +182,9 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                                 ),
                                 child: Center(
                                   child: Text(
-                                    favoritesCount > 99 ? '99+' : '$favoritesCount',
+                                    favoritesCount > 99
+                                        ? '99+'
+                                        : '$favoritesCount',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 10,
@@ -274,6 +277,7 @@ class _NavigationItem extends StatefulWidget {
   final double? selectedIconSize;
   final double? topPadding;
   final Offset? selectedIconOffset;
+  final Offset? iconOffset;
 
   const _NavigationItem({
     this.icon,
@@ -288,6 +292,7 @@ class _NavigationItem extends StatefulWidget {
     this.selectedIconSize,
     this.topPadding,
     this.selectedIconOffset,
+    this.iconOffset,
   });
 
   @override
@@ -435,9 +440,13 @@ class _NavigationItemState extends State<_NavigationItem>
       iconWidget = const SizedBox.shrink();
     }
 
-    if (widget.isSelected && widget.selectedIconOffset != null) {
+    final Offset resolvedOffset = widget.isSelected
+        ? (widget.selectedIconOffset ?? widget.iconOffset ?? Offset.zero)
+        : (widget.iconOffset ?? Offset.zero);
+
+    if (resolvedOffset != Offset.zero) {
       return Transform.translate(
-        offset: widget.selectedIconOffset!,
+        offset: resolvedOffset,
         child: iconWidget,
       );
     }

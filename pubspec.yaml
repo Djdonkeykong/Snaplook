@@ -2,7 +2,7 @@ name: snaplook
 description: "A Flutter app for fashion detection and styling recommendations"
 publish_to: 'none'
 
-version: 1.0.0+60
+version: 1.0.0+62
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -107,13 +107,29 @@ flutter:
         - asset: assets/fonts/Shinier-Regular.ttf
     - family: PlusJakartaSans
       fonts:
+        - asset: assets/fonts/PlusJakartaSans-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/PlusJakartaSans-Light.ttf
+          weight: 300
         - asset: assets/fonts/PlusJakartaSans-Regular.ttf
           weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
         - asset: assets/fonts/PlusJakartaSans-Bold.ttf
           weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
     - family: snaplook-icons
       fonts:
         - asset: assets/fonts/snaplook-icons.ttf
+    - family: snaplook-heart-outline
+      fonts:
+        - asset: assets/fonts/snaplook-heart-outline.ttf
+    - family: trash-bin
+      fonts:
+        - asset: assets/fonts/trash-bin.ttf
     - family: snaplook-ai-icon
       fonts:
         - asset: assets/fonts/snaplook-ai-icon.ttf

@@ -29,6 +29,22 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
   void initState() {
     super.initState();
 
+    // Add keyboard event listeners to each focus node
+    for (int i = 0; i < 6; i++) {
+      final index = i; // Capture index for closure
+      _focusNodes[i].onKeyEvent = (node, event) {
+        if (event is KeyDownEvent || event is KeyRepeatEvent) {
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.backspace ||
+              key == LogicalKeyboardKey.delete) {
+            final handled = _handleBackspaceKey(index);
+            return handled ? KeyEventResult.handled : KeyEventResult.ignored;
+          }
+        }
+        return KeyEventResult.ignored;
+      };
+    }
+
     // Auto-focus first code input field after a short delay
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
@@ -49,6 +65,15 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
   }
 
   Future<void> _handleCodeInput(int index, String value) async {
+    if (value.length > 1) {
+      // If user pastes or types multiple digits, take only the first one
+      _controllers[index].text = value[0];
+      _controllers[index].selection = TextSelection.fromPosition(
+        TextPosition(offset: 1),
+      );
+      value = value[0];
+    }
+
     if (value.isNotEmpty && index < 5) {
       _focusNodes[index + 1].requestFocus();
     }
@@ -88,20 +113,40 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
         }
         _focusNodes[0].requestFocus();
 
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Invalid verification code. Please try again.'),
+            content: Text(
+              'Invalid verification code. Please try again.',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
             backgroundColor: Colors.red,
+            duration: const Duration(milliseconds: 2500),
           ),
         );
       }
     }
   }
 
-  void _handleBackspace(int index) {
-    if (_controllers[index].text.isEmpty && index > 0) {
-      _focusNodes[index - 1].requestFocus();
+  bool _handleBackspaceKey(int index) {
+    final controller = _controllers[index];
+    if (controller.text.isNotEmpty) {
+      // Current field has content - clear it
+      controller.clear();
+      controller.selection = const TextSelection.collapsed(offset: 0);
+      return true;
     }
+
+    if (index > 0) {
+      // Current field is empty - go to previous field and clear it
+      final previousController = _controllers[index - 1];
+      _focusNodes[index - 1].requestFocus();
+      previousController.clear();
+      previousController.selection = const TextSelection.collapsed(offset: 0);
+      return true;
+    }
+
+    return false;
   }
 
   String _maskEmail(String email) {
@@ -126,19 +171,29 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
       await authService.signInWithOtp(widget.email);
 
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Verification code resent'),
+            content: Text(
+              'Verification code resent',
+              style: TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
             backgroundColor: Color(0xFFf2003c),
+            duration: Duration(milliseconds: 2500),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error resending code: ${e.toString()}'),
+            content: Text(
+              'Error resending code: ${e.toString()}',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
             backgroundColor: Colors.red,
+            duration: const Duration(milliseconds: 2500),
           ),
         );
       }
@@ -234,6 +289,10 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                     textAlign: TextAlign.center,
                     keyboardType: TextInputType.number,
                     maxLength: 1,
+                    showCursor: true,
+                    cursorColor: Colors.black,
+                    cursorWidth: 2,
+                    cursorHeight: 32,
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -252,28 +311,30 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                         vertical: 12,
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(
                           color: Colors.black,
                           width: 2,
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(
                           color: Colors.black,
                           width: 2,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(
                           color: Colors.black,
                           width: 2,
                         ),
                       ),
                     ),
-                    onChanged: (value) => _handleCodeInput(index, value),
+                    onChanged: (value) {
+                      _handleCodeInput(index, value);
+                    },
                     onTap: () {
                       _controllers[index].selection = TextSelection(
                         baseOffset: 0,

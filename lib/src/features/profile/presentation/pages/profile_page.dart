@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -83,10 +84,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         }
       } catch (e) {
         if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error logging out: ${e.toString()}'),
+              content: Text(
+                'Error logging out: ${e.toString()}',
+                style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
               backgroundColor: Colors.black,
+              duration: const Duration(milliseconds: 2500),
             ),
           );
         }
@@ -108,6 +114,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     });
 
     final spacing = context.spacing;
+    final user = ref.watch(currentUserProvider);
+    final userEmail = user?.email ?? 'user@example.com';
+    final initials = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -115,72 +124,109 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         child: SingleChildScrollView(
           controller: _scrollController,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Centered Header
               Padding(
-                padding: EdgeInsets.all(spacing.l),
+                padding: EdgeInsets.symmetric(vertical: spacing.l),
                 child: const Text(
                   'Settings',
                   style: TextStyle(
-                    fontSize: 38,
+                    fontSize: 16,
                     fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -1.0,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     color: Colors.black,
-                    height: 1.3,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
+              // Profile Section
+              Material(
+                color: Colors.white,
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.mediumImpact();
+                    // TODO: Navigate to profile edit page
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.all(spacing.l),
+                    child: Row(
+                      children: [
+                        // Circular Avatar
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFB4E5D4),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              initials,
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'PlusJakartaSans',
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: spacing.m),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                userEmail.split('@').first,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'PlusJakartaSans',
+                                  color: Colors.black,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                userEmail,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontFamily: 'PlusJakartaSans',
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                      ],
+                    ),
                   ),
                 ),
               ),
 
               SizedBox(height: spacing.m),
 
-              // Account Section
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.l),
-                child: _SectionTitle(title: 'Account'),
+              // Settings Section
+              _SectionHeader(title: 'Settings'),
+              _SimpleSettingItem(
+                title: 'Premium',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PremiumPage()),
+                  );
+                },
               ),
-              SizedBox(height: spacing.m),
-              _SettingItem(
-                  icon: Icons.workspace_premium_outlined,
-                  title: 'Premium',
-                  subtitle: 'Unlock all features',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const PremiumPage()),
-                    );
-                  },
-                ),
-
-              SizedBox(height: spacing.xl),
-
-              // Notifications Section
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.l),
-                child: _SectionTitle(title: 'Preferences'),
-              ),
-              SizedBox(height: spacing.m),
-              _SettingItem(
-                icon: Icons.notifications_outlined,
+              _SimpleSettingItem(
                 title: 'Notifications',
-                subtitle: 'Product updates and new features',
-                trailing: Switch(
-                  value: true,
-                  onChanged: (value) {},
-                  activeColor: AppColors.secondary,
-                ),
-                onTap: null,
+                onTap: () {},
               ),
 
-              SizedBox(height: spacing.xl),
+              SizedBox(height: spacing.l),
 
               // Support Section
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.l),
-                child: _SectionTitle(title: 'Support & Legal'),
-              ),
-              SizedBox(height: spacing.m),
-              _SettingItem(
-                icon: Icons.help_outline,
+              _SectionHeader(title: 'Support'),
+              _SimpleSettingItem(
                 title: 'Help & FAQ',
                 onTap: () {
                   Navigator.of(context).push(
@@ -188,9 +234,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   );
                 },
               ),
-              Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
-              _SettingItem(
-                icon: Icons.email_outlined,
+              _SimpleSettingItem(
                 title: 'Contact Support',
                 onTap: () {
                   Navigator.of(context).push(
@@ -198,9 +242,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   );
                 },
               ),
-              Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
-              _SettingItem(
-                icon: Icons.shield_outlined,
+
+              SizedBox(height: spacing.l),
+
+              // Legal Section
+              _SectionHeader(title: 'Legal'),
+              _SimpleSettingItem(
                 title: 'Privacy Policy',
                 onTap: () {
                   Navigator.of(context).push(
@@ -208,9 +255,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   );
                 },
               ),
-              Divider(height: 1, thickness: 1, color: Colors.grey.shade200),
-              _SettingItem(
-                icon: Icons.description_outlined,
+              _SimpleSettingItem(
                 title: 'Terms and Conditions',
                 onTap: () {
                   Navigator.of(context).push(
@@ -219,77 +264,31 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 },
               ),
 
+              SizedBox(height: spacing.l),
+
+              // Account Section
+              _SectionHeader(title: 'Account'),
+              _SimpleSettingItem(
+                title: 'Logout',
+                textColor: AppColors.secondary,
+                onTap: _handleLogout,
+              ),
+              _SimpleSettingItem(
+                title: 'Delete Account',
+                textColor: AppColors.secondary,
+                onTap: () {},
+              ),
+
               SizedBox(height: spacing.xl),
 
-              // Logout Button
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.l),
-                child: GestureDetector(
-                  onTap: _handleLogout,
-                  child: Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary,
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Logout',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'PlusJakartaSans',
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: spacing.m),
-
-              // Delete Account Button
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.l),
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: AppColors.secondary, width: 2),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Delete Account',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'PlusJakartaSans',
-                          color: AppColors.secondary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: spacing.xxl),
-
               // Version info
-              Center(
-                child: Text(
-                  'Version 1.0.0',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade500,
-                    fontFamily: 'PlusJakartaSans',
-                  ),
+              Text(
+                'Version 1.0.0',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade400,
+                  fontFamily: 'PlusJakartaSans',
                 ),
               ),
 
@@ -302,38 +301,45 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
+class _SectionHeader extends StatelessWidget {
   final String title;
 
-  const _SectionTitle({required this.title});
+  const _SectionHeader({required this.title});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Colors.black,
-        fontFamily: 'PlusJakartaSans',
+    final spacing = context.spacing;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: spacing.l,
+        right: spacing.l,
+        bottom: spacing.sm,
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade600,
+            fontFamily: 'PlusJakartaSans',
+          ),
+        ),
       ),
     );
   }
 }
 
-class _SettingItem extends StatelessWidget {
-  final IconData icon;
+class _SimpleSettingItem extends StatelessWidget {
   final String title;
-  final String? subtitle;
-  final Widget? trailing;
   final VoidCallback? onTap;
+  final Color? textColor;
 
-  const _SettingItem({
-    required this.icon,
+  const _SimpleSettingItem({
     required this.title,
-    this.subtitle,
-    this.trailing,
     this.onTap,
+    this.textColor,
   });
 
   @override
@@ -343,50 +349,35 @@ class _SettingItem extends StatelessWidget {
     return Material(
       color: Colors.white,
       child: InkWell(
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 68),
-          padding: EdgeInsets.symmetric(vertical: spacing.m, horizontal: spacing.l),
+        onTap: onTap != null
+            ? () {
+                HapticFeedback.mediumImpact();
+                onTap!();
+              }
+            : null,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: spacing.l,
+            vertical: spacing.sm + 4,
+          ),
           child: Row(
             children: [
-              Icon(icon, size: 22, color: Colors.black),
-              SizedBox(width: spacing.m),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                          fontFamily: 'PlusJakartaSans',
-                        ),
-                      ),
-                    ],
-                  ],
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: textColor ?? Colors.black,
+                    fontFamily: 'PlusJakartaSans',
+                  ),
                 ),
               ),
-              if (trailing != null)
-                trailing!
-              else if (onTap != null)
-                Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey.shade400,
-                  size: 20,
-                ),
+              Icon(
+                Icons.chevron_right,
+                color: Colors.grey.shade400,
+                size: 20,
+              ),
             ],
           ),
         ),
