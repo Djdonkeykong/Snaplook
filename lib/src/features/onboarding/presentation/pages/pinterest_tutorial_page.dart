@@ -19,7 +19,7 @@ class PinterestTutorialPage extends ConsumerWidget {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Define tap areas and text positions as fractions of screen size
+    // Define tap areas as fractions of screen size
     Map<String, dynamic> getStepConfig() {
       switch (currentStep) {
         case PinterestTutorialStep.step1:
@@ -29,10 +29,6 @@ class PinterestTutorialPage extends ConsumerWidget {
             'tapAreaLeft': screenWidth * 0.25, // Further to the left
             'tapAreaWidth': screenWidth * 0.20,
             'tapAreaHeight': screenHeight * 0.08,
-            'textTop': screenHeight * 0.785, // Further down
-            'textLeft': screenWidth * 0.24, // Further to the left
-            'instruction': 'Tap here',
-            'arrowDirection': 'down',
           };
         case PinterestTutorialStep.step2:
           return {
@@ -41,10 +37,6 @@ class PinterestTutorialPage extends ConsumerWidget {
             'tapAreaLeft': screenWidth * 0.5,
             'tapAreaWidth': screenWidth * 0.25,
             'tapAreaHeight': screenHeight * 0.12,
-            'textTop': screenHeight * 0.76,
-            'textLeft': screenWidth * 0.50,
-            'instruction': 'Tap here',
-            'arrowDirection': 'down',
           };
         case PinterestTutorialStep.step3:
           return {
@@ -53,10 +45,6 @@ class PinterestTutorialPage extends ConsumerWidget {
             'tapAreaLeft': screenWidth * 0.0,
             'tapAreaWidth': screenWidth * 0.25,
             'tapAreaHeight': screenHeight * 0.12,
-            'textTop': screenHeight * 0.61,
-            'textLeft': screenWidth * 0.01,
-            'instruction': 'Tap here',
-            'arrowDirection': 'down',
           };
       }
     }
@@ -171,56 +159,6 @@ class PinterestTutorialPage extends ConsumerWidget {
               ),
             ),
           ),
-
-          // "Tap here" indicator - positioned dynamically above tap area
-          Positioned(
-            top: config['textTop'],
-            left: config['textLeft'],
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFf2003c),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      config['instruction'],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-
-                // Arrow pointing down to tap area
-                if (config['arrowDirection'] == 'down')
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    child: const Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Color(0xFFf2003c),
-                      size: 28,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
         ],
       ),
     );

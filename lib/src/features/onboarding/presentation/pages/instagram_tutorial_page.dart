@@ -77,45 +77,6 @@ class InstagramTutorialPage extends ConsumerWidget {
                 ),
               ),
             ),
-            Positioned(
-              bottom: screenHeight * _shareIndicatorBottomFraction,
-              left: screenWidth * _shareIndicatorLeftFraction,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFf2003c),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Text(
-                      'Tap here',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.only(left: 4),
-                    child: const Icon(
-                      Icons.keyboard_arrow_right,
-                      color: Color(0xFFf2003c),
-                      size: 24,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
 
           // Dark overlay when popup appears
@@ -178,54 +139,6 @@ class InstagramTutorialPage extends ConsumerWidget {
               ),
             ),
 
-          // "Tap here" indicator for step 4 (confirmShare)
-          if (currentStep == TutorialStep.confirmShare)
-            Positioned(
-              bottom: screenHeight * _confirmIndicatorBottomFraction,
-              right: screenWidth * _confirmIndicatorRightFraction,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFf2003c),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Text(
-                        'Tap here',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-
-                    // Arrow pointing down to the tap area
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      child: Transform.rotate(
-                        angle: 0.0, // Rotation angle in radians
-                        child: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Color(0xFFf2003c),
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
 
           // Tap detection area for the "Share to" button in the popup
           if (currentStep == TutorialStep.selectSnaplook)
@@ -248,54 +161,6 @@ class InstagramTutorialPage extends ConsumerWidget {
               ),
             ),
 
-          // "Tap here" indicator on top of the popup
-          if (currentStep == TutorialStep.selectSnaplook)
-            Positioned(
-              bottom: screenHeight * _selectIndicatorBottomFraction,
-              left: screenWidth * _selectIndicatorLeftFraction,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFf2003c),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Text(
-                        'Tap here',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-
-                    // Arrow pointing down to the popup
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      child: Transform.rotate(
-                        angle: 0, // Rotation angle in radians
-                        child: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Color(0xFFf2003c),
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
     );

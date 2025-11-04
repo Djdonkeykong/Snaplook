@@ -67,118 +67,9 @@ class SafariTutorialPage extends ConsumerWidget {
             ),
           ),
 
-          // Indicator + arrow
-          Positioned(
-            top: size.height * config.indicatorTopFraction,
-            left: size.width * config.indicatorLeftFraction,
-            child: _SafariIndicator(
-              instruction: config.instruction,
-              arrowDirection: config.arrowDirection,
-            ),
-          ),
         ],
       ),
     );
-  }
-}
-
-class _SafariIndicator extends StatelessWidget {
-  const _SafariIndicator({
-    required this.instruction,
-    required this.arrowDirection,
-  });
-
-  final String instruction;
-  final _SafariArrowDirection arrowDirection;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFf2003c),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Text(
-        instruction,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          fontFamily: 'PlusJakartaSans',
-        ),
-      ),
-    );
-
-    final arrow = _buildArrow();
-
-    if (arrowDirection == _SafariArrowDirection.right) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          label,
-          const SizedBox(width: 8),
-          arrow,
-        ],
-      );
-    }
-
-    if (arrowDirection == _SafariArrowDirection.up) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          arrow,
-          const SizedBox(height: 8),
-          label,
-        ],
-      );
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        label,
-        const SizedBox(height: 8),
-        arrow,
-      ],
-    );
-  }
-
-  Widget _buildArrow() {
-    switch (arrowDirection) {
-      case _SafariArrowDirection.right:
-        return const Icon(
-          Icons.keyboard_arrow_right,
-          color: Color(0xFFf2003c),
-          size: 32,
-        );
-      case _SafariArrowDirection.up:
-        return Transform.rotate(
-          angle: 3.14159,
-          child: const Icon(
-            Icons.keyboard_arrow_down,
-            color: Color(0xFFf2003c),
-            size: 32,
-          ),
-        );
-      case _SafariArrowDirection.down:
-      default:
-        return const Icon(
-          Icons.keyboard_arrow_down,
-          color: Color(0xFFf2003c),
-          size: 32,
-        );
-    }
   }
 }
 
@@ -189,10 +80,6 @@ class _SafariStepConfig {
     required this.tapLeftFraction,
     required this.tapWidthFraction,
     required this.tapHeightFraction,
-    required this.indicatorTopFraction,
-    required this.indicatorLeftFraction,
-    required this.instruction,
-    required this.arrowDirection,
   });
 
   final String imagePath;
@@ -200,13 +87,7 @@ class _SafariStepConfig {
   final double tapLeftFraction;
   final double tapWidthFraction;
   final double tapHeightFraction;
-  final double indicatorTopFraction;
-  final double indicatorLeftFraction;
-  final String instruction;
-  final _SafariArrowDirection arrowDirection;
 }
-
-enum _SafariArrowDirection { right, down, up }
 
 _SafariStepConfig _getConfig(SafariTutorialStep step) {
   switch (step) {
@@ -217,10 +98,6 @@ _SafariStepConfig _getConfig(SafariTutorialStep step) {
         tapLeftFraction: 0.0,
         tapWidthFraction: 1,
         tapHeightFraction: 0.55,
-        indicatorTopFraction: 0.66,
-        indicatorLeftFraction: 0.34,
-        instruction: 'Hold here',
-        arrowDirection: _SafariArrowDirection.up,
       );
     case SafariTutorialStep.step2:
       return const _SafariStepConfig(
@@ -229,10 +106,6 @@ _SafariStepConfig _getConfig(SafariTutorialStep step) {
         tapLeftFraction: 0.2,
         tapWidthFraction: 0.61,
         tapHeightFraction: 0.07,
-        indicatorTopFraction: 0.54,
-        indicatorLeftFraction: 0.38,
-        instruction: 'Tap here',
-        arrowDirection: _SafariArrowDirection.down,
       );
     case SafariTutorialStep.step3:
     default:
@@ -242,10 +115,6 @@ _SafariStepConfig _getConfig(SafariTutorialStep step) {
         tapLeftFraction: 0.22,
         tapWidthFraction: 0.25,
         tapHeightFraction: 0.1,
-        indicatorTopFraction: 0.6,
-        indicatorLeftFraction: 0.23,
-        instruction: 'Tap here',
-        arrowDirection: _SafariArrowDirection.down,
       );
   }
 }

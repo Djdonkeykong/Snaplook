@@ -238,9 +238,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
 
         if (mounted) {
           Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(
-              builder: (context) => const DetectionPage(),
-            ),
+            MaterialPageRoute(builder: (context) => const DetectionPage()),
           );
         }
       }
@@ -315,13 +313,17 @@ class _NavigationItemState extends State<_NavigationItem>
 
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.08)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.08,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 40,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.08, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(
+          begin: 1.08,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 60,
       ),
     ]).animate(_controller);
@@ -445,10 +447,7 @@ class _NavigationItemState extends State<_NavigationItem>
         : (widget.iconOffset ?? Offset.zero);
 
     if (resolvedOffset != Offset.zero) {
-      return Transform.translate(
-        offset: resolvedOffset,
-        child: iconWidget,
-      );
+      return Transform.translate(offset: resolvedOffset, child: iconWidget);
     }
 
     return iconWidget;
@@ -473,10 +472,7 @@ class _FloatingActionBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFf2003c),
         borderRadius: BorderRadius.circular(35),
-        border: Border.all(
-          color: const Color(0xFFf2003c),
-          width: 1.5,
-        ),
+        border: Border.all(color: const Color(0xFFf2003c), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.20),
@@ -489,7 +485,7 @@ class _FloatingActionBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _FloatingActionButtonSvg(
               svgIcon: 'assets/icons/camera_filled.svg',
@@ -546,8 +542,10 @@ class _FloatingActionButtonSvg extends StatelessWidget {
                 svgIcon,
                 width: 24,
                 height: 24,
-                colorFilter:
-                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
               ),
               const SizedBox(height: 4),
               Text(

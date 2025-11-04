@@ -75,7 +75,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
               child: const Text(
                 'My Wishlist',
                 style: TextStyle(
-                  fontSize: 38,
+                  fontSize: 30,
                   fontFamily: 'PlusJakartaSans',
                   letterSpacing: -1.0,
                   fontWeight: FontWeight.bold,
@@ -315,9 +315,11 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
               },
               child: Container(
                 alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
+                padding: const EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 16,
+                  bottom: 18,
                 ),
                 constraints: const BoxConstraints(
                   minHeight: 52,
@@ -335,7 +337,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                     fontWeight: FontWeight.w600,
                     fontFamily: 'PlusJakartaSans',
                     color: Colors.white,
-                    height: 1.0,
+                    height: 1.5,
                   ),
                 ),
               ),

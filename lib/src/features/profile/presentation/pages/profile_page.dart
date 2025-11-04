@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -114,188 +113,246 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     });
 
     final spacing = context.spacing;
+    final topInset = MediaQuery.of(context).padding.top;
+    final double expandedHeight = topInset + spacing.xl * 3;
     final user = ref.watch(currentUserProvider);
     final userEmail = user?.email ?? 'user@example.com';
     final initials = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          child: Column(
-            children: [
-              // Centered Header
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: spacing.l),
-                child: const Text(
-                  'Settings',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontFamily: 'PlusJakartaSans',
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+      body: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            pinned: true,
+            automaticallyImplyLeading: false,
+            expandedHeight: expandedHeight,
+            flexibleSpace: LayoutBuilder(
+              builder: (context, constraints) {
+                final currentHeight = constraints.biggest.height;
+                final double minHeight = topInset + kToolbarHeight;
+                final double collapseRange =
+                    (expandedHeight - minHeight).clamp(0.0001, double.infinity);
+                final double t = ((currentHeight - minHeight) / collapseRange)
+                    .clamp(0.0, 1.0);
 
-              // Profile Section
-              Material(
-                color: Colors.white,
-                child: InkWell(
-                  onTap: () {
-                    HapticFeedback.mediumImpact();
-                    // TODO: Navigate to profile edit page
-                  },
-                  child: Padding(
-                    padding: EdgeInsets.all(spacing.l),
-                    child: Row(
-                      children: [
-                        // Circular Avatar
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFB4E5D4),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              initials,
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'PlusJakartaSans',
-                                color: Colors.black,
-                              ),
+                return Container(
+                  color: Colors.white,
+                  padding: EdgeInsets.only(top: topInset),
+                  child: Stack(
+                    children: [
+                      Align(
+                        alignment: Alignment.center,
+                        child: Opacity(
+                          opacity: 1 - t,
+                          child: const Text(
+                            'Settings',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontFamily: 'PlusJakartaSans',
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
                             ),
                           ),
                         ),
-                        SizedBox(width: spacing.m),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                userEmail.split('@').first,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'PlusJakartaSans',
-                                  color: Colors.black,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                userEmail,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontFamily: 'PlusJakartaSans',
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
+                      ),
+                      Positioned(
+                        left: spacing.l,
+                        bottom: 16,
+                        child: Opacity(
+                          opacity: t,
+                          child: const Text(
+                            'Settings',
+                            style: TextStyle(
+                              fontSize: 30,
+                              fontFamily: 'PlusJakartaSans',
+                              letterSpacing: -1.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              height: 1.3,
+                            ),
                           ),
                         ),
-                        Icon(Icons.chevron_right, color: Colors.grey.shade400),
-                      ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SafeArea(
+              top: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: spacing.m),
+
+                  // Profile Section
+                  Material(
+                    color: Colors.white,
+                    child: InkWell(
+                      onTap: () {
+                        // TODO: Navigate to profile edit page
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.all(spacing.l),
+                        child: Row(
+                          children: [
+                            // Circular Avatar
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFB4E5D4),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  initials,
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'PlusJakartaSans',
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: spacing.m),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    userEmail.split('@').first,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: 'PlusJakartaSans',
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    userEmail,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontFamily: 'PlusJakartaSans',
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right,
+                                color: Colors.grey.shade400),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  SizedBox(height: spacing.m),
+
+                  // Settings Section
+                  _SectionHeader(title: 'Settings'),
+                  _SimpleSettingItem(
+                    title: 'Premium',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const PremiumPage()),
+                      );
+                    },
+                  ),
+                  _SimpleSettingItem(
+                    title: 'Notifications',
+                    onTap: () {},
+                  ),
+
+                  SizedBox(height: spacing.l),
+
+                  // Support Section
+                  _SectionHeader(title: 'Support'),
+                  _SimpleSettingItem(
+                    title: 'Help & FAQ',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const HelpFaqPage()),
+                      );
+                    },
+                  ),
+                  _SimpleSettingItem(
+                    title: 'Contact Support',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const ContactSupportPage()),
+                      );
+                    },
+                  ),
+
+                  SizedBox(height: spacing.l),
+
+                  // Legal Section
+                  _SectionHeader(title: 'Legal'),
+                  _SimpleSettingItem(
+                    title: 'Privacy Policy',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const PrivacyPolicyPage()),
+                      );
+                    },
+                  ),
+                  _SimpleSettingItem(
+                    title: 'Terms and Conditions',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const TermsPage()),
+                      );
+                    },
+                  ),
+
+                  SizedBox(height: spacing.l),
+
+                  // Account Section
+                  _SectionHeader(title: 'Account'),
+                  _SimpleSettingItem(
+                    title: 'Logout',
+                    textColor: AppColors.secondary,
+                    onTap: _handleLogout,
+                  ),
+                  _SimpleSettingItem(
+                    title: 'Delete Account',
+                    textColor: AppColors.secondary,
+                    onTap: () {},
+                  ),
+
+                  SizedBox(height: spacing.xl),
+
+                  // Version info
+                  Center(
+                    child: Text(
+                      'Version 1.0.0',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade400,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+
+                  SizedBox(height: spacing.xl),
+                ],
               ),
-
-              SizedBox(height: spacing.m),
-
-              // Settings Section
-              _SectionHeader(title: 'Settings'),
-              _SimpleSettingItem(
-                title: 'Premium',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PremiumPage()),
-                  );
-                },
-              ),
-              _SimpleSettingItem(
-                title: 'Notifications',
-                onTap: () {},
-              ),
-
-              SizedBox(height: spacing.l),
-
-              // Support Section
-              _SectionHeader(title: 'Support'),
-              _SimpleSettingItem(
-                title: 'Help & FAQ',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const HelpFaqPage()),
-                  );
-                },
-              ),
-              _SimpleSettingItem(
-                title: 'Contact Support',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ContactSupportPage()),
-                  );
-                },
-              ),
-
-              SizedBox(height: spacing.l),
-
-              // Legal Section
-              _SectionHeader(title: 'Legal'),
-              _SimpleSettingItem(
-                title: 'Privacy Policy',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
-                  );
-                },
-              ),
-              _SimpleSettingItem(
-                title: 'Terms and Conditions',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const TermsPage()),
-                  );
-                },
-              ),
-
-              SizedBox(height: spacing.l),
-
-              // Account Section
-              _SectionHeader(title: 'Account'),
-              _SimpleSettingItem(
-                title: 'Logout',
-                textColor: AppColors.secondary,
-                onTap: _handleLogout,
-              ),
-              _SimpleSettingItem(
-                title: 'Delete Account',
-                textColor: AppColors.secondary,
-                onTap: () {},
-              ),
-
-              SizedBox(height: spacing.xl),
-
-              // Version info
-              Text(
-                'Version 1.0.0',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade400,
-                  fontFamily: 'PlusJakartaSans',
-                ),
-              ),
-
-              SizedBox(height: spacing.xl),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -349,12 +406,7 @@ class _SimpleSettingItem extends StatelessWidget {
     return Material(
       color: Colors.white,
       child: InkWell(
-        onTap: onTap != null
-            ? () {
-                HapticFeedback.mediumImpact();
-                onTap!();
-              }
-            : null,
+        onTap: onTap,
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: spacing.l,

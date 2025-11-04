@@ -19,7 +19,7 @@ class TikTokTutorialPage extends ConsumerWidget {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Define tap areas and text positions as fractions of screen size
+    // Define tap areas as fractions of screen size
     Map<String, dynamic> getStepConfig() {
       switch (currentStep) {
         case TikTokTutorialStep.step1:
@@ -29,10 +29,6 @@ class TikTokTutorialPage extends ConsumerWidget {
             'tapAreaLeft': screenWidth * 0.84,
             'tapAreaWidth': screenWidth * 0.18,
             'tapAreaHeight': screenHeight * 0.08,
-            'textTop': screenHeight * 0.77,
-            'textLeft': screenWidth * 0.51,
-            'instruction': 'Tap here',
-            'arrowDirection': 'right',
           };
         case TikTokTutorialStep.step2:
           return {
@@ -41,11 +37,6 @@ class TikTokTutorialPage extends ConsumerWidget {
             'tapAreaLeft': screenWidth * 0.79,
             'tapAreaWidth': screenWidth * 0.21,
             'tapAreaHeight': screenHeight * 0.11,
-            'textTop': screenHeight * 0.66,
-            'textLeft': screenWidth * 0.77,
-            'instruction': 'Tap here',
-            'arrowDirection': 'down',
-            'arrowOffset': 10.0,
           };
         case TikTokTutorialStep.step3:
           return {
@@ -54,10 +45,6 @@ class TikTokTutorialPage extends ConsumerWidget {
             'tapAreaLeft': screenWidth * 0.225,
             'tapAreaWidth': screenWidth * 0.26,
             'tapAreaHeight': screenHeight * 0.12,
-            'textTop': screenHeight * 0.66,
-            'textLeft': screenWidth * 0.24,
-            'instruction': 'Tap here',
-            'arrowDirection': 'down',
           };
       }
     }
@@ -154,93 +141,6 @@ class TikTokTutorialPage extends ConsumerWidget {
               ),
             ),
           ),
-
-          // "Tap here" indicator - positioned dynamically above tap area
-          Positioned(
-            top: config['textTop'],
-            left: config['textLeft'],
-            child: config['arrowDirection'] == 'right'
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFf2003c),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          config['instruction'],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      Container(
-                        margin: const EdgeInsets.only(left: 8),
-                        child: const Icon(
-                          Icons.keyboard_arrow_right,
-                          color: Color(0xFFf2003c),
-                          size: 28,
-                        ),
-                      ),
-                    ],
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFf2003c),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          config['instruction'],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      Container(
-                        margin: EdgeInsets.only(
-                          top: 8,
-                          left: config['arrowOffset'] ?? 0.0,
-                        ),
-                        child: const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Color(0xFFf2003c),
-                          size: 28,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-
         ],
       ),
     );

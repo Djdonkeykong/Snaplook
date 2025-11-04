@@ -218,8 +218,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           // Floating Action Bar
           Positioned(
-            left: MediaQuery.of(context).size.width * 0.125,
-            right: MediaQuery.of(context).size.width * 0.125,
+            left: MediaQuery.of(context).size.width * 0.09,
+            right: MediaQuery.of(context).size.width * 0.09,
             bottom: 24,
             child: _FloatingActionBar(
               onSnapTap: () => _pickImage(ImageSource.camera),
@@ -1458,29 +1458,39 @@ class _FloatingActionBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _FloatingActionButtonSvg(
-              svgIcon: 'assets/icons/camera_filled.svg',
-              label: 'Snap',
-              onTap: onSnapTap,
-              iconSize: 25,
-              spacing: 3,
+            Expanded(
+              child: _FloatingActionButtonSvg(
+                svgIcon: 'assets/icons/camera_filled.svg',
+                label: 'Snap',
+                onTap: onSnapTap,
+                iconSize: 25,
+                spacing: 3,
+              ),
             ),
-            _FloatingActionButtonSvg(
-              svgIcon: 'assets/icons/upload_filled.svg',
-              label: 'Upload',
-              onTap: onUploadTap,
+            const SizedBox(width: 4),
+            Expanded(
+              child: _FloatingActionButtonSvg(
+                svgIcon: 'assets/icons/upload_filled.svg',
+                label: 'Upload',
+                onTap: onUploadTap,
+              ),
             ),
-            _FloatingActionButtonSvg(
-              svgIcon: 'assets/icons/tutorials_filled.svg',
-              label: 'Tutorials',
-              onTap: () {},
+            const SizedBox(width: 4),
+            Expanded(
+              child: _FloatingActionButtonSvg(
+                svgIcon: 'assets/icons/tutorials_filled.svg',
+                label: 'Tutorials',
+                onTap: () {},
+              ),
             ),
-            _FloatingActionButtonSvg(
-              svgIcon: 'assets/icons/info_icon.svg',
-              label: 'Info',
-              onTap: onInfoTap,
+            const SizedBox(width: 4),
+            Expanded(
+              child: _FloatingActionButtonSvg(
+                svgIcon: 'assets/icons/info_icon.svg',
+                label: 'Info',
+                onTap: onInfoTap,
+              ),
             ),
           ],
         ),
@@ -1506,37 +1516,35 @@ class _FloatingActionButtonSvg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          onTap();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SvgPicture.asset(
-                  svgIcon,
-                  width: iconSize,
-                  height: iconSize,
-                  colorFilter:
-                      const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                svgIcon,
+                width: iconSize,
+                height: iconSize,
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              ),
+              SizedBox(height: spacing),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
                 ),
-                SizedBox(height: spacing),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

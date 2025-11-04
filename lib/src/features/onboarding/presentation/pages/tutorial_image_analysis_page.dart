@@ -125,52 +125,6 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
                     ),
                   ),
 
-                // "Tap here" indicator (only when not analyzing)
-                if (!_isAnalyzing)
-                  Positioned(
-                    bottom: 168, // Position above the scan button - moved up 18px from 150 (12+6)
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFf2003c),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.4),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'Tap to analyze',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-
-                          // Arrow pointing down to the scan button
-                          Container(
-                            margin: const EdgeInsets.only(top: 8),
-                            child: const Icon(
-                              Icons.keyboard_arrow_down,
-                              color: Color(0xFFf2003c),
-                              size: 28,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
               ],
             ),
           );
