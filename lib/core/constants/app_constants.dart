@@ -168,7 +168,7 @@ class AppConstants {
 
   // === 🐝 ScrapingBee Keys ===
   static const List<String> _scrapingBeeKeyPriority = [
-    'MBVJU10S1A0YUDAMPSUBIVSPGPA6MIJ5R1HNXZBSRQSDD06JH6K8UK74XZF9N8AISFWXTOLQH3U37NZF',
+    '55D79GGF9UWXJ4IX0QJ3G5GDCZL07245FYFEHX6A2UJTALDE8EFBFRA0FVCMXQ615UQ7J6DTHC6WMM7C',
   ];
 
   static List<String> _parseScrapingBeeEnv(String? raw) {
