@@ -133,8 +133,8 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
       SnackBar(
         content: Text(
           'Removed from favorites',
-          style: textTheme.bodyMedium?.copyWith(
-            fontFamily: 'PlusJakartaSans',
+          style: context.snackTextStyle(
+            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
           ),
         ),
         duration: const Duration(milliseconds: 2500),
@@ -426,8 +426,8 @@ class _FavoriteCard extends ConsumerWidget {
                       SnackBar(
                         content: Text(
                           'Link unavailable for this item.',
-                          style: textTheme.bodyMedium?.copyWith(
-                            fontFamily: 'PlusJakartaSans',
+                          style: context.snackTextStyle(
+                            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
                           ),
                         ),
                         duration: const Duration(seconds: 2),
@@ -441,8 +441,8 @@ class _FavoriteCard extends ConsumerWidget {
                       SnackBar(
                         content: Text(
                           'Link copied to clipboard',
-                          style: textTheme.bodyMedium?.copyWith(
-                            fontFamily: 'PlusJakartaSans',
+                          style: context.snackTextStyle(
+                            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
                           ),
                         ),
                         duration: const Duration(seconds: 2),

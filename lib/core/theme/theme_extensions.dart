@@ -115,6 +115,13 @@ class AppRadiusExtension extends ThemeExtension<AppRadiusExtension> {
 extension ThemeExtensions on BuildContext {
   AppSpacingExtension get spacing => Theme.of(this).extension<AppSpacingExtension>()!;
   AppRadiusExtension get radius => Theme.of(this).extension<AppRadiusExtension>()!;
+  TextStyle snackTextStyle({TextStyle? merge}) {
+    final theme = Theme.of(this);
+    final base = theme.snackBarTheme.contentTextStyle ??
+        theme.textTheme.bodyMedium ??
+        const TextStyle();
+    return merge != null ? base.merge(merge) : base;
+  }
 }
 
 @immutable

@@ -639,7 +639,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           SnackBar(
             content: Text(
               'Failed to crop image: $e',
-              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              style: context.snackTextStyle(
+                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
             ),
             duration: const Duration(milliseconds: 2500),
           ),
@@ -733,7 +735,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           SnackBar(
             content: Text(
               'Detection failed: $e',
-              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              style: context.snackTextStyle(
+                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
             ),
             duration: const Duration(milliseconds: 2500),
           ),

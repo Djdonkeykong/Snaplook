@@ -114,7 +114,9 @@ class AccountCreationPage extends ConsumerWidget {
                                     SnackBar(
                                       content: Text(
                                         'Error signing in with Apple: ${e.toString()}',
-                                        style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                        style: context.snackTextStyle(
+                                          merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                        ),
                                       ),
                                       duration: const Duration(milliseconds: 2500),
                                     ),
@@ -157,7 +159,9 @@ class AccountCreationPage extends ConsumerWidget {
                                     SnackBar(
                                       content: Text(
                                         'Error signing in with Google: ${e.toString()}',
-                                        style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                        style: context.snackTextStyle(
+                                          merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                        ),
                                       ),
                                       duration: const Duration(milliseconds: 2500),
                                     ),

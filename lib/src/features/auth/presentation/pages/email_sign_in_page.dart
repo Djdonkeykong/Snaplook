@@ -73,7 +73,9 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
           SnackBar(
             content: Text(
               'Error sending verification code: ${e.toString()}',
-              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              style: context.snackTextStyle(
+                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
             ),
             duration: const Duration(milliseconds: 2500),
           ),

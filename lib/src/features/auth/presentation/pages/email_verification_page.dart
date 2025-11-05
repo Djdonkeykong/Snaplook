@@ -118,7 +118,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
           SnackBar(
             content: Text(
               'Invalid verification code. Please try again.',
-              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              style: context.snackTextStyle(
+                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
             ),
             duration: const Duration(milliseconds: 2500),
           ),
@@ -175,7 +177,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
           SnackBar(
             content: Text(
               'Verification code resent',
-              style: TextStyle(fontFamily: 'PlusJakartaSans'),
+              style: context.snackTextStyle(
+                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
             ),
             duration: const Duration(milliseconds: 2500),
           ),
@@ -188,7 +192,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
           SnackBar(
             content: Text(
               'Error resending code: ${e.toString()}',
-              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              style: context.snackTextStyle(
+                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
             ),
             duration: const Duration(milliseconds: 2500),
           ),

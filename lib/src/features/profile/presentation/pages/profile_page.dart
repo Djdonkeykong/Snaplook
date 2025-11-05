@@ -91,7 +91,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           SnackBar(
             content: Text(
               'Error logging out: ${e.toString()}',
-              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              style: context.snackTextStyle(
+                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
             ),
             duration: const Duration(milliseconds: 2500),
           ),

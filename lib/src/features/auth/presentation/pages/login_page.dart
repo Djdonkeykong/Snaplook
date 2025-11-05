@@ -307,7 +307,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                         SnackBar(
                           content: Text(
                             'Error signing in with Apple: ${e.toString()}',
-                            style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                            style: context.snackTextStyle(
+                              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                            ),
                           ),
                           duration: const Duration(milliseconds: 2500),
                         ),
@@ -352,7 +354,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                         SnackBar(
                           content: Text(
                             'Error signing in with Google: ${e.toString()}',
-                            style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                            style: context.snackTextStyle(
+                              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                            ),
                           ),
                           duration: const Duration(milliseconds: 2500),
                         ),

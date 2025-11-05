@@ -669,7 +669,10 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error picking image: $e'),
+            content: Text(
+              'Error picking image: $e',
+              style: context.snackTextStyle(),
+            ),
           ),
         );
       }
