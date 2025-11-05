@@ -566,15 +566,7 @@ class _ThemeModeOptionTile extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(spacing.m),
         decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.secondary.withOpacity(0.12)
-              : colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(borderRadius),
-          border: Border.all(
-            color:
-                isSelected ? colorScheme.secondary : colorScheme.outlineVariant,
-            width: 1,
-          ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
