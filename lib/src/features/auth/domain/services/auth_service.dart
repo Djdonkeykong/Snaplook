@@ -41,12 +41,18 @@ class AuthService {
     try {
       final userId = isAuthenticated ? currentUser?.id : null;
 
+      print('[Auth] Calling setAuthFlag method channel...');
+      print('[Auth]   - isAuthenticated: $isAuthenticated');
+      print('[Auth]   - userId: $userId');
+
       // IMPORTANT: Always send the current state, even if null
       // This ensures old user_id values are cleared from UserDefaults
-      await _authChannel.invokeMethod('setAuthFlag', {
+      final result = await _authChannel.invokeMethod('setAuthFlag', {
         'isAuthenticated': isAuthenticated,
         'userId': userId,  // Will be null if not authenticated, clearing old values
       });
+
+      print('[Auth] Method channel call completed, result: $result');
 
       if (isAuthenticated && userId != null) {
         print('[Auth] Synced to share extension - authenticated with userId: $userId');
@@ -54,7 +60,8 @@ class AuthService {
         print('[Auth] Synced to share extension - NOT authenticated, cleared user_id');
       }
     } catch (e) {
-      print('[Auth] Error updating auth flag: $e');
+      print('[Auth] ERROR calling method channel: $e');
+      print('[Auth] Stack trace: ${StackTrace.current}');
     }
   }
 
