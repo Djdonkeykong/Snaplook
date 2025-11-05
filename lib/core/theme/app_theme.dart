@@ -48,6 +48,7 @@ class AppTheme {
       extensions: const [
         AppSpacingExtension.standard,
         AppRadiusExtension.standard,
+        AppNavigationExtension.light,
       ],
     );
   }
@@ -97,6 +98,7 @@ class AppTheme {
       extensions: const [
         AppSpacingExtension.standard,
         AppRadiusExtension.standard,
+        AppNavigationExtension.dark,
       ],
     );
   }

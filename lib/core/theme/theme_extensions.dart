@@ -115,3 +115,91 @@ extension ThemeExtensions on BuildContext {
   AppSpacingExtension get spacing => Theme.of(this).extension<AppSpacingExtension>()!;
   AppRadiusExtension get radius => Theme.of(this).extension<AppRadiusExtension>()!;
 }
+
+@immutable
+class AppNavigationExtension extends ThemeExtension<AppNavigationExtension> {
+  const AppNavigationExtension({
+    required this.navBarBackground,
+    required this.navBarActiveIcon,
+    required this.navBarInactiveIcon,
+    required this.navBarBadgeBackground,
+    required this.navBarBadgeBorder,
+    required this.actionBarBackground,
+    required this.actionBarIcon,
+    required this.actionBarLabel,
+  });
+
+  final Color navBarBackground;
+  final Color navBarActiveIcon;
+  final Color navBarInactiveIcon;
+  final Color navBarBadgeBackground;
+  final Color navBarBadgeBorder;
+  final Color actionBarBackground;
+  final Color actionBarIcon;
+  final Color actionBarLabel;
+
+  static const AppNavigationExtension light = AppNavigationExtension(
+    navBarBackground: Colors.white,
+    navBarActiveIcon: Colors.black,
+    navBarInactiveIcon: Color(0x99000000),
+    navBarBadgeBackground: Color(0xFFf2003c),
+    navBarBadgeBorder: Colors.white,
+    actionBarBackground: Colors.white,
+    actionBarIcon: Colors.black,
+    actionBarLabel: Colors.black,
+  );
+
+  static const AppNavigationExtension dark = AppNavigationExtension(
+    navBarBackground: Colors.black,
+    navBarActiveIcon: Colors.white,
+    navBarInactiveIcon: Color(0x99FFFFFF),
+    navBarBadgeBackground: Color(0xFFf2003c),
+    navBarBadgeBorder: Colors.white,
+    actionBarBackground: Colors.black,
+    actionBarIcon: Colors.white,
+    actionBarLabel: Colors.white,
+  );
+
+  @override
+  AppNavigationExtension copyWith({
+    Color? navBarBackground,
+    Color? navBarActiveIcon,
+    Color? navBarInactiveIcon,
+    Color? navBarBadgeBackground,
+    Color? navBarBadgeBorder,
+    Color? actionBarBackground,
+    Color? actionBarIcon,
+    Color? actionBarLabel,
+  }) {
+    return AppNavigationExtension(
+      navBarBackground: navBarBackground ?? this.navBarBackground,
+      navBarActiveIcon: navBarActiveIcon ?? this.navBarActiveIcon,
+      navBarInactiveIcon: navBarInactiveIcon ?? this.navBarInactiveIcon,
+      navBarBadgeBackground: navBarBadgeBackground ?? this.navBarBadgeBackground,
+      navBarBadgeBorder: navBarBadgeBorder ?? this.navBarBadgeBorder,
+      actionBarBackground: actionBarBackground ?? this.actionBarBackground,
+      actionBarIcon: actionBarIcon ?? this.actionBarIcon,
+      actionBarLabel: actionBarLabel ?? this.actionBarLabel,
+    );
+  }
+
+  @override
+  AppNavigationExtension lerp(AppNavigationExtension? other, double t) {
+    if (other is! AppNavigationExtension) return this;
+    return AppNavigationExtension(
+      navBarBackground: Color.lerp(navBarBackground, other.navBarBackground, t)!,
+      navBarActiveIcon: Color.lerp(navBarActiveIcon, other.navBarActiveIcon, t)!,
+      navBarInactiveIcon: Color.lerp(navBarInactiveIcon, other.navBarInactiveIcon, t)!,
+      navBarBadgeBackground: Color.lerp(navBarBadgeBackground, other.navBarBadgeBackground, t)!,
+      navBarBadgeBorder: Color.lerp(navBarBadgeBorder, other.navBarBadgeBorder, t)!,
+      actionBarBackground: Color.lerp(actionBarBackground, other.actionBarBackground, t)!,
+      actionBarIcon: Color.lerp(actionBarIcon, other.actionBarIcon, t)!,
+      actionBarLabel: Color.lerp(actionBarLabel, other.actionBarLabel, t)!,
+    );
+  }
+}
+
+extension NavigationExtensionGetter on BuildContext {
+  AppNavigationExtension get navigation =>
+      Theme.of(this).extension<AppNavigationExtension>() ?? AppNavigationExtension.light;
+}
