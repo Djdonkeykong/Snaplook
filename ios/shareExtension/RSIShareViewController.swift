@@ -1490,6 +1490,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         bottomBarContainer.addSubview(separator)
         bottomBarContainer.addSubview(saveButton)
 
+        // Layout constraints - safely unwrap FIRST to prevent crashes
+        guard let loadingView = loadingView, let tableView = resultsTableView else {
+            shareLog("ERROR: loadingView or resultsTableView is nil - cannot display results")
+            return
+        }
+
         let headerView = addResultsHeaderIfNeeded()
         let filterTopAnchor: NSLayoutYAxisAnchor
         let filterTopPadding: CGFloat
@@ -1497,24 +1503,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
             filterTopAnchor = headerView.bottomAnchor
             filterTopPadding = 12
         } else {
-            filterTopAnchor = loadingView!.safeAreaLayoutGuide.topAnchor
+            filterTopAnchor = loadingView.safeAreaLayoutGuide.topAnchor
             filterTopPadding = 0
         }
 
         // Add all views to loadingView
-        loadingView?.addSubview(filterView)
-        if let tableView = resultsTableView {
-            loadingView?.addSubview(tableView)
-        }
-        loadingView?.addSubview(bottomBarContainer)
+        loadingView.addSubview(filterView)
+        loadingView.addSubview(tableView)
+        loadingView.addSubview(bottomBarContainer)
         if let headerView = headerView {
-            loadingView?.bringSubviewToFront(headerView)
-        }
-
-        // Layout constraints - safely unwrap to prevent crashes
-        guard let loadingView = loadingView, let tableView = resultsTableView else {
-            shareLog("ERROR: loadingView or resultsTableView is nil - cannot display results")
-            return
+            loadingView.bringSubviewToFront(headerView)
         }
 
         NSLayoutConstraint.activate([
