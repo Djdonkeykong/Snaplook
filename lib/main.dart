@@ -305,10 +305,30 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     super.didChangeAppLifecycleState(state);
   }
 
-  void _syncAuthState() {
+  void _syncAuthState() async {
     try {
+      debugPrint('[Auth] Syncing auth state to share extension...');
+
+      // Try to recover session from storage if current session is null
+      var session = Supabase.instance.client.auth.currentSession;
+      if (session == null) {
+        debugPrint('[Auth] No current session, attempting recovery...');
+        try {
+          session = await Supabase.instance.client.auth.recoverSession();
+          debugPrint('[Auth] Session recovery result: ${session != null ? "success" : "failed"}');
+        } catch (e) {
+          debugPrint('[Auth] Session recovery error: $e');
+        }
+      }
+
+      final user = Supabase.instance.client.auth.currentUser;
+      debugPrint('[Auth] Current session: ${session != null ? "exists" : "null"}');
+      debugPrint('[Auth] Current user: ${user?.id ?? "null"}');
+
       final authService = AuthService();
-      authService.syncAuthState();
+      await authService.syncAuthState();
+
+      debugPrint('[Auth] Sync complete');
     } catch (e) {
       debugPrint('[Auth] Failed to sync auth state: $e');
     }

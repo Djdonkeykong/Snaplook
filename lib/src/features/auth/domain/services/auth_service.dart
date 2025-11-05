@@ -16,6 +16,10 @@ class AuthService {
 
   // Initialize and sync current auth state to share extension
   Future<void> syncAuthState() async {
+    print('[AuthService] syncAuthState called');
+    print('[AuthService] isAuthenticated: $isAuthenticated');
+    print('[AuthService] currentUser: ${currentUser?.id ?? "null"}');
+
     await _updateAuthFlag(isAuthenticated);
 
     // Also listen for auth state changes and sync automatically
@@ -24,6 +28,8 @@ class AuthService {
       print('[Auth] Auth state changed: ${authState.event}');
       _updateAuthFlag(authState.session != null);
     });
+
+    print('[AuthService] Auth listener set up');
   }
 
   void dispose() {
