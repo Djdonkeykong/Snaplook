@@ -34,7 +34,13 @@ class FavoriteItem extends Equatable {
       brand: json['brand'] as String,
       price: (json['price'] as num).toDouble(),
       imageUrl: json['image_url'] as String,
-      purchaseUrl: json['purchase_url'] as String?,
+      purchaseUrl: (() {
+        final dynamic rawUrl =
+            json['purchase_url'] ?? json['purchaseUrl'] ?? json['url'];
+        if (rawUrl == null) return null;
+        final trimmed = rawUrl.toString().trim();
+        return trimmed.isEmpty ? null : trimmed;
+      })(),
       category: json['category'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
     );

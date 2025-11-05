@@ -234,9 +234,10 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
 
   void _showOptionsMenu() {
     final product = widget.product;
-    final productUrl = product['url']?.toString() ?? '';
-    final productTitle = product['title']?.toString() ?? 'Product';
-    final productBrand = product['brand']?.toString() ?? '';
+    final dynamic rawUrl = product['url'] ?? product['purchase_url'];
+    final productUrl = rawUrl == null ? '' : rawUrl.toString().trim();
+    final productTitle = (product['title'] ?? product['product_name'] ?? 'Product').toString();
+    final productBrand = (product['brand'] ?? '').toString();
 
     Rect _shareOriginForContext(BuildContext context) {
       final renderBox = context.findRenderObject() as RenderBox?;

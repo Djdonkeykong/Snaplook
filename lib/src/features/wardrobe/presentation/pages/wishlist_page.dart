@@ -331,7 +331,7 @@ class _FavoriteCard extends ConsumerWidget {
   void _showShareMenu(BuildContext context) {
     final productBrand = favorite.brand;
     final productTitle = favorite.productName;
-    final productUrl = favorite.purchaseUrl ?? '';
+    final productUrl = favorite.purchaseUrl?.trim() ?? '';
 
     Rect _shareOriginForContext(BuildContext context) {
       final renderBox = context.findRenderObject() as RenderBox?;
@@ -426,6 +426,7 @@ class _FavoriteCard extends ConsumerWidget {
           'price': favorite.price,
           'image_url': favorite.imageUrl,
           'url': favorite.purchaseUrl ?? '',
+          'purchase_url': favorite.purchaseUrl ?? '',
           'category': favorite.category,
         };
 
