@@ -46,11 +46,6 @@ class HelpFaqPage extends StatelessWidget {
           ),
           SizedBox(height: spacing.m),
           _FaqItem(
-            question: 'Can I create collections?',
-            answer: 'Yes! Tap the three dots on any favorited item and add it to a collection.',
-          ),
-          SizedBox(height: spacing.m),
-          _FaqItem(
             question: 'How do I delete my account?',
             answer: 'Go to Settings and tap "Delete Account" at the bottom of the page.',
           ),

@@ -6,7 +6,6 @@ import 'package:easy_refresh/easy_refresh.dart';
 import '../../../favorites/domain/providers/favorites_provider.dart';
 import '../../../favorites/domain/models/favorite_item.dart';
 import '../../../product/presentation/pages/product_detail_page.dart';
-import '../../../collections/presentation/widgets/add_to_collection_sheet.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
@@ -22,18 +21,10 @@ class WishlistPage extends ConsumerStatefulWidget {
 class _WishlistPageState extends ConsumerState<WishlistPage>
     with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
-  late TabController _tabController;
   final Map<String, AnimationController> _removeControllers = {};
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
   void dispose() {
-    _tabController.dispose();
     _scrollController.dispose();
     for (var controller in _removeControllers.values) {
       controller.dispose();
@@ -85,40 +76,12 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
               ),
             ),
 
-            // Tab Bar
-            TabBar(
-              controller: _tabController,
-              labelColor: Colors.black,
-              unselectedLabelColor: AppColors.textSecondary,
-              indicatorColor: const Color(0xFFf2003c),
-              indicatorWeight: 2,
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'PlusJakartaSans',
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'PlusJakartaSans',
-              ),
-              tabs: const [
-                Tab(text: 'All'),
-                Tab(text: 'Collections'),
-              ],
-            ),
+            SizedBox(height: spacing.s),
 
-            // Tab Views
+            // Favorites List
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildAllFavoritesTab(
-                      isInitialLoading, hasError, favorites, spacing),
-                  _buildCollectionsTab(),
-                ],
-              ),
+              child: _buildAllFavoritesTab(
+                  isInitialLoading, hasError, favorites, spacing),
             ),
           ],
         ),
@@ -257,19 +220,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     );
   }
 
-  Widget _buildCollectionsTab() {
-    return const Center(
-      child: Text(
-        'Collections coming soon!',
-        style: TextStyle(
-          fontSize: 16,
-          color: AppColors.textSecondary,
-          fontFamily: 'PlusJakartaSans',
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState(BuildContext context, dynamic spacing) {
     return Center(
       child: Padding(
@@ -360,56 +310,6 @@ class _FavoriteCard extends ConsumerWidget {
     this.onDelete,
   });
 
-  void _showOptionsMenu(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(SnaplookIcons.addCircleOutline,
-                      color: Colors.black, size: 24),
-                  title: const Text(
-                    'Add to Collection',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) => AddToCollectionSheet(
-                        productId: favorite.productId,
-                        productName: favorite.productName,
-                        brand: favorite.brand,
-                        price: favorite.price,
-                        imageUrl: favorite.imageUrl,
-                        purchaseUrl: favorite.purchaseUrl,
-                        category: favorite.category,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final radius = context.radius;
@@ -499,55 +399,26 @@ class _FavoriteCard extends ConsumerWidget {
 
             SizedBox(width: spacing.sm),
 
-            // Action Icons (Delete & Menu)
+            // Action Icon (Delete)
             SizedBox(
               height: 100,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Delete Icon
-                  GestureDetector(
-                    onTap: onDelete,
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        SnaplookIcons.trashBin,
-                        color: Colors.white,
-                        size: 14,
-                      ),
+              child: Center(
+                child: GestureDetector(
+                  onTap: onDelete,
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      SnaplookIcons.trashBin,
+                      color: Colors.white,
+                      size: 14,
                     ),
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // Three Dots Menu
-                  GestureDetector(
-                    onTap: () => _showOptionsMenu(context, ref),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.black,
-                          width: 1.0,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.more_horiz,
-                          color: Colors.black,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],

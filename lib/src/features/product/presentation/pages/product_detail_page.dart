@@ -15,7 +15,6 @@ import '../../../home/domain/services/inspiration_service.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../favorites/domain/providers/favorites_provider.dart';
-import '../../../collections/presentation/widgets/add_to_collection_sheet.dart';
 import 'visual_search_page.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -182,6 +181,22 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
     super.dispose();
   }
 
+  void _showSnackBar(String message, {Color backgroundColor = Colors.black}) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+        ),
+        backgroundColor: backgroundColor,
+        duration: const Duration(milliseconds: 2500),
+      ),
+    );
+  }
+
   Future<void> _onLikeToggle() async {
     HapticFeedback.mediumImpact();
 
@@ -207,23 +222,13 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
       await ref.read(favoritesProvider.notifier).toggleFavorite(productResult);
 
       // Show snackbar based on action
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(wasAlreadyFavorited ? 'Removed from favorites' : 'Added to favorites'),
-            backgroundColor: Colors.black,
-          ),
-        );
-      }
+      _showSnackBar(
+        wasAlreadyFavorited ? 'Removed from favorites' : 'Added to favorites',
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update favorites: ${e.toString()}'),
-            backgroundColor: Colors.black,
-          ),
-        );
-      }
+      _showSnackBar(
+        'Failed to update favorites: ${e.toString()}',
+      );
     }
   }
 
@@ -246,34 +251,6 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ListTile(
-                  leading: const Icon(SnaplookIcons.addCircleOutline,
-                      color: Colors.black, size: 24),
-                  title: const Text(
-                    'Add to Collection',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) => AddToCollectionSheet(
-                        productId: product['id']?.toString() ?? '',
-                        productName: product['title'] ?? 'Unknown',
-                        brand: product['brand'] ?? 'Unknown',
-                        price: double.tryParse(product['price']?.toString() ?? '0') ?? 0.0,
-                        imageUrl: product['image_url'] ?? '',
-                        purchaseUrl: product['url'],
-                        category: product['category'] ?? 'Unknown',
-                      ),
-                    );
-                  },
-                ),
                 ListTile(
                   leading: const Icon(Icons.share_outlined,
                       color: Colors.black, size: 24),
@@ -319,17 +296,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                     Navigator.pop(context);
                     if (productUrl.isNotEmpty) {
                       Clipboard.setData(ClipboardData(text: productUrl));
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Link copied to clipboard',
-                            style: TextStyle(fontFamily: 'PlusJakartaSans'),
-                          ),
-                          backgroundColor: Colors.black,
-                          duration: Duration(milliseconds: 2000),
-                        ),
-                      );
+                      _showSnackBar('Link copied to clipboard');
                     }
                   },
                 ),
@@ -402,14 +369,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                             final productUrl = widget.product['url'] as String?;
 
                             if (productUrl == null || productUrl.isEmpty) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('No product link available'),
-                                    backgroundColor: Colors.black,
-                                  ),
-                                );
-                              }
+                              _showSnackBar('No product link available');
                               return;
                             }
 
@@ -417,24 +377,10 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                             if (await canLaunchUrl(uri)) {
                               await launchUrl(uri);
                             } else {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Cannot open product link'),
-                                    backgroundColor: Colors.black,
-                                  ),
-                                );
-                              }
+                              _showSnackBar('Cannot open product link');
                             }
                           } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error opening link: $e'),
-                                  backgroundColor: Colors.black,
-                                ),
-                              );
-                            }
+                            _showSnackBar('Error opening link: $e');
                           }
                         },
                         style: ElevatedButton.styleFrom(
