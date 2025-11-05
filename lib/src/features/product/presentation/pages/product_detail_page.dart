@@ -17,6 +17,25 @@ import '../../../detection/domain/models/detection_result.dart';
 import '../../../favorites/domain/providers/favorites_provider.dart';
 import 'visual_search_page.dart';
 
+String _resolveProductUrl(Map<String, dynamic> product) {
+  final candidates = [
+    product['purchase_url'],
+    product['purchaseUrl'],
+    product['url'],
+    product['link'],
+    product['product_url'],
+  ];
+
+  for (final candidate in candidates) {
+    if (candidate == null) continue;
+    final trimmed = candidate.toString().trim();
+    if (trimmed.isNotEmpty && trimmed.startsWith('http')) {
+      return trimmed;
+    }
+  }
+  return '';
+}
+
 class ProductDetailPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> product;
   final String heroTag;
@@ -38,25 +57,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   late List<Map<String, dynamic>> _products;
   int _currentIndex = 0;
   bool _isLoadingMore = false;
-
-  String _resolveProductUrl(Map<String, dynamic> product) {
-    final candidates = [
-      product['purchase_url'],
-      product['purchaseUrl'],
-      product['url'],
-      product['link'],
-      product['product_url'],
-    ];
-
-    for (final candidate in candidates) {
-      if (candidate == null) continue;
-      final trimmed = candidate.toString().trim();
-      if (trimmed.isNotEmpty && trimmed.startsWith('http')) {
-        return trimmed;
-      }
-    }
-    return '';
-  }
 
   @override
   void initState() {
