@@ -48,9 +48,9 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
     final detectionState = ref.watch(detectionProvider);
     final notifier = ref.read(detectionProvider.notifier);
 
-    final categories = notifier.availableCategories;
-    final selectedCategory = detectionState.selectedCategory;
-    final results = notifier.filteredResults;
+    const categories = ['all'];
+    const selectedCategory = 'all';
+    final results = detectionState.results;
 
     final spacing = context.spacing;
     final radius = context.radius;
