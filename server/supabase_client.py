@@ -48,6 +48,42 @@ class SupabaseManager:
     # IMAGE CACHE OPERATIONS
     # ============================================
 
+    def check_cache_by_source(self, source_url: str) -> Optional[Dict[str, Any]]:
+        """
+        Check if we've already analyzed this Instagram/source URL.
+        Returns cache entry if found and not expired, None otherwise.
+        """
+        if not self.enabled:
+            return None
+
+        try:
+            # Find a user_search with this source_url
+            response = self.client.table('user_searches')\
+                .select('image_cache_id, image_cache(*)')\
+                .eq('source_url', source_url)\
+                .order('created_at', desc=True)\
+                .limit(1)\
+                .execute()
+
+            if response.data and len(response.data) > 0:
+                search = response.data[0]
+                cache_data = search.get('image_cache')
+
+                if cache_data:
+                    # Check if cache is still valid
+                    expires_at_str = cache_data.get('expires_at')
+                    if expires_at_str:
+                        expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '+00:00'))
+                        if expires_at > datetime.now(expires_at.tzinfo):
+                            print(f"Cache HIT for Instagram URL: {source_url[:50]}...")
+                            return cache_data
+
+            return None
+
+        except Exception as e:
+            print(f"Cache check by source error: {e}")
+            return None
+
     def check_cache(self, image_url: Optional[str] = None, image_hash: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Check if image exists in cache by URL or hash.

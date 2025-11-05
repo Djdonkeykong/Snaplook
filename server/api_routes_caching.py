@@ -94,12 +94,18 @@ async def analyze_with_caching(
             image_hash = hash_image(image_obj)
 
         # Step 1: Check cache
+        # For Instagram posts, check by source_url first (avoids re-downloading)
         cache_entry = None
         if supabase_manager.enabled:
-            cache_entry = supabase_manager.check_cache(
-                image_url=image_url,
-                image_hash=image_hash
-            )
+            if request.search_type == "instagram" and request.source_url:
+                cache_entry = supabase_manager.check_cache_by_source(request.source_url)
+
+            # If no cache hit by source, try by image URL/hash
+            if not cache_entry:
+                cache_entry = supabase_manager.check_cache(
+                    image_url=image_url,
+                    image_hash=image_hash
+                )
 
         # Step 2: Cache HIT - Return instant results
         if cache_entry:

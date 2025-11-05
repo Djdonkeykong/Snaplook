@@ -2225,6 +2225,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let productData: [String: Any] = [
+            "id": product.id,
+            "product_id": product.id,  // Also include as product_id for backwards compatibility
             "product_name": product.product_name,
             "brand": product.brand ?? "",
             "price": product.priceValue ?? 0.0,
