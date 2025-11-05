@@ -2093,19 +2093,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Fallback: Try to use the first product's image if original image unavailable
         if !imageAdded && !detectionResults.isEmpty {
-            if let firstProduct = detectionResults.first,
-               let imageUrlString = firstProduct.image_url,
-               let imageUrl = URL(string: imageUrlString) {
-                shareLog("Fallback: Attempting to download product image from: \(imageUrlString)")
+            if let firstProduct = detectionResults.first {
+                let imageUrlString = firstProduct.image_url
+                if !imageUrlString.isEmpty, let imageUrl = URL(string: imageUrlString) {
+                    shareLog("Fallback: Attempting to download product image from: \(imageUrlString)")
 
-                // Download image synchronously (we're already in share flow)
-                if let imageData = try? Data(contentsOf: imageUrl),
-                   let image = UIImage(data: imageData) {
-                    itemsToShare.insert(image, at: 0)
-                    shareLog("✅ Successfully added product image as fallback (size: \(image.size))")
-                    imageAdded = true
-                } else {
-                    shareLog("❌ Failed to download fallback image")
+                    // Download image synchronously (we're already in share flow)
+                    if let imageData = try? Data(contentsOf: imageUrl),
+                       let image = UIImage(data: imageData) {
+                        itemsToShare.insert(image, at: 0)
+                        shareLog("✅ Successfully added product image as fallback (size: \(image.size))")
+                        imageAdded = true
+                    } else {
+                        shareLog("❌ Failed to download fallback image")
+                    }
                 }
             }
         }
