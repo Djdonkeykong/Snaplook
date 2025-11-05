@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'tutorial_analysis_page.dart';
+import 'tutorial_image_analysis_page.dart';
 
 enum SafariTutorialStep {
   step1,
@@ -46,7 +46,7 @@ class SafariTutorialPage extends ConsumerWidget {
                 } else {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialAnalysisPage(
+                      builder: (context) => const TutorialImageAnalysisPage(
                         imagePath: 'assets/images/safari_tutorial.webp',
                         scenario: 'Safari',
                       ),

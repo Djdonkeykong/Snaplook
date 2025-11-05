@@ -85,7 +85,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
             TabBar(
               controller: _tabController,
               labelColor: Colors.black,
-              unselectedLabelColor: Colors.grey,
+              unselectedLabelColor: AppColors.textSecondary,
               indicatorColor: const Color(0xFFf2003c),
               indicatorWeight: 2,
               indicatorSize: TabBarIndicatorSize.tab,
@@ -250,7 +250,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         'Collections coming soon!',
         style: TextStyle(
           fontSize: 16,
-          color: Colors.grey,
+          color: AppColors.textSecondary,
           fontFamily: 'PlusJakartaSans',
         ),
       ),
@@ -358,8 +358,8 @@ class _FavoriteCard extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.collections_bookmark_outlined,
-                      color: Colors.black),
+                  leading: const Icon(SnaplookIcons.addCircleOutline,
+                      color: Colors.black, size: 24),
                   title: const Text(
                     'Add to Collection',
                     style: TextStyle(
@@ -433,7 +433,7 @@ class _FavoriteCard extends ConsumerWidget {
                   errorWidget: (context, url, error) => Container(
                     color: Colors.grey.shade200,
                     child:
-                        const Icon(Icons.error, color: Colors.grey, size: 24),
+                        const Icon(Icons.error, color: AppColors.textTertiary, size: 24),
                   ),
                 ),
               ),
@@ -463,7 +463,7 @@ class _FavoriteCard extends ConsumerWidget {
                     favorite.productName,
                     style: const TextStyle(
                       fontSize: 14,
-                      color: Colors.grey,
+                      color: AppColors.textSecondary,
                       fontFamily: 'PlusJakartaSans',
                     ),
                     maxLines: 2,
@@ -484,7 +484,7 @@ class _FavoriteCard extends ConsumerWidget {
                 child: Center(
                   child: Icon(
                     Icons.more_horiz,
-                    color: Colors.grey.shade400,
+                    color: AppColors.textTertiary,
                     size: 24,
                   ),
                 ),

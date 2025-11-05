@@ -63,21 +63,32 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
     try {
       await ref.read(favoritesProvider.notifier).toggleFavorite(widget.product);
 
-      // Show snackbar based on action
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
           SnackBar(
-            content: Text(wasAlreadyFavorited ? 'Removed from favorites' : 'Added to favorites'),
+            content: Text(
+              wasAlreadyFavorited ? 'Removed from favorites' : 'Added to favorites',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
             backgroundColor: Colors.black,
+            duration: const Duration(milliseconds: 2500),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
           SnackBar(
-            content: Text('Failed to update favorites: ${e.toString()}'),
+            content: Text(
+              'Failed to update favorites: ${e.toString()}',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
             backgroundColor: Colors.black,
+            duration: const Duration(milliseconds: 2500),
           ),
         );
       }

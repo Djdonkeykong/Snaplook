@@ -43,10 +43,10 @@ cloudinary.config(
     secure=True
 )
 
-# SearchAPI.io credentials and configuration
-SEARCHAPI_KEY = os.getenv("SEARCHAPI_KEY", "T2BUYdLUfK1zpz4qvoz5u2HF")
-SEARCHAPI_LOCATION = os.getenv("SEARCHAPI_LOCATION", "us")  # Country code for results
-SEARCHAPI_DEVICE = os.getenv("SEARCHAPI_DEVICE", "mobile")  # mobile or desktop
+# SerpAPI credentials and configuration
+SERPAPI_KEY = os.getenv("SERPAPI_KEY", "e65af8658648b412e968ab84fe28e44c98867bc7e1667de031837e5acf356fd6")
+SERPAPI_LOCATION = os.getenv("SERPAPI_LOCATION", "United States")  # Location for results
+SERPAPI_DEVICE = os.getenv("SERPAPI_DEVICE", "mobile")  # mobile or desktop
 
 # Tiny/irrelevant crop guard (pixels)
 MIN_CROP_W = 80
@@ -1430,7 +1430,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 return {'success': False, 'message': 'Failed to upload garment crops to CDN', 'results': []}
 
         # Step 4: Visual product search (parallel, no timeout)
-        print(f"[SearchAPI] Searching {len(crops_with_urls)} garments...")
+        print(f"[SerpAPI] Searching {len(crops_with_urls)} garments...")
 
         def search_single_garment(item):
             garment = item['garment']
@@ -1442,7 +1442,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 req.max_results_per_garment,
                 req.location,
             )
-            print(f"[SearchAPI] {label} search took {time.time() - t_search:.2f}s ({len(search_results)} results)")
+            print(f"[SerpAPI] {label} search took {time.time() - t_search:.2f}s ({len(search_results)} results)")
 
             return [
                 format_detection_result(r, label, i)
@@ -1461,17 +1461,17 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                     all_results.extend(future.result() or [])
                 except Exception as exc:
                     label = future_to_item[future]["garment"]["label"]
-                    print(f"[SearchAPI] Unexpected error collecting results for {label}: {exc}")
+                    print(f"[SerpAPI] Unexpected error collecting results for {label}: {exc}")
             if not_done:
                 for future in not_done:
                     label = future_to_item[future]["garment"]["label"]
-                    print(f"[SearchAPI] Search incomplete for {label}")
+                    print(f"[SerpAPI] Search incomplete for {label}")
                     future.cancel()
         finally:
             executor.shutdown(wait=False, cancel_futures=True)
 
         serp_elapsed = time.time() - t_serp
-        print(f"[SearchAPI] All searches complete in {serp_elapsed:.2f}s")
+        print(f"[SerpAPI] All searches complete in {serp_elapsed:.2f}s")
 
         # Step 5: Filter, deduplicate, and summarize
         pdp_count = sum(
@@ -1573,35 +1573,33 @@ def search_visual_products(
     max_results: int = 10,
     location: str = None,
 ):
-    """SearchAPI.io optimized Google Lens search for fashion products."""
+    """SerpAPI optimized Google Lens search for fashion products."""
     params = {
         "engine": "google_lens",
-        "api_key": SEARCHAPI_KEY,
+        "api_key": SERPAPI_KEY,
         "url": image_url,
-        "search_type": "products",
-        "location": location or SEARCHAPI_LOCATION,  # Country-specific results
-        "device": SEARCHAPI_DEVICE,  # Mobile optimized for better fashion results
+        "location": location or SERPAPI_LOCATION,  # Location-specific results
         "hl": "en",  # English interface
     }
 
     http_timeout = 30.0
 
     try:
-        response = requests.get("https://www.searchapi.io/api/v1/search", params=params, timeout=http_timeout)
+        response = requests.get("https://serpapi.com/search.json", params=params, timeout=http_timeout)
         response.raise_for_status()
     except requests.exceptions.Timeout:
-        print(f"[SearchAPI] HTTP timeout after {http_timeout:.1f}s")
+        print(f"[SerpAPI] HTTP timeout after {http_timeout:.1f}s")
         return []
     except requests.RequestException as exc:
-        print(f"[SearchAPI] Request error: {exc}")
+        print(f"[SerpAPI] Request error: {exc}")
         return []
 
     data = response.json()
     if data.get("error"):
-        print(f"[SearchAPI] API error: {data['error']}")
+        print(f"[SerpAPI] API error: {data['error']}")
         return []
 
-    # SearchAPI.io returns results in visual_matches array
+    # SerpAPI returns results in visual_matches array
     matches = data.get("visual_matches", [])
     if not isinstance(matches, list):
         matches = []

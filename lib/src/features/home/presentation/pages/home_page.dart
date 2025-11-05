@@ -695,12 +695,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade500,
+                        color: const Color(0xFF6B7280),
                         fontFamily: 'PlusJakartaSans',
                       ),
                     ),
 
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
 
                     // Membership type
                     const Text(
@@ -737,7 +737,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade400,
+                            color: const Color(0xFF6B7280),
                             fontFamily: 'PlusJakartaSans',
                           ),
                         ),
@@ -751,7 +751,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       'Credits Remaining',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey.shade600,
+                        color: const Color(0xFF6B7280),
                         fontFamily: 'PlusJakartaSans',
                       ),
                     ),
@@ -777,7 +777,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       'Resets monthly on the 1st',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: const Color(0xFF6B7280),
                         fontFamily: 'PlusJakartaSans',
                       ),
                     ),
@@ -1460,12 +1460,15 @@ class _FloatingActionBar extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: _FloatingActionButtonSvg(
-                svgIcon: 'assets/icons/camera_filled.svg',
-                label: 'Snap',
-                onTap: onSnapTap,
-                iconSize: 25,
-                spacing: 3,
+              child: Transform.translate(
+                offset: const Offset(0, -1),
+                child: _FloatingActionButtonSvg(
+                  svgIcon: 'assets/icons/camera_filled.svg',
+                  label: 'Snap',
+                  onTap: onSnapTap,
+                  iconSize: 27,
+                  spacing: 3,
+                ),
               ),
             ),
             const SizedBox(width: 4),

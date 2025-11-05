@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'tutorial_analysis_page.dart';
+import 'tutorial_image_analysis_page.dart';
 
 enum PhotosTutorialStep {
   step1,
@@ -95,7 +95,7 @@ class PhotosTutorialPage extends ConsumerWidget {
                   // Navigate to analysis page with Photos image
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialAnalysisPage(
+                      builder: (context) => const TutorialImageAnalysisPage(
                         imagePath: 'assets/images/photos_tutorial.jpg',
                         scenario: 'Photos',
                       ),

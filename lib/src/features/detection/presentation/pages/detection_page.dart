@@ -294,7 +294,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(40),
           onTap: () async {
-            HapticFeedback.mediumImpact();
             _startDetection();
           },
           child: Center(
@@ -717,9 +716,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           );
 
       if (mounted && results.isNotEmpty) {
-        // Haptic feedback for successful detection
-        HapticFeedback.mediumImpact();
-
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => ResultsPage(

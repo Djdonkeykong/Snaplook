@@ -183,14 +183,14 @@ class _ShareOption extends StatelessWidget {
           Icon(
             icon,
             size: 20,
-            color: isHighlighted ? const Color(0xFFFF521B) : Colors.grey.shade600,
+            color: isHighlighted ? const Color(0xFFFF521B) : AppColors.textSecondary,
           ),
           const SizedBox(height: 2),
           Text(
             label,
             style: TextStyle(
               fontSize: 10,
-              color: isHighlighted ? const Color(0xFFFF521B) : Colors.grey.shade600,
+              color: isHighlighted ? const Color(0xFFFF521B) : AppColors.textSecondary,
               fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -240,11 +240,11 @@ class _PreloadedVideoPlayerState extends State<_PreloadedVideoPlayer> {
       return Container(
         color: Colors.white,
         child: const Center(
-          child: Icon(
-            Icons.play_circle_outline,
-            size: 48,
-            color: Colors.grey,
-          ),
+        child: Icon(
+          Icons.play_circle_outline,
+          size: 48,
+          color: AppColors.textSecondary,
+        ),
         ),
       );
     }

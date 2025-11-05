@@ -9,7 +9,7 @@ import '../models/detection_result.dart';
 import '../../../../core/constants/category_rules.dart';
 import '../../../../services/cloudinary_service.dart';
 
-/// Detection pipeline powered by the backend SearchAPI service (with optional SerpAPI fallback).
+/// Detection pipeline powered by the backend SerpAPI service (with optional legacy fallback).
 class DetectionService {
   DetectionService({
     http.Client? client,
@@ -27,7 +27,7 @@ class DetectionService {
   // serp cache keyed by imageUrl + textQuery
   static final Map<String, List<Map<String, dynamic>>> _serpCache = {};
 
-  /// Main entrypoint ΓÇö prefer the backend SearchAPI pipeline, with optional legacy fallback.
+  /// Main entrypoint ΓÇö prefer the backend SerpAPI pipeline, with optional legacy fallback.
   Future<List<DetectionResult>> analyzeImage(
     XFile? image, {
     bool skipDetection = false,
@@ -41,13 +41,13 @@ class DetectionService {
       );
       if (serverResults.isNotEmpty) {
         debugPrint(
-          'Γ£à Returning ${serverResults.length} results from SearchAPI pipeline.',
+          'Γ£à Returning ${serverResults.length} results from SerpAPI pipeline.',
         );
         return serverResults;
       }
       throw Exception('Detector returned no results.');
     } catch (error, stackTrace) {
-      debugPrint('ΓÜá∩╕Å SearchAPI pipeline failed: $error\n$stackTrace');
+      debugPrint('ΓÜá∩╕Å SerpAPI pipeline failed: $error\n$stackTrace');
       if (!strictMode) {
         debugPrint(
           'Γå⌐∩╕Å Falling back to legacy SerpAPI pipeline (strictMode=false).',

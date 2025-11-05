@@ -36,6 +36,13 @@ class AppColors {
   static const Color onSurface = Color(0xFF1c1c25); // Dark text on light
   static const Color onSurfaceVariant = Color(0xFF6B7280); // Muted gray text
   static const Color onBackground = Color(0xFF111827); // Primary dark text
+  static const Color textPrimary = onSurface; // Headlines, primary body copy
+  static const Color textSecondary = Color(0xFF6B7280); // Descriptive/supporting text
+  static const Color textTertiary = Color(0xFF9CA3AF); // Captions, metadata
+  static const Color textDisabled = Color(0xFFD1D5DB); // Disabled-only text
+
+  // Icon Colors
+  static const Color iconPrimary = Color(0xFF080808); // Core iconography
 
   // State Colors
   static const Color error = Color(0xFFEF4444); // Red 500

@@ -193,12 +193,12 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
                               ),
                               Text(
                                 '${_getFilteredResults().length} results',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'PlusJakartaSans',
-                                ),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'PlusJakartaSans',
+                                  ),
                               ),
                             ],
                           ),
@@ -541,7 +541,7 @@ class _ProductCard extends StatelessWidget {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: Colors.grey[400],
+              color: AppColors.textTertiary,
             ),
           ],
         ),

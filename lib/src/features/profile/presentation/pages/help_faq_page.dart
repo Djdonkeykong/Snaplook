@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 
 class HelpFaqPage extends StatelessWidget {
   const HelpFaqPage({super.key});
@@ -13,9 +15,13 @@ class HelpFaqPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
+        leadingWidth: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: SnaplookBackButton(
+            onPressed: () => Navigator.of(context).pop(),
+            showBackground: false,
+          ),
         ),
         title: const Text(
           'Help & FAQ',
@@ -102,11 +108,11 @@ class _FaqItemState extends State<_FaqItem> {
                       ),
                     ),
                   ),
-                  Icon(
-                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.grey.shade600,
-                  ),
-                ],
+                Icon(
+                  _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  color: AppColors.textSecondary,
+                ),
+              ],
               ),
             ),
           ),
@@ -116,11 +122,11 @@ class _FaqItemState extends State<_FaqItem> {
               padding: EdgeInsets.all(spacing.m),
               child: Text(
                 widget.answer,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade700,
-                  fontFamily: 'PlusJakartaSans',
-                  height: 1.5,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+                fontFamily: 'PlusJakartaSans',
+                height: 1.5,
                 ),
               ),
             ),

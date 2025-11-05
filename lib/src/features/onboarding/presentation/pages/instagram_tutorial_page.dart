@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'tutorial_analysis_page.dart';
+import 'package:snaplook/core/theme/app_colors.dart';
+import 'tutorial_image_analysis_page.dart';
 
 const bool _kShowTouchTargets = false;
 
@@ -121,7 +122,7 @@ class InstagramTutorialPage extends ConsumerWidget {
                   print("Step 4 tap detected! Moving to analysis page");
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialAnalysisPage(
+                      builder: (context) => const TutorialImageAnalysisPage(
                         scenario: 'Instagram',
                       ),
                       allowSnapshotting: false,
@@ -307,7 +308,7 @@ class _ShareOption extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              color: isHighlighted ? Colors.white : Colors.grey.shade600,
+              color: isHighlighted ? Colors.white : AppColors.textSecondary,
               size: 24,
             ),
           ),
@@ -316,7 +317,7 @@ class _ShareOption extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: isHighlighted ? Colors.orange : Colors.grey.shade600,
+              color: isHighlighted ? Colors.orange : AppColors.textSecondary,
               fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.normal,
             ),
             textAlign: TextAlign.center,

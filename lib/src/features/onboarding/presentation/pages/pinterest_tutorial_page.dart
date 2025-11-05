@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'tutorial_analysis_page.dart';
+import 'tutorial_image_analysis_page.dart';
 
 enum PinterestTutorialStep {
   step1,
@@ -143,7 +143,7 @@ class PinterestTutorialPage extends ConsumerWidget {
                   // Navigate to analysis page with Pinterest image
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialAnalysisPage(
+                      builder: (context) => const TutorialImageAnalysisPage(
                         imagePath: 'assets/images/pinterest_tutorial.jpg',
                         scenario: 'Pinterest',
                       ),

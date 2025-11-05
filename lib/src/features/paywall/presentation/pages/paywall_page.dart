@@ -288,7 +288,7 @@ class _FeatureItem extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 14,
-                  color: Colors.grey.shade600,
+                  color: AppColors.textSecondary,
                   fontWeight: FontWeight.w400,
                   letterSpacing: -0.3,
                 ),
@@ -381,7 +381,7 @@ class _TimelineItem extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
                       fontSize: 14,
-                      color: Colors.grey.shade600,
+                      color: AppColors.textSecondary,
                       fontWeight: FontWeight.w400,
                       letterSpacing: -0.3,
                     ),

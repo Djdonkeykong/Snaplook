@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/theme/snaplook_icons.dart';
 import '../../domain/providers/collections_provider.dart';
 import '../../domain/models/collection.dart';
 
@@ -61,8 +63,8 @@ class _AddToCollectionSheetState extends ConsumerState<AddToCollectionSheet> {
               ),
               decoration: InputDecoration(
                 hintText: 'Collection name',
-                hintStyle: TextStyle(
-                  color: Colors.grey.shade400,
+                hintStyle: const TextStyle(
+                  color: AppColors.textTertiary,
                   fontFamily: 'PlusJakartaSans',
                 ),
                 filled: true,
@@ -87,8 +89,8 @@ class _AddToCollectionSheetState extends ConsumerState<AddToCollectionSheet> {
               maxLines: 2,
               decoration: InputDecoration(
                 hintText: 'Description (optional)',
-                hintStyle: TextStyle(
-                  color: Colors.grey.shade400,
+                hintStyle: const TextStyle(
+                  color: AppColors.textTertiary,
                   fontFamily: 'PlusJakartaSans',
                 ),
                 filled: true,
@@ -108,10 +110,10 @@ class _AddToCollectionSheetState extends ConsumerState<AddToCollectionSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
+            child: const Text(
               'Cancel',
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: AppColors.textSecondary,
                 fontFamily: 'PlusJakartaSans',
                 fontWeight: FontWeight.w600,
               ),
@@ -286,9 +288,9 @@ class _AddToCollectionSheetState extends ConsumerState<AddToCollectionSheet> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(
-                          Icons.add,
+                          SnaplookIcons.addCircleOutline,
                           color: Colors.white,
-                          size: 24,
+                          size: 28,
                         ),
                       ),
                       SizedBox(width: spacing.m),
@@ -317,8 +319,8 @@ class _AddToCollectionSheetState extends ConsumerState<AddToCollectionSheet> {
                         child: Text(
                           'No collections yet.\nCreate your first one above!',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
                             fontFamily: 'PlusJakartaSans',
                             fontSize: 14,
                           ),
@@ -366,9 +368,10 @@ class _AddToCollectionSheetState extends ConsumerState<AddToCollectionSheet> {
                                             fit: BoxFit.cover,
                                           ),
                                         )
-                                      : Icon(
-                                          Icons.collections_bookmark_outlined,
-                                          color: Colors.grey.shade600,
+                                      : const Icon(
+                                          SnaplookIcons.addCircleOutline,
+                                          color: AppColors.textSecondary,
+                                          size: 24,
                                         ),
                                 ),
                                 SizedBox(width: spacing.m),
@@ -390,9 +393,9 @@ class _AddToCollectionSheetState extends ConsumerState<AddToCollectionSheet> {
                                       if (collection.description != null)
                                         Text(
                                           collection.description!,
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             fontSize: 12,
-                                            color: Colors.grey.shade600,
+                                            color: AppColors.textSecondary,
                                             fontFamily: 'PlusJakartaSans',
                                           ),
                                           maxLines: 1,
@@ -400,19 +403,19 @@ class _AddToCollectionSheetState extends ConsumerState<AddToCollectionSheet> {
                                         ),
                                       Text(
                                         '${collection.itemCount} items',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey.shade500,
+                                          color: AppColors.textTertiary,
                                           fontFamily: 'PlusJakartaSans',
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Icon(
+                                const Icon(
                                   Icons.arrow_forward_ios,
                                   size: 16,
-                                  color: Colors.grey.shade400,
+                                  color: AppColors.textTertiary,
                                 ),
                               ],
                             ),

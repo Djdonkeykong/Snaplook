@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:super_cupertino_navigation_bar/super_cupertino_navigation_bar.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
-import 'premium_page.dart';
+import 'edit_profile_page.dart';
 import 'help_faq_page.dart';
 import 'contact_support_page.dart';
 import 'privacy_policy_page.dart';
@@ -113,246 +114,211 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     });
 
     final spacing = context.spacing;
-    final topInset = MediaQuery.of(context).padding.top;
-    final double expandedHeight = topInset + spacing.xl * 3;
     final user = ref.watch(currentUserProvider);
     final userEmail = user?.email ?? 'user@example.com';
     final initials = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
+    final metadata = user?.userMetadata ?? <String, dynamic>{};
+    final membershipValue = metadata['membership'];
+    final membershipLabel = _formatMembershipLabel(membershipValue);
+    final isPremiumMembership = _isPremiumMembership(membershipValue);
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverAppBar(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            pinned: true,
-            automaticallyImplyLeading: false,
-            expandedHeight: expandedHeight,
-            flexibleSpace: LayoutBuilder(
-              builder: (context, constraints) {
-                final currentHeight = constraints.biggest.height;
-                final double minHeight = topInset + kToolbarHeight;
-                final double collapseRange =
-                    (expandedHeight - minHeight).clamp(0.0001, double.infinity);
-                final double t = ((currentHeight - minHeight) / collapseRange)
-                    .clamp(0.0, 1.0);
-
-                return Container(
-                  color: Colors.white,
-                  padding: EdgeInsets.only(top: topInset),
-                  child: Stack(
-                    children: [
-                      Align(
-                        alignment: Alignment.center,
-                        child: Opacity(
-                          opacity: 1 - t,
-                          child: const Text(
-                            'Settings',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontFamily: 'PlusJakartaSans',
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        left: spacing.l,
-                        bottom: 16,
-                        child: Opacity(
-                          opacity: t,
-                          child: const Text(
-                            'Settings',
-                            style: TextStyle(
-                              fontSize: 30,
-                              fontFamily: 'PlusJakartaSans',
-                              letterSpacing: -1.0,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                              height: 1.3,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+      body: SuperScaffold(
+        scrollController: _scrollController,
+        appBar: SuperAppBar(
+          title: const Text(
+            'Settings',
+            style: TextStyle(
+              fontSize: 17,
+              fontFamily: 'PlusJakartaSans',
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
             ),
           ),
-          SliverToBoxAdapter(
-            child: SafeArea(
-              top: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: spacing.m),
-
-                  // Profile Section
-                  Material(
-                    color: Colors.white,
-                    child: InkWell(
-                      onTap: () {
-                        // TODO: Navigate to profile edit page
-                      },
-                      child: Padding(
-                        padding: EdgeInsets.all(spacing.l),
-                        child: Row(
-                          children: [
-                            // Circular Avatar
-                            Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFB4E5D4),
-                                shape: BoxShape.circle,
+          backgroundColor: Colors.white,
+          searchBar: SuperSearchBar(enabled: false),
+          largeTitle: SuperLargeTitle(
+            largeTitle: 'Settings',
+            textStyle: const TextStyle(
+              fontSize: 30,
+              fontFamily: 'PlusJakartaSans',
+              letterSpacing: -1.0,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              height: 1.3,
+            ),
+            padding: EdgeInsets.symmetric(horizontal: spacing.l),
+          ),
+        ),
+        body: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(top: spacing.m),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Profile Section
+                Material(
+                  color: Colors.white,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const EditProfilePage()),
+                      );
+                    },
+                    child: Padding(
+                      padding: EdgeInsets.all(spacing.l),
+                      child: Row(
+                        children: [
+                          // Circular Avatar
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFB4E5D4),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                initials,
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'PlusJakartaSans',
+                                  color: Colors.black,
+                                ),
                               ),
-                              child: Center(
-                                child: Text(
-                                  initials,
+                            ),
+                          ),
+                          SizedBox(width: spacing.m),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  userEmail.split('@').first,
                                   style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
                                     fontFamily: 'PlusJakartaSans',
                                     color: Colors.black,
                                   ),
                                 ),
-                              ),
-                            ),
-                            SizedBox(width: spacing.m),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    userEmail.split('@').first,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'PlusJakartaSans',
-                                      color: Colors.black,
-                                    ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  userEmail,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontFamily: 'PlusJakartaSans',
+                                    color: AppColors.textSecondary,
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    userEmail,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontFamily: 'PlusJakartaSans',
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                                SizedBox(height: spacing.xs),
+                                _MembershipBadge(
+                                  label: membershipLabel,
+                                  isPremium: isPremiumMembership,
+                                ),
+                              ],
                             ),
-                            Icon(Icons.chevron_right,
-                                color: Colors.grey.shade400),
-                          ],
-                        ),
+                          ),
+                          Icon(Icons.chevron_right,
+                              color: Colors.grey.shade400),
+                        ],
                       ),
                     ),
                   ),
-                  SizedBox(height: spacing.m),
+                ),
+                SizedBox(height: spacing.m),
 
-                  // Settings Section
-                  _SectionHeader(title: 'Settings'),
-                  _SimpleSettingItem(
-                    title: 'Premium',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const PremiumPage()),
-                      );
-                    },
-                  ),
-                  _SimpleSettingItem(
-                    title: 'Notifications',
-                    onTap: () {},
-                  ),
+                // Settings Section
+                _SectionHeader(title: 'Settings'),
+                _SimpleSettingItem(
+                  title: 'Notifications',
+                  onTap: () {},
+                ),
 
-                  SizedBox(height: spacing.l),
+                SizedBox(height: spacing.l),
 
-                  // Support Section
-                  _SectionHeader(title: 'Support'),
-                  _SimpleSettingItem(
-                    title: 'Help & FAQ',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const HelpFaqPage()),
-                      );
-                    },
-                  ),
-                  _SimpleSettingItem(
-                    title: 'Contact Support',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const ContactSupportPage()),
-                      );
-                    },
-                  ),
+                // Support Section
+                _SectionHeader(title: 'Support'),
+                _SimpleSettingItem(
+                  title: 'Help & FAQ',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const HelpFaqPage()),
+                    );
+                  },
+                ),
+                _SimpleSettingItem(
+                  title: 'Contact Support',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const ContactSupportPage()),
+                    );
+                  },
+                ),
 
-                  SizedBox(height: spacing.l),
+                SizedBox(height: spacing.l),
 
-                  // Legal Section
-                  _SectionHeader(title: 'Legal'),
-                  _SimpleSettingItem(
-                    title: 'Privacy Policy',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const PrivacyPolicyPage()),
-                      );
-                    },
-                  ),
-                  _SimpleSettingItem(
-                    title: 'Terms and Conditions',
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const TermsPage()),
-                      );
-                    },
-                  ),
+                // Legal Section
+                _SectionHeader(title: 'Legal'),
+                _SimpleSettingItem(
+                  title: 'Privacy Policy',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const PrivacyPolicyPage()),
+                    );
+                  },
+                ),
+                _SimpleSettingItem(
+                  title: 'Terms and Conditions',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const TermsPage()),
+                    );
+                  },
+                ),
 
-                  SizedBox(height: spacing.l),
+                SizedBox(height: spacing.l),
 
-                  // Account Section
-                  _SectionHeader(title: 'Account'),
-                  _SimpleSettingItem(
-                    title: 'Logout',
-                    textColor: AppColors.secondary,
-                    onTap: _handleLogout,
-                  ),
-                  _SimpleSettingItem(
-                    title: 'Delete Account',
-                    textColor: AppColors.secondary,
-                    onTap: () {},
-                  ),
+                // Account Section
+                _SectionHeader(title: 'Account'),
+                _SimpleSettingItem(
+                  title: 'Logout',
+                  textColor: AppColors.secondary,
+                  onTap: _handleLogout,
+                ),
+                _SimpleSettingItem(
+                  title: 'Delete Account',
+                  textColor: AppColors.secondary,
+                  onTap: () {},
+                ),
 
-                  SizedBox(height: spacing.xl),
+                SizedBox(height: spacing.xl),
 
-                  // Version info
-                  Center(
-                    child: Text(
-                      'Version 1.0.0',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade400,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                      textAlign: TextAlign.center,
+                // Version info
+                Center(
+                  child: Text(
+                    'Version 1.0.0',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textTertiary,
+                      fontFamily: 'PlusJakartaSans',
                     ),
+                    textAlign: TextAlign.center,
                   ),
+                ),
 
-                  SizedBox(height: spacing.xl),
-                ],
-              ),
+                SizedBox(height: spacing.xl),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -379,7 +345,7 @@ class _SectionHeader extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.grey.shade600,
+            color: AppColors.textSecondary,
             fontFamily: 'PlusJakartaSans',
           ),
         ),
@@ -436,4 +402,86 @@ class _SimpleSettingItem extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MembershipBadge extends StatelessWidget {
+  final String label;
+  final bool isPremium;
+
+  const _MembershipBadge({
+    required this.label,
+    required this.isPremium,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+    final backgroundColor =
+        isPremium ? AppColors.secondary.withOpacity(0.1) : Colors.grey.shade100;
+    final textColor = isPremium ? AppColors.secondary : AppColors.textSecondary;
+    final radius = context.radius.medium;
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: spacing.s,
+        vertical: spacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: isPremium ? AppColors.secondary : Colors.grey.shade300,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.workspace_premium_outlined,
+            size: 14,
+            color: textColor,
+          ),
+          SizedBox(width: spacing.xs),
+          Text(
+            '$label member',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'PlusJakartaSans',
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatMembershipLabel(dynamic membershipValue) {
+  final raw = (membershipValue is String
+          ? membershipValue
+          : membershipValue?.toString() ?? '')
+      .trim();
+  if (raw.isEmpty) {
+    return 'Free';
+  }
+  final normalized = raw.replaceAll(RegExp(r'[_-]+'), ' ').trim();
+  final segments = normalized
+      .split(RegExp(r'\s+'))
+      .where((segment) => segment.isNotEmpty)
+      .map(
+        (segment) =>
+            segment[0].toUpperCase() + segment.substring(1).toLowerCase(),
+      )
+      .toList();
+  return segments.isEmpty ? 'Free' : segments.join(' ');
+}
+
+bool _isPremiumMembership(dynamic membershipValue) {
+  final raw = (membershipValue is String
+          ? membershipValue
+          : membershipValue?.toString() ?? '')
+      .toLowerCase();
+  return raw.contains('premium') || raw.contains('pro');
 }

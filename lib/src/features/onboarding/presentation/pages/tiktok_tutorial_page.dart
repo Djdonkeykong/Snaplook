@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'tutorial_analysis_page.dart';
+import 'tutorial_image_analysis_page.dart';
 
 enum TikTokTutorialStep {
   step1,
@@ -125,7 +125,7 @@ class TikTokTutorialPage extends ConsumerWidget {
                   // Navigate to analysis page with TikTok image
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialAnalysisPage(
+                      builder: (context) => const TutorialImageAnalysisPage(
                         imagePath: 'assets/images/tiktok_tutorial.jpg',
                         scenario: 'TikTok',
                       ),

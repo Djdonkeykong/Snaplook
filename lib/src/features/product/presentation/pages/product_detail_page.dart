@@ -4,14 +4,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../home/domain/services/inspiration_service.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../favorites/domain/providers/favorites_provider.dart';
+import '../../../collections/presentation/widgets/add_to_collection_sheet.dart';
 import 'visual_search_page.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -128,29 +132,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 8,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.black,
-                  size: 20,
-                ),
-              ),
+            child: SnaplookBackButton(
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ),
         ],
@@ -242,6 +225,107 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
         );
       }
     }
+  }
+
+  void _showOptionsMenu() {
+    final product = widget.product;
+    final productUrl = product['url']?.toString() ?? '';
+    final productTitle = product['title']?.toString() ?? 'Product';
+    final productBrand = product['brand']?.toString() ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(SnaplookIcons.addCircleOutline,
+                      color: Colors.black, size: 24),
+                  title: const Text(
+                    'Add to Collection',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => AddToCollectionSheet(
+                        productId: product['id']?.toString() ?? '',
+                        productName: product['title'] ?? 'Unknown',
+                        brand: product['brand'] ?? 'Unknown',
+                        price: double.tryParse(product['price']?.toString() ?? '0') ?? 0.0,
+                        imageUrl: product['image_url'] ?? '',
+                        purchaseUrl: product['url'],
+                        category: product['category'] ?? 'Unknown',
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.share_outlined,
+                      color: Colors.black, size: 24),
+                  title: const Text(
+                    'Share Product',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Share.share(
+                      'Check out this $productBrand $productTitle on Snaplook! $productUrl',
+                      subject: '$productBrand $productTitle',
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.link,
+                      color: Colors.black, size: 24),
+                  title: const Text(
+                    'Copy Link',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (productUrl.isNotEmpty) {
+                      Clipboard.setData(ClipboardData(text: productUrl));
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Link copied to clipboard',
+                            style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                          ),
+                          backgroundColor: Colors.black,
+                          duration: Duration(milliseconds: 2000),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -414,14 +498,17 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                             ),
                           ),
                           const SizedBox(width: 4),
-                          SizedBox(
-                            width: 44,
-                            height: 48,
-                            child: Center(
-                              child: Icon(
-                                Icons.more_horiz,
-                                color: Colors.black,
-                                size: 24,
+                          GestureDetector(
+                            onTap: _showOptionsMenu,
+                            child: SizedBox(
+                              width: 44,
+                              height: 48,
+                              child: Center(
+                                child: Icon(
+                                  Icons.more_horiz,
+                                  color: Colors.black,
+                                  size: 24,
+                                ),
                               ),
                             ),
                           ),
@@ -436,7 +523,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
-                        color: Colors.grey.shade600,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 4),

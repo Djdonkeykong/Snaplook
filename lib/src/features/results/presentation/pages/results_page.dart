@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -147,7 +148,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                                 '${results.length} results',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[600],
+                                  color: AppColors.textSecondary,
                                   fontWeight: FontWeight.w600,
                                   fontFamily: 'PlusJakartaSans',
                                 ),
@@ -367,7 +368,7 @@ class _ProductCard extends StatelessWidget {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: Colors.grey[400],
+              color: AppColors.textTertiary,
             ),
           ],
         ),

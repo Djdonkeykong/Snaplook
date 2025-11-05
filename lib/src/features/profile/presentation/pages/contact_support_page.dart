@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 
 class ContactSupportPage extends StatelessWidget {
   const ContactSupportPage({super.key});
@@ -27,9 +28,13 @@ class ContactSupportPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
+        leadingWidth: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: SnaplookBackButton(
+            onPressed: () => Navigator.of(context).pop(),
+            showBackground: false,
+          ),
         ),
         title: const Text(
           'Contact Support',
@@ -59,7 +64,7 @@ class ContactSupportPage extends StatelessWidget {
               'Have a question or need assistance? We\'re here to help!',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey.shade600,
+                color: AppColors.textSecondary,
                 fontFamily: 'PlusJakartaSans',
                 height: 1.5,
               ),
@@ -101,13 +106,13 @@ class ContactSupportPage extends StatelessWidget {
                   ),
                   SizedBox(height: spacing.sm),
                   Text(
-                    'We typically respond within 24 hours',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                      fontFamily: 'PlusJakartaSans',
-                    ),
+                  'We typically respond within 24 hours',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    fontFamily: 'PlusJakartaSans',
                   ),
+                ),
                 ],
               ),
             ),
