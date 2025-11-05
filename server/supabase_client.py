@@ -1,6 +1,9 @@
 """
 Supabase client for Snaplook backend.
 Handles all database operations including caching, user history, and favorites.
+
+IMPORTANT: Users MUST be authenticated via Supabase Auth before using these APIs.
+The iOS app handles authentication and sends the auth user ID.
 """
 
 import os
@@ -40,78 +43,6 @@ class SupabaseManager:
     @property
     def enabled(self) -> bool:
         return self._client is not None
-
-    # ============================================
-    # USER MANAGEMENT
-    # ============================================
-
-    def get_or_create_user_id(self, device_id: str) -> Optional[str]:
-        """
-        Get existing user ID for device, or create new auth user.
-        Returns the auth user UUID to use for all operations.
-        """
-        if not self.enabled:
-            return None
-
-        try:
-            # Look for existing user by email pattern (device_id@device.snaplook.app)
-            device_email = f"{device_id.lower()}@device.snaplook.app"
-
-            response = self.client.table('users')\
-                .select('id')\
-                .eq('email', device_email)\
-                .execute()
-
-            if response.data and len(response.data) > 0:
-                auth_user_id = response.data[0]['id']
-                print(f"Found existing user: {auth_user_id} for device: {device_id}")
-                return auth_user_id
-
-            # Create new auth user for this device
-            try:
-                auth_response = self.client.auth.admin.create_user({
-                    "email": device_email,
-                    "email_confirm": True,
-                    "user_metadata": {
-                        "device_id": device_id,
-                        "is_device_user": True
-                    }
-                })
-
-                if auth_response and hasattr(auth_response, 'user') and auth_response.user:
-                    auth_user_id = auth_response.user.id
-                    print(f"Created auth user: {auth_user_id} for device: {device_id}")
-
-                    # Create profile in public.users
-                    user_entry = {
-                        'id': auth_user_id,
-                        'email': device_email,
-                        'full_name': None,
-                        'avatar_url': None
-                    }
-
-                    self.client.table('users').insert(user_entry).execute()
-                    print(f"Created user profile: {auth_user_id}")
-                    return auth_user_id
-
-            except Exception as auth_error:
-                if 'already been registered' in str(auth_error).lower():
-                    # Race condition - try to fetch again
-                    response = self.client.table('users').select('id').eq('email', device_email).execute()
-                    if response.data:
-                        return response.data[0]['id']
-                print(f"Auth creation error: {auth_error}")
-                return None
-
-        except Exception as e:
-            print(f"User lookup/creation error: {e}")
-            return None
-
-    def ensure_user_exists(self, user_id: str) -> bool:
-        """
-        Simplified wrapper that returns bool for backwards compatibility.
-        """
-        return self.get_or_create_user_id(user_id) is not None
 
     # ============================================
     # IMAGE CACHE OPERATIONS
@@ -228,6 +159,7 @@ class SupabaseManager:
     ) -> Optional[str]:
         """
         Create a user search history entry.
+        user_id must be a valid auth.users.id
         Returns search_id if successful.
         """
         if not self.enabled:
@@ -282,33 +214,40 @@ class SupabaseManager:
             return []
 
     # ============================================
-    # USER FAVORITES
+    # FAVORITES - Using existing 'favorites' table
     # ============================================
 
     def add_favorite(
         self,
         user_id: str,
-        product_data: Dict[str, Any],
-        search_id: Optional[str] = None
+        product_id: str,
+        product_name: str,
+        brand: str,
+        price: float,
+        image_url: str,
+        purchase_url: Optional[str],
+        category: str
     ) -> Optional[str]:
-        """Add a product to user favorites"""
+        """
+        Add a product to favorites table.
+        user_id must be a valid auth.users.id
+        """
         if not self.enabled:
             return None
 
         try:
             favorite_entry = {
                 'user_id': user_id,
-                'search_id': search_id,
-                'product_data': product_data,
-                'product_url': product_data.get('purchase_url', ''),
-                'product_name': product_data.get('product_name', ''),
-                'brand': product_data.get('brand'),
-                'category': product_data.get('category'),
-                'image_url': product_data.get('image_url'),
-                'price': product_data.get('price')
+                'product_id': product_id,
+                'product_name': product_name,
+                'brand': brand,
+                'price': price,
+                'image_url': image_url,
+                'purchase_url': purchase_url,
+                'category': category
             }
 
-            response = self.client.table('user_favorites')\
+            response = self.client.table('favorites')\
                 .insert(favorite_entry)\
                 .execute()
 
@@ -322,7 +261,7 @@ class SupabaseManager:
         except Exception as e:
             # Handle unique constraint violation (already favorited)
             if 'duplicate key' in str(e):
-                print(f"⚠️ Product already favorited by user")
+                print(f"Product already favorited by user")
                 return None
             print(f"Add favorite error: {e}")
             return None
@@ -333,7 +272,7 @@ class SupabaseManager:
             return False
 
         try:
-            response = self.client.table('user_favorites')\
+            response = self.client.table('favorites')\
                 .delete()\
                 .eq('id', favorite_id)\
                 .eq('user_id', user_id)\
@@ -351,12 +290,12 @@ class SupabaseManager:
         limit: int = 50,
         offset: int = 0
     ) -> List[Dict[str, Any]]:
-        """Get user's favorites"""
+        """Get user's favorites from favorites table"""
         if not self.enabled:
             return []
 
         try:
-            response = self.client.from_('v_user_favorites_enriched')\
+            response = self.client.table('favorites')\
                 .select('*')\
                 .eq('user_id', user_id)\
                 .order('created_at', desc=True)\
@@ -404,7 +343,7 @@ class SupabaseManager:
         except Exception as e:
             # Handle unique constraint (already saved)
             if 'duplicate key' in str(e):
-                print(f"⚠️ Search already saved by user")
+                print(f"Search already saved by user")
                 return None
             print(f"Save search error: {e}")
             return None

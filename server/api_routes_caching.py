@@ -1,6 +1,8 @@
 """
 API routes with smart caching integration.
 Add these routes to your FastAPI app.
+
+IMPORTANT: user_id must be a valid auth.users.id from Supabase Auth.
 """
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -22,7 +24,7 @@ router = APIRouter(prefix="/api/v1")
 # ============================================
 
 class AnalyzeRequest(BaseModel):
-    user_id: str
+    user_id: str  # Must be auth.users.id
     image_url: Optional[str] = None
     image_base64: Optional[str] = None
     cloudinary_url: Optional[str] = None
@@ -45,13 +47,12 @@ class AnalyzeResponse(BaseModel):
 
 
 class FavoriteRequest(BaseModel):
-    user_id: str
-    search_id: Optional[str] = None
-    product: Dict[str, Any]
+    user_id: str  # Must be auth.users.id
+    product: Dict[str, Any]  # Contains product_id, product_name, brand, price, etc.
 
 
 class SaveSearchRequest(BaseModel):
-    user_id: str
+    user_id: str  # Must be auth.users.id
     name: Optional[str] = None
 
 
@@ -71,6 +72,8 @@ async def analyze_with_caching(
     1. Check cache by URL/hash
     2. If cache hit: Return instant results + create user_search entry
     3. If cache miss: Run full analysis + store in cache + create user_search entry
+
+    NOTE: user_id must be a valid auth.users.id
     """
 
     try:
@@ -115,20 +118,16 @@ async def analyze_with_caching(
                     cache_entry['id']
                 )
 
-            # Ensure user exists and get auth user ID
+            # Create user search entry
             search_id = None
             if supabase_manager.enabled:
-                auth_user_id = supabase_manager.get_or_create_user_id(request.user_id)
-                if auth_user_id:
-                    search_id = supabase_manager.create_user_search(
-                        user_id=auth_user_id,
-                        image_cache_id=cache_entry['id'],
-                        search_type=request.search_type,
-                        source_url=request.source_url,
-                        source_username=request.source_username
-                    )
-                else:
-                    print(f"WARNING: Could not create/find user for device: {request.user_id}")
+                search_id = supabase_manager.create_user_search(
+                    user_id=request.user_id,
+                    image_cache_id=cache_entry['id'],
+                    search_type=request.search_type,
+                    source_url=request.source_url,
+                    source_username=request.source_username
+                )
 
             return AnalyzeResponse(
                 success=True,
@@ -145,10 +144,9 @@ async def analyze_with_caching(
         print(f"CACHE MISS - Running full analysis")
 
         # Import the existing detection function
-        # NOTE: You'll need to modify fashion_detector_server.py to export this function
         from fashion_detector_server import run_full_detection_pipeline
 
-        # Run the full detection pipeline (existing code)
+        # Run the full detection pipeline
         detection_result = run_full_detection_pipeline(
             image_base64=request.image_base64,
             image_url=request.image_url,
@@ -180,17 +178,13 @@ async def analyze_with_caching(
         # Create user search entry
         search_id = None
         if supabase_manager.enabled and cache_id:
-            auth_user_id = supabase_manager.get_or_create_user_id(request.user_id)
-            if auth_user_id:
-                search_id = supabase_manager.create_user_search(
-                    user_id=auth_user_id,
-                    image_cache_id=cache_id,
-                    search_type=request.search_type,
-                    source_url=request.source_url,
-                    source_username=request.source_username
-                )
-            else:
-                print(f"WARNING: Could not create/find user for device: {request.user_id}")
+            search_id = supabase_manager.create_user_search(
+                user_id=request.user_id,
+                image_cache_id=cache_id,
+                search_type=request.search_type,
+                source_url=request.source_url,
+                source_username=request.source_username
+            )
 
         return AnalyzeResponse(
             success=True,
@@ -215,19 +209,20 @@ async def analyze_with_caching(
 
 @router.post("/favorites")
 async def add_favorite(request: FavoriteRequest):
-    """Add product to user favorites"""
+    """Add product to favorites table"""
     if not supabase_manager.enabled:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    # Get or create auth user ID for this device
-    auth_user_id = supabase_manager.get_or_create_user_id(request.user_id)
-    if not auth_user_id:
-        raise HTTPException(status_code=400, detail="Could not provision user")
-
+    product = request.product
     favorite_id = supabase_manager.add_favorite(
-        user_id=auth_user_id,
-        product_data=request.product,
-        search_id=request.search_id
+        user_id=request.user_id,
+        product_id=product.get('id', product.get('product_id', '')),
+        product_name=product.get('product_name', ''),
+        brand=product.get('brand', ''),
+        price=float(product.get('price', 0)),
+        image_url=product.get('image_url', ''),
+        purchase_url=product.get('purchase_url'),
+        category=product.get('category', '')
     )
 
     if favorite_id:
@@ -276,13 +271,8 @@ async def save_search(search_id: str, request: SaveSearchRequest):
     if not supabase_manager.enabled:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    # Get or create auth user ID for this device
-    auth_user_id = supabase_manager.get_or_create_user_id(request.user_id)
-    if not auth_user_id:
-        raise HTTPException(status_code=400, detail="Could not provision user")
-
     saved_id = supabase_manager.save_search(
-        user_id=auth_user_id,
+        user_id=request.user_id,
         search_id=search_id,
         name=request.name
     )
