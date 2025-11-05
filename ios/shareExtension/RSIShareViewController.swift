@@ -2105,10 +2105,31 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
+    // Get server base URL from detection endpoint
+    private func getServerBaseUrl() -> String? {
+        guard let endpoint = detectorEndpoint() else {
+            return nil
+        }
+
+        // Extract base URL from endpoint like "https://domain.com/detect-and-search"
+        if let url = URL(string: endpoint),
+           let scheme = url.scheme,
+           let host = url.host {
+            var baseUrl = "\(scheme)://\(host)"
+            if let port = url.port {
+                baseUrl += ":\(port)"
+            }
+            return baseUrl
+        }
+
+        return nil
+    }
+
     // Backend API calls for favorites and save
     private func saveSearchToBackend(searchId: String) {
-        guard let serverUrl = URL(string: serverBaseUrl) else {
-            shareLog("ERROR: Invalid server URL")
+        guard let serverBaseUrl = getServerBaseUrl(),
+              let serverUrl = URL(string: serverBaseUrl) else {
+            shareLog("ERROR: Could not determine server URL from detection endpoint")
             return
         }
 
@@ -2149,8 +2170,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func addFavoriteToBackend(product: DetectionResultItem, completion: @escaping (Bool) -> Void) {
-        guard let serverUrl = URL(string: serverBaseUrl) else {
-            shareLog("ERROR: Invalid server URL")
+        guard let serverBaseUrl = getServerBaseUrl(),
+              let serverUrl = URL(string: serverBaseUrl) else {
+            shareLog("ERROR: Could not determine server URL from detection endpoint")
             completion(false)
             return
         }
