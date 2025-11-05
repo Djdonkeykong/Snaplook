@@ -244,9 +244,7 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(28),
                                 side: BorderSide(
-                                  color: isSelected
-                                      ? const Color(0xFFf2003c)
-                                      : const Color(0xFFD1D5DB),
+                                  color: const Color(0xFFf2003c),
                                   width: 1,
                                 ),
                               ),

@@ -384,7 +384,7 @@ class _AllResultsChip extends StatelessWidget {
         color: const Color(0xFFF2003C),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0xFFAFAFB4),
+          color: const Color(0xFFF2003C),
           width: 1,
         ),
       ),

@@ -1930,14 +1930,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
         let button = UIButton(type: .system)
+        let primaryRed = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         button.setTitle(CategoryGroup.all.displayName, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
         button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
         button.layer.cornerRadius = 18
         button.clipsToBounds = true
         button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.systemGray4.cgColor
-        button.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        button.layer.borderColor = primaryRed.cgColor
+        button.backgroundColor = primaryRed
         button.setTitleColor(.white, for: .normal)
         button.isUserInteractionEnabled = false
         button.translatesAutoresizingMaskIntoConstraints = false
