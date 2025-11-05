@@ -2428,6 +2428,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self?.statusRotationTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
 
+                // Safety check: Stop if messages array became empty
+                guard !self.currentStatusMessages.isEmpty else {
+                    shareLog("Status rotation stopped - messages array is empty")
+                    self.stopStatusRotation()
+                    return
+                }
+
                 // Move to next message
                 if stopAtLast && self.currentStatusIndex >= self.currentStatusMessages.count - 1 {
                     // Already at last message, stop rotation
@@ -2438,6 +2445,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.currentStatusIndex = stopAtLast
                     ? self.currentStatusIndex + 1
                     : (self.currentStatusIndex + 1) % self.currentStatusMessages.count
+
+                // Safety check: Ensure index is within bounds
+                guard self.currentStatusIndex < self.currentStatusMessages.count else {
+                    shareLog("Status index out of bounds - stopping rotation")
+                    self.stopStatusRotation()
+                    return
+                }
+
                 let message = self.currentStatusMessages[self.currentStatusIndex]
 
                 // Animate the text change
