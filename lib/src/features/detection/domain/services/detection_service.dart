@@ -22,7 +22,7 @@ class DetectionService {
   static const int _maxGarments = 5;
   static const int _maxResultsPerGarment =
       10; // limit per garment to keep searches snappy
-  static const int _maxPerDomain = 3;
+  static const int _maxPerDomain = 5; // Increased from 3 to match server caps
 
   // serp cache keyed by imageUrl + textQuery
   static final Map<String, List<Map<String, dynamic>>> _serpCache = {};
@@ -806,9 +806,16 @@ class DetectionService {
       );
       final trusted = isTier1 || isTrustedRetail;
 
-      final cap = (isMarketplace || isAggregator)
-          ? 1
-          : (isTier1 ? 7 : (trusted ? 5 : _maxPerDomain));
+      // Updated caps to match server-side filtering (more generous)
+      final cap = isAggregator
+          ? 3 // Aggregators still capped lower
+          : isMarketplace
+              ? 5 // Allow multiple products from Amazon, eBay, etc.
+              : isTier1
+                  ? 10 // Premium retailers get more slots
+                  : trusted
+                      ? 8 // Good retailers like Zara, H&M get plenty of slots
+                      : _maxPerDomain; // Even unknown domains get more chances
 
       final list = byDomain.putIfAbsent(domain, () => []);
       if ((domainCount[domain] ?? 0) < cap) {
