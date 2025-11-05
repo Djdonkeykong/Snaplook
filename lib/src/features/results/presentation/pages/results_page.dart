@@ -203,6 +203,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                           return _ProductCard(
                             result: result,
                             onTap: () => _openProduct(result),
+                            isFirst: index == 0,
                           );
                         },
                       ),
@@ -243,10 +244,12 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
 class _ProductCard extends StatelessWidget {
   final DetectionResult result;
   final VoidCallback onTap;
+  final bool isFirst;
 
   const _ProductCard({
     required this.result,
     required this.onTap,
+    required this.isFirst,
   });
 
   @override
@@ -257,8 +260,9 @@ class _ProductCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(
-          vertical: spacing.m,
+        padding: EdgeInsets.only(
+          top: isFirst ? 0 : spacing.m,
+          bottom: spacing.m,
         ),
         color: Theme.of(context).colorScheme.surface,
         child: Row(
