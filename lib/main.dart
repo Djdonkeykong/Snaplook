@@ -18,6 +18,7 @@ import 'src/features/home/domain/providers/image_provider.dart';
 import 'src/features/home/domain/providers/pending_share_provider.dart';
 import 'src/features/detection/presentation/pages/detection_page.dart';
 import 'src/features/splash/presentation/pages/splash_page.dart';
+import 'src/features/wardrobe/presentation/pages/history_page.dart';
 import 'src/services/instagram_service.dart';
 import 'src/shared/services/video_preloader.dart';
 import 'src/shared/services/share_import_status.dart';
@@ -733,6 +734,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       themeMode: themeMode,
       navigatorObservers: [routeObserver],
       home: const SplashPage(),
+      onGenerateRoute: (settings) {
+        if (settings.name == '/history') {
+          return MaterialPageRoute(
+            builder: (context) => const HistoryPage(),
+          );
+        }
+        return null;
+      },
     );
   }
 }

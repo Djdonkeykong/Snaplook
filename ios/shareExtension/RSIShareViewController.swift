@@ -531,6 +531,9 @@ struct DetectionResponse: Codable {
     let total_results: Int
     let results: [DetectionResultItem]
     let message: String?
+    let search_id: String?
+    let image_cache_id: String?
+    let cached: Bool?
 
     enum CodingKeys: String, CodingKey {
         case success
@@ -538,6 +541,9 @@ struct DetectionResponse: Codable {
         case total_results
         case results
         case message
+        case search_id
+        case image_cache_id
+        case cached
     }
 
     init(from decoder: Decoder) throws {
@@ -553,6 +559,9 @@ struct DetectionResponse: Codable {
         }
         results = (try? container.decode([DetectionResultItem].self, forKey: .results)) ?? []
         message = try? container.decodeIfPresent(String.self, forKey: .message)
+        search_id = try? container.decodeIfPresent(String.self, forKey: .search_id)
+        image_cache_id = try? container.decodeIfPresent(String.self, forKey: .image_cache_id)
+        cached = try? container.decodeIfPresent(Bool.self, forKey: .cached)
     }
 
     struct DetectedGarment: Codable {
@@ -592,6 +601,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingImageUrl: String?
     private var pendingInstagramUrl: String?
     private var pendingInstagramCompletion: (() -> Void)?
+    private var currentSearchId: String?
+    private var currentImageCacheId: String?
     private var analyzedImageData: Data? // Store the analyzed image for sharing
     private var selectedGroup: CategoryGroup? = nil
     private var categoryFilterView: UIView?
@@ -1551,6 +1562,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 if detectionResponse.success {
                     shareLog("SUCCESS: Detection found \(detectionResponse.total_results) results")
+
+                    // Store search_id and image_cache_id for favorites/save functionality
+                    self.currentSearchId = detectionResponse.search_id
+                    self.currentImageCacheId = detectionResponse.image_cache_id
+                    if let searchId = detectionResponse.search_id {
+                        shareLog("Stored search_id: \(searchId)")
+                    }
+                    if let cached = detectionResponse.cached {
+                        shareLog("Cache status: \(cached ? "HIT" : "MISS")")
+                    }
+
                     self.updateProgress(1.0, status: "Analysis complete")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self.stopSmoothProgress()
@@ -2019,6 +2041,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
 
+        // Call backend API to save search
+        if let searchId = currentSearchId {
+            saveSearchToBackend(searchId: searchId)
+        } else {
+            shareLog("WARNING: No search_id available - skipping backend save")
+        }
+
         // Write the pending image file to shared container
         if let data = pendingImageData, let file = pendingSharedFile {
             guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
@@ -2074,6 +2103,111 @@ open class RSIShareViewController: SLComposeServiceViewController {
         enqueueRedirect(to: redirectURL, minimumDuration: minimumDuration) { [weak self] in
             self?.finishExtensionRequest()
         }
+    }
+
+    // Backend API calls for favorites and save
+    private func saveSearchToBackend(searchId: String) {
+        guard let serverUrl = URL(string: serverBaseUrl) else {
+            shareLog("ERROR: Invalid server URL")
+            return
+        }
+
+        let endpoint = serverUrl.appendingPathComponent("api/v1/searches/\(searchId)/save")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "user_id": getUserId(),
+            "name": nil as Any?
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+        } catch {
+            shareLog("ERROR: Failed to serialize save search request: \(error.localizedDescription)")
+            return
+        }
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                shareLog("ERROR: Save search request failed: \(error.localizedDescription)")
+                return
+            }
+
+            if let httpResponse = response as? HTTPURLResponse {
+                shareLog("Save search response status: \(httpResponse.statusCode)")
+                if httpResponse.statusCode == 200 {
+                    shareLog("Search saved successfully")
+                } else {
+                    shareLog("Save search failed with status \(httpResponse.statusCode)")
+                }
+            }
+        }
+
+        task.resume()
+    }
+
+    private func addFavoriteToBackend(product: DetectionResultItem, completion: @escaping (Bool) -> Void) {
+        guard let serverUrl = URL(string: serverBaseUrl) else {
+            shareLog("ERROR: Invalid server URL")
+            completion(false)
+            return
+        }
+
+        let endpoint = serverUrl.appendingPathComponent("api/v1/favorites")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let productData: [String: Any] = [
+            "product_name": product.product_name,
+            "brand": product.brand ?? "",
+            "price": product.price ?? 0.0,
+            "image_url": product.image_url,
+            "purchase_url": product.purchase_url ?? product.url ?? "",
+            "category": product.category
+        ]
+
+        let body: [String: Any] = [
+            "user_id": getUserId(),
+            "search_id": currentSearchId as Any?,
+            "product": productData
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+        } catch {
+            shareLog("ERROR: Failed to serialize add favorite request: \(error.localizedDescription)")
+            completion(false)
+            return
+        }
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                shareLog("ERROR: Add favorite request failed: \(error.localizedDescription)")
+                completion(false)
+                return
+            }
+
+            if let httpResponse = response as? HTTPURLResponse {
+                shareLog("Add favorite response status: \(httpResponse.statusCode)")
+                completion(httpResponse.statusCode == 200)
+            } else {
+                completion(false)
+            }
+        }
+
+        task.resume()
+    }
+
+    private func getUserId() -> String {
+        // TODO: Implement proper user ID from Supabase Auth
+        // For now, use device ID or anonymous ID
+        if let deviceId = UIDevice.current.identifierForVendor?.uuidString {
+            return deviceId
+        }
+        return "anonymous"
     }
 
     // Custom activity item source for rich share metadata
@@ -3579,6 +3713,22 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
         let result = filteredResults[indexPath.row]
         cell.configure(with: result)
 
+        // Set favorite toggle callback
+        cell.onFavoriteToggle = { [weak self] product, isFavorite in
+            if isFavorite {
+                // Add to favorites
+                self?.addFavoriteToBackend(product: product) { success in
+                    if !success {
+                        shareLog("Failed to add favorite to backend")
+                    }
+                }
+            } else {
+                // TODO: Implement remove favorite
+                // For now, favorites are only added, not removed from backend
+                shareLog("Remove favorite - not yet implemented")
+            }
+        }
+
         // Hide separator for last cell
         if indexPath.row == filteredResults.count - 1 {
             cell.separatorInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: .greatestFiniteMagnitude)
@@ -3743,6 +3893,8 @@ class ResultCell: UITableViewCell {
         return button
     }()
     private var isFavorite = false
+    private var product: DetectionResultItem?
+    var onFavoriteToggle: ((DetectionResultItem, Bool) -> Void)?
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -3785,6 +3937,9 @@ class ResultCell: UITableViewCell {
     }
 
     func configure(with result: DetectionResultItem) {
+        // Store product for favorite callback
+        self.product = result
+
         if let brand = result.brand, !brand.isEmpty {
             brandLabel.text = brand
         } else {
@@ -3823,6 +3978,11 @@ class ResultCell: UITableViewCell {
 
         isFavorite.toggle()
         updateFavoriteAppearance(animated: true)
+
+        // Call backend API via callback
+        if let product = product {
+            onFavoriteToggle?(product, isFavorite)
+        }
     }
 
     private func updateFavoriteAppearance(animated: Bool) {

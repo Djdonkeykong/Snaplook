@@ -58,35 +58,50 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
 
     return Scaffold(
       backgroundColor: colorScheme.background,
+      appBar: AppBar(
+        backgroundColor: colorScheme.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        automaticallyImplyLeading: false,
+        title: Text(
+          'My Wishlist',
+          style: textTheme.headlineMedium?.copyWith(
+            fontSize: 24,
+            letterSpacing: -0.5,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.history,
+              color: colorScheme.onSurface,
+            ),
+            onPressed: () {
+              Navigator.of(context).pushNamed('/history');
+            },
+            tooltip: 'Search History',
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Fixed Header
+            // Subtitle
             Padding(
-              padding: EdgeInsets.all(spacing.l),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'My Wishlist',
-                    style: textTheme.headlineMedium?.copyWith(
-                      fontSize: 30,
-                      letterSpacing: -1,
-                      fontWeight: FontWeight.bold,
-                      height: 1.3,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'These are the items you liked the most.',
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontSize: 14,
-                      color: colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-                ],
+              padding: EdgeInsets.only(
+                left: spacing.l,
+                right: spacing.l,
+                bottom: spacing.m,
+              ),
+              child: Text(
+                'These are the items you liked the most.',
+                style: textTheme.bodyMedium?.copyWith(
+                  fontSize: 14,
+                  color: colorScheme.onSurface.withOpacity(0.7),
+                ),
               ),
             ),
 

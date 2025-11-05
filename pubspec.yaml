@@ -70,6 +70,7 @@ dependencies:
 
   # Utils
   intl: ^0.19.0
+  timeago: ^3.7.0
   uuid: ^4.5.0
   equatable: ^2.0.5
   crypto: ^3.0.3
