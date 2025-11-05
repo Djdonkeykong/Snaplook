@@ -368,14 +368,14 @@ final class CategoryNormalizer {
         )
     ]
 
-    private let minimumScore = 3
+    private let minimumScore = 2
 
     func assignment(for item: DetectionResultItem) -> NormalizedCategoryAssignment {
         let normalizedCategoryKey = item.category.lowercased()
         var scores: [NormalizedCategory: Int] = [:]
 
         if let mapped = baseMappings[normalizedCategoryKey] {
-            scores[mapped, default: 0] += 2
+            scores[mapped, default: 0] += 3
         }
 
         let sourceText = [
@@ -523,6 +523,46 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var headerContainerView: UIView?
     private var headerLogoImageView: UIImageView?
     private var cancelButtonView: UIButton?
+
+    private static let bannedContentDomainRoots: Set<String> = [
+        "facebook.com","instagram.com","twitter.com","x.com","pinterest.com",
+        "tiktok.com","linkedin.com","reddit.com","youtube.com","snapchat.com",
+        "threads.net","discord.com","wechat.com","weibo.com","line.me","vk.com",
+        "blogspot.com","wordpress.com","tumblr.com","medium.com","substack.com",
+        "weebly.com","wixsite.com","squarespace.com","ghost.io","notion.site",
+        "livejournal.com","typepad.com","quora.com","fandom.com","wikipedia.org",
+        "wikihow.com","britannica.com","ask.com","answers.com","bbc.com","cnn.com",
+        "nytimes.com","washingtonpost.com","forbes.com","bloomberg.com",
+        "reuters.com","huffpost.com","usatoday.com","abcnews.go.com","cbsnews.com",
+        "npr.org","time.com","theguardian.com","independent.co.uk","theatlantic.com",
+        "vox.com","buzzfeed.com","vice.com","msn.com","dailymail.co.uk","mirror.co.uk",
+        "nbcnews.com","latimes.com","insider.com","soundcloud.com","deviantart.com",
+        "dribbble.com","artstation.com","behance.net","vimeo.com","bandcamp.com",
+        "mixcloud.com","last.fm","spotify.com","goodreads.com","vogue.com","elle.com",
+        "harpersbazaar.com","cosmopolitan.com","glamour.com","refinery29.com",
+        "whowhatwear.com","instyle.com","graziamagazine.com","vanityfair.com",
+        "marieclaire.com","teenvogue.com","stylecaster.com","popsugar.com","nylon.com",
+        "lifestyleasia.com","thezoereport.com","allure.com","coveteur.com","thecut.com",
+        "dazeddigital.com","highsnobiety.com","hypebeast.com","complex.com","gq.com",
+        "esquire.com","menshealth.com","wmagazine.com","people.com","today.com",
+        "observer.com","standard.co.uk","eveningstandard.co.uk","nssmag.com",
+        "grazia.fr","grazia.it","techcrunch.com","wired.com","theverge.com",
+        "engadget.com","gsmarena.com","cnet.com","zdnet.com","mashable.com",
+        "makeuseof.com","arstechnica.com","androidauthority.com","macrumors.com",
+        "9to5mac.com","digitaltrends.com","imore.com","tomsguide.com",
+        "pocket-lint.com","tripadvisor.com","expedia.com","lonelyplanet.com",
+        "booking.com","airbnb.com","travelandleisure.com","kayak.com","skyscanner.com"
+    ]
+
+    private static func isBannedPurchaseUrl(_ url: String) -> Bool {
+        guard let host = URL(string: url)?.host?.lowercased() else { return false }
+        for root in bannedContentDomainRoots {
+            if host == root || host.hasSuffix(".\(root)") {
+                return true
+            }
+        }
+        return false
+    }
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -1422,7 +1462,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     self.updateProgress(1.0, status: "Analysis complete")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self.stopSmoothProgress()
-                        self.detectionResults = detectionResponse.results
+                        let originalCount = detectionResponse.results.count
+                        let filteredResults = detectionResponse.results.filter { result in
+                            guard let url = result.purchase_url, !url.isEmpty else { return true }
+                            return !Self.isBannedPurchaseUrl(url)
+                        }
+                        let dropped = originalCount - filteredResults.count
+                        if dropped > 0 {
+                            shareLog("Filtered out \(dropped) result(s) due to banned domains")
+                        }
+                        self.detectionResults = filteredResults
                         self.isShowingDetectionResults = true
 
                         // Haptic feedback for successful analysis
