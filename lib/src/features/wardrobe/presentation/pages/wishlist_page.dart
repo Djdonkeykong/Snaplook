@@ -91,8 +91,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
               ),
             ),
 
-            SizedBox(height: spacing.sm),
-
             // Favorites List
             Expanded(
               child: _buildAllFavoritesTab(
@@ -204,7 +202,12 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
       ),
       child: ListView.builder(
         controller: _scrollController,
-        padding: EdgeInsets.all(spacing.m),
+        padding: EdgeInsets.fromLTRB(
+          spacing.m,
+          0,
+          spacing.m,
+          spacing.m,
+        ),
         itemCount: favorites.length,
         itemBuilder: (context, index) {
           final favorite = favorites[index];
