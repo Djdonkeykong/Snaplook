@@ -21,12 +21,13 @@ class ContactSupportPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final spacing = context.spacing;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         leadingWidth: 64,
         leading: Padding(
@@ -36,10 +37,10 @@ class ContactSupportPage extends StatelessWidget {
             showBackground: false,
           ),
         ),
-        title: const Text(
+        title: Text(
           'Contact Support',
           style: TextStyle(
-            color: Colors.black,
+            color: colorScheme.onSurface,
             fontFamily: 'PlusJakartaSans',
             fontWeight: FontWeight.w600,
           ),
@@ -50,13 +51,13 @@ class ContactSupportPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Get in Touch',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'PlusJakartaSans',
-                color: Colors.black,
+                color: colorScheme.onSurface,
               ),
             ),
             SizedBox(height: spacing.m),
@@ -64,7 +65,7 @@ class ContactSupportPage extends StatelessWidget {
               'Have a question or need assistance? We\'re here to help!',
               style: TextStyle(
                 fontSize: 16,
-                color: AppColors.textSecondary,
+                color: colorScheme.onSurfaceVariant,
                 fontFamily: 'PlusJakartaSans',
                 height: 1.5,
               ),
@@ -73,9 +74,9 @@ class ContactSupportPage extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(spacing.l),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(context.radius.medium),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,24 +85,24 @@ class ContactSupportPage extends StatelessWidget {
                     children: [
                       Icon(Icons.email_outlined, color: AppColors.secondary, size: 24),
                       SizedBox(width: spacing.m),
-                      const Text(
+                      Text(
                         'Email Support',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           fontFamily: 'PlusJakartaSans',
-                          color: Colors.black,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                     ],
                   ),
                   SizedBox(height: spacing.m),
-                  const Text(
+                  Text(
                     'support@snaplook.com',
                     style: TextStyle(
                       fontSize: 16,
                       fontFamily: 'PlusJakartaSans',
-                      color: Colors.black,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   SizedBox(height: spacing.sm),
@@ -109,7 +110,7 @@ class ContactSupportPage extends StatelessWidget {
                   'We typically respond within 24 hours',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                     fontFamily: 'PlusJakartaSans',
                   ),
                 ),

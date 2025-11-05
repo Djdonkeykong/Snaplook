@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:super_cupertino_navigation_bar/super_cupertino_navigation_bar.dart';
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 
@@ -9,16 +8,17 @@ class TermsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final spacing = context.spacing;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.background,
       body: SuperScaffold(
         appBar: SuperAppBar(
-          title: const Text(
+          title: Text(
             'Terms and Conditions',
             style: TextStyle(
-              color: Colors.black,
+              color: colorScheme.onSurface,
               fontFamily: 'PlusJakartaSans',
               fontWeight: FontWeight.w600,
               fontSize: 17,
@@ -33,16 +33,16 @@ class TermsPage extends StatelessWidget {
             ),
           ),
           automaticallyImplyLeading: false,
-          backgroundColor: Colors.white,
+          backgroundColor: colorScheme.surface,
           searchBar: SuperSearchBar(enabled: false),
           largeTitle: SuperLargeTitle(
             largeTitle: 'Terms and Conditions',
-            textStyle: const TextStyle(
+            textStyle: TextStyle(
               fontSize: 30,
               fontFamily: 'PlusJakartaSans',
               letterSpacing: -1.0,
               fontWeight: FontWeight.bold,
-              color: Colors.black,
+              color: colorScheme.onSurface,
               height: 1.3,
             ),
             padding: EdgeInsets.symmetric(horizontal: spacing.l),
@@ -60,7 +60,7 @@ class TermsPage extends StatelessWidget {
                   'Last updated: ${DateTime.now().year}',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: colorScheme.onSurfaceVariant,
                     fontFamily: 'PlusJakartaSans',
                   ),
                 ),
@@ -122,17 +122,18 @@ class _TermsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
             fontFamily: 'PlusJakartaSans',
-            color: Colors.black,
+            color: colorScheme.onSurface,
           ),
         ),
         SizedBox(height: spacing.sm),
@@ -140,7 +141,7 @@ class _TermsSection extends StatelessWidget {
           content,
           style: TextStyle(
             fontSize: 15,
-            color: AppColors.textSecondary,
+            color: colorScheme.onSurfaceVariant,
             fontFamily: 'PlusJakartaSans',
             height: 1.6,
           ),

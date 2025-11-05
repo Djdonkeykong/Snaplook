@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 
@@ -8,12 +7,13 @@ class HelpFaqPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final spacing = context.spacing;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         leadingWidth: 64,
         leading: Padding(
@@ -23,10 +23,10 @@ class HelpFaqPage extends StatelessWidget {
             showBackground: false,
           ),
         ),
-        title: const Text(
+        title: Text(
           'Help & FAQ',
           style: TextStyle(
-            color: Colors.black,
+            color: colorScheme.onSurface,
             fontFamily: 'PlusJakartaSans',
             fontWeight: FontWeight.w600,
           ),
@@ -74,11 +74,14 @@ class _FaqItemState extends State<_FaqItem> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
+    final borderRadius = context.radius.medium;
 
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
+        color: colorScheme.surface,
+        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(borderRadius),
       ),
       child: Column(
         children: [
@@ -95,33 +98,35 @@ class _FaqItemState extends State<_FaqItem> {
                   Expanded(
                     child: Text(
                       widget.question,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         fontFamily: 'PlusJakartaSans',
-                        color: Colors.black,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ),
-                Icon(
-                  _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  color: AppColors.textSecondary,
-                ),
-              ],
+                  Icon(
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ],
               ),
             ),
           ),
           if (_isExpanded) ...[
-            Divider(height: 1, color: Colors.grey.shade300),
+            Divider(height: 1, color: colorScheme.outlineVariant),
             Padding(
               padding: EdgeInsets.all(spacing.m),
               child: Text(
                 widget.answer,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-                fontFamily: 'PlusJakartaSans',
-                height: 1.5,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colorScheme.onSurfaceVariant,
+                  fontFamily: 'PlusJakartaSans',
+                  height: 1.5,
                 ),
               ),
             ),

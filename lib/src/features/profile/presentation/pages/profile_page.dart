@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:super_cupertino_navigation_bar/super_cupertino_navigation_bar.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/theme/theme_mode_notifier.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
@@ -32,6 +33,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text(
           'Logout',
           style: TextStyle(
@@ -47,25 +49,25 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
-                color: Colors.black,
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+              textStyle: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 fontWeight: FontWeight.w600,
               ),
             ),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(
-              'Logout',
-              style: TextStyle(
-                color: AppColors.secondary,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+              textStyle: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 fontWeight: FontWeight.w600,
               ),
             ),
+            child: const Text('Logout'),
           ),
         ],
       ),
@@ -91,12 +93,35 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 'Error logging out: ${e.toString()}',
                 style: const TextStyle(fontFamily: 'PlusJakartaSans'),
               ),
-              backgroundColor: Colors.black,
+              backgroundColor: Theme.of(context).colorScheme.inverseSurface,
               duration: const Duration(milliseconds: 2500),
             ),
           );
         }
       }
+    }
+  }
+
+  Future<void> _showThemeModeSheet() async {
+    final currentMode = ref.read(themeModeProvider);
+    final selectedMode = await showModalBottomSheet<ThemeMode>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (context) => _ThemeModeBottomSheet(currentMode: currentMode),
+    );
+    if (selectedMode != null) {
+      await ref.read(themeModeProvider.notifier).setThemeMode(selectedMode);
+    }
+  }
+
+  String _themeModeLabel(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
+      case ThemeMode.system:
+        return 'System';
     }
   }
 
@@ -113,7 +138,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       }
     });
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final spacing = context.spacing;
+    final themeMode = ref.watch(themeModeProvider);
     final user = ref.watch(currentUserProvider);
     final userEmail = user?.email ?? 'user@example.com';
     final initials = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
@@ -123,29 +151,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final isPremiumMembership = _isPremiumMembership(membershipValue);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.background,
       body: SuperScaffold(
         scrollController: _scrollController,
         appBar: SuperAppBar(
-          title: const Text(
+          title: Text(
             'Settings',
             style: TextStyle(
               fontSize: 17,
               fontFamily: 'PlusJakartaSans',
               fontWeight: FontWeight.w600,
-              color: Colors.black,
+              color: colorScheme.onSurface,
             ),
           ),
-          backgroundColor: Colors.white,
+          backgroundColor: colorScheme.surface,
           searchBar: SuperSearchBar(enabled: false),
           largeTitle: SuperLargeTitle(
             largeTitle: 'Settings',
-            textStyle: const TextStyle(
+            textStyle: TextStyle(
               fontSize: 30,
               fontFamily: 'PlusJakartaSans',
               letterSpacing: -1.0,
               fontWeight: FontWeight.bold,
-              color: Colors.black,
+              color: colorScheme.onSurface,
               height: 1.3,
             ),
             padding: EdgeInsets.symmetric(horizontal: spacing.l),
@@ -160,7 +188,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               children: [
                 // Profile Section
                 Material(
-                  color: Colors.white,
+                  color: colorScheme.surface,
                   child: InkWell(
                     onTap: () {
                       Navigator.of(context).push(
@@ -181,16 +209,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               shape: BoxShape.circle,
                             ),
                             child: Center(
-                              child: Text(
-                                initials,
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'PlusJakartaSans',
-                                  color: Colors.black,
-                                ),
+                            child: Text(
+                              initials,
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'PlusJakartaSans',
+                                color: colorScheme.onSurface,
                               ),
                             ),
+                          ),
                           ),
                           SizedBox(width: spacing.m),
                           Expanded(
@@ -199,11 +227,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               children: [
                                 Text(
                                   userEmail.split('@').first,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                     fontFamily: 'PlusJakartaSans',
-                                    color: Colors.black,
+                                    color: colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -212,7 +240,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontFamily: 'PlusJakartaSans',
-                                    color: AppColors.textSecondary,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                                 SizedBox(height: spacing.xs),
@@ -224,7 +252,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             ),
                           ),
                           Icon(Icons.chevron_right,
-                              color: Colors.grey.shade400),
+                              color: colorScheme.onSurfaceVariant),
                         ],
                       ),
                     ),
@@ -237,6 +265,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _SimpleSettingItem(
                   title: 'Notifications',
                   onTap: () {},
+                ),
+                _SimpleSettingItem(
+                  title: 'Appearance',
+                  trailingText: _themeModeLabel(themeMode),
+                  onTap: _showThemeModeSheet,
                 ),
 
                 SizedBox(height: spacing.l),
@@ -307,7 +340,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textTertiary,
+                      color: colorScheme.onSurfaceVariant,
                       fontFamily: 'PlusJakartaSans',
                     ),
                     textAlign: TextAlign.center,
@@ -345,7 +378,7 @@ class _SectionHeader extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontFamily: 'PlusJakartaSans',
           ),
         ),
@@ -358,19 +391,23 @@ class _SimpleSettingItem extends StatelessWidget {
   final String title;
   final VoidCallback? onTap;
   final Color? textColor;
+  final String? trailingText;
 
   const _SimpleSettingItem({
     required this.title,
     this.onTap,
     this.textColor,
+    this.trailingText,
   });
 
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Material(
-      color: Colors.white,
+      color: colorScheme.surface,
       child: InkWell(
         onTap: onTap,
         child: Padding(
@@ -386,14 +423,27 @@ class _SimpleSettingItem extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: textColor ?? Colors.black,
+                    color: textColor ?? colorScheme.onSurface,
                     fontFamily: 'PlusJakartaSans',
                   ),
                 ),
               ),
+              if (trailingText != null)
+                Padding(
+                  padding: EdgeInsets.only(right: spacing.xs),
+                  child: Text(
+                    trailingText!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: colorScheme.onSurfaceVariant,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                ),
               Icon(
                 Icons.chevron_right,
-                color: Colors.grey.shade400,
+                color: colorScheme.onSurfaceVariant,
                 size: 20,
               ),
             ],
@@ -402,6 +452,190 @@ class _SimpleSettingItem extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ThemeModeBottomSheet extends StatelessWidget {
+  final ThemeMode currentMode;
+
+  const _ThemeModeBottomSheet({required this.currentMode});
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final radius = context.radius.large;
+
+    const options = [
+      _ThemeModeOption(
+        mode: ThemeMode.system,
+        title: 'Use system setting',
+        description: 'Automatically follow your device appearance.',
+        icon: Icons.auto_mode_outlined,
+      ),
+      _ThemeModeOption(
+        mode: ThemeMode.light,
+        title: 'Light',
+        description: 'Bright background with dark text.',
+        icon: Icons.light_mode_outlined,
+      ),
+      _ThemeModeOption(
+        mode: ThemeMode.dark,
+        title: 'Dark',
+        description: 'Dim background with light text.',
+        icon: Icons.dark_mode_outlined,
+      ),
+    ];
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: spacing.l,
+          right: spacing.l,
+          top: spacing.m,
+          bottom: spacing.l + MediaQuery.of(context).padding.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            SizedBox(height: spacing.m),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Appearance',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'PlusJakartaSans',
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ),
+            SizedBox(height: spacing.s),
+            ...options.map(
+              (option) => Padding(
+                padding: EdgeInsets.only(bottom: spacing.s),
+                child: _ThemeModeOptionTile(
+                  option: option,
+                  isSelected: option.mode == currentMode,
+                  borderRadius: radius,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeModeOptionTile extends StatelessWidget {
+  final _ThemeModeOption option;
+  final bool isSelected;
+  final double borderRadius;
+
+  const _ThemeModeOptionTile({
+    required this.option,
+    required this.isSelected,
+    required this.borderRadius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(borderRadius),
+      onTap: () => Navigator.of(context).pop(option.mode),
+      child: Container(
+        padding: EdgeInsets.all(spacing.m),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colorScheme.secondary.withOpacity(0.12)
+              : colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: Border.all(
+            color:
+                isSelected ? colorScheme.secondary : colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              option.icon,
+              size: 24,
+              color:
+                  isSelected ? colorScheme.secondary : colorScheme.onSurface,
+            ),
+            SizedBox(width: spacing.m),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          option.title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'PlusJakartaSans',
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      if (isSelected)
+                        Icon(
+                          Icons.check_circle,
+                          size: 20,
+                          color: colorScheme.secondary,
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: spacing.xs),
+                  Text(
+                    option.description,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      fontFamily: 'PlusJakartaSans',
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeModeOption {
+  final ThemeMode mode;
+  final String title;
+  final String description;
+  final IconData icon;
+
+  const _ThemeModeOption({
+    required this.mode,
+    required this.title,
+    required this.description,
+    required this.icon,
+  });
 }
 
 class _MembershipBadge extends StatelessWidget {
@@ -416,9 +650,14 @@ class _MembershipBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
-    final backgroundColor =
-        isPremium ? AppColors.secondary.withOpacity(0.1) : Colors.grey.shade100;
-    final textColor = isPremium ? AppColors.secondary : AppColors.textSecondary;
+    final colorScheme = Theme.of(context).colorScheme;
+    final backgroundColor = isPremium
+        ? colorScheme.secondary.withOpacity(0.12)
+        : colorScheme.surfaceVariant;
+    final textColor =
+        isPremium ? colorScheme.secondary : colorScheme.onSurfaceVariant;
+    final borderColor =
+        isPremium ? colorScheme.secondary : colorScheme.outlineVariant;
     final radius = context.radius.medium;
 
     return Container(
@@ -430,7 +669,7 @@ class _MembershipBadge extends StatelessWidget {
         color: backgroundColor,
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(
-          color: isPremium ? AppColors.secondary : Colors.grey.shade300,
+          color: borderColor,
           width: 1,
         ),
       ),

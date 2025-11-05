@@ -49,14 +49,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final spacing = context.spacing;
     final user = ref.watch(currentUserProvider);
     final initials = _initialsFromName(_nameController.text, user?.email);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         automaticallyImplyLeading: false,
         leadingWidth: 64,
@@ -69,10 +70,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         ),
         titleSpacing: 0,
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'Profile',
           style: TextStyle(
-            color: Colors.black,
+            color: colorScheme.onSurface,
             fontFamily: 'PlusJakartaSans',
             fontWeight: FontWeight.w600,
             fontSize: 17,
@@ -99,11 +100,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       child: Center(
                         child: Text(
                           initials,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.w700,
                             fontFamily: 'PlusJakartaSans',
-                            color: Colors.black,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -118,15 +119,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                           horizontal: spacing.m,
                           vertical: spacing.xs,
                         ),
-                        backgroundColor: Colors.grey.shade200,
+                        backgroundColor: colorScheme.surfaceVariant,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Edit',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: colorScheme.onSurface,
                           fontFamily: 'PlusJakartaSans',
                           fontWeight: FontWeight.w600,
                         ),
@@ -205,45 +206,48 @@ class _RoundedField extends StatelessWidget {
   Widget build(BuildContext context) {
     final radius = context.radius.large;
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             fontFamily: 'PlusJakartaSans',
-            color: Colors.black,
+            color: colorScheme.onSurface,
           ),
         ),
         SizedBox(height: spacing.s),
         TextField(
           controller: controller,
           decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            color: AppColors.textTertiary,
-          ),
+            hintText: hintText,
+            hintStyle: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              color: colorScheme.onSurfaceVariant,
+            ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: colorScheme.surface,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(radius),
-              borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+              borderSide:
+                  BorderSide(color: colorScheme.outlineVariant, width: 1.5),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(radius),
-              borderSide: const BorderSide(color: Colors.black, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.secondary, width: 1.5),
             ),
           ),
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'PlusJakartaSans',
             fontSize: 16,
-            color: Colors.black,
+            color: colorScheme.onSurface,
           ),
         ),
       ],
@@ -264,11 +268,15 @@ class _MembershipStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final radius = context.radius.large;
-    final backgroundColor =
-        isPremium ? const Color(0xFFFFF1F5) : Colors.grey.shade100;
-    final borderColor = isPremium ? AppColors.secondary : Colors.grey.shade300;
-    final iconColor = isPremium ? AppColors.secondary : Colors.grey.shade500;
-    final descriptionColor = AppColors.textSecondary;
+    final colorScheme = Theme.of(context).colorScheme;
+    final backgroundColor = isPremium
+        ? AppColors.secondary.withOpacity(0.12)
+        : colorScheme.surfaceVariant;
+    final borderColor =
+        isPremium ? AppColors.secondary : colorScheme.outlineVariant;
+    final iconColor =
+        isPremium ? AppColors.secondary : colorScheme.onSurfaceVariant;
+    final descriptionColor = colorScheme.onSurfaceVariant;
 
     return Container(
       width: double.infinity,
@@ -287,7 +295,7 @@ class _MembershipStatusCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: isPremium
                   ? AppColors.secondary.withOpacity(0.1)
-                  : Colors.white,
+                  : colorScheme.surface,
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -300,23 +308,23 @@ class _MembershipStatusCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Membership',
                   style: TextStyle(
                     fontSize: 13,
                     fontFamily: 'PlusJakartaSans',
                     fontWeight: FontWeight.w600,
-                    color: Colors.black54,
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
                 SizedBox(height: spacing.xs),
                 Text(
                   membershipType,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontFamily: 'PlusJakartaSans',
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 SizedBox(height: spacing.xs),
