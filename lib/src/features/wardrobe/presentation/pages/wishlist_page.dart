@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_refresh/easy_refresh.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../favorites/domain/providers/favorites_provider.dart';
 import '../../../favorites/domain/models/favorite_item.dart';
 import '../../../product/presentation/pages/product_detail_page.dart';
@@ -63,16 +64,30 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
             // Fixed Header
             Padding(
               padding: EdgeInsets.all(spacing.l),
-              child: const Text(
-                'My Wishlist',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -1.0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  height: 1.3,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'My Wishlist',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -1.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      height: 1.3,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'These are the items you liked the most.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'PlusJakartaSans',
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -310,6 +325,95 @@ class _FavoriteCard extends ConsumerWidget {
     this.onDelete,
   });
 
+  void _showShareMenu(BuildContext context) {
+    final productBrand = favorite.brand;
+    final productTitle = favorite.productName;
+    final productUrl = favorite.purchaseUrl ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final messenger = ScaffoldMessenger.of(context);
+        final shareTitle = '$productBrand $productTitle'.trim();
+        final shareMessage = productUrl.isNotEmpty
+            ? 'Check out this $productBrand $productTitle on Snaplook! $productUrl'
+            : 'Check out this $productBrand $productTitle on Snaplook!';
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading:
+                      const Icon(Icons.share_outlined, color: Colors.black, size: 24),
+                  title: const Text(
+                    'Share Product',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Share.share(
+                      shareMessage,
+                      subject: shareTitle.isEmpty ? null : shareTitle,
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.link, color: Colors.black, size: 24),
+                  title: const Text(
+                    'Copy Link',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    if (productUrl.isEmpty) {
+                      messenger.hideCurrentSnackBar();
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Link unavailable for this item.',
+                            style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                          ),
+                          backgroundColor: Colors.black,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                      return;
+                    }
+                    Clipboard.setData(ClipboardData(text: productUrl));
+                    messenger.hideCurrentSnackBar();
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Link copied to clipboard',
+                          style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                        ),
+                        backgroundColor: Colors.black,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final radius = context.radius;
@@ -399,26 +503,51 @@ class _FavoriteCard extends ConsumerWidget {
 
             SizedBox(width: spacing.sm),
 
-            // Action Icon (Delete)
+            // Action Icons (Delete & Share)
             SizedBox(
               height: 100,
-              child: Center(
-                child: GestureDetector(
-                  onTap: onDelete,
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      SnaplookIcons.trashBin,
-                      color: Colors.white,
-                      size: 14,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        SnaplookIcons.trashBin,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _showShareMenu(context),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.black,
+                          width: 1.0,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.more_horiz,
+                          color: Colors.black,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
