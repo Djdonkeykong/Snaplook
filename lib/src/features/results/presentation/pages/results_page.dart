@@ -107,6 +107,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                 top: false,
                 bottom: false,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
                       padding: EdgeInsets.only(
@@ -160,13 +161,17 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       child: SizedBox(
                         height: 36,
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: EdgeInsets.symmetric(horizontal: spacing.m),
-                          child: Row(
-                            children: const [
-                              _AllResultsChip(),
-                            ],
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                _AllResultsChip(),
+                              ],
+                            ),
                           ),
                         ),
                       ),
