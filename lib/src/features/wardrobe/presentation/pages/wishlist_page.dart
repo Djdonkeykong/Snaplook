@@ -354,7 +354,7 @@ class _FavoriteCard extends ConsumerWidget {
               children: [
                 _SheetActionItem(
                   icon: Icons.share_outlined,
-                  label: 'Share Product',
+                  label: 'Share product',
                   onTap: () {
                     Navigator.pop(context);
                     Share.share(
@@ -366,7 +366,7 @@ class _FavoriteCard extends ConsumerWidget {
                 const SizedBox(height: 8),
                 _SheetActionItem(
                   icon: Icons.link,
-                  label: 'Copy Link',
+                  label: 'Share link',
                   onTap: () {
                     Navigator.pop(context);
                     if (productUrl.isEmpty) {
@@ -383,18 +383,7 @@ class _FavoriteCard extends ConsumerWidget {
                       );
                       return;
                     }
-                    Clipboard.setData(ClipboardData(text: productUrl));
-                    messenger.hideCurrentSnackBar();
-                    messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Link copied to clipboard',
-                          style: TextStyle(fontFamily: 'PlusJakartaSans'),
-                        ),
-                        backgroundColor: Colors.black,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                    Share.share(productUrl);
                   },
                 ),
               ],

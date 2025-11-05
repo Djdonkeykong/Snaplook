@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -251,53 +251,32 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ListTile(
-                  leading: const Icon(Icons.share_outlined,
-                      color: Colors.black, size: 24),
-                  title: const Text(
-                    'Share Product',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                _ProductDetailSheetItem(
+                  icon: Icons.share_outlined,
+                  label: 'Share product',
                   onTap: () {
-                    final renderBox = context.findRenderObject() as RenderBox?;
-                    final mediaSize = MediaQuery.of(context).size;
-
-                    Rect shareOrigin = Offset.zero & mediaSize;
-                    if (renderBox != null && renderBox.hasSize) {
-                      final size = renderBox.size;
-                      if (!size.isEmpty) {
-                        final position = renderBox.localToGlobal(Offset.zero);
-                        shareOrigin = position & size;
-                      }
-                    }
-
                     Navigator.pop(context);
+                    final shareTitle = '$productBrand $productTitle'.trim();
+                    final message = productUrl.isNotEmpty
+                        ? 'Check out this $productBrand $productTitle on Snaplook! $productUrl'
+                        : 'Check out this $productBrand $productTitle on Snaplook!';
                     Share.share(
-                      'Check out this $productBrand $productTitle on Snaplook! $productUrl',
-                      subject: '$productBrand $productTitle',
-                      sharePositionOrigin: shareOrigin,
+                      message,
+                      subject: shareTitle.isEmpty ? null : shareTitle,
                     );
                   },
                 ),
-                ListTile(
-                  leading: const Icon(Icons.link,
-                      color: Colors.black, size: 24),
-                  title: const Text(
-                    'Copy Link',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                const SizedBox(height: 8),
+                _ProductDetailSheetItem(
+                  icon: Icons.link,
+                  label: 'Share link',
                   onTap: () {
                     Navigator.pop(context);
-                    if (productUrl.isNotEmpty) {
-                      Clipboard.setData(ClipboardData(text: productUrl));
-                      _showSnackBar('Link copied to clipboard');
+                    if (productUrl.isEmpty) {
+                      _showSnackBar('No product link available');
+                      return;
                     }
+                    Share.share(productUrl);
                   },
                 ),
               ],
@@ -505,6 +484,46 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
           ],
         ),
       ],
+    );
+  }
+}
+
+class _ProductDetailSheetItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ProductDetailSheetItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.black, size: 24),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontWeight: FontWeight.w500,
+                  fontSize: 16,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
