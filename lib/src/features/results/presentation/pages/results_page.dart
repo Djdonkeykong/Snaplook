@@ -157,22 +157,26 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                     ),
                     SizedBox(height: spacing.m),
                     // Category filter chips - mirror share extension styling
-                    SizedBox(
-                      height: 36,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: EdgeInsets.symmetric(horizontal: spacing.m),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              _AllResultsChip(),
-                            ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: SizedBox(
+                        height: 36,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                _AllResultsChip(),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
+                    SizedBox(height: spacing.sm),
                     Expanded(
                       child: ListView.separated(
                         controller: scrollController,
