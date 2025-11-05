@@ -2193,8 +2193,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Build items array: image MUST be first for iOS preview thumbnail
         // iOS share sheet preview works best with file URLs, not UIImage objects
         if let image = shareImage {
-            // Build smart filename and subject based on source and content
+            // Simple, clean filename
             let tempDir = FileManager.default.temporaryDirectory
+            let imageFileName = "Snaplook-Fashion-Matches.jpg"
+            let imageURL = tempDir.appendingPathComponent(imageFileName)
+
+            // Build subject/subtitle for share sheet based on source
+            var subject = "Snaplook Fashion Match"
 
             // Extract Instagram username if available
             var instagramUsername: String?
@@ -2208,35 +2213,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
             }
 
-            // Get dominant garment category
-            let dominantCategory = detectionResults.first?.categoryGroup.displayName ?? "Fashion"
-
-            // Build filename components
-            var filenameParts: [String] = ["Snaplook"]
-
-            if let username = instagramUsername {
-                filenameParts.append("Instagram")
-                filenameParts.append("@\(username)")
-            } else {
-                // Try to detect source app
-                if let sourceApp = readSourceApplicationBundleIdentifier() {
-                    if sourceApp.contains("instagram") {
-                        filenameParts.append("Instagram")
-                    } else if sourceApp.contains("photos") {
-                        filenameParts.append("Photos")
-                    } else if sourceApp.contains("safari") || sourceApp.contains("webkit") {
-                        filenameParts.append("Web")
-                    }
-                }
-            }
-
-            filenameParts.append(dominantCategory)
-
-            let imageFileName = filenameParts.joined(separator: "-") + ".jpg"
-            let imageURL = tempDir.appendingPathComponent(imageFileName)
-
-            // Build subject/subtitle for share sheet
-            var subject = "Snaplook Fashion Match"
             if let username = instagramUsername {
                 subject = "from Instagram @\(username)"
             } else if let sourceApp = readSourceApplicationBundleIdentifier() {
