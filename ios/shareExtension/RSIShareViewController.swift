@@ -2160,15 +2160,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Try to get the analyzed image
         if let imageData = analyzedImageData {
-            self.shareLog("Attempting to create UIImage from \(imageData.count) bytes")
+            shareLog("Attempting to create UIImage from \(imageData.count) bytes")
             if let image = UIImage(data: imageData) {
                 shareImage = image
-                self.shareLog("✅ Successfully loaded analyzed image (size: \(image.size))")
+                shareLog("✅ Successfully loaded analyzed image (size: \(image.size))")
             } else {
-                self.shareLog("❌ ERROR: Failed to create UIImage from imageData")
+                shareLog("❌ ERROR: Failed to create UIImage from imageData")
             }
         } else {
-            self.shareLog("❌ WARNING: analyzedImageData is nil - trying fallback")
+            shareLog("❌ WARNING: analyzedImageData is nil - trying fallback")
         }
 
         // Fallback: Try to use the first product's image if original image unavailable
@@ -2176,15 +2176,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
             if let firstProduct = detectionResults.first {
                 let imageUrlString = firstProduct.image_url
                 if !imageUrlString.isEmpty, let imageUrl = URL(string: imageUrlString) {
-                    self.shareLog("Fallback: Attempting to download product image from: \(imageUrlString)")
+                    shareLog("Fallback: Attempting to download product image from: \(imageUrlString)")
 
                     // Download image synchronously (we're already in share flow)
                     if let imageData = try? Data(contentsOf: imageUrl),
                        let image = UIImage(data: imageData) {
                         shareImage = image
-                        self.shareLog("✅ Successfully loaded product image as fallback (size: \(image.size))")
+                        shareLog("✅ Successfully loaded product image as fallback (size: \(image.size))")
                     } else {
-                        self.shareLog("❌ Failed to download fallback image")
+                        shareLog("❌ Failed to download fallback image")
                     }
                 }
             }
@@ -2259,24 +2259,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     )
                     itemsToShare.append(shareItem)
                     itemsToShare.append(shareText)
-                    self.shareLog("✅ Share items: [custom image item, text] - wrote temp file: \(imageFileName)")
-                    self.shareLog("   Subject: \(subject)")
+                    shareLog("✅ Share items: [custom image item, text] - wrote temp file: \(imageFileName)")
+                    shareLog("   Subject: \(subject)")
                 } catch {
-                    self.shareLog("❌ Failed to write temp image file: \(error)")
+                    shareLog("❌ Failed to write temp image file: \(error)")
                     // Fallback to UIImage if file write fails
                     itemsToShare.append(image)
                     itemsToShare.append(shareText)
-                    self.shareLog("⚠️ Fallback: using UIImage instead of file URL")
+                    shareLog("⚠️ Fallback: using UIImage instead of file URL")
                 }
             } else {
-                self.shareLog("❌ Failed to convert image to JPEG")
+                shareLog("❌ Failed to convert image to JPEG")
                 itemsToShare.append(image)
                 itemsToShare.append(shareText)
-                self.shareLog("⚠️ Fallback: using UIImage instead of JPEG")
+                shareLog("⚠️ Fallback: using UIImage instead of JPEG")
             }
         } else {
             itemsToShare.append(shareText)
-            self.shareLog("⚠️ Share items: [text only] - no image available")
+            shareLog("⚠️ Share items: [text only] - no image available")
         }
 
         // Present iOS share sheet on main thread
@@ -2303,7 +2303,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             self.present(activityVC, animated: true) {
-                self.shareLog("Share sheet presented successfully")
+                shareLog("Share sheet presented successfully")
             }
         }
     }
