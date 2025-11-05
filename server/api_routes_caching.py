@@ -115,19 +115,20 @@ async def analyze_with_caching(
                     cache_entry['id']
                 )
 
-            # Ensure user exists before creating search entry
+            # Ensure user exists and get auth user ID
             search_id = None
             if supabase_manager.enabled:
-                if supabase_manager.ensure_user_exists(request.user_id):
+                auth_user_id = supabase_manager.get_or_create_user_id(request.user_id)
+                if auth_user_id:
                     search_id = supabase_manager.create_user_search(
-                        user_id=request.user_id,
+                        user_id=auth_user_id,
                         image_cache_id=cache_entry['id'],
                         search_type=request.search_type,
                         source_url=request.source_url,
                         source_username=request.source_username
                     )
                 else:
-                    print(f"WARNING: Could not ensure user exists: {request.user_id}")
+                    print(f"WARNING: Could not create/find user for device: {request.user_id}")
 
             return AnalyzeResponse(
                 success=True,
@@ -179,16 +180,17 @@ async def analyze_with_caching(
         # Create user search entry
         search_id = None
         if supabase_manager.enabled and cache_id:
-            if supabase_manager.ensure_user_exists(request.user_id):
+            auth_user_id = supabase_manager.get_or_create_user_id(request.user_id)
+            if auth_user_id:
                 search_id = supabase_manager.create_user_search(
-                    user_id=request.user_id,
+                    user_id=auth_user_id,
                     image_cache_id=cache_id,
                     search_type=request.search_type,
                     source_url=request.source_url,
                     source_username=request.source_username
                 )
             else:
-                print(f"⚠️ Could not ensure user exists: {request.user_id}")
+                print(f"WARNING: Could not create/find user for device: {request.user_id}")
 
         return AnalyzeResponse(
             success=True,
@@ -217,12 +219,13 @@ async def add_favorite(request: FavoriteRequest):
     if not supabase_manager.enabled:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    # Ensure user exists before adding favorite
-    if not supabase_manager.ensure_user_exists(request.user_id):
+    # Get or create auth user ID for this device
+    auth_user_id = supabase_manager.get_or_create_user_id(request.user_id)
+    if not auth_user_id:
         raise HTTPException(status_code=400, detail="Could not provision user")
 
     favorite_id = supabase_manager.add_favorite(
-        user_id=request.user_id,
+        user_id=auth_user_id,
         product_data=request.product,
         search_id=request.search_id
     )
@@ -273,12 +276,13 @@ async def save_search(search_id: str, request: SaveSearchRequest):
     if not supabase_manager.enabled:
         raise HTTPException(status_code=503, detail="Database not available")
 
-    # Ensure user exists before saving search
-    if not supabase_manager.ensure_user_exists(request.user_id):
+    # Get or create auth user ID for this device
+    auth_user_id = supabase_manager.get_or_create_user_id(request.user_id)
+    if not auth_user_id:
         raise HTTPException(status_code=400, detail="Could not provision user")
 
     saved_id = supabase_manager.save_search(
-        user_id=request.user_id,
+        user_id=auth_user_id,
         search_id=search_id,
         name=request.name
     )

@@ -45,50 +45,73 @@ class SupabaseManager:
     # USER MANAGEMENT
     # ============================================
 
-    def ensure_user_exists(self, user_id: str) -> bool:
+    def get_or_create_user_id(self, device_id: str) -> Optional[str]:
         """
-        Ensure user exists in the database. Create if not exists.
-        Returns True if user exists or was created successfully.
+        Get existing user ID for device, or create new auth user.
+        Returns the auth user UUID to use for all operations.
         """
         if not self.enabled:
-            return False
+            return None
 
         try:
-            # Check if user exists
+            # Look for existing user by email pattern (device_id@device.snaplook.app)
+            device_email = f"{device_id.lower()}@device.snaplook.app"
+
             response = self.client.table('users')\
                 .select('id')\
-                .eq('id', user_id)\
+                .eq('email', device_email)\
                 .execute()
 
             if response.data and len(response.data) > 0:
-                return True  # User already exists
+                auth_user_id = response.data[0]['id']
+                print(f"Found existing user: {auth_user_id} for device: {device_id}")
+                return auth_user_id
 
-            # Create user (anonymous for now)
-            user_entry = {
-                'id': user_id,
-                'email': None,
-                'full_name': None,
-                'avatar_url': None
-            }
+            # Create new auth user for this device
+            try:
+                auth_response = self.client.auth.admin.create_user({
+                    "email": device_email,
+                    "email_confirm": True,
+                    "user_metadata": {
+                        "device_id": device_id,
+                        "is_device_user": True
+                    }
+                })
 
-            response = self.client.table('users')\
-                .insert(user_entry)\
-                .execute()
+                if auth_response and hasattr(auth_response, 'user') and auth_response.user:
+                    auth_user_id = auth_response.user.id
+                    print(f"Created auth user: {auth_user_id} for device: {device_id}")
 
-            if response.data:
-                print(f"Created anonymous user: {user_id}")
-                return True
-            else:
-                print(f"Failed to create user: {user_id}")
-                return False
+                    # Create profile in public.users
+                    user_entry = {
+                        'id': auth_user_id,
+                        'email': device_email,
+                        'full_name': None,
+                        'avatar_url': None
+                    }
+
+                    self.client.table('users').insert(user_entry).execute()
+                    print(f"Created user profile: {auth_user_id}")
+                    return auth_user_id
+
+            except Exception as auth_error:
+                if 'already been registered' in str(auth_error).lower():
+                    # Race condition - try to fetch again
+                    response = self.client.table('users').select('id').eq('email', device_email).execute()
+                    if response.data:
+                        return response.data[0]['id']
+                print(f"Auth creation error: {auth_error}")
+                return None
 
         except Exception as e:
-            # User might have been created by another request (race condition)
-            if 'duplicate key' in str(e).lower() or 'unique constraint' in str(e).lower():
-                print(f"User already exists (race condition): {user_id}")
-                return True
-            print(f"User creation error: {e}")
-            return False
+            print(f"User lookup/creation error: {e}")
+            return None
+
+    def ensure_user_exists(self, user_id: str) -> bool:
+        """
+        Simplified wrapper that returns bool for backwards compatibility.
+        """
+        return self.get_or_create_user_id(user_id) is not None
 
     # ============================================
     # IMAGE CACHE OPERATIONS
