@@ -321,8 +321,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var headerContainerView: UIView?
     private var headerLogoImageView: UIImageView?
     private var cancelButtonView: UIButton?
-    private var analyzedImagePreviewContainer: UIView?
-    private var analyzedImagePreviewView: UIImageView?
 
     open func shouldAutoRedirect() -> Bool { true }
 
@@ -1384,104 +1382,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cancelButtonView = nil
     }
 
-    @discardableResult
-    private func ensureAnalyzedImagePreview(on overlay: UIView) -> UIView? {
-        if let container = analyzedImagePreviewContainer {
-            return container
-        }
-
-        let hasImageSource = analyzedImageData != nil
-            || sharedMedia.contains(where: { $0.type == .image })
-            || downloadedImageUrl != nil
-            || pendingImageUrl != nil
-
-        guard hasImageSource else {
-            shareLog("⚠️ No analyzed image available for preview - skipping preview container")
-            return nil
-        }
-
-        let container = UIView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-        container.layer.cornerRadius = 16
-        container.layer.masksToBounds = true
-        container.backgroundColor = UIColor.secondarySystemBackground
-
-        let imageView = UIImageView()
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.contentMode = .scaleAspectFill
-        imageView.clipsToBounds = true
-        imageView.backgroundColor = UIColor.secondarySystemBackground
-
-        container.addSubview(imageView)
-        NSLayoutConstraint.activate([
-            imageView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            imageView.topAnchor.constraint(equalTo: container.topAnchor),
-            imageView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
-        ])
-
-        overlay.addSubview(container)
-
-        analyzedImagePreviewContainer = container
-        analyzedImagePreviewView = imageView
-
-        loadAnalyzedImagePreview()
-
-        return container
-    }
-
-    private func loadAnalyzedImagePreview() {
-        guard let imageView = analyzedImagePreviewView else { return }
-
-        if let data = analyzedImageData, let image = UIImage(data: data) {
-            shareLog("✅ Preview image loaded from analyzedImageData (\(data.count) bytes)")
-            imageView.image = image
-            return
-        }
-
-        if let localPath = sharedMedia.first(where: { $0.type == .image })?.path,
-           let url = URL(string: localPath) {
-            shareLog("ℹ️ Loading preview image from shared media path: \(localPath)")
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                guard let data = try? Data(contentsOf: url),
-                      let image = UIImage(data: data) else {
-                    shareLog("❌ ERROR: Failed to load preview image from shared media path")
-                    return
-                }
-                DispatchQueue.main.async {
-                    self?.analyzedImagePreviewView?.image = image
-                }
-            }
-            return
-        }
-
-        if let urlString = downloadedImageUrl ?? pendingImageUrl,
-           let url = URL(string: urlString) {
-            shareLog("ℹ️ Loading preview image from URL: \(urlString)")
-            let request = URLRequest(
-                url: url,
-                cachePolicy: .returnCacheDataElseLoad,
-                timeoutInterval: 15
-            )
-            URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
-                if let error = error {
-                    shareLog("❌ ERROR: Preview image download failed - \(error.localizedDescription)")
-                    return
-                }
-                guard let data = data, let image = UIImage(data: data) else {
-                    shareLog("❌ ERROR: Preview image data invalid from URL")
-                    return
-                }
-                DispatchQueue.main.async {
-                    self?.analyzedImagePreviewView?.image = image
-                }
-            }.resume()
-            return
-        }
-
-        shareLog("⚠️ Unable to load analyzed image preview - no data sources available")
-    }
-
     // Trigger detection using the Cloudinary-backed API
     private func uploadAndDetect(imageData: Data) {
         shareLog("START uploadAndDetect - image size: \(imageData.count) bytes")
@@ -1626,25 +1526,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         let headerView = addResultsHeaderIfNeeded()
-        var filterTopAnchor: NSLayoutYAxisAnchor
-        var filterTopPadding: CGFloat
+        let filterTopAnchor: NSLayoutYAxisAnchor
+        let filterTopPadding: CGFloat
         if let headerView = headerView {
             filterTopAnchor = headerView.bottomAnchor
             filterTopPadding = 12
         } else {
             filterTopAnchor = loadingView.safeAreaLayoutGuide.topAnchor
             filterTopPadding = 0
-        }
-
-        if let previewContainer = ensureAnalyzedImagePreview(on: loadingView) {
-            NSLayoutConstraint.activate([
-                previewContainer.topAnchor.constraint(equalTo: filterTopAnchor, constant: filterTopPadding),
-                previewContainer.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 16),
-                previewContainer.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -16),
-                previewContainer.heightAnchor.constraint(equalTo: previewContainer.widthAnchor, multiplier: 4.0 / 3.0)
-            ])
-            filterTopAnchor = previewContainer.bottomAnchor
-            filterTopPadding = 16
         }
 
         // Add all views to loadingView
@@ -2745,8 +2634,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stopStatusPolling()
         statusLabel = nil
         progressView = nil
-        analyzedImagePreviewView = nil
-        analyzedImagePreviewContainer = nil
     }
 
     // MARK: - Authentication Check
