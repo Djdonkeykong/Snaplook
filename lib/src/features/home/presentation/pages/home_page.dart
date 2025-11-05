@@ -736,7 +736,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: const Color(0xFF6B7280),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontFamily: 'PlusJakartaSans',
                       ),
                     ),
@@ -765,10 +765,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                       children: [
                         Text(
                           '$creditsRemaining',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFf2003c),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : const Color(0xFFf2003c),
                             fontFamily: 'PlusJakartaSans',
                             letterSpacing: -2,
                           ),
@@ -778,7 +780,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF6B7280),
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontFamily: 'PlusJakartaSans',
                           ),
                         ),
@@ -792,7 +794,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       'Credits Remaining',
                       style: TextStyle(
                         fontSize: 13,
-                        color: const Color(0xFF6B7280),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontFamily: 'PlusJakartaSans',
                       ),
                     ),
@@ -806,8 +808,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                         value: creditsPercentage,
                         minHeight: 6,
                         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                            Color(0xFFf2003c)),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : const Color(0xFFf2003c)),
                       ),
                     ),
 
@@ -818,7 +822,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       'Resets monthly on the 1st',
                       style: TextStyle(
                         fontSize: 12,
-                        color: const Color(0xFF6B7280),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontFamily: 'PlusJakartaSans',
                       ),
                     ),

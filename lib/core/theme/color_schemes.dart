@@ -51,9 +51,9 @@ const darkColorScheme = ColorScheme(
   errorContainer: Color(0xFF7F1D1D),
   onErrorContainer: Color(0xFFFEF2F2),
   surface: Color(0xFF09090D), // Near-black surface
-  onSurface: Color(0xFFE5E5E8), // Light text on dark surface
+  onSurface: Color(0xFFF5F5F5), // Light text on dark surface (whiter)
   surfaceContainerHighest: Color(0xFF16161A), // Lighter dark
-  onSurfaceVariant: Color(0xFFB8B8BA), // Muted light text
+  onSurfaceVariant: Color(0xFFD4D4D4), // Muted light text (whiter)
   outline: Color(0xFF2D2D33), // Dark borders
   outlineVariant: Color(0xFF1F1F24), // Darker borders
   shadow: Color(0xFF000000),
