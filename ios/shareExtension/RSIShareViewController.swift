@@ -236,6 +236,178 @@ struct DetectionResultItem: Codable {
         }
         return nil
     }
+
+    var normalizedCategories: [NormalizedCategory] {
+        CategoryNormalizer.shared.normalizedCategories(for: self)
+    }
+}
+
+enum NormalizedCategory: String, CaseIterable, Hashable {
+    case tops, bottoms, dresses, outerwear, shoes, bags, accessories, headwear, other
+
+    var displayName: String {
+        switch self {
+        case .tops: return "Tops"
+        case .bottoms: return "Bottoms"
+        case .dresses: return "Dresses"
+        case .outerwear: return "Outerwear"
+        case .shoes: return "Shoes"
+        case .bags: return "Bags"
+        case .accessories: return "Accessories"
+        case .headwear: return "Headwear"
+        case .other: return "Other"
+        }
+    }
+
+    static let preferredOrder: [NormalizedCategory] = [
+        .tops, .bottoms, .dresses, .outerwear, .shoes, .bags, .accessories, .headwear, .other
+    ]
+
+    init?(displayName: String) {
+        let lowered = displayName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch lowered {
+        case "tops": self = .tops
+        case "bottoms": self = .bottoms
+        case "dresses": self = .dresses
+        case "outerwear": self = .outerwear
+        case "shoes": self = .shoes
+        case "bags": self = .bags
+        case "accessories": self = .accessories
+        case "headwear": self = .headwear
+        case "other": self = .other
+        default: return nil
+        }
+    }
+}
+
+private struct CategoryRuleSet {
+    let positives: [String]
+    let negatives: [String]
+}
+
+final class CategoryNormalizer {
+    static let shared = CategoryNormalizer()
+
+    private let baseMappings: [String: NormalizedCategory] = [
+        "tops": .tops,
+        "top": .tops,
+        "shirts": .tops,
+        "shirt": .tops,
+        "blouse": .tops,
+        "tees": .tops,
+        "t-shirts": .tops,
+        "bottoms": .bottoms,
+        "pants": .bottoms,
+        "trousers": .bottoms,
+        "jeans": .bottoms,
+        "shorts": .bottoms,
+        "skirts": .bottoms,
+        "dresses": .dresses,
+        "dress": .dresses,
+        "outerwear": .outerwear,
+        "jackets": .outerwear,
+        "coats": .outerwear,
+        "shoes": .shoes,
+        "footwear": .shoes,
+        "bags": .bags,
+        "bag": .bags,
+        "accessories": .accessories,
+        "headwear": .headwear,
+        "hats": .headwear
+    ]
+
+    private let ruleSets: [NormalizedCategory: CategoryRuleSet] = [
+        .tops: CategoryRuleSet(
+            positives: ["top", "tee", "t-shirt", "shirt", "blouse", "sweater", "hoodie", "cardigan", "pullover", "tank", "camisole"],
+            negatives: ["dress", "skirt", "pant", "shoe", "bag", "shorts", "trouser"]
+        ),
+        .bottoms: CategoryRuleSet(
+            positives: ["pant", "jean", "trouser", "short", "skirt", "legging", "culotte", "jogger", "denim", "bottom"],
+            negatives: ["dress", "bag", "shoe", "top", "shirt", "hoodie"]
+        ),
+        .dresses: CategoryRuleSet(
+            positives: ["dress", "gown", "maxi", "mini dress", "midi dress", "strapless", "wrap dress", "bodycon"],
+            negatives: ["shoe", "bag", "pant", "short", "skirt"]
+        ),
+        .outerwear: CategoryRuleSet(
+            positives: ["coat", "jacket", "blazer", "trench", "parka", "puffer", "outerwear", "windbreaker", "shacket"],
+            negatives: ["dress", "skirt", "shoe", "bag"]
+        ),
+        .shoes: CategoryRuleSet(
+            positives: ["shoe", "boot", "sneaker", "heel", "sandal", "pump", "loafer", "mule", "trainer", "cleat"],
+            negatives: ["bag", "dress", "skirt", "top"]
+        ),
+        .bags: CategoryRuleSet(
+            positives: ["bag", "handbag", "tote", "crossbody", "satchel", "backpack", "clutch", "shoulder bag", "purse", "duffle"],
+            negatives: ["shoe", "dress", "pant"]
+        ),
+        .accessories: CategoryRuleSet(
+            positives: ["belt", "scarf", "sunglass", "bracelet", "necklace", "earring", "ring", "watch", "wallet", "glove", "accessory", "jewelry"],
+            negatives: ["shoe", "dress", "pant", "hat", "cap", "beanie"]
+        ),
+        .headwear: CategoryRuleSet(
+            positives: ["hat", "cap", "beanie", "headband", "visor", "beret"],
+            negatives: ["bag", "shoe", "dress", "pant"]
+        ),
+        .other: CategoryRuleSet(
+            positives: [],
+            negatives: []
+        )
+    ]
+
+    private let minimumScore = 2
+
+    func normalizedCategories(for item: DetectionResultItem) -> [NormalizedCategory] {
+        let normalizedCategoryKey = item.category.lowercased()
+        var scores: [NormalizedCategory: Int] = [:]
+
+        if let mapped = baseMappings[normalizedCategoryKey] {
+            scores[mapped, default: 0] += 3
+        }
+
+        let sourceText = [
+            item.product_name,
+            item.brand ?? "",
+            item.description ?? "",
+            item.category
+        ]
+            .joined(separator: " ")
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z0-9\\s]", with: " ", options: .regularExpression)
+
+        for (category, ruleSet) in ruleSets {
+            var score = scores[category, default: 0]
+            for keyword in ruleSet.positives where sourceText.contains(keyword) {
+                score += 1
+            }
+            for keyword in ruleSet.negatives where sourceText.contains(keyword) {
+                score -= 2
+            }
+            scores[category] = score
+        }
+
+        // Determine best scores
+        let sorted = scores.sorted { $0.value > $1.value }
+        let bestScore = sorted.first?.value ?? 0
+
+        var chosen = sorted.filter { $0.value >= max(minimumScore, bestScore - 1) && $0.value > 0 }.map { $0.key }
+
+        if chosen.isEmpty, let mapped = baseMappings[normalizedCategoryKey] {
+            chosen = [mapped]
+        }
+
+        if chosen.isEmpty {
+            chosen = [.other]
+        } else if chosen.count > 2 {
+            chosen = Array(chosen.prefix(2))
+        }
+
+        if chosen.contains(.other), chosen.count > 1 {
+            chosen.removeAll { $0 == .other }
+        }
+
+        return chosen
+    }
 }
 
 struct DetectionResponse: Codable {
@@ -306,7 +478,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingInstagramUrl: String?
     private var pendingInstagramCompletion: (() -> Void)?
     private var analyzedImageData: Data? // Store the analyzed image for sharing
-    private var selectedCategory: String = "All"
+    private var selectedCategory: NormalizedCategory? = nil
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
     private var progressView: UIProgressView?
@@ -1458,7 +1630,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Initialize filtered results
         filteredResults = detectionResults
-        selectedCategory = "All"
+        selectedCategory = nil
 
         shareLog("Creating category filters...")
         // Create category filter chips
@@ -1597,35 +1769,39 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stackView.spacing = 8
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Extract unique categories from results and map to display names
-        var uniqueCategories = Set<String>()
+        var uniqueCategories = Set<NormalizedCategory>()
         for result in detectionResults {
-            let displayCategory = categoryDisplayName(for: result.category)
-            uniqueCategories.insert(displayCategory)
+            for category in result.normalizedCategories {
+                uniqueCategories.insert(category)
+            }
         }
 
-        // Sort categories in a logical order
-        let categoryOrder = ["Tops", "Bottoms", "Dresses", "Outerwear", "Shoes", "Bags", "Accessories", "Headwear"]
-        let sortedCategories = categoryOrder.filter { uniqueCategories.contains($0) }
+        let orderedCategories = NormalizedCategory.preferredOrder
+            .filter { uniqueCategories.contains($0) && $0 != .other }
 
-        // Always start with "All"
-        var categories = ["All"]
-        categories.append(contentsOf: sortedCategories)
+        var categories: [NormalizedCategory?] = [nil] // nil represents "All"
+        categories.append(contentsOf: orderedCategories)
+        if uniqueCategories.contains(.other) {
+            categories.append(.other)
+        }
 
         for category in categories {
             let button = UIButton(type: .system)
-            button.setTitle(category, for: .normal)
+            let title = category?.displayName ?? "All"
+            button.setTitle(title, for: .normal)
             button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
             button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
             button.layer.cornerRadius = 18
             button.clipsToBounds = true
             button.layer.borderWidth = 1
             button.layer.borderColor = UIColor.systemGray4.cgColor
-            button.backgroundColor = category == "All" ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
-            button.setTitleColor(category == "All" ? .white : .label, for: .normal)
+
+            let isSelected = (category == nil && selectedCategory == nil) || (category == selectedCategory)
+            button.backgroundColor = isSelected ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
+            button.setTitleColor(isSelected ? .white : .label, for: .normal)
+
             button.addTarget(self, action: #selector(categoryFilterTapped(_:)), for: .touchUpInside)
 
-            // Set explicit height for perfect pill shape
             button.heightAnchor.constraint(equalToConstant: 36).isActive = true
             button.translatesAutoresizingMaskIntoConstraints = false
 
@@ -1652,51 +1828,46 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     // Convert server category to display name
-    private func categoryDisplayName(for category: String) -> String {
-        let lower = category.lowercased()
-        switch lower {
-        case "tops": return "Tops"
-        case "bottoms": return "Bottoms"
-        case "dresses": return "Dresses"
-        case "outerwear": return "Outerwear"
-        case "shoes": return "Shoes"
-        case "bags": return "Bags"
-        case "accessories": return "Accessories"
-        case "headwear": return "Headwear"
-        default: return category.capitalized
-        }
-    }
-
     @objc private func categoryFilterTapped(_ sender: UIButton) {
-        guard let category = sender.titleLabel?.text else { return }
+        guard let title = sender.titleLabel?.text else { return }
 
-        selectedCategory = category
+        if title == "All" {
+            selectedCategory = nil
+        } else {
+            selectedCategory = NormalizedCategory(displayName: title)
+        }
 
-        // Update button styles
         if let stackView = categoryFilterView?.subviews.first?.subviews.first as? UIStackView {
             for case let button as UIButton in stackView.arrangedSubviews {
-                let isSelected = button.titleLabel?.text == category
+                guard let buttonTitle = button.titleLabel?.text else { continue }
+                let buttonCategory = buttonTitle == "All" ? nil : NormalizedCategory(displayName: buttonTitle)
+                let isSelected = (buttonCategory == nil && selectedCategory == nil) || (buttonCategory == selectedCategory)
                 button.backgroundColor = isSelected ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
                 button.setTitleColor(isSelected ? .white : .label, for: .normal)
             }
         }
 
-        // Filter results
         filterResultsByCategory()
     }
 
     private func filterResultsByCategory() {
-        if selectedCategory == "All" {
-            filteredResults = detectionResults
-        } else {
-            // Filter by matching the display name with the result's category
+        if let selected = selectedCategory {
             filteredResults = detectionResults.filter { result in
-                categoryDisplayName(for: result.category) == selectedCategory
+                let categories = result.normalizedCategories
+                if categories.isEmpty {
+                    return selected == .other
+                }
+                if selected == .other {
+                    return !categories.contains { $0 != .other }
+                }
+                return categories.contains(selected)
             }
+        } else {
+            filteredResults = detectionResults
         }
 
         resultsTableView?.reloadData()
-        shareLog("Filtered to \(filteredResults.count) results for category: \(selectedCategory)")
+        shareLog("Filtered to \(filteredResults.count) results for category: \(selectedCategory?.displayName ?? "All")")
     }
 
     @objc private func saveAllTapped() {
@@ -3351,16 +3522,16 @@ class ResultCell: UITableViewCell {
         }
 
         if animated {
-            let shrinkTransform = CGAffineTransform(scaleX: 0.88, y: 0.88)
+            applyAppearance()
+            let expandTransform = CGAffineTransform(scaleX: 1.12, y: 1.12)
             UIView.animate(withDuration: 0.1, animations: {
-                self.favoriteButton.transform = shrinkTransform
+                self.favoriteButton.transform = expandTransform
             }, completion: { _ in
-                applyAppearance()
                 UIView.animate(
-                    withDuration: 0.2,
+                    withDuration: 0.25,
                     delay: 0,
-                    usingSpringWithDamping: 0.5,
-                    initialSpringVelocity: 3,
+                    usingSpringWithDamping: 0.55,
+                    initialSpringVelocity: 3.5,
                     options: [.allowUserInteraction, .beginFromCurrentState],
                     animations: {
                         self.favoriteButton.transform = .identity
