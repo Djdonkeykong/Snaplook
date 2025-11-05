@@ -286,17 +286,15 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                 const SizedBox(height: 8),
                 _ProductDetailSheetItem(
                   icon: Icons.link,
-                  label: 'Share link',
+                  label: 'Copy link',
                   onTap: () {
                     Navigator.pop(context);
                     if (productUrl.isEmpty) {
                       _showSnackBar('No product link available');
                       return;
                     }
-                    Share.share(
-                      productUrl,
-                      sharePositionOrigin: shareOrigin,
-                    );
+                    Clipboard.setData(ClipboardData(text: productUrl));
+                    _showSnackBar('Link copied to clipboard');
                   },
                 ),
               ],
