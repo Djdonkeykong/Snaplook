@@ -3243,21 +3243,23 @@ class ResultCell: UITableViewCell {
     private let favoriteButton: UIButton = {
         let button = UIButton(type: .custom)
         button.translatesAutoresizingMaskIntoConstraints = false
-        let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
         button.setImage(UIImage(systemName: "heart", withConfiguration: config), for: .normal)
         button.setImage(UIImage(systemName: "heart.fill", withConfiguration: config), for: .selected)
         button.tintColor = .black
         button.backgroundColor = UIColor(white: 1.0, alpha: 0.9)
-        button.layer.cornerRadius = 20
+        button.layer.cornerRadius = 16
         button.layer.masksToBounds = false
         button.layer.shadowColor = UIColor.black.withAlphaComponent(0.1).cgColor
         button.layer.shadowOpacity = 1
-        button.layer.shadowRadius = 4
-        button.layer.shadowOffset = CGSize(width: 0, height: 2)
+        button.layer.shadowRadius = 3
+        button.layer.shadowOffset = CGSize(width: 0, height: 1.5)
         button.adjustsImageWhenHighlighted = false
-        button.contentEdgeInsets = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        button.contentEdgeInsets = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
+        button.imageEdgeInsets = .zero
         return button
     }()
+    private var isFavorite = false
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -3278,6 +3280,7 @@ class ResultCell: UITableViewCell {
         contentView.addSubview(productImageView)
         contentView.addSubview(favoriteButton)
         contentView.addSubview(textStackView)
+        favoriteButton.addTarget(self, action: #selector(favoriteTapped), for: .touchUpInside)
 
         NSLayoutConstraint.activate([
             productImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -3285,10 +3288,10 @@ class ResultCell: UITableViewCell {
             productImageView.widthAnchor.constraint(equalToConstant: 80),
             productImageView.heightAnchor.constraint(equalToConstant: 80),
 
-            favoriteButton.bottomAnchor.constraint(equalTo: productImageView.bottomAnchor, constant: -8),
-            favoriteButton.trailingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: -8),
-            favoriteButton.widthAnchor.constraint(equalToConstant: 40),
-            favoriteButton.heightAnchor.constraint(equalToConstant: 40),
+            favoriteButton.bottomAnchor.constraint(equalTo: productImageView.bottomAnchor, constant: -6),
+            favoriteButton.trailingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: -6),
+            favoriteButton.widthAnchor.constraint(equalToConstant: 32),
+            favoriteButton.heightAnchor.constraint(equalToConstant: 32),
 
             textStackView.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
             textStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
@@ -3324,6 +3327,50 @@ class ResultCell: UITableViewCell {
                     }
                 }
             }.resume()
+        }
+
+        // Reset favorite state for reused cells
+        isFavorite = false
+        updateFavoriteAppearance(animated: false)
+    }
+
+    @objc private func favoriteTapped() {
+        let feedback = UIImpactFeedbackGenerator(style: .light)
+        feedback.impactOccurred()
+
+        isFavorite.toggle()
+        updateFavoriteAppearance(animated: true)
+    }
+
+    private func updateFavoriteAppearance(animated: Bool) {
+        let applyAppearance = {
+            self.favoriteButton.isSelected = self.isFavorite
+            self.favoriteButton.tintColor = self.isFavorite
+                ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+                : .black
+        }
+
+        if animated {
+            let shrinkTransform = CGAffineTransform(scaleX: 0.88, y: 0.88)
+            UIView.animate(withDuration: 0.1, animations: {
+                self.favoriteButton.transform = shrinkTransform
+            }, completion: { _ in
+                applyAppearance()
+                UIView.animate(
+                    withDuration: 0.2,
+                    delay: 0,
+                    usingSpringWithDamping: 0.5,
+                    initialSpringVelocity: 3,
+                    options: [.allowUserInteraction, .beginFromCurrentState],
+                    animations: {
+                        self.favoriteButton.transform = .identity
+                    },
+                    completion: nil
+                )
+            })
+        } else {
+            applyAppearance()
+            favoriteButton.transform = .identity
         }
     }
 }
