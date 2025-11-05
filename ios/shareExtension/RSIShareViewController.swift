@@ -525,7 +525,7 @@ final class CategoryNormalizer {
     }
 }
 
-struct DetectionResponse: Codable {
+struct DetectionResponse: Decodable {
     let success: Bool
     let detected_garment: DetectedGarment?
     let total_results: Int
@@ -583,7 +583,7 @@ struct DetectionResponse: Codable {
         cached = try? container.decodeIfPresent(Bool.self, forKey: .cached)
     }
 
-    struct DetectedGarment: Codable {
+    struct DetectedGarment: Decodable {
         let label: String
         let score: Double
         let bbox: [Int]
