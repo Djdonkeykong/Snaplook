@@ -155,23 +155,20 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                         ],
                       ),
                     ),
-                    SizedBox.shrink(),
+                    SizedBox(height: spacing.m),
                     // Category filter chips - mirror share extension styling
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: spacing.m),
-                      child: SizedBox(
-                        height: 36,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            padding: EdgeInsets.zero,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                _AllResultsChip(),
-                              ],
-                            ),
+                    SizedBox(
+                      height: 36,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              _AllResultsChip(),
+                            ],
                           ),
                         ),
                       ),
