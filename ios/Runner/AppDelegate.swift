@@ -58,12 +58,24 @@ import receive_sharing_intent
 
         switch call.method {
         case "setAuthFlag":
+          NSLog("[Auth] setAuthFlag called from Flutter")
+
           guard let args = call.arguments as? [String: Any],
-                let isAuthenticated = args["isAuthenticated"] as? Bool,
-                let defaults = self.sharedUserDefaults() else {
+                let isAuthenticated = args["isAuthenticated"] as? Bool else {
+            NSLog("[Auth] ERROR: Invalid arguments - isAuthenticated missing")
             result(FlutterError(code: "INVALID_ARGS", message: "Invalid arguments", details: nil))
             return
           }
+
+          guard let defaults = self.sharedUserDefaults() else {
+            NSLog("[Auth] ERROR: Could not get sharedUserDefaults")
+            result(FlutterError(code: "NO_DEFAULTS", message: "Cannot access UserDefaults", details: nil))
+            return
+          }
+
+          // Log which app group we're using
+          let groupId = self.getAppGroupId()
+          NSLog("[Auth] Using app group: \(groupId ?? "nil")")
 
           defaults.set(isAuthenticated, forKey: self.authFlagKey)
 
@@ -77,6 +89,11 @@ import receive_sharing_intent
           }
 
           defaults.synchronize()
+
+          // Verify it was written
+          let readBack = defaults.string(forKey: self.authUserIdKey)
+          NSLog("[Auth] Verification - read back userId: \(readBack ?? "nil")")
+
           result(nil)
         default:
           result(FlutterMethodNotImplemented)
@@ -225,13 +242,17 @@ import receive_sharing_intent
     return super.application(app, open: url, options: options)
   }
 
-  private func sharedUserDefaults() -> UserDefaults? {
+  private func getAppGroupId() -> String? {
     let defaultGroupId = "group.\(Bundle.main.bundleIdentifier ?? "")"
     if let customGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String,
        !customGroupId.isEmpty,
        customGroupId != "$(CUSTOM_GROUP_ID)" {
-      return UserDefaults(suiteName: customGroupId)
+      return customGroupId
     }
-    return UserDefaults(suiteName: defaultGroupId)
+    return defaultGroupId
+  }
+
+  private func sharedUserDefaults() -> UserDefaults? {
+    return UserDefaults(suiteName: getAppGroupId())
   }
 }

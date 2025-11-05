@@ -26,7 +26,27 @@ class AuthService {
     _authSubscription?.cancel();
     _authSubscription = _supabase.auth.onAuthStateChange.listen((authState) {
       print('[Auth] Auth state changed: ${authState.event}');
-      _updateAuthFlag(authState.session != null);
+      print('[Auth] Event session: ${authState.session != null ? "exists" : "null"}');
+      print('[Auth] Event user: ${authState.session?.user.id ?? "null"}');
+      print('[Auth] Current user (at event time): ${currentUser?.id ?? "null"}');
+
+      // IMPORTANT: Only sync if we have a valid user, or if we're explicitly signing out
+      // This prevents race conditions where session exists but user is momentarily null
+      final hasSession = authState.session != null;
+      final hasUser = authState.session?.user != null;
+
+      if (hasSession && hasUser) {
+        // Valid authenticated state - sync it
+        print('[Auth] Valid auth state - syncing userId: ${authState.session!.user.id}');
+        _updateAuthFlag(true);
+      } else if (!hasSession) {
+        // Explicitly signed out - clear auth
+        print('[Auth] No session - clearing auth state');
+        _updateAuthFlag(false);
+      } else {
+        // Session exists but no user - this is a race condition, skip sync
+        print('[Auth] WARNING: Session exists but no user - skipping sync to prevent clearing userId');
+      }
     });
 
     print('[AuthService] Auth listener set up');
