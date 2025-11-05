@@ -1587,6 +1587,7 @@ def search_visual_products(
         "engine": "google_lens",
         "api_key": SERPAPI_KEY,
         "url": image_url,
+        "type": "products",  # CRITICAL: Only fetch products, not all visual matches
         "location": location or SERPAPI_LOCATION,  # Location-specific results
         "hl": "en",  # English interface
     }
