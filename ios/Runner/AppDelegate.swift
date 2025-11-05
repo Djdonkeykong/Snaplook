@@ -15,6 +15,7 @@ import receive_sharing_intent
   private let shareLogsChannelName = "snaplook/share_extension_logs"
   private let shareLogsKey = "ShareExtensionLogEntries"
   private let authFlagKey = "user_authenticated"
+  private let authUserIdKey = "supabase_user_id"
 
   override func application(
     _ application: UIApplication,
@@ -65,9 +66,17 @@ import receive_sharing_intent
           }
 
           defaults.set(isAuthenticated, forKey: self.authFlagKey)
-          defaults.synchronize()
 
-          NSLog("[Auth] Set auth flag to: \(isAuthenticated)")
+          // Store user ID if authenticated
+          if let userId = args["userId"] as? String {
+            defaults.set(userId, forKey: self.authUserIdKey)
+            NSLog("[Auth] Set auth flag to: \(isAuthenticated), userId: \(userId)")
+          } else {
+            defaults.removeObject(forKey: self.authUserIdKey)
+            NSLog("[Auth] Set auth flag to: \(isAuthenticated), userId: nil")
+          }
+
+          defaults.synchronize()
           result(nil)
         default:
           result(FlutterMethodNotImplemented)

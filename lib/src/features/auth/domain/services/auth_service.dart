@@ -12,13 +12,15 @@ class AuthService {
 
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
-  // Update the authentication flag for share extension via method channel
+  // Update the authentication flag and user ID for share extension via method channel
   Future<void> _updateAuthFlag(bool isAuthenticated) async {
     try {
+      final userId = isAuthenticated ? currentUser?.id : null;
       await _authChannel.invokeMethod('setAuthFlag', {
         'isAuthenticated': isAuthenticated,
+        'userId': userId,
       });
-      print('Auth flag set to: $isAuthenticated');
+      print('Auth flag set to: $isAuthenticated, userId: $userId');
     } catch (e) {
       print('Error updating auth flag: $e');
     }

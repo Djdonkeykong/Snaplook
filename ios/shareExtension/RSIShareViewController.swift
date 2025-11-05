@@ -2266,8 +2266,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func getUserId() -> String {
-        // TODO: Implement proper user ID from Supabase Auth
-        // For now, use device ID or anonymous ID
+        // Get Supabase auth user ID from shared UserDefaults
+        if let defaults = UserDefaults(suiteName: appGroupId),
+           let userId = defaults.string(forKey: "supabase_user_id"),
+           !userId.isEmpty {
+            return userId
+        }
+
+        // Fallback to device ID (should not happen if user is authenticated)
+        shareLog("WARNING: No Supabase user ID found, using device ID fallback")
         if let deviceId = UIDevice.current.identifierForVendor?.uuidString {
             return deviceId
         }
