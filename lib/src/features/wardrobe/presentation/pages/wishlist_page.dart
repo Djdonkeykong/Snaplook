@@ -333,6 +333,19 @@ class _FavoriteCard extends ConsumerWidget {
     final productTitle = favorite.productName;
     final productUrl = favorite.purchaseUrl ?? '';
 
+    Rect _shareOriginForContext(BuildContext context) {
+      final renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox != null && renderBox.hasSize) {
+        return renderBox.localToGlobal(Offset.zero) & renderBox.size;
+      }
+      final mediaSize = MediaQuery.of(context).size;
+      return Rect.fromCenter(
+        center: Offset(mediaSize.width / 2, mediaSize.height / 2),
+        width: 1,
+        height: 1,
+      );
+    }
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -345,6 +358,7 @@ class _FavoriteCard extends ConsumerWidget {
         final shareMessage = productUrl.isNotEmpty
             ? 'Check out this $productBrand $productTitle on Snaplook! $productUrl'
             : 'Check out this $productBrand $productTitle on Snaplook!';
+        final shareOrigin = _shareOriginForContext(context);
 
         return SafeArea(
           child: Padding(
@@ -360,6 +374,7 @@ class _FavoriteCard extends ConsumerWidget {
                     Share.share(
                       shareMessage,
                       subject: shareTitle.isEmpty ? null : shareTitle,
+                      sharePositionOrigin: shareOrigin,
                     );
                   },
                 ),
@@ -383,7 +398,10 @@ class _FavoriteCard extends ConsumerWidget {
                       );
                       return;
                     }
-                    Share.share(productUrl);
+                    Share.share(
+                      productUrl,
+                      sharePositionOrigin: shareOrigin,
+                    );
                   },
                 ),
               ],

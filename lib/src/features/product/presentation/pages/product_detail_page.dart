@@ -238,6 +238,19 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
     final productTitle = product['title']?.toString() ?? 'Product';
     final productBrand = product['brand']?.toString() ?? '';
 
+    Rect _shareOriginForContext(BuildContext context) {
+      final renderBox = context.findRenderObject() as RenderBox?;
+      if (renderBox != null && renderBox.hasSize) {
+        return renderBox.localToGlobal(Offset.zero) & renderBox.size;
+      }
+      final mediaSize = MediaQuery.of(context).size;
+      return Rect.fromCenter(
+        center: Offset(mediaSize.width / 2, mediaSize.height / 2),
+        width: 1,
+        height: 1,
+      );
+    }
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -245,6 +258,8 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
+        final shareOrigin = _shareOriginForContext(context);
+
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -263,6 +278,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                     Share.share(
                       message,
                       subject: shareTitle.isEmpty ? null : shareTitle,
+                      sharePositionOrigin: shareOrigin,
                     );
                   },
                 ),
@@ -276,7 +292,10 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                       _showSnackBar('No product link available');
                       return;
                     }
-                    Share.share(productUrl);
+                    Share.share(
+                      productUrl,
+                      sharePositionOrigin: shareOrigin,
+                    );
                   },
                 ),
               ],
