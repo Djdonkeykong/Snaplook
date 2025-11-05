@@ -42,6 +42,55 @@ class SupabaseManager:
         return self._client is not None
 
     # ============================================
+    # USER MANAGEMENT
+    # ============================================
+
+    def ensure_user_exists(self, user_id: str) -> bool:
+        """
+        Ensure user exists in the database. Create if not exists.
+        Returns True if user exists or was created successfully.
+        """
+        if not self.enabled:
+            return False
+
+        try:
+            # Check if user exists
+            response = self.client.table('users')\
+                .select('id')\
+                .eq('id', user_id)\
+                .execute()
+
+            if response.data and len(response.data) > 0:
+                return True  # User already exists
+
+            # Create user (anonymous for now)
+            user_entry = {
+                'id': user_id,
+                'email': None,
+                'display_name': 'Anonymous User',
+                'is_anonymous': True
+            }
+
+            response = self.client.table('users')\
+                .insert(user_entry)\
+                .execute()
+
+            if response.data:
+                print(f"✅ Created anonymous user: {user_id}")
+                return True
+            else:
+                print(f"❌ Failed to create user: {user_id}")
+                return False
+
+        except Exception as e:
+            # User might have been created by another request (race condition)
+            if 'duplicate key' in str(e).lower() or 'unique constraint' in str(e).lower():
+                print(f"✅ User already exists (race condition): {user_id}")
+                return True
+            print(f"User creation error: {e}")
+            return False
+
+    # ============================================
     # IMAGE CACHE OPERATIONS
     # ============================================
 

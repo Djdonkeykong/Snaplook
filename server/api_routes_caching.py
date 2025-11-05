@@ -115,17 +115,19 @@ async def analyze_with_caching(
                     cache_entry['id']
                 )
 
-            # Create user search entry in background
+            # Ensure user exists before creating search entry
+            search_id = None
             if supabase_manager.enabled:
-                search_id = supabase_manager.create_user_search(
-                    user_id=request.user_id,
-                    image_cache_id=cache_entry['id'],
-                    search_type=request.search_type,
-                    source_url=request.source_url,
-                    source_username=request.source_username
-                )
-            else:
-                search_id = None
+                if supabase_manager.ensure_user_exists(request.user_id):
+                    search_id = supabase_manager.create_user_search(
+                        user_id=request.user_id,
+                        image_cache_id=cache_entry['id'],
+                        search_type=request.search_type,
+                        source_url=request.source_url,
+                        source_username=request.source_username
+                    )
+                else:
+                    print(f"⚠️ Could not ensure user exists: {request.user_id}")
 
             return AnalyzeResponse(
                 success=True,
@@ -177,13 +179,16 @@ async def analyze_with_caching(
         # Create user search entry
         search_id = None
         if supabase_manager.enabled and cache_id:
-            search_id = supabase_manager.create_user_search(
-                user_id=request.user_id,
-                image_cache_id=cache_id,
-                search_type=request.search_type,
-                source_url=request.source_url,
-                source_username=request.source_username
-            )
+            if supabase_manager.ensure_user_exists(request.user_id):
+                search_id = supabase_manager.create_user_search(
+                    user_id=request.user_id,
+                    image_cache_id=cache_id,
+                    search_type=request.search_type,
+                    source_url=request.source_url,
+                    source_username=request.source_username
+                )
+            else:
+                print(f"⚠️ Could not ensure user exists: {request.user_id}")
 
         return AnalyzeResponse(
             success=True,
@@ -211,6 +216,10 @@ async def add_favorite(request: FavoriteRequest):
     """Add product to user favorites"""
     if not supabase_manager.enabled:
         raise HTTPException(status_code=503, detail="Database not available")
+
+    # Ensure user exists before adding favorite
+    if not supabase_manager.ensure_user_exists(request.user_id):
+        raise HTTPException(status_code=400, detail="Could not provision user")
 
     favorite_id = supabase_manager.add_favorite(
         user_id=request.user_id,
@@ -263,6 +272,10 @@ async def save_search(search_id: str, request: SaveSearchRequest):
     """Save entire search"""
     if not supabase_manager.enabled:
         raise HTTPException(status_code=503, detail="Database not available")
+
+    # Ensure user exists before saving search
+    if not supabase_manager.ensure_user_exists(request.user_id):
+        raise HTTPException(status_code=400, detail="Could not provision user")
 
     saved_id = supabase_manager.save_search(
         user_id=request.user_id,
