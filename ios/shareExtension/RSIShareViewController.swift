@@ -538,8 +538,10 @@ struct DetectionResponse: Codable {
     enum CodingKeys: String, CodingKey {
         case success
         case detected_garment
+        case detected_garments
         case total_results
         case results
+        case search_results
         case message
         case search_id
         case image_cache_id
@@ -549,15 +551,32 @@ struct DetectionResponse: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         success = (try? container.decode(Bool.self, forKey: .success)) ?? false
-        detected_garment = try? container.decodeIfPresent(DetectedGarment.self, forKey: .detected_garment)
+
+        // Handle both old (detected_garment) and new (detected_garments) formats
+        if let garments = try? container.decodeIfPresent([DetectedGarment].self, forKey: .detected_garments),
+           let firstGarment = garments.first {
+            detected_garment = firstGarment
+        } else {
+            detected_garment = try? container.decodeIfPresent(DetectedGarment.self, forKey: .detected_garment)
+        }
+
         if let total = try? container.decode(Int.self, forKey: .total_results) {
             total_results = total
         } else if let decodedResults = try? container.decode([DetectionResultItem].self, forKey: .results) {
             total_results = decodedResults.count
+        } else if let decodedResults = try? container.decode([DetectionResultItem].self, forKey: .search_results) {
+            total_results = decodedResults.count
         } else {
             total_results = 0
         }
-        results = (try? container.decode([DetectionResultItem].self, forKey: .results)) ?? []
+
+        // Handle both old (results) and new (search_results) formats
+        if let searchResults = try? container.decode([DetectionResultItem].self, forKey: .search_results) {
+            results = searchResults
+        } else {
+            results = (try? container.decode([DetectionResultItem].self, forKey: .results)) ?? []
+        }
+
         message = try? container.decodeIfPresent(String.self, forKey: .message)
         search_id = try? container.decodeIfPresent(String.self, forKey: .search_id)
         image_cache_id = try? container.decodeIfPresent(String.self, forKey: .image_cache_id)
@@ -1467,15 +1486,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let urlForLog = imageUrl ?? "<nil>"
         shareLog("START runDetectionAnalysis - imageUrl: \(urlForLog), base64 length: \(imageBase64.count)")
 
-        guard let endpoint = detectorEndpoint(),
-              let serpKey = serpApiKey() else {
-            shareLog("ERROR: Detection endpoint or SerpAPI key not configured")
+        guard let serverBaseUrl = getServerBaseUrl() else {
+            shareLog("ERROR: Could not determine server base URL")
             handleDetectionFailure(reason: "Detection setup is incomplete. Please open Snaplook to finish configuring analysis.")
             return
         }
 
-        shareLog("Detection endpoint: \(endpoint)")
-        shareLog("SerpAPI key: \(serpKey.prefix(8))...")
+        // Use new caching endpoint
+        let analyzeEndpoint = serverBaseUrl + "/api/v1/analyze"
+        shareLog("Detection endpoint: \(analyzeEndpoint)")
         targetProgress = 0.60
 
         // Start rotating status messages for the search phase
@@ -1490,14 +1509,37 @@ open class RSIShareViewController: SLComposeServiceViewController {
         ]
         startStatusRotation(messages: searchMessages, interval: 2.5, stopAtLast: true)
 
+        // Determine search type based on source
+        var searchType = "unknown"
+        var sourceUrl: String? = nil
+        var sourceUsername: String? = nil
+
+        if let pendingInstaUrl = pendingInstagramUrl {
+            searchType = "instagram"
+            sourceUrl = pendingInstaUrl
+            sourceUsername = extractInstagramUsername(from: pendingInstaUrl)
+        } else if imageUrl != nil {
+            searchType = "photos"
+        } else {
+            searchType = "camera"
+        }
+
         var requestBody: [String: Any] = [
+            "user_id": getUserId(),
             "image_base64": imageBase64,
-            "serp_api_key": serpKey,
-            "max_results_per_garment": 10
+            "search_type": searchType
         ]
 
         if let imageUrl = imageUrl, !imageUrl.isEmpty {
             requestBody["image_url"] = imageUrl
+        }
+
+        if let sourceUrl = sourceUrl {
+            requestBody["source_url"] = sourceUrl
+        }
+
+        if let sourceUsername = sourceUsername {
+            requestBody["source_username"] = sourceUsername
         }
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
@@ -1508,8 +1550,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Request body size: \(jsonData.count) bytes")
 
-        guard let url = URL(string: endpoint) else {
-            shareLog("ERROR: Invalid detection endpoint URL: \(endpoint)")
+        guard let url = URL(string: analyzeEndpoint) else {
+            shareLog("ERROR: Invalid detection endpoint URL: \(analyzeEndpoint)")
             handleDetectionFailure(reason: "The detection service URL looks invalid. Check your configuration in Snaplook.")
             return
         }
@@ -1520,7 +1562,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.httpBody = jsonData
         request.timeoutInterval = 90.0  // Increased from 30s to 90s for multi-garment detection + SerpAPI searches
 
-        shareLog("Sending detection API request to: \(endpoint)")
+        shareLog("Sending detection API request to: \(analyzeEndpoint)")
 
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
@@ -2230,6 +2272,23 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return deviceId
         }
         return "anonymous"
+    }
+
+    private func extractInstagramUsername(from url: String) -> String? {
+        // Extract username from Instagram URLs like:
+        // https://www.instagram.com/username/...
+        // https://instagram.com/username/...
+        if let regex = try? NSRegularExpression(pattern: "instagram\\.com/([^/]+)", options: []),
+           let match = regex.firstMatch(in: url, options: [], range: NSRange(url.startIndex..., in: url)),
+           match.numberOfRanges > 1,
+           let usernameRange = Range(match.range(at: 1), in: url) {
+            let username = String(url[usernameRange])
+            // Filter out non-username paths like 'p', 'reel', 'tv', etc.
+            if !["p", "reel", "tv", "stories", "explore"].contains(username.lowercased()) {
+                return username
+            }
+        }
+        return nil
     }
 
     // Custom activity item source for rich share metadata
