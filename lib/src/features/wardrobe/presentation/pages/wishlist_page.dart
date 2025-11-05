@@ -137,7 +137,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
             fontFamily: 'PlusJakartaSans',
           ),
         ),
-        backgroundColor: colorScheme.inverseSurface,
         duration: const Duration(milliseconds: 2500),
       ),
     );
@@ -422,21 +421,20 @@ class _FavoriteCard extends ConsumerWidget {
                   onTap: () {
                     Navigator.pop(context);
                     if (productUrl.isEmpty) {
-                      messenger.hideCurrentSnackBar();
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Link unavailable for this item.',
-                            style: textTheme.bodyMedium?.copyWith(
-                              fontFamily: 'PlusJakartaSans',
-                            ),
+                    messenger.hideCurrentSnackBar();
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Link unavailable for this item.',
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontFamily: 'PlusJakartaSans',
                           ),
-                          backgroundColor: colorScheme.inverseSurface,
-                          duration: const Duration(seconds: 2),
                         ),
-                      );
-                      return;
-                    }
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
                     Clipboard.setData(ClipboardData(text: productUrl));
                     messenger.hideCurrentSnackBar();
                     messenger.showSnackBar(
@@ -447,7 +445,6 @@ class _FavoriteCard extends ConsumerWidget {
                             fontFamily: 'PlusJakartaSans',
                           ),
                         ),
-                        backgroundColor: colorScheme.inverseSurface,
                         duration: const Duration(seconds: 2),
                       ),
                     );

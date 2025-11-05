@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'color_schemes.dart';
 import 'text_themes.dart';
 import 'theme_extensions.dart';
+import 'app_colors.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
     const colorScheme = lightColorScheme;
+    final baseSnackTextStyle =
+        AppTextThemes.textTheme.bodyMedium ?? const TextStyle(fontFamily: 'PlusJakartaSans');
 
     return ThemeData(
       useMaterial3: true,
@@ -32,6 +35,15 @@ class AppTheme {
         showUnselectedLabels: false,
         elevation: 0,
       ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: colorScheme.surface,
+        contentTextStyle: baseSnackTextStyle.copyWith(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+        actionTextColor: AppColors.secondary,
+        behavior: SnackBarBehavior.floating,
+      ),
       textTheme: AppTextThemes.textTheme,
       extensions: const [
         AppSpacingExtension.standard,
@@ -42,6 +54,8 @@ class AppTheme {
 
   static ThemeData get darkTheme {
     const colorScheme = darkColorScheme;
+    final baseSnackTextStyle =
+        AppTextThemes.textTheme.bodyMedium ?? const TextStyle(fontFamily: 'PlusJakartaSans');
 
     return ThemeData(
       useMaterial3: true,
@@ -66,6 +80,15 @@ class AppTheme {
         showSelectedLabels: false,
         showUnselectedLabels: false,
         elevation: 0,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: Colors.white,
+        contentTextStyle: baseSnackTextStyle.copyWith(
+          color: Colors.black,
+          fontWeight: FontWeight.w600,
+        ),
+        actionTextColor: AppColors.secondary,
+        behavior: SnackBarBehavior.floating,
       ),
       textTheme: AppTextThemes.textTheme.apply(
         bodyColor: colorScheme.onBackground,

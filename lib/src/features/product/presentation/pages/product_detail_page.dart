@@ -200,7 +200,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
     super.dispose();
   }
 
-  void _showSnackBar(String message, {Color backgroundColor = Colors.black}) {
+  void _showSnackBar(String message) {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     messenger.clearSnackBars();
@@ -210,7 +210,6 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
           message,
           style: const TextStyle(fontFamily: 'PlusJakartaSans'),
         ),
-        backgroundColor: backgroundColor,
         duration: const Duration(milliseconds: 2500),
       ),
     );

@@ -120,7 +120,6 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               'Invalid verification code. Please try again.',
               style: const TextStyle(fontFamily: 'PlusJakartaSans'),
             ),
-            backgroundColor: Colors.red,
             duration: const Duration(milliseconds: 2500),
           ),
         );
@@ -173,13 +172,12 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
               'Verification code resent',
               style: TextStyle(fontFamily: 'PlusJakartaSans'),
             ),
-            backgroundColor: Color(0xFFf2003c),
-            duration: Duration(milliseconds: 2500),
+            duration: const Duration(milliseconds: 2500),
           ),
         );
       }
@@ -192,7 +190,6 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               'Error resending code: ${e.toString()}',
               style: const TextStyle(fontFamily: 'PlusJakartaSans'),
             ),
-            backgroundColor: Colors.red,
             duration: const Duration(milliseconds: 2500),
           ),
         );

@@ -641,7 +641,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               'Failed to crop image: $e',
               style: const TextStyle(fontFamily: 'PlusJakartaSans'),
             ),
-            backgroundColor: Colors.red,
             duration: const Duration(milliseconds: 2500),
           ),
         );
@@ -736,7 +735,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               'Detection failed: $e',
               style: const TextStyle(fontFamily: 'PlusJakartaSans'),
             ),
-            backgroundColor: Colors.red,
             duration: const Duration(milliseconds: 2500),
           ),
         );

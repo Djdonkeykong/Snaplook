@@ -249,7 +249,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error picking image: $e'),
-            backgroundColor: Colors.red,
           ),
         );
       }

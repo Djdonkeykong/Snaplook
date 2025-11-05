@@ -309,7 +309,6 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                             'Error signing in with Apple: ${e.toString()}',
                             style: const TextStyle(fontFamily: 'PlusJakartaSans'),
                           ),
-                          backgroundColor: Colors.red,
                           duration: const Duration(milliseconds: 2500),
                         ),
                       );
@@ -355,7 +354,6 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                             'Error signing in with Google: ${e.toString()}',
                             style: const TextStyle(fontFamily: 'PlusJakartaSans'),
                           ),
-                          backgroundColor: Colors.red,
                           duration: const Duration(milliseconds: 2500),
                         ),
                       );

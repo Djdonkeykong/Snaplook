@@ -75,7 +75,6 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
               'Error sending verification code: ${e.toString()}',
               style: const TextStyle(fontFamily: 'PlusJakartaSans'),
             ),
-            backgroundColor: Colors.red,
             duration: const Duration(milliseconds: 2500),
           ),
         );

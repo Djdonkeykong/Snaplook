@@ -87,17 +87,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Error logging out: ${e.toString()}',
-                style: const TextStyle(fontFamily: 'PlusJakartaSans'),
-              ),
-              backgroundColor: Theme.of(context).colorScheme.inverseSurface,
-              duration: const Duration(milliseconds: 2500),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error logging out: ${e.toString()}',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
             ),
-          );
-        }
+            duration: const Duration(milliseconds: 2500),
+          ),
+        );
+      }
       }
     }
   }

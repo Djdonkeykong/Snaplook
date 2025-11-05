@@ -670,7 +670,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error picking image: $e'),
-            backgroundColor: Colors.red,
           ),
         );
       }
@@ -1481,18 +1480,18 @@ class _FloatingActionBar extends StatelessWidget {
       height: 70,
       margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: colorScheme.onSecondary,
+        color: colorScheme.secondary,
         borderRadius: BorderRadius.circular(35),
         border: Border.all(
-          color: colorScheme.secondary.withOpacity(0.1),
+          color: colorScheme.onSecondary.withOpacity(0.08),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.secondary.withOpacity(0.16),
-            blurRadius: 32,
-            offset: const Offset(0, 6),
-            spreadRadius: 1,
+            color: Colors.black.withOpacity(0.30),
+            blurRadius: 28,
+            offset: const Offset(0, 8),
+            spreadRadius: 2,
           ),
         ],
       ),
@@ -1573,25 +1572,25 @@ class _FloatingActionButtonSvg extends StatelessWidget {
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                svgIcon,
-                width: iconSize,
-                height: iconSize,
-                colorFilter: ColorFilter.mode(
-                  colorScheme.secondary,
-                  BlendMode.srcIn,
-                ),
+          children: [
+            SvgPicture.asset(
+              svgIcon,
+              width: iconSize,
+              height: iconSize,
+              colorFilter: ColorFilter.mode(
+                colorScheme.onSecondary,
+                BlendMode.srcIn,
               ),
-              SizedBox(height: spacing),
-              Text(
-                label,
-                style: TextStyle(
-                  color: colorScheme.secondary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
+            ),
+            SizedBox(height: spacing),
+            Text(
+              label,
+              style: TextStyle(
+                color: colorScheme.onSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
               ),
+            ),
             ],
           ),
         ),

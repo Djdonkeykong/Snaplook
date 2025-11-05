@@ -72,7 +72,6 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
               wasAlreadyFavorited ? 'Removed from favorites' : 'Added to favorites',
               style: const TextStyle(fontFamily: 'PlusJakartaSans'),
             ),
-            backgroundColor: Colors.black,
             duration: const Duration(milliseconds: 2500),
           ),
         );
@@ -87,7 +86,6 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
               'Failed to update favorites: ${e.toString()}',
               style: const TextStyle(fontFamily: 'PlusJakartaSans'),
             ),
-            backgroundColor: Colors.black,
             duration: const Duration(milliseconds: 2500),
           ),
         );
@@ -173,7 +171,6 @@ class FavoriteIconButton extends ConsumerWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Failed to update favorites: ${e.toString()}'),
-                backgroundColor: Colors.red,
               ),
             );
           }
