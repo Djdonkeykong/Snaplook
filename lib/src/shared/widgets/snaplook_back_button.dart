@@ -14,7 +14,7 @@ class SnaplookBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final button = IconButton(
       padding: EdgeInsets.zero,
-      icon: const Icon(Icons.arrow_back, color: Colors.black, size: 20),
+      icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface, size: 20),
       onPressed: onPressed ?? () => Navigator.of(context).maybePop(),
     );
 
@@ -26,7 +26,7 @@ class SnaplookBackButton extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(

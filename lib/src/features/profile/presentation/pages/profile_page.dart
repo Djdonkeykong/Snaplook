@@ -61,7 +61,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.secondary,
+              foregroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : AppColors.secondary,
               textStyle: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 fontWeight: FontWeight.w600,
@@ -323,12 +325,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _SectionHeader(title: 'Account'),
                 _SimpleSettingItem(
                   title: 'Logout',
-                  textColor: AppColors.secondary,
+                  textColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : AppColors.secondary,
                   onTap: _handleLogout,
                 ),
                 _SimpleSettingItem(
                   title: 'Delete Account',
-                  textColor: AppColors.secondary,
+                  textColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : AppColors.secondary,
                   onTap: () {},
                 ),
 

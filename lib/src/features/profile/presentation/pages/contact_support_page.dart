@@ -83,7 +83,13 @@ class ContactSupportPage extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.email_outlined, color: AppColors.secondary, size: 24),
+                      Icon(
+                        Icons.email_outlined,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : AppColors.secondary,
+                        size: 24,
+                      ),
                       SizedBox(width: spacing.m),
                       Text(
                         'Email Support',
@@ -124,17 +130,21 @@ class ContactSupportPage extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.secondary,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : AppColors.secondary,
                   borderRadius: BorderRadius.circular(28),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
                     'Send Email',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'PlusJakartaSans',
-                      color: Colors.white,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.black
+                          : Colors.white,
                     ),
                   ),
                 ),

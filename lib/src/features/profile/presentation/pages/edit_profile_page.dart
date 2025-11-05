@@ -240,8 +240,11 @@ class _RoundedField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(radius),
-              borderSide:
-                  const BorderSide(color: AppColors.secondary, width: 1.5),
+              borderSide: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : AppColors.secondary,
+                  width: 1.5),
             ),
           ),
           style: TextStyle(
@@ -269,13 +272,16 @@ class _MembershipStatusCard extends StatelessWidget {
     final spacing = context.spacing;
     final radius = context.radius.large;
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isPremium
-        ? AppColors.secondary.withOpacity(0.12)
+        ? (isDark ? Colors.white.withOpacity(0.12) : AppColors.secondary.withOpacity(0.12))
         : colorScheme.surfaceVariant;
-    final borderColor =
-        isPremium ? AppColors.secondary : colorScheme.outlineVariant;
-    final iconColor =
-        isPremium ? AppColors.secondary : colorScheme.onSurfaceVariant;
+    final borderColor = isPremium
+        ? (isDark ? Colors.white : AppColors.secondary)
+        : colorScheme.outlineVariant;
+    final iconColor = isPremium
+        ? (isDark ? Colors.white : AppColors.secondary)
+        : colorScheme.onSurfaceVariant;
     final descriptionColor = colorScheme.onSurfaceVariant;
 
     return Container(
@@ -294,7 +300,7 @@ class _MembershipStatusCard extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: isPremium
-                  ? AppColors.secondary.withOpacity(0.1)
+                  ? (isDark ? Colors.white.withOpacity(0.1) : AppColors.secondary.withOpacity(0.1))
                   : colorScheme.surface,
               shape: BoxShape.circle,
             ),

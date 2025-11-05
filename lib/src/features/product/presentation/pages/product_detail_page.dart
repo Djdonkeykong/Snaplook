@@ -502,7 +502,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 4),
