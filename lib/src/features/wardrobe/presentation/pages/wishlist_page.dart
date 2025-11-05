@@ -328,10 +328,26 @@ class _FavoriteCard extends ConsumerWidget {
     this.onDelete,
   });
 
+  String _resolveProductUrl() {
+    final candidates = [
+      favorite.purchaseUrl,
+      favorite.productId,
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      final trimmed = candidate.trim();
+      if (trimmed.isNotEmpty && trimmed.startsWith('http')) {
+        return trimmed;
+      }
+    }
+    return '';
+  }
+
   void _showShareMenu(BuildContext context) {
     final productBrand = favorite.brand;
     final productTitle = favorite.productName;
-    final productUrl = favorite.purchaseUrl?.trim() ?? '';
+    final productUrl = _resolveProductUrl();
 
     Rect _shareOriginForContext(BuildContext context) {
       final renderBox = context.findRenderObject() as RenderBox?;
@@ -435,6 +451,7 @@ class _FavoriteCard extends ConsumerWidget {
           'image_url': favorite.imageUrl,
           'url': favorite.purchaseUrl ?? '',
           'purchase_url': favorite.purchaseUrl ?? '',
+          'link': favorite.purchaseUrl ?? '',
           'category': favorite.category,
         };
 

@@ -39,6 +39,25 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   int _currentIndex = 0;
   bool _isLoadingMore = false;
 
+  String _resolveProductUrl(Map<String, dynamic> product) {
+    final candidates = [
+      product['purchase_url'],
+      product['purchaseUrl'],
+      product['url'],
+      product['link'],
+      product['product_url'],
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      final trimmed = candidate.toString().trim();
+      if (trimmed.isNotEmpty && trimmed.startsWith('http')) {
+        return trimmed;
+      }
+    }
+    return '';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -207,13 +226,15 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
     final productId = widget.product['id']?.toString() ?? '';
     final wasAlreadyFavorited = ref.read(isFavoriteProvider(productId));
 
+    final resolvedUrl = _resolveProductUrl(widget.product);
+
     final productResult = DetectionResult(
       id: productId,
       productName: widget.product['title'] ?? 'Unknown',
       brand: widget.product['brand'] ?? 'Unknown',
       price: double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0.0,
       imageUrl: widget.product['image_url'] ?? '',
-      purchaseUrl: widget.product['url'],
+      purchaseUrl: resolvedUrl.isEmpty ? null : resolvedUrl,
       category: widget.product['category'] ?? 'Unknown',
       confidence: 1.0,
     );
@@ -234,8 +255,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
 
   void _showOptionsMenu() {
     final product = widget.product;
-    final dynamic rawUrl = product['url'] ?? product['purchase_url'];
-    final productUrl = rawUrl == null ? '' : rawUrl.toString().trim();
+    final productUrl = _resolveProductUrl(product);
     final productTitle = (product['title'] ?? product['product_name'] ?? 'Product').toString();
     final productBrand = (product['brand'] ?? '').toString();
 
