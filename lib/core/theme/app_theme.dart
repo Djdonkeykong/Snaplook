@@ -36,9 +36,9 @@ class AppTheme {
         elevation: 0,
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: Colors.black,
         contentTextStyle: baseSnackTextStyle.copyWith(
-          color: colorScheme.onSurface,
+          color: Colors.white,
           fontWeight: FontWeight.w600,
         ),
         actionTextColor: AppColors.secondary,
