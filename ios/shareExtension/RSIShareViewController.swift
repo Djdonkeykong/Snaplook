@@ -1768,6 +1768,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     @objc private func shareResultsTapped() {
         shareLog("Share button tapped - preparing share content")
+        shareLog("analyzedImageData exists: \(analyzedImageData != nil)")
+        if let data = analyzedImageData {
+            shareLog("analyzedImageData size: \(data.count) bytes")
+        }
 
         // Haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .medium)
@@ -1796,11 +1800,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
         var itemsToShare: [Any] = [shareText]
 
         // Add the analyzed image if available
-        if let imageData = analyzedImageData, let image = UIImage(data: imageData) {
-            itemsToShare.insert(image, at: 0) // Image first, then text
-            shareLog("Adding analyzed image to share (\(imageData.count) bytes)")
+        if let imageData = analyzedImageData {
+            shareLog("Attempting to create UIImage from \(imageData.count) bytes")
+            if let image = UIImage(data: imageData) {
+                itemsToShare.insert(image, at: 0) // Image first, then text
+                shareLog("✅ Successfully added analyzed image to share (size: \(image.size))")
+            } else {
+                shareLog("❌ ERROR: Failed to create UIImage from imageData")
+            }
         } else {
-            shareLog("Warning: No analyzed image available to share")
+            shareLog("❌ WARNING: analyzedImageData is nil - no image to share")
         }
 
         // Present iOS share sheet
