@@ -2054,6 +2054,53 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
 
+        // Show loading indicator while preparing share content
+        let loadingView = UIView(frame: view.bounds)
+        loadingView.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        loadingView.tag = 9999 // Tag for easy removal
+
+        let loadingContainer = UIView()
+        loadingContainer.backgroundColor = UIColor.systemBackground
+        loadingContainer.layer.cornerRadius = 12
+        loadingContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        let activityIndicator = UIActivityIndicatorView(style: .medium)
+        activityIndicator.startAnimating()
+        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+
+        let loadingLabel = UILabel()
+        loadingLabel.text = "Preparing to share..."
+        loadingLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        loadingLabel.textColor = .label
+        loadingLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        loadingContainer.addSubview(activityIndicator)
+        loadingContainer.addSubview(loadingLabel)
+        loadingView.addSubview(loadingContainer)
+        view.addSubview(loadingView)
+
+        NSLayoutConstraint.activate([
+            loadingContainer.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
+            loadingContainer.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor),
+            loadingContainer.widthAnchor.constraint(equalToConstant: 200),
+            loadingContainer.heightAnchor.constraint(equalToConstant: 80),
+
+            activityIndicator.centerXAnchor.constraint(equalTo: loadingContainer.centerXAnchor),
+            activityIndicator.topAnchor.constraint(equalTo: loadingContainer.topAnchor, constant: 16),
+
+            loadingLabel.centerXAnchor.constraint(equalTo: loadingContainer.centerXAnchor),
+            loadingLabel.topAnchor.constraint(equalTo: activityIndicator.bottomAnchor, constant: 8)
+        ])
+
+        // Prepare share content asynchronously to avoid blocking UI
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+
+            self.prepareAndPresentShare(loadingView: loadingView)
+        }
+    }
+
+    private func prepareAndPresentShare(loadingView: UIView) {
         // Get top 5 products for sharing
         let topProducts = Array(detectionResults.prefix(5))
         let totalResults = detectionResults.count
@@ -2114,7 +2161,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if let image = shareImage {
             // Write image to temporary file for proper iOS preview
             let tempDir = FileManager.default.temporaryDirectory
-            let imageFileName = "snaplook-share-\(UUID().uuidString).jpg"
+            // Use clean filename with timestamp for uniqueness
+            let timestamp = Date().timeIntervalSince1970
+            let imageFileName = "Snaplook-Fashion-Match-\(Int(timestamp)).jpg"
             let imageURL = tempDir.appendingPathComponent(imageFileName)
 
             if let jpegData = image.jpegData(compressionQuality: 0.9) {
@@ -2141,25 +2190,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
             shareLog("⚠️ Share items: [text only] - no image available")
         }
 
-        // Present iOS share sheet
-        let activityVC = UIActivityViewController(activityItems: itemsToShare, applicationActivities: nil)
+        // Present iOS share sheet on main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
 
-        // Exclude some activities that don't make sense
-        activityVC.excludedActivityTypes = [
-            .assignToContact,
-            .addToReadingList,
-            .openInIBooks
-        ]
+            // Remove loading view
+            loadingView.removeFromSuperview()
 
-        // For iPad support
-        if let popover = activityVC.popoverPresentationController {
-            popover.sourceView = view
-            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
-            popover.permittedArrowDirections = []
-        }
+            let activityVC = UIActivityViewController(activityItems: itemsToShare, applicationActivities: nil)
 
-        present(activityVC, animated: true) {
-            shareLog("Share sheet presented successfully")
+            // Exclude some activities that don't make sense
+            activityVC.excludedActivityTypes = [
+                .assignToContact,
+                .addToReadingList,
+                .openInIBooks
+            ]
+
+            // For iPad support
+            if let popover = activityVC.popoverPresentationController {
+                popover.sourceView = self.view
+                popover.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.midY, width: 0, height: 0)
+                popover.permittedArrowDirections = []
+            }
+
+            self.present(activityVC, animated: true) {
+                self.shareLog("Share sheet presented successfully")
+            }
         }
     }
 
