@@ -3356,13 +3356,19 @@ class ResultCell: UITableViewCell {
     private let favoriteButton: UIButton = {
         let button = UIButton(type: .custom)
         button.translatesAutoresizingMaskIntoConstraints = false
-        let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)
         button.setImage(UIImage(systemName: "heart", withConfiguration: config), for: .normal)
         button.setImage(UIImage(systemName: "heart.fill", withConfiguration: config), for: .selected)
-        button.tintColor = .white
-        button.backgroundColor = UIColor(white: 0, alpha: 0.3)
-        button.layer.cornerRadius = 12
-        button.clipsToBounds = true
+        button.tintColor = .black
+        button.backgroundColor = UIColor(white: 1.0, alpha: 0.9)
+        button.layer.cornerRadius = 20
+        button.layer.masksToBounds = false
+        button.layer.shadowColor = UIColor.black.withAlphaComponent(0.1).cgColor
+        button.layer.shadowOpacity = 1
+        button.layer.shadowRadius = 4
+        button.layer.shadowOffset = CGSize(width: 0, height: 2)
+        button.adjustsImageWhenHighlighted = false
+        button.contentEdgeInsets = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
         return button
     }()
 
@@ -3392,10 +3398,10 @@ class ResultCell: UITableViewCell {
             productImageView.widthAnchor.constraint(equalToConstant: 80),
             productImageView.heightAnchor.constraint(equalToConstant: 80),
 
-            favoriteButton.bottomAnchor.constraint(equalTo: productImageView.bottomAnchor, constant: -4),
-            favoriteButton.trailingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: -4),
-            favoriteButton.widthAnchor.constraint(equalToConstant: 24),
-            favoriteButton.heightAnchor.constraint(equalToConstant: 24),
+            favoriteButton.bottomAnchor.constraint(equalTo: productImageView.bottomAnchor, constant: -8),
+            favoriteButton.trailingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: -8),
+            favoriteButton.widthAnchor.constraint(equalToConstant: 40),
+            favoriteButton.heightAnchor.constraint(equalToConstant: 40),
 
             textStackView.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
             textStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
