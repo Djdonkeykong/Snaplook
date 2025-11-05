@@ -12,6 +12,7 @@ import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/pages/results_page.dart';
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
+import '../../../../../core/theme/theme_extensions.dart';
 import '../providers/detection_provider.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {

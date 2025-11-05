@@ -146,7 +146,7 @@ async def analyze_with_caching(
         from fashion_detector_server import run_full_detection_pipeline
 
         # Run the full detection pipeline (existing code)
-        detection_result = await run_full_detection_pipeline(
+        detection_result = run_full_detection_pipeline(
             image_base64=request.image_base64,
             image_url=request.image_url,
             cloudinary_url=request.cloudinary_url,

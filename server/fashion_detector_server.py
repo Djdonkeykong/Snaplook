@@ -352,6 +352,15 @@ STYLE_HINT_KEYWORDS = ['silk', 'satin', 'lace', 'bias', 'midi', 'maxi', 'slip', 
 # === FASTAPI SETUP ===
 app = FastAPI(title="Fashion Detector API")
 
+# Import and mount caching routes
+try:
+    from api_routes_caching import router as caching_router
+    app.include_router(caching_router)
+    print("Caching routes mounted successfully")
+except ImportError as e:
+    print(f"Warning: Could not import caching routes: {e}")
+    print("Caching features will not be available")
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -1328,6 +1337,198 @@ def detect(req: DetectRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# === REUSABLE DETECTION PIPELINE (for caching integration) ===
+def run_full_detection_pipeline(
+    image_url: Optional[str] = None,
+    image_base64: Optional[str] = None,
+    cloudinary_url: Optional[str] = None,
+    skip_detection: bool = False,
+    threshold: Optional[float] = None,
+    expand_ratio: Optional[float] = None,
+    max_crops: Optional[int] = None,
+    max_results_per_garment: Optional[int] = 10,
+    location: Optional[str] = None
+) -> dict:
+    """
+    Reusable detection pipeline function that can be called by caching API.
+    Returns dict with: success, message (if failed), cloudinary_url, detected_garments, results, total_results
+    """
+    t0 = time.time()
+    threshold = threshold or CONF_THRESHOLD
+    expand_ratio = expand_ratio or EXPAND_RATIO
+    max_crops = max_crops or MAX_GARMENTS
+
+    source_desc = image_url[:80] if image_url else f"<base64:{len(image_base64 or '')} chars>"
+    print(f"Starting detection pipeline for: {source_desc}...")
+
+    # Step 1: Acquire image
+    image = None
+    initial_count = 0
+    uploaded_cloudinary_url = cloudinary_url  # Track the main cloudinary URL
+
+    if skip_detection and (image_url or cloudinary_url):
+        print("User cropped image - skipping detection")
+        filtered = [{
+            "id": "user_crop_1",
+            "label": "garment",
+            "score": 1.0,
+            "bbox": [0, 0, 1, 1],
+            "expanded_bbox": [0, 0, 1, 1]
+        }]
+        initial_count = 1
+        uploaded_cloudinary_url = cloudinary_url or image_url
+    else:
+        if image_base64:
+            try:
+                img_bytes = base64.b64decode(image_base64)
+                image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                print(f"Image decoded from base64: {image.width}x{image.height}")
+            except Exception as e:
+                return {'success': False, 'message': f'Unable to decode base64 image: {e}'}
+        elif image_url:
+            try:
+                image = download_image_from_url(image_url)
+                print(f"Image downloaded: {image.width}x{image.height}")
+            except Exception as e:
+                return {'success': False, 'message': f'Unable to download image: {e}'}
+        else:
+            return {'success': False, 'message': 'No image provided'}
+
+        # Step 2: YOLOS detection
+        t_detect = time.time()
+        filtered, initial_count = run_detection(image, threshold, expand_ratio, max_crops)
+        print(f"Detection completed in {time.time()-t_detect:.2f}s with {len(filtered)} garments")
+
+    if not filtered:
+        return {'success': False, 'message': 'No garments detected'}
+
+    # Step 3: Crop & upload garments to Cloudinary
+    if skip_detection and uploaded_cloudinary_url:
+        print(f"Using pre-uploaded image URL (skip_detection=true)")
+        crops_with_urls = [{"garment": filtered[0], "crop_url": uploaded_cloudinary_url}]
+    elif initial_count == 1 and image is not None:
+        print(f"Only 1 garment - uploading full image")
+        full_image_url = upload_to_cloudinary(image, filtered[0].get('label'))
+        if full_image_url:
+            crops_with_urls = [{"garment": filtered[0], "crop_url": full_image_url}]
+            uploaded_cloudinary_url = full_image_url
+        else:
+            return {'success': False, 'message': 'Failed to upload image to CDN'}
+    elif image is not None:
+        crop_data = []
+        for det in filtered:
+            ratio = resolve_expand_ratio(det["label"], expand_ratio)
+            expanded = expand_bbox(det["bbox"], image.width, image.height, ratio)
+            det["expanded_bbox"] = expanded
+            crop_data.append((det, image.crop(tuple(expanded))))
+
+        def upload_crop_safe(crop_tuple):
+            det, crop = crop_tuple
+            try:
+                url = upload_to_cloudinary(crop, det.get('label'))
+                if url:
+                    return det, url
+            except Exception as e:
+                print(f"Upload failed for {det['label']}: {e}")
+            return det, None
+
+        print(f"Uploading {len(crop_data)} crops in parallel...")
+        t_upload = time.time()
+        with ThreadPoolExecutor(max_workers=min(6, len(crop_data))) as ex:
+            results = list(ex.map(upload_crop_safe, crop_data))
+        print(f"Uploads complete in {time.time()-t_upload:.2f}s")
+
+        crops_with_urls = [
+            {"garment": det, "crop_url": url}
+            for det, url in results if url
+        ]
+        # Set main cloudinary_url to first crop
+        if crops_with_urls:
+            uploaded_cloudinary_url = crops_with_urls[0]["crop_url"]
+    else:
+        return {'success': False, 'message': 'No image available for processing'}
+
+    if not crops_with_urls:
+        if image is not None:
+            print("All uploads failed - attempting fallback")
+            fallback_url = upload_to_cloudinary(image, filtered[0].get('label'))
+            if fallback_url:
+                crops_with_urls = [{"garment": filtered[0], "crop_url": fallback_url}]
+                uploaded_cloudinary_url = fallback_url
+            else:
+                return {'success': False, 'message': 'Failed to upload to CDN'}
+        else:
+            return {'success': False, 'message': 'Failed to upload to CDN'}
+
+    # Step 4: Visual product search
+    print(f"Searching {len(crops_with_urls)} garments...")
+
+    def search_single_garment(item):
+        garment = item['garment']
+        crop_url = item['crop_url']
+        label = garment['label']
+        t_search = time.time()
+        search_results = search_visual_products(crop_url, max_results_per_garment, location)
+        print(f"{label} search took {time.time() - t_search:.2f}s ({len(search_results)} results)")
+
+        return [
+            format_detection_result(r, label, i)
+            for i, r in enumerate(search_results)
+        ]
+
+    t_serp = time.time()
+    all_results = []
+    executor = ThreadPoolExecutor(max_workers=min(6, len(crops_with_urls)))
+    future_to_item = {executor.submit(search_single_garment, item): item for item in crops_with_urls}
+    done, not_done = set(), set()
+    try:
+        done, not_done = wait(list(future_to_item.keys()), timeout=None)
+        for future in done:
+            try:
+                all_results.extend(future.result() or [])
+            except Exception as exc:
+                label = future_to_item[future]["garment"]["label"]
+                print(f"Unexpected error collecting results for {label}: {exc}")
+        if not_done:
+            for future in not_done:
+                future.cancel()
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    print(f"All searches complete in {time.time() - t_serp:.2f}s")
+
+    # Step 5: Filter and deduplicate
+    pdp_count = sum(
+        1 for r in all_results
+        if not looks_like_collection(r.get('purchase_url', ''), r.get('product_name', ''))
+    )
+    if pdp_count >= 15:
+        before = len(all_results)
+        all_results = [
+            r for r in all_results
+            if not looks_like_collection(r.get('purchase_url', ''), r.get('product_name', ''))
+        ]
+        print(f"Removed {before - len(all_results)} collection pages")
+
+    deduped_results = deduplicate_and_limit_by_domain(all_results)
+    print(f"Pipeline complete ({time.time()-t0:.2f}s total). Returned {len(deduped_results)} results.")
+
+    return {
+        'success': True,
+        'cloudinary_url': uploaded_cloudinary_url,
+        'detected_garments': [
+            {
+                'label': det['label'],
+                'score': round(det['score'], 3),
+                'bbox': det.get('expanded_bbox', det['bbox'])
+            }
+            for det in filtered
+        ],
+        'results': deduped_results,
+        'total_results': len(deduped_results)
+    }
+
 
 # === DETECT AND SEARCH ENDPOINT (Optimized) ===
 @app.post("/detect-and-search")
