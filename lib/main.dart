@@ -202,6 +202,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    // Sync auth state to share extension (runs on widget init, including after hot reload)
+    _syncAuthState();
+
     // ShareHandlerService is NO LONGER NEEDED!
     // The receive_sharing_intent package's RSIShareViewController
     // automatically handles everything via ReceiveSharingIntent.getInitialMedia()
@@ -296,8 +299,19 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkForPendingSharedMediaOnResume();
+      // Also sync auth state when app resumes
+      _syncAuthState();
     }
     super.didChangeAppLifecycleState(state);
+  }
+
+  void _syncAuthState() {
+    try {
+      final authService = AuthService();
+      authService.syncAuthState();
+    } catch (e) {
+      debugPrint('[Auth] Failed to sync auth state: $e');
+    }
   }
 
   Future<void> _checkForPendingSharedMediaOnResume() async {
