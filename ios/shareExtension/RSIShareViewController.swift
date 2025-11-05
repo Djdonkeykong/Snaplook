@@ -1511,21 +1511,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
             loadingView?.bringSubviewToFront(headerView)
         }
 
-        // Layout constraints
+        // Layout constraints - safely unwrap to prevent crashes
+        guard let loadingView = loadingView, let tableView = resultsTableView else {
+            shareLog("ERROR: loadingView or resultsTableView is nil - cannot display results")
+            return
+        }
+
         NSLayoutConstraint.activate([
             filterView.topAnchor.constraint(equalTo: filterTopAnchor, constant: filterTopPadding),
-            filterView.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
-            filterView.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
+            filterView.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
+            filterView.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
             filterView.heightAnchor.constraint(equalToConstant: 60),
 
-            resultsTableView!.topAnchor.constraint(equalTo: filterView.bottomAnchor),
-            resultsTableView!.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
-            resultsTableView!.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
-            resultsTableView!.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
+            tableView.topAnchor.constraint(equalTo: filterView.bottomAnchor),
+            tableView.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
 
-            bottomBarContainer.leadingAnchor.constraint(equalTo: loadingView!.leadingAnchor),
-            bottomBarContainer.trailingAnchor.constraint(equalTo: loadingView!.trailingAnchor),
-            bottomBarContainer.bottomAnchor.constraint(equalTo: loadingView!.safeAreaLayoutGuide.bottomAnchor),
+            bottomBarContainer.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
+            bottomBarContainer.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
+            bottomBarContainer.bottomAnchor.constraint(equalTo: loadingView.safeAreaLayoutGuide.bottomAnchor),
             bottomBarContainer.heightAnchor.constraint(equalToConstant: 90),
 
             separator.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
@@ -1539,7 +1544,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             saveButton.heightAnchor.constraint(equalToConstant: 56)
         ])
 
-        resultsTableView?.reloadData()
+        tableView.reloadData()
+        shareLog("Results UI successfully displayed")
     }
 
     private func createCategoryFilters() -> UIView {
