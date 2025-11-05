@@ -6,11 +6,34 @@ import 'theme_extensions.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
+    const colorScheme = lightColorScheme;
+
     return ThemeData(
       useMaterial3: true,
-      colorScheme: lightColorScheme,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.surface,
+      canvasColor: colorScheme.surface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
+        titleTextStyle: AppTextThemes.textTheme.titleMedium?.copyWith(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: colorScheme.surface,
+        selectedItemColor: colorScheme.secondary,
+        unselectedItemColor: colorScheme.onSurfaceVariant,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        elevation: 0,
+      ),
       textTheme: AppTextThemes.textTheme,
-      extensions: [
+      extensions: const [
         AppSpacingExtension.standard,
         AppRadiusExtension.standard,
       ],
@@ -18,11 +41,37 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme {
+    const colorScheme = darkColorScheme;
+
     return ThemeData(
       useMaterial3: true,
-      colorScheme: darkColorScheme,
-      textTheme: AppTextThemes.textTheme,
-      extensions: [
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.surface,
+      canvasColor: colorScheme.surface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
+        titleTextStyle: AppTextThemes.textTheme.titleMedium?.copyWith(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: colorScheme.surface,
+        selectedItemColor: colorScheme.secondary,
+        unselectedItemColor: colorScheme.onSurface,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        elevation: 0,
+      ),
+      textTheme: AppTextThemes.textTheme.apply(
+        bodyColor: colorScheme.onBackground,
+        displayColor: colorScheme.onBackground,
+      ),
+      extensions: const [
         AppSpacingExtension.standard,
         AppRadiusExtension.standard,
       ],

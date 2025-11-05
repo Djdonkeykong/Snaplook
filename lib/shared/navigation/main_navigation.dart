@@ -113,15 +113,17 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       ),
     ];
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: colorScheme.surface,
       body: IndexedStack(index: selectedIndex, children: pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colorScheme.surface,
           border: Border(
             top: BorderSide(
-              color: AppColors.outline.withOpacity(0.3),
+              color: colorScheme.outlineVariant.withOpacity(0.6),
               width: 0.5,
             ),
           ),
@@ -173,10 +175,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                                 width: 20,
                                 height: 20,
                                 decoration: BoxDecoration(
-                                  color: Colors.black,
+                                  color: colorScheme.secondary,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: Colors.white,
+                                    color: colorScheme.surface,
                                     width: 1.5,
                                   ),
                                 ),
@@ -185,8 +187,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                                     favoritesCount > 99
                                         ? '99+'
                                         : '$favoritesCount',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: colorScheme.onSecondary,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                       fontFamily: 'PlusJakartaSans',
@@ -400,7 +402,11 @@ class _NavigationItemState extends State<_NavigationItem>
   }
 
   Widget _buildIcon() {
-    final color = widget.isSelected ? AppColors.secondary : AppColors.black;
+    final colorScheme = Theme.of(context).colorScheme;
+    final unselectedColor = colorScheme.brightness == Brightness.dark
+        ? colorScheme.onSurface
+        : colorScheme.onSurfaceVariant;
+    final color = widget.isSelected ? colorScheme.secondary : unselectedColor;
 
     final size = widget.isSelected && widget.selectedIconSize != null
         ? widget.selectedIconSize!

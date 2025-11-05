@@ -34,13 +34,13 @@ const lightColorScheme = ColorScheme(
 
 const darkColorScheme = ColorScheme(
   brightness: Brightness.dark,
-  primary: Color(0xFF1c1c25), // Dark navy for dark theme
+  primary: Color(0xFF000000), // True black primary
   onPrimary: Color(0xFFFFFFFF), // White text on dark
-  primaryContainer: Color(0xFF2c2c35), // Darker container
+  primaryContainer: Color(0xFF16161A), // Deep charcoal container
   onPrimaryContainer: Color(0xFFE8E8EA), // Light text
   secondary: Color(0xFF080808), // Black accent (same)
   onSecondary: Color(0xFFFFFFFF), // White text on black
-  secondaryContainer: Color(0xFF333333), // Dark gray container
+  secondaryContainer: Color(0xFF1E1E23), // Dark gray container
   onSecondaryContainer: Color(0xFFFFFFFF), // White text
   tertiary: Color(0xFFFFFFFF), // White tertiary for dark theme
   onTertiary: Color(0xFF1c1c25), // Dark text on white
@@ -50,12 +50,12 @@ const darkColorScheme = ColorScheme(
   onError: Color(0xFFFFFFFF),
   errorContainer: Color(0xFF7F1D1D),
   onErrorContainer: Color(0xFFFEF2F2),
-  surface: Color(0xFF1f1f28), // Dark surface
-  onSurface: Color(0xFFE8E8EA), // Light text on dark surface
-  surfaceContainerHighest: Color(0xFF252530), // Lighter dark
+  surface: Color(0xFF09090D), // Near-black surface
+  onSurface: Color(0xFFE5E5E8), // Light text on dark surface
+  surfaceContainerHighest: Color(0xFF16161A), // Lighter dark
   onSurfaceVariant: Color(0xFFB8B8BA), // Muted light text
-  outline: Color(0xFF3a3a45), // Dark borders
-  outlineVariant: Color(0xFF2a2a35), // Darker borders
+  outline: Color(0xFF2D2D33), // Dark borders
+  outlineVariant: Color(0xFF1F1F24), // Darker borders
   shadow: Color(0xFF000000),
   scrim: Color(0xFF000000),
   inverseSurface: Color(0xFFFFFFFF), // White for inverse

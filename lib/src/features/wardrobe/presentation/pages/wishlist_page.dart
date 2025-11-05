@@ -7,7 +7,6 @@ import 'package:share_plus/share_plus.dart';
 import '../../../favorites/domain/providers/favorites_provider.dart';
 import '../../../favorites/domain/models/favorite_item.dart';
 import '../../../product/presentation/pages/product_detail_page.dart';
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
@@ -47,6 +46,8 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     });
     final spacing = context.spacing;
     final radius = context.radius;
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final favoritesAsync = ref.watch(favoritesProvider);
 
     // Always show data if we have it, even during refresh
@@ -56,7 +57,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     final hasError = favoritesAsync.hasError && !favoritesAsync.hasValue;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,25 +67,23 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
               padding: EdgeInsets.all(spacing.l),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'My Wishlist',
-                    style: TextStyle(
+                    style: textTheme.headlineMedium?.copyWith(
                       fontSize: 30,
-                      fontFamily: 'PlusJakartaSans',
-                      letterSpacing: -1.0,
+                      letterSpacing: -1,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
                       height: 1.3,
+                      color: colorScheme.onSurface,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'These are the items you liked the most.',
-                    style: TextStyle(
+                    style: textTheme.bodyMedium?.copyWith(
                       fontSize: 14,
-                      fontFamily: 'PlusJakartaSans',
-                      color: AppColors.textSecondary,
+                      color: colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                 ],
@@ -127,24 +126,33 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     controller.dispose();
 
     ScaffoldMessenger.of(context).clearSnackBars();
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
           'Removed from favorites',
-          style: TextStyle(fontFamily: 'PlusJakartaSans'),
+          style: textTheme.bodyMedium?.copyWith(
+            fontFamily: 'PlusJakartaSans',
+          ),
         ),
-        backgroundColor: Colors.black,
-        duration: Duration(milliseconds: 2500),
+        backgroundColor: colorScheme.inverseSurface,
+        duration: const Duration(milliseconds: 2500),
       ),
     );
   }
 
   Widget _buildAllFavoritesTab(bool isInitialLoading, bool hasError,
       List<FavoriteItem> favorites, dynamic spacing) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     if (isInitialLoading) {
-      return const Center(
+      return Center(
         child: CircularProgressIndicator(
-          color: Color(0xFFf2003c),
+          valueColor:
+              AlwaysStoppedAnimation<Color>(colorScheme.secondary),
           strokeWidth: 2,
         ),
       );
@@ -156,14 +164,25 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            Icon(Icons.error_outline,
+                size: 64, color: colorScheme.error),
             const SizedBox(height: 16),
-            Text('Error: ${favoritesAsync.error}'),
+            Text(
+              'Error: ${favoritesAsync.error}',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 ref.read(favoritesProvider.notifier).refresh();
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.secondary,
+                foregroundColor: colorScheme.onSecondary,
+              ),
               child: const Text('Retry'),
             ),
           ],
@@ -198,7 +217,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
           color: Color(0xFFf2003c),
           size: 24,
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
       ),
       child: ListView.builder(
         controller: _scrollController,
@@ -239,6 +258,9 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
   }
 
   Widget _buildEmptyState(BuildContext context, dynamic spacing) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Center(
       child: Padding(
         padding: EdgeInsets.all(spacing.xl),
@@ -250,27 +272,26 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                   width: 1.5,
                 ),
               ),
               child: Transform.translate(
                 offset: const Offset(-2, 0),
-                child: const Icon(
+                child: Icon(
                   SnaplookIcons.heartOutline,
                   size: 32,
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                 ),
               ),
             ),
             SizedBox(height: spacing.l),
             Text(
               'Tap the heart on pieces you love to build your personal shortlist.',
-              style: const TextStyle(
+              style: textTheme.bodyMedium?.copyWith(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                fontFamily: 'PlusJakartaSans',
-                color: Colors.black87,
+                color: colorScheme.onSurface,
                 height: 1.35,
               ),
               textAlign: TextAlign.center,
@@ -295,16 +316,15 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                   maxWidth: 220,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFf2003c),
+                  color: colorScheme.secondary,
                   borderRadius: BorderRadius.circular(28),
                 ),
-                child: const Text(
+                child: Text(
                   'Browse Items',
-                  style: TextStyle(
+                  style: textTheme.labelLarge?.copyWith(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    fontFamily: 'PlusJakartaSans',
-                    color: Colors.white,
+                    color: colorScheme.onSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -363,7 +383,7 @@ class _FavoriteCard extends ConsumerWidget {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -374,6 +394,8 @@ class _FavoriteCard extends ConsumerWidget {
             ? 'Check out this $productBrand $productTitle on Snaplook! $productUrl'
             : 'Check out this $productBrand $productTitle on Snaplook!';
         final shareOrigin = _shareOriginForContext(context);
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
 
         return SafeArea(
           child: Padding(
@@ -402,13 +424,15 @@ class _FavoriteCard extends ConsumerWidget {
                     if (productUrl.isEmpty) {
                       messenger.hideCurrentSnackBar();
                       messenger.showSnackBar(
-                        const SnackBar(
+                        SnackBar(
                           content: Text(
                             'Link unavailable for this item.',
-                            style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontFamily: 'PlusJakartaSans',
+                            ),
                           ),
-                          backgroundColor: Colors.black,
-                          duration: Duration(seconds: 2),
+                          backgroundColor: colorScheme.inverseSurface,
+                          duration: const Duration(seconds: 2),
                         ),
                       );
                       return;
@@ -416,13 +440,15 @@ class _FavoriteCard extends ConsumerWidget {
                     Clipboard.setData(ClipboardData(text: productUrl));
                     messenger.hideCurrentSnackBar();
                     messenger.showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(
                           'Link copied to clipboard',
-                          style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontFamily: 'PlusJakartaSans',
+                          ),
                         ),
-                        backgroundColor: Colors.black,
-                        duration: Duration(seconds: 2),
+                        backgroundColor: colorScheme.inverseSurface,
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },
@@ -438,6 +464,8 @@ class _FavoriteCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final radius = context.radius;
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -479,12 +507,15 @@ class _FavoriteCard extends ConsumerWidget {
                   imageUrl: favorite.imageUrl,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
-                    color: Colors.grey.shade200,
+                    color: colorScheme.surfaceVariant,
                   ),
                   errorWidget: (context, url, error) => Container(
-                    color: Colors.grey.shade200,
-                    child:
-                        const Icon(Icons.error, color: AppColors.textTertiary, size: 24),
+                    color: colorScheme.surfaceVariant,
+                    child: Icon(
+                      Icons.error,
+                      color: colorScheme.onSurfaceVariant,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
@@ -497,29 +528,27 @@ class _FavoriteCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    favorite.brand,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'PlusJakartaSans',
-                      color: Colors.black,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+              children: [
+                Text(
+                  favorite.brand,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    favorite.productName,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                      fontFamily: 'PlusJakartaSans',
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  favorite.productName,
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontSize: 14,
+                    color: colorScheme.onSurfaceVariant,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 ],
               ),
             ),
@@ -538,12 +567,12 @@ class _FavoriteCard extends ConsumerWidget {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: Colors.black,
+                        color: colorScheme.secondary,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         SnaplookIcons.trashBin,
-                        color: Colors.white,
+                        color: colorScheme.onSecondary,
                         size: 14,
                       ),
                     ),
@@ -556,15 +585,15 @@ class _FavoriteCard extends ConsumerWidget {
                       height: 38,
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: Colors.black,
+                          color: colorScheme.onSurface,
                           width: 1.0,
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Icon(
                           Icons.more_horiz,
-                          color: Colors.black,
+                          color: colorScheme.onSurface,
                           size: 16,
                         ),
                       ),
@@ -593,6 +622,9 @@ class _SheetActionItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -600,16 +632,16 @@ class _SheetActionItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Icon(icon, color: Colors.black, size: 24),
+            Icon(icon, color: colorScheme.onSurface, size: 24),
             const SizedBox(width: 24),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: textTheme.bodyLarge?.copyWith(
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.w500,
                   fontSize: 16,
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                 ),
               ),
             ),
