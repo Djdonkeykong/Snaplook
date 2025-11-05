@@ -2185,9 +2185,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let productData: [String: Any] = [
             "product_name": product.product_name,
             "brand": product.brand ?? "",
-            "price": product.price ?? 0.0,
+            "price": product.priceValue ?? 0.0,
             "image_url": product.image_url,
-            "purchase_url": product.purchase_url ?? product.url ?? "",
+            "purchase_url": product.purchase_url ?? "",
             "category": product.category
         ]
 
