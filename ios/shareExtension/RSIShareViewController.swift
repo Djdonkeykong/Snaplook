@@ -305,6 +305,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingImageUrl: String?
     private var pendingInstagramUrl: String?
     private var pendingInstagramCompletion: (() -> Void)?
+    private var analyzedImageData: Data? // Store the analyzed image for sharing
     private var selectedCategory: String = "All"
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
@@ -1385,6 +1386,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func uploadAndDetect(imageData: Data) {
         shareLog("START uploadAndDetect - image size: \(imageData.count) bytes")
 
+        // Store the image for sharing later
+        analyzedImageData = imageData
+
         // Stop status polling since we're now in detection mode
         stopStatusPolling()
         hasPresentedDetectionFailureAlert = false
@@ -1479,7 +1483,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             shareLog("Table view created successfully")
         }
 
-        // Create bottom bar with Save All button
+        // Create bottom bar with Share and Save buttons
         let bottomBarContainer = UIView()
         bottomBarContainer.backgroundColor = .systemBackground
         bottomBarContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -1489,6 +1493,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         separator.backgroundColor = UIColor.systemGray5
         separator.translatesAutoresizingMaskIntoConstraints = false
 
+        // Share button (secondary style)
+        let shareButton = UIButton(type: .system)
+        shareButton.setTitle("Share", for: .normal)
+        shareButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        shareButton.backgroundColor = .systemBackground
+        shareButton.setTitleColor(UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0), for: .normal)
+        shareButton.layer.cornerRadius = 28
+        shareButton.layer.borderWidth = 2
+        shareButton.layer.borderColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0).cgColor
+        shareButton.addTarget(self, action: #selector(shareResultsTapped), for: .touchUpInside)
+        shareButton.translatesAutoresizingMaskIntoConstraints = false
+
+        // Save button (primary style)
         let saveButton = UIButton(type: .system)
         saveButton.setTitle("Save", for: .normal)
         saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
@@ -1499,6 +1516,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         saveButton.translatesAutoresizingMaskIntoConstraints = false
 
         bottomBarContainer.addSubview(separator)
+        bottomBarContainer.addSubview(shareButton)
         bottomBarContainer.addSubview(saveButton)
 
         // Layout constraints - safely unwrap FIRST to prevent crashes
@@ -1547,8 +1565,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
             separator.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor),
             separator.heightAnchor.constraint(equalToConstant: 1),
 
+            // Share button (left, 50% width)
+            shareButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 16),
+            shareButton.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor, constant: 16),
+            shareButton.trailingAnchor.constraint(equalTo: bottomBarContainer.centerXAnchor, constant: -6),
+            shareButton.heightAnchor.constraint(equalToConstant: 56),
+
+            // Save button (right, 50% width)
             saveButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 16),
-            saveButton.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor, constant: 16),
+            saveButton.leadingAnchor.constraint(equalTo: bottomBarContainer.centerXAnchor, constant: 6),
             saveButton.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor, constant: -16),
             saveButton.heightAnchor.constraint(equalToConstant: 56)
         ])
@@ -1738,6 +1763,65 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let minimumDuration = isPhotosSourceApp ? 2.0 : 0.0
         enqueueRedirect(to: redirectURL, minimumDuration: minimumDuration) { [weak self] in
             self?.finishExtensionRequest()
+        }
+    }
+
+    @objc private func shareResultsTapped() {
+        shareLog("Share button tapped - preparing share content")
+
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+
+        // Get top 5 products for sharing
+        let topProducts = Array(detectionResults.prefix(5))
+        let totalResults = detectionResults.count
+
+        // Create share text
+        var shareText = "I analyzed this look on Snaplook and found \(totalResults) matches! 🔥\n\n"
+
+        if !topProducts.isEmpty {
+            shareText += "Top finds:\n"
+            for (index, product) in topProducts.enumerated() {
+                let productName = product.product_name
+                let brand = product.brand ?? "Unknown brand"
+                shareText += "\(index + 1). \(brand) - \(productName)\n"
+            }
+            shareText += "\n"
+        }
+
+        shareText += "Get Snaplook to find your fashion matches: https://snaplook.app"
+
+        // Prepare items to share
+        var itemsToShare: [Any] = [shareText]
+
+        // Add the analyzed image if available
+        if let imageData = analyzedImageData, let image = UIImage(data: imageData) {
+            itemsToShare.insert(image, at: 0) // Image first, then text
+            shareLog("Adding analyzed image to share (\(imageData.count) bytes)")
+        } else {
+            shareLog("Warning: No analyzed image available to share")
+        }
+
+        // Present iOS share sheet
+        let activityVC = UIActivityViewController(activityItems: itemsToShare, applicationActivities: nil)
+
+        // Exclude some activities that don't make sense
+        activityVC.excludedActivityTypes = [
+            .assignToContact,
+            .addToReadingList,
+            .openInIBooks
+        ]
+
+        // For iPad support
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+
+        present(activityVC, animated: true) {
+            shareLog("Share sheet presented successfully")
         }
     }
 
