@@ -42,7 +42,8 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
         actionTextColor: AppColors.secondary,
-        behavior: SnackBarBehavior.floating,
+        behavior: SnackBarBehavior.fixed,
+        elevation: 0,
       ),
       textTheme: AppTextThemes.textTheme,
       extensions: const [
@@ -89,7 +90,8 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
         actionTextColor: AppColors.secondary,
-        behavior: SnackBarBehavior.floating,
+        behavior: SnackBarBehavior.fixed,
+        elevation: 0,
       ),
       textTheme: AppTextThemes.textTheme.apply(
         bodyColor: colorScheme.onBackground,

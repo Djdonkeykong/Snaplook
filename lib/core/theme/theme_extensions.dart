@@ -1,5 +1,6 @@
 // lib/core/theme/theme_extensions.dart
 import 'package:flutter/material.dart';
+import 'app_colors.dart';
 
 @immutable
 class AppSpacingExtension extends ThemeExtension<AppSpacingExtension> {
@@ -140,22 +141,22 @@ class AppNavigationExtension extends ThemeExtension<AppNavigationExtension> {
 
   static const AppNavigationExtension light = AppNavigationExtension(
     navBarBackground: Colors.white,
-    navBarActiveIcon: Colors.black,
-    navBarInactiveIcon: Color(0x99000000),
-    navBarBadgeBackground: Color(0xFFf2003c),
+    navBarActiveIcon: AppColors.secondary,
+    navBarInactiveIcon: Color(0x66000000),
+    navBarBadgeBackground: AppColors.secondary,
     navBarBadgeBorder: Colors.white,
-    actionBarBackground: Colors.white,
-    actionBarIcon: Colors.black,
-    actionBarLabel: Colors.black,
+    actionBarBackground: AppColors.secondary,
+    actionBarIcon: Colors.white,
+    actionBarLabel: Colors.white,
   );
 
   static const AppNavigationExtension dark = AppNavigationExtension(
     navBarBackground: Colors.black,
-    navBarActiveIcon: Colors.white,
-    navBarInactiveIcon: Color(0x99FFFFFF),
-    navBarBadgeBackground: Color(0xFFf2003c),
+    navBarActiveIcon: AppColors.secondary,
+    navBarInactiveIcon: Color(0x8CFFFFFF),
+    navBarBadgeBackground: AppColors.secondary,
     navBarBadgeBorder: Colors.white,
-    actionBarBackground: Colors.black,
+    actionBarBackground: AppColors.secondary,
     actionBarIcon: Colors.white,
     actionBarLabel: Colors.white,
   );
