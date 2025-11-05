@@ -131,7 +131,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             itemBuilder: (context, index) {
               if (index >= _products.length) {
                 return Container(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   child: const Center(
                     child: CircularProgressIndicator(
                       color: Color(0xFFf2003c),
@@ -273,7 +273,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -349,7 +349,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
                   child: widget.product['image_url'] != null
                       ? Hero(
@@ -360,18 +360,18 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                           ),
                         )
                       : Container(
-                          color: Colors.grey.shade100,
-                          child: const Icon(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          child: Icon(
                             Icons.checkroom,
                             size: 50,
-                            color: Colors.grey,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                 ),
               ),
             ),
             Container(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               padding: EdgeInsets.all(spacing.m),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,7 +444,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                                   child: Icon(
                                     SnaplookAiIcon.aiSearchIcon,
                                     size: 21,
-                                    color: Colors.black,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -467,7 +467,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                                         child: Icon(
                                           isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
                                           size: isFavorite ? 24 * 0.85 : 24 * 0.75,
-                                          color: isFavorite ? const Color(0xFFf2003c) : Colors.black,
+                                          color: isFavorite ? const Color(0xFFf2003c) : Theme.of(context).colorScheme.onSurface,
                                         ),
                                       ),
                                     ),
@@ -485,7 +485,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                               child: Center(
                                 child: Icon(
                                   Icons.more_horiz,
-                                  color: Colors.black,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   size: 24,
                                 ),
                               ),
@@ -510,10 +510,10 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                   if (widget.product['title'] != null) ...[
                     Text(
                       widget.product['title'],
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.onSurface,
                         height: 1.3,
                       ),
                     ),
@@ -549,16 +549,16 @@ class _ProductDetailSheetItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Icon(icon, color: Colors.black, size: 24),
+            Icon(icon, color: Theme.of(context).colorScheme.onSurface, size: 24),
             const SizedBox(width: 24),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.w500,
                   fontSize: 16,
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
@@ -623,11 +623,11 @@ class _AdaptiveMainProductImageState extends State<_AdaptiveMainProductImage> {
         );
       },
       errorBuilder: (context, error, stackTrace) => Container(
-        color: Colors.grey.shade100,
-        child: const Icon(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: Icon(
           Icons.image_not_supported,
           size: 50,
-          color: Colors.grey,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );
