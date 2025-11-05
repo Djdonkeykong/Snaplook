@@ -1425,7 +1425,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     // Show detection results in table view
     private func showDetectionResults() {
-        guard !detectionResults.isEmpty else { return }
+        shareLog("=== showDetectionResults START ===")
+        shareLog("detectionResults.count: \(detectionResults.count)")
+        shareLog("loadingView exists: \(loadingView != nil)")
+        shareLog("resultsTableView exists: \(resultsTableView != nil)")
+
+        guard !detectionResults.isEmpty else {
+            shareLog("ERROR: detectionResults is empty, returning")
+            return
+        }
 
         // Prevent re-creating UI if already showing results
         if resultsTableView != nil {
@@ -1448,10 +1456,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         filteredResults = detectionResults
         selectedCategory = "All"
 
+        shareLog("Creating category filters...")
         // Create category filter chips
         let filterView = createCategoryFilters()
         categoryFilterView = filterView
 
+        shareLog("Creating table view...")
         // Create table view if not exists
         if resultsTableView == nil {
             let tableView = UITableView(frame: .zero, style: .plain)
@@ -1466,6 +1476,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
 
             resultsTableView = tableView
+            shareLog("Table view created successfully")
         }
 
         // Create bottom bar with Save All button
