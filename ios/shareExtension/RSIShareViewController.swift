@@ -2160,15 +2160,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Try to get the analyzed image
         if let imageData = analyzedImageData {
-            shareLog("Attempting to create UIImage from \(imageData.count) bytes")
+            self.shareLog("Attempting to create UIImage from \(imageData.count) bytes")
             if let image = UIImage(data: imageData) {
                 shareImage = image
-                shareLog("✅ Successfully loaded analyzed image (size: \(image.size))")
+                self.shareLog("✅ Successfully loaded analyzed image (size: \(image.size))")
             } else {
-                shareLog("❌ ERROR: Failed to create UIImage from imageData")
+                self.shareLog("❌ ERROR: Failed to create UIImage from imageData")
             }
         } else {
-            shareLog("❌ WARNING: analyzedImageData is nil - trying fallback")
+            self.shareLog("❌ WARNING: analyzedImageData is nil - trying fallback")
         }
 
         // Fallback: Try to use the first product's image if original image unavailable
@@ -2176,15 +2176,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
             if let firstProduct = detectionResults.first {
                 let imageUrlString = firstProduct.image_url
                 if !imageUrlString.isEmpty, let imageUrl = URL(string: imageUrlString) {
-                    shareLog("Fallback: Attempting to download product image from: \(imageUrlString)")
+                    self.shareLog("Fallback: Attempting to download product image from: \(imageUrlString)")
 
                     // Download image synchronously (we're already in share flow)
                     if let imageData = try? Data(contentsOf: imageUrl),
                        let image = UIImage(data: imageData) {
                         shareImage = image
-                        shareLog("✅ Successfully loaded product image as fallback (size: \(image.size))")
+                        self.shareLog("✅ Successfully loaded product image as fallback (size: \(image.size))")
                     } else {
-                        shareLog("❌ Failed to download fallback image")
+                        self.shareLog("❌ Failed to download fallback image")
                     }
                 }
             }
@@ -2259,24 +2259,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     )
                     itemsToShare.append(shareItem)
                     itemsToShare.append(shareText)
-                    shareLog("✅ Share items: [custom image item, text] - wrote temp file: \(imageFileName)")
-                    shareLog("   Subject: \(subject)")
+                    self.shareLog("✅ Share items: [custom image item, text] - wrote temp file: \(imageFileName)")
+                    self.shareLog("   Subject: \(subject)")
                 } catch {
-                    shareLog("❌ Failed to write temp image file: \(error)")
+                    self.shareLog("❌ Failed to write temp image file: \(error)")
                     // Fallback to UIImage if file write fails
                     itemsToShare.append(image)
                     itemsToShare.append(shareText)
-                    shareLog("⚠️ Fallback: using UIImage instead of file URL")
+                    self.shareLog("⚠️ Fallback: using UIImage instead of file URL")
                 }
             } else {
-                shareLog("❌ Failed to convert image to JPEG")
+                self.shareLog("❌ Failed to convert image to JPEG")
                 itemsToShare.append(image)
                 itemsToShare.append(shareText)
-                shareLog("⚠️ Fallback: using UIImage instead of JPEG")
+                self.shareLog("⚠️ Fallback: using UIImage instead of JPEG")
             }
         } else {
             itemsToShare.append(shareText)
-            shareLog("⚠️ Share items: [text only] - no image available")
+            self.shareLog("⚠️ Share items: [text only] - no image available")
         }
 
         // Present iOS share sheet on main thread
