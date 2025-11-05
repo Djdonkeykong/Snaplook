@@ -2043,6 +2043,40 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
+    // Custom activity item source for rich share metadata
+    private class SnaplookShareItem: NSObject, UIActivityItemSource {
+        let imageURL: URL
+        let imageTitle: String
+        let imageSubject: String
+
+        init(imageURL: URL, title: String, subject: String) {
+            self.imageURL = imageURL
+            self.imageTitle = title
+            self.imageSubject = subject
+            super.init()
+        }
+
+        func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+            return imageURL
+        }
+
+        func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+            return imageURL
+        }
+
+        func activityViewController(_ activityViewController: UIActivityViewController, subjectForActivityType activityType: UIActivity.ActivityType?) -> String {
+            return imageSubject
+        }
+
+        func activityViewController(_ activityViewController: UIActivityViewController, dataTypeIdentifierForActivityType activityType: UIActivity.ActivityType?) -> String {
+            return "public.jpeg"
+        }
+
+        func activityViewController(_ activityViewController: UIActivityViewController, thumbnailImageForActivityType activityType: UIActivity.ActivityType?, suggestedSize size: CGSize) -> UIImage? {
+            return UIImage(contentsOfFile: imageURL.path)
+        }
+    }
+
     @objc private func shareResultsTapped() {
         shareLog("Share button tapped - preparing share content")
         shareLog("analyzedImageData exists: \(analyzedImageData != nil)")
@@ -2159,19 +2193,74 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Build items array: image MUST be first for iOS preview thumbnail
         // iOS share sheet preview works best with file URLs, not UIImage objects
         if let image = shareImage {
-            // Write image to temporary file for proper iOS preview
+            // Build smart filename and subject based on source and content
             let tempDir = FileManager.default.temporaryDirectory
-            // Use clean filename with timestamp for uniqueness
-            let timestamp = Date().timeIntervalSince1970
-            let imageFileName = "Snaplook-Fashion-Match-\(Int(timestamp)).jpg"
+
+            // Extract Instagram username if available
+            var instagramUsername: String?
+            if let instagramUrl = pendingInstagramUrl {
+                let pattern = "instagram\\.com/([^/?]+)"
+                if let regex = try? NSRegularExpression(pattern: pattern),
+                   let match = regex.firstMatch(in: instagramUrl, range: NSRange(instagramUrl.startIndex..., in: instagramUrl)) {
+                    if let usernameRange = Range(match.range(at: 1), in: instagramUrl) {
+                        instagramUsername = String(instagramUrl[usernameRange])
+                    }
+                }
+            }
+
+            // Get dominant garment category
+            let dominantCategory = detectionResults.first?.categoryGroup.displayName ?? "Fashion"
+
+            // Build filename components
+            var filenameParts: [String] = ["Snaplook"]
+
+            if let username = instagramUsername {
+                filenameParts.append("Instagram")
+                filenameParts.append("@\(username)")
+            } else {
+                // Try to detect source app
+                if let sourceApp = readSourceApplicationBundleIdentifier() {
+                    if sourceApp.contains("instagram") {
+                        filenameParts.append("Instagram")
+                    } else if sourceApp.contains("photos") {
+                        filenameParts.append("Photos")
+                    } else if sourceApp.contains("safari") || sourceApp.contains("webkit") {
+                        filenameParts.append("Web")
+                    }
+                }
+            }
+
+            filenameParts.append(dominantCategory)
+
+            let imageFileName = filenameParts.joined(separator: "-") + ".jpg"
             let imageURL = tempDir.appendingPathComponent(imageFileName)
+
+            // Build subject/subtitle for share sheet
+            var subject = "Snaplook Fashion Match"
+            if let username = instagramUsername {
+                subject = "from Instagram @\(username)"
+            } else if let sourceApp = readSourceApplicationBundleIdentifier() {
+                if sourceApp.contains("instagram") {
+                    subject = "from Instagram"
+                } else if sourceApp.contains("photos") {
+                    subject = "from Photos"
+                }
+            }
 
             if let jpegData = image.jpegData(compressionQuality: 0.9) {
                 do {
                     try jpegData.write(to: imageURL)
-                    itemsToShare.append(imageURL)
+
+                    // Use custom activity item source for rich metadata
+                    let shareItem = SnaplookShareItem(
+                        imageURL: imageURL,
+                        title: imageFileName,
+                        subject: subject
+                    )
+                    itemsToShare.append(shareItem)
                     itemsToShare.append(shareText)
-                    shareLog("✅ Share items: [imageURL, text] - wrote temp file: \(imageFileName)")
+                    shareLog("✅ Share items: [custom image item, text] - wrote temp file: \(imageFileName)")
+                    shareLog("   Subject: \(subject)")
                 } catch {
                     shareLog("❌ Failed to write temp image file: \(error)")
                     // Fallback to UIImage if file write fails
