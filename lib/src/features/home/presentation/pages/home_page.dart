@@ -20,6 +20,25 @@ import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show scrollToTopTriggerProvider, isAtHomeRootProvider;
 
+String? _extractProductUrl(Map<String, dynamic> product) {
+  final candidates = [
+    product['purchase_url'],
+    product['purchaseUrl'],
+    product['url'],
+    product['link'],
+    product['product_url'],
+  ];
+
+  for (final candidate in candidates) {
+    if (candidate == null) continue;
+    final trimmed = candidate.toString().trim();
+    if (trimmed.isNotEmpty && trimmed.startsWith('http')) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
@@ -522,11 +541,18 @@ class _HomePageState extends ConsumerState<HomePage> {
     // Hide floating bar when navigating away
     ref.read(isAtHomeRootProvider.notifier).state = false;
 
+    final product = Map<String, dynamic>.from(image);
+    final resolvedUrl = _extractProductUrl(product);
+    if (resolvedUrl != null) {
+      product.putIfAbsent('url', () => resolvedUrl);
+      product.putIfAbsent('purchase_url', () => resolvedUrl);
+    }
+
     Navigator.of(context)
         .push(
       MaterialPageRoute(
         builder: (context) => ProductDetailPage(
-          product: image,
+          product: product,
           heroTag: 'product_${image['id']}_$index',
         ),
       ),
@@ -1075,7 +1101,7 @@ class _StaggeredInspirationImageCardState
                           widget.image['price']?.toString() ?? '0') ??
                       0.0,
                   imageUrl: widget.image['image_url'] ?? '',
-                  purchaseUrl: null,
+                  purchaseUrl: _extractProductUrl(widget.image),
                   category: widget.image['category'] ?? 'Unknown',
                   confidence: 1.0,
                 ),
@@ -1194,7 +1220,7 @@ class _MagazineStyleImageCard extends ConsumerWidget {
                   price:
                       double.tryParse(image['price']?.toString() ?? '0') ?? 0.0,
                   imageUrl: image['image_url'] ?? '',
-                  purchaseUrl: null,
+                  purchaseUrl: _extractProductUrl(image),
                   category: image['category'] ?? 'Unknown',
                   confidence: 1.0,
                 ),
