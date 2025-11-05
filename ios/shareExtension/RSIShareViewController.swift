@@ -2075,18 +2075,43 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Prepare items to share
         var itemsToShare: [Any] = [shareText]
+        var imageAdded = false
 
-        // Add the analyzed image if available
+        // Try to add the analyzed image if available
         if let imageData = analyzedImageData {
             shareLog("Attempting to create UIImage from \(imageData.count) bytes")
             if let image = UIImage(data: imageData) {
                 itemsToShare.insert(image, at: 0) // Image first, then text
                 shareLog("✅ Successfully added analyzed image to share (size: \(image.size))")
+                imageAdded = true
             } else {
                 shareLog("❌ ERROR: Failed to create UIImage from imageData")
             }
         } else {
-            shareLog("❌ WARNING: analyzedImageData is nil - no image to share")
+            shareLog("❌ WARNING: analyzedImageData is nil - trying fallback")
+        }
+
+        // Fallback: Try to use the first product's image if original image unavailable
+        if !imageAdded && !detectionResults.isEmpty {
+            if let firstProduct = detectionResults.first,
+               let imageUrlString = firstProduct.image_url,
+               let imageUrl = URL(string: imageUrlString) {
+                shareLog("Fallback: Attempting to download product image from: \(imageUrlString)")
+
+                // Download image synchronously (we're already in share flow)
+                if let imageData = try? Data(contentsOf: imageUrl),
+                   let image = UIImage(data: imageData) {
+                    itemsToShare.insert(image, at: 0)
+                    shareLog("✅ Successfully added product image as fallback (size: \(image.size))")
+                    imageAdded = true
+                } else {
+                    shareLog("❌ Failed to download fallback image")
+                }
+            }
+        }
+
+        if !imageAdded {
+            shareLog("⚠️ No image could be added to share sheet - sharing text only")
         }
 
         // Present iOS share sheet
