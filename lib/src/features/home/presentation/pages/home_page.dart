@@ -1475,20 +1475,22 @@ class _FloatingActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       height: 70,
       margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFf2003c),
+        color: colorScheme.onSecondary,
         borderRadius: BorderRadius.circular(35),
         border: Border.all(
-          color: const Color(0xFFf2003c),
+          color: colorScheme.secondary.withOpacity(0.1),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.20),
-            blurRadius: 35,
+            color: colorScheme.secondary.withOpacity(0.16),
+            blurRadius: 32,
             offset: const Offset(0, 6),
             spreadRadius: 1,
           ),
@@ -1558,6 +1560,8 @@ class _FloatingActionButtonSvg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
@@ -1574,14 +1578,16 @@ class _FloatingActionButtonSvg extends StatelessWidget {
                 svgIcon,
                 width: iconSize,
                 height: iconSize,
-                colorFilter:
-                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                colorFilter: ColorFilter.mode(
+                  colorScheme.secondary,
+                  BlendMode.srcIn,
+                ),
               ),
               SizedBox(height: spacing),
               Text(
                 label,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: colorScheme.secondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),

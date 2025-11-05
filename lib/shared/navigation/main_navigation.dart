@@ -120,10 +120,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       body: IndexedStack(index: selectedIndex, children: pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: colorScheme.surface,
+          color: colorScheme.secondary,
           border: Border(
             top: BorderSide(
-              color: colorScheme.outlineVariant.withOpacity(0.6),
+              color: colorScheme.onSecondary.withOpacity(0.08),
               width: 0.5,
             ),
           ),
@@ -175,10 +175,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                                 width: 20,
                                 height: 20,
                                 decoration: BoxDecoration(
-                                  color: colorScheme.secondary,
+                                  color: AppColors.secondary,
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: colorScheme.surface,
+                                    color: colorScheme.onSecondary,
                                     width: 1.5,
                                   ),
                                 ),
@@ -403,10 +403,9 @@ class _NavigationItemState extends State<_NavigationItem>
 
   Widget _buildIcon() {
     final colorScheme = Theme.of(context).colorScheme;
-    final unselectedColor = colorScheme.brightness == Brightness.dark
-        ? colorScheme.onSurface
-        : colorScheme.onSurfaceVariant;
-    final color = widget.isSelected ? colorScheme.secondary : unselectedColor;
+    final selectedColor = colorScheme.onSecondary;
+    final unselectedColor = colorScheme.onSecondary.withOpacity(0.6);
+    final color = widget.isSelected ? selectedColor : unselectedColor;
 
     final size = widget.isSelected && widget.selectedIconSize != null
         ? widget.selectedIconSize!
