@@ -2110,10 +2110,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         // Build items array: image MUST be first for iOS preview thumbnail
+        // iOS share sheet preview works best with file URLs, not UIImage objects
         if let image = shareImage {
-            itemsToShare.append(image)
-            itemsToShare.append(shareText)
-            shareLog("✅ Share items: [image, text] - iOS should show image preview")
+            // Write image to temporary file for proper iOS preview
+            let tempDir = FileManager.default.temporaryDirectory
+            let imageFileName = "snaplook-share-\(UUID().uuidString).jpg"
+            let imageURL = tempDir.appendingPathComponent(imageFileName)
+
+            if let jpegData = image.jpegData(compressionQuality: 0.9) {
+                do {
+                    try jpegData.write(to: imageURL)
+                    itemsToShare.append(imageURL)
+                    itemsToShare.append(shareText)
+                    shareLog("✅ Share items: [imageURL, text] - wrote temp file: \(imageFileName)")
+                } catch {
+                    shareLog("❌ Failed to write temp image file: \(error)")
+                    // Fallback to UIImage if file write fails
+                    itemsToShare.append(image)
+                    itemsToShare.append(shareText)
+                    shareLog("⚠️ Fallback: using UIImage instead of file URL")
+                }
+            } else {
+                shareLog("❌ Failed to convert image to JPEG")
+                itemsToShare.append(image)
+                itemsToShare.append(shareText)
+                shareLog("⚠️ Fallback: using UIImage instead of JPEG")
+            }
         } else {
             itemsToShare.append(shareText)
             shareLog("⚠️ Share items: [text only] - no image available")
