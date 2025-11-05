@@ -315,7 +315,9 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                   maxWidth: 220,
                 ),
                 decoration: BoxDecoration(
-                  color: colorScheme.secondary,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : colorScheme.secondary,
                   borderRadius: BorderRadius.circular(28),
                 ),
                 child: Text(
@@ -323,7 +325,9 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                   style: textTheme.labelLarge?.copyWith(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: colorScheme.onSecondary,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black
+                        : colorScheme.onSecondary,
                     height: 1.5,
                   ),
                 ),

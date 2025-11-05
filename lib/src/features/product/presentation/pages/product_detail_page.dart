@@ -121,7 +121,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Stack(
         children: [
           PageView.builder(
@@ -400,8 +400,12 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFf2003c),
-                          foregroundColor: Colors.white,
+                          backgroundColor: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : const Color(0xFFf2003c),
+                          foregroundColor: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.black
+                              : Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 32),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(28),
