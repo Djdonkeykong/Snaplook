@@ -14,3 +14,4 @@ concurrent-log-handler
 tqdm
 cloudinary
 python-dotenv
+supabase>=2.0.0
