@@ -352,16 +352,9 @@ class _FavoriteCard extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ListTile(
-                  leading:
-                      const Icon(Icons.share_outlined, color: Colors.black, size: 24),
-                  title: const Text(
-                    'Share Product',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                _SheetActionItem(
+                  icon: Icons.share_outlined,
+                  label: 'Share Product',
                   onTap: () {
                     Navigator.pop(context);
                     Share.share(
@@ -370,15 +363,10 @@ class _FavoriteCard extends ConsumerWidget {
                     );
                   },
                 ),
-                ListTile(
-                  leading: const Icon(Icons.link, color: Colors.black, size: 24),
-                  title: const Text(
-                    'Copy Link',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                const SizedBox(height: 8),
+                _SheetActionItem(
+                  icon: Icons.link,
+                  label: 'Copy Link',
                   onTap: () {
                     Navigator.pop(context);
                     if (productUrl.isEmpty) {
@@ -551,6 +539,46 @@ class _FavoriteCard extends ConsumerWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetActionItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _SheetActionItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.black, size: 24),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontWeight: FontWeight.w500,
+                  fontSize: 16,
+                  color: Colors.black,
+                ),
               ),
             ),
           ],
