@@ -1937,38 +1937,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stackView.spacing = 8
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
-        var groupsPresent = Set<CategoryGroup>()
-        for result in detectionResults {
-            groupsPresent.insert(result.categoryGroup)
-        }
-        let groupSummary = groupsPresent.map { $0.displayName }.sorted().joined(separator: ", ")
-        shareLog("Category groups available: [\(groupSummary.isEmpty ? "None" : groupSummary)]")
+        let button = UIButton(type: .system)
+        button.setTitle(CategoryGroup.all.displayName, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
+        button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+        button.layer.cornerRadius = 18
+        button.clipsToBounds = true
+        button.layer.borderWidth = 1
+        button.layer.borderColor = UIColor.systemGray4.cgColor
+        button.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        button.setTitleColor(.white, for: .normal)
+        button.isUserInteractionEnabled = false
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.heightAnchor.constraint(equalToConstant: 36).isActive = true
 
-        var groups: [CategoryGroup?] = [nil] // nil == All
-        groups.append(contentsOf: CategoryGroup.orderedGroups.filter { groupsPresent.contains($0) })
-
-        for group in groups {
-            let button = UIButton(type: .system)
-            let title = group?.displayName ?? CategoryGroup.all.displayName
-            button.setTitle(title, for: .normal)
-            button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
-            button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
-            button.layer.cornerRadius = 18
-            button.clipsToBounds = true
-            button.layer.borderWidth = 1
-            button.layer.borderColor = UIColor.systemGray4.cgColor
-
-            let isSelected = (group == nil && selectedGroup == nil) || (group == selectedGroup)
-            button.backgroundColor = isSelected ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
-            button.setTitleColor(isSelected ? .white : .label, for: .normal)
-
-            button.addTarget(self, action: #selector(categoryFilterTapped(_:)), for: .touchUpInside)
-
-            button.heightAnchor.constraint(equalToConstant: 36).isActive = true
-            button.translatesAutoresizingMaskIntoConstraints = false
-
-            stackView.addArrangedSubview(button)
-        }
+        stackView.addArrangedSubview(button)
 
         scrollView.addSubview(stackView)
         containerView.addSubview(scrollView)
@@ -1991,36 +1974,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     // Convert server category to display name
     @objc private func categoryFilterTapped(_ sender: UIButton) {
-        guard let title = sender.titleLabel?.text else { return }
-
-        if title == CategoryGroup.all.displayName {
-            selectedGroup = nil
-        } else {
-            selectedGroup = CategoryGroup(title: title)
-        }
-
-        if let stackView = categoryFilterView?.subviews.first?.subviews.first as? UIStackView {
-            for case let button as UIButton in stackView.arrangedSubviews {
-                guard let buttonTitle = button.titleLabel?.text else { continue }
-                let buttonGroup = buttonTitle == CategoryGroup.all.displayName ? nil : CategoryGroup(title: buttonTitle)
-                let isSelected = (buttonGroup == nil && selectedGroup == nil) || (buttonGroup == selectedGroup)
-                button.backgroundColor = isSelected ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
-                button.setTitleColor(isSelected ? .white : .label, for: .normal)
-            }
-        }
-
+        // Only "All" chip exists; no filtering required.
         filterResultsByCategory()
     }
 
     private func filterResultsByCategory() {
-        if let selected = selectedGroup {
-            filteredResults = detectionResults.filter { $0.categoryGroup == selected }
-        } else {
-            filteredResults = detectionResults
-        }
-
+        filteredResults = detectionResults
         resultsTableView?.reloadData()
-        shareLog("Filtered to \(filteredResults.count) results for category: \(selectedGroup?.displayName ?? CategoryGroup.all.displayName)")
+        shareLog("Filtered to \(filteredResults.count) results for category: All")
     }
 
     @objc private func saveAllTapped() {
