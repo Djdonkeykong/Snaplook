@@ -218,7 +218,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 color: Color(0xFFf2003c),
                 size: 24,
               ),
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.surface,
             ),
             child: _buildInspirationGrid(inspirationState),
           ),
@@ -714,9 +714,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       isScrollControlled: true,
       useRootNavigator: true,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(
             top: Radius.circular(20),
           ),
         ),
@@ -744,12 +744,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                     const SizedBox(height: 2),
 
                     // Membership type
-                    const Text(
+                    Text(
                       'Premium',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: -0.3,
                       ),
@@ -805,7 +805,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       child: LinearProgressIndicator(
                         value: creditsPercentage,
                         minHeight: 6,
-                        backgroundColor: Colors.grey.shade200,
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         valueColor: const AlwaysStoppedAnimation<Color>(
                             Color(0xFFf2003c)),
                       ),
@@ -835,7 +835,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: IconButton(
                   padding: EdgeInsets.zero,
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: Colors.black, size: 24),
+                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface, size: 24),
                 ),
               ),
             ],

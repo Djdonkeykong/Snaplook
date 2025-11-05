@@ -163,7 +163,7 @@ class AppNavigationExtension extends ThemeExtension<AppNavigationExtension> {
     navBarInactiveIcon: Color(0x8CFFFFFF),
     navBarBadgeBackground: AppColors.secondary,
     navBarBadgeBorder: Colors.white,
-    actionBarBackground: AppColors.secondary,
+    actionBarBackground: Colors.black,
     actionBarIcon: Colors.white,
     actionBarLabel: Colors.white,
   );
