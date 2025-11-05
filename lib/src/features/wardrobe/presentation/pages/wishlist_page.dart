@@ -91,7 +91,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
               ),
             ),
 
-            SizedBox(height: spacing.s),
+            SizedBox(height: spacing.sm),
 
             // Favorites List
             Expanded(
