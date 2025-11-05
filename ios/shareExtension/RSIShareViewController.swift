@@ -1547,16 +1547,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     self.updateProgress(1.0, status: "Analysis complete")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self.stopSmoothProgress()
-                        let originalCount = detectionResponse.results.count
-                        let filteredResults = detectionResponse.results.filter { result in
-                            guard let url = result.purchase_url, !url.isEmpty else { return true }
-                            return !Self.isBannedPurchaseUrl(url)
-                        }
-                        let dropped = originalCount - filteredResults.count
-                        if dropped > 0 {
-                            shareLog("Filtered out \(dropped) result(s) due to banned domains")
-                        }
-                        self.detectionResults = filteredResults
+                        // Server already filters banned domains, trust the server results
+                        self.detectionResults = detectionResponse.results
                         self.isShowingDetectionResults = true
 
                         // Haptic feedback for successful analysis
