@@ -248,6 +248,13 @@ struct DetectionResultItem: Codable {
     var normalizedCategoryConfidence: Int {
         normalizedCategoryAssignment.confidence
     }
+
+    var categoryGroup: CategoryGroup {
+        CategoryGroup.from(
+            normalized: normalizedCategories,
+            productName: product_name
+        )
+    }
 }
 
 enum NormalizedCategory: String, CaseIterable, Hashable {
@@ -296,6 +303,79 @@ private struct CategoryRuleSet {
 struct NormalizedCategoryAssignment {
     let categories: [NormalizedCategory]
     let confidence: Int
+}
+
+enum CategoryGroup: Hashable {
+    case all
+    case clothing
+    case footwear
+    case accessories
+
+    var displayName: String {
+        switch self {
+        case .all: return "All"
+        case .clothing: return "Clothing"
+        case .footwear: return "Footwear"
+        case .accessories: return "Accessories"
+        }
+    }
+
+    init?(title: String) {
+        switch title.lowercased() {
+        case "all": self = .all
+        case "clothing": self = .clothing
+        case "footwear": self = .footwear
+        case "accessories": self = .accessories
+        default: return nil
+        }
+    }
+
+    static let orderedGroups: [CategoryGroup] = [.clothing, .footwear, .accessories]
+
+    static func from(normalized: [NormalizedCategory], productName: String) -> CategoryGroup {
+        let normalizedSet = Set(normalized)
+
+        if normalizedSet.contains(.shoes) {
+            return .footwear
+        }
+
+        if !normalizedSet.intersection(clothingCategories).isEmpty {
+            return .clothing
+        }
+
+        if !normalizedSet.intersection(accessoryCategories).isEmpty {
+            return .accessories
+        }
+
+        let lowerTitle = productName.lowercased()
+        if footwearKeywords.contains(where: lowerTitle.contains) {
+            return .footwear
+        }
+
+        if clothingKeywords.contains(where: lowerTitle.contains) {
+            return .clothing
+        }
+
+        return .accessories
+    }
+
+    private static let clothingCategories: Set<NormalizedCategory> = [
+        .tops, .bottoms, .dresses, .outerwear
+    ]
+
+    private static let accessoryCategories: Set<NormalizedCategory> = [
+        .bags, .accessories, .headwear, .other
+    ]
+
+    private static let footwearKeywords: [String] = [
+        "shoe", "boot", "heel", "sandal", "pump", "loafer", "sneaker",
+        "trainer", "stiletto", "mule", "platform", "slipper"
+    ]
+
+    private static let clothingKeywords: [String] = [
+        "dress", "gown", "skirt", "top", "shirt", "blouse", "jacket",
+        "coat", "hoodie", "sweater", "pant", "trouser", "jean", "short"
+    ]
 }
 
 final class CategoryNormalizer {
@@ -368,7 +448,7 @@ final class CategoryNormalizer {
         )
     ]
 
-    private let minimumScore = 2
+    private let minimumScore = 3
 
     func assignment(for item: DetectionResultItem) -> NormalizedCategoryAssignment {
         let normalizedCategoryKey = item.category.lowercased()
@@ -420,23 +500,28 @@ final class CategoryNormalizer {
         let sorted = scores.sorted { $0.value > $1.value }
         let bestScore = sorted.first?.value ?? 0
 
-        var chosen = sorted.filter { $0.value >= max(minimumScore, bestScore - 1) && $0.value > 0 }.map { $0.key }
+        var chosen = sorted
+            .filter { $0.value >= max(minimumScore, bestScore - 1) && $0.value > 0 }
+            .map { $0.key }
 
-        if chosen.count > 2 {
-            chosen = Array(chosen.prefix(2))
+        if chosen.isEmpty, let mapped = baseMappings[normalizedCategoryKey] {
+            chosen = [mapped]
         }
 
-        let finalConfidence = max(bestScore, 0)
-
-        if chosen.isEmpty || finalConfidence < minimumScore {
-            return NormalizedCategoryAssignment(categories: [.other], confidence: 0)
+        if chosen.isEmpty {
+            chosen = [.other]
+        } else if chosen.count > 2 {
+            chosen = Array(chosen.prefix(2))
         }
 
         if chosen.contains(.other) && chosen.count > 1 {
             chosen.removeAll { $0 == .other }
         }
 
-        return NormalizedCategoryAssignment(categories: chosen, confidence: finalConfidence)
+        return NormalizedCategoryAssignment(
+            categories: chosen,
+            confidence: max(bestScore, 0)
+        )
     }
 }
 
@@ -508,7 +593,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingInstagramUrl: String?
     private var pendingInstagramCompletion: (() -> Void)?
     private var analyzedImageData: Data? // Store the analyzed image for sharing
-    private var selectedCategory: NormalizedCategory? = nil
+    private var selectedGroup: CategoryGroup? = nil
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
     private var progressView: UIProgressView?
@@ -1481,7 +1566,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         shareLog("Calling showDetectionResults with \(self.detectionResults.count) items")
                         for (index, item) in self.detectionResults.prefix(10).enumerated() {
                             let categories = item.normalizedCategories.map { $0.displayName }.joined(separator: ", ")
-                            shareLog("Category normalization [\(index)]: \(categories) (confidence: \(item.normalizedCategoryConfidence)) for \(item.product_name)")
+                            shareLog("Category normalization [\(index)]: \(categories) => \(item.categoryGroup.displayName) (confidence: \(item.normalizedCategoryConfidence)) for \(item.product_name)")
                         }
                         self.showDetectionResults()
                     }
@@ -1713,7 +1798,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Initialize filtered results
         filteredResults = detectionResults
-        selectedCategory = nil
+        selectedGroup = nil
 
         shareLog("Creating category filters...")
         // Create category filter chips
@@ -1852,25 +1937,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stackView.spacing = 8
         stackView.translatesAutoresizingMaskIntoConstraints = false
 
-        var uniqueCategories = Set<NormalizedCategory>()
+        var groupsPresent = Set<CategoryGroup>()
         for result in detectionResults {
-            for category in result.normalizedCategories {
-                uniqueCategories.insert(category)
-            }
+            groupsPresent.insert(result.categoryGroup)
         }
+        let groupSummary = groupsPresent.map { $0.displayName }.sorted().joined(separator: ", ")
+        shareLog("Category groups available: [\(groupSummary.isEmpty ? "None" : groupSummary)]")
 
-        let orderedCategories = NormalizedCategory.preferredOrder
-            .filter { uniqueCategories.contains($0) && $0 != .other }
+        var groups: [CategoryGroup?] = [nil] // nil == All
+        groups.append(contentsOf: CategoryGroup.orderedGroups.filter { groupsPresent.contains($0) })
 
-        var categories: [NormalizedCategory?] = [nil] // nil represents "All"
-        categories.append(contentsOf: orderedCategories)
-        if uniqueCategories.contains(.other) {
-            categories.append(.other)
-        }
-
-        for category in categories {
+        for group in groups {
             let button = UIButton(type: .system)
-            let title = category?.displayName ?? "All"
+            let title = group?.displayName ?? CategoryGroup.all.displayName
             button.setTitle(title, for: .normal)
             button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
             button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
@@ -1879,7 +1958,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             button.layer.borderWidth = 1
             button.layer.borderColor = UIColor.systemGray4.cgColor
 
-            let isSelected = (category == nil && selectedCategory == nil) || (category == selectedCategory)
+            let isSelected = (group == nil && selectedGroup == nil) || (group == selectedGroup)
             button.backgroundColor = isSelected ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
             button.setTitleColor(isSelected ? .white : .label, for: .normal)
 
@@ -1914,17 +1993,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
     @objc private func categoryFilterTapped(_ sender: UIButton) {
         guard let title = sender.titleLabel?.text else { return }
 
-        if title == "All" {
-            selectedCategory = nil
+        if title == CategoryGroup.all.displayName {
+            selectedGroup = nil
         } else {
-            selectedCategory = NormalizedCategory(displayName: title)
+            selectedGroup = CategoryGroup(title: title)
         }
 
         if let stackView = categoryFilterView?.subviews.first?.subviews.first as? UIStackView {
             for case let button as UIButton in stackView.arrangedSubviews {
                 guard let buttonTitle = button.titleLabel?.text else { continue }
-                let buttonCategory = buttonTitle == "All" ? nil : NormalizedCategory(displayName: buttonTitle)
-                let isSelected = (buttonCategory == nil && selectedCategory == nil) || (buttonCategory == selectedCategory)
+                let buttonGroup = buttonTitle == CategoryGroup.all.displayName ? nil : CategoryGroup(title: buttonTitle)
+                let isSelected = (buttonGroup == nil && selectedGroup == nil) || (buttonGroup == selectedGroup)
                 button.backgroundColor = isSelected ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
                 button.setTitleColor(isSelected ? .white : .label, for: .normal)
             }
@@ -1934,23 +2013,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func filterResultsByCategory() {
-        if let selected = selectedCategory {
-            filteredResults = detectionResults.filter { result in
-                let categories = result.normalizedCategories
-                if categories.isEmpty {
-                    return selected == .other
-                }
-                if selected == .other {
-                    return !categories.contains { $0 != .other }
-                }
-                return categories.contains(selected)
-            }
+        if let selected = selectedGroup {
+            filteredResults = detectionResults.filter { $0.categoryGroup == selected }
         } else {
             filteredResults = detectionResults
         }
 
         resultsTableView?.reloadData()
-        shareLog("Filtered to \(filteredResults.count) results for category: \(selectedCategory?.displayName ?? "All")")
+        shareLog("Filtered to \(filteredResults.count) results for category: \(selectedGroup?.displayName ?? CategoryGroup.all.displayName)")
     }
 
     @objc private func saveAllTapped() {
