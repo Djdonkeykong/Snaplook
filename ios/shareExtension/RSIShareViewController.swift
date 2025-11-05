@@ -2410,9 +2410,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         // Debug: List all keys in UserDefaults
-        if let allKeys = defaults.dictionaryRepresentation().keys as? [String] {
-            shareLog("DEBUG: All UserDefaults keys: \(allKeys.joined(separator: ", "))")
-        }
+        let allKeys = Array(defaults.dictionaryRepresentation().keys)
+        shareLog("DEBUG: All UserDefaults keys: \(allKeys.joined(separator: ", "))")
 
         // Fallback to device ID (should not happen if user is authenticated)
         shareLog("WARNING: No Supabase user ID found, using device ID fallback")
