@@ -1591,13 +1591,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let button = UIButton(type: .system)
             button.setTitle(category, for: .normal)
             button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
-            button.contentEdgeInsets = UIEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
-            button.layer.cornerRadius = 28
+            button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+            button.layer.cornerRadius = 18
+            button.clipsToBounds = true
             button.layer.borderWidth = 1
             button.layer.borderColor = UIColor.systemGray4.cgColor
             button.backgroundColor = category == "All" ? UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) : .systemBackground
             button.setTitleColor(category == "All" ? .white : .label, for: .normal)
             button.addTarget(self, action: #selector(categoryFilterTapped(_:)), for: .touchUpInside)
+
+            // Set explicit height for perfect pill shape
+            button.heightAnchor.constraint(equalToConstant: 36).isActive = true
+            button.translatesAutoresizingMaskIntoConstraints = false
+
             stackView.addArrangedSubview(button)
         }
 
