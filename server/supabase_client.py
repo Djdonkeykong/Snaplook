@@ -31,7 +31,7 @@ class SupabaseManager:
                 self._client = None
             else:
                 self._client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-                print("✅ Supabase client initialized")
+                print("Supabase client initialized")
 
     @property
     def client(self) -> Optional[Client]:
@@ -67,8 +67,8 @@ class SupabaseManager:
             user_entry = {
                 'id': user_id,
                 'email': None,
-                'display_name': 'Anonymous User',
-                'is_anonymous': True
+                'full_name': None,
+                'avatar_url': None
             }
 
             response = self.client.table('users')\
@@ -76,16 +76,16 @@ class SupabaseManager:
                 .execute()
 
             if response.data:
-                print(f"✅ Created anonymous user: {user_id}")
+                print(f"Created anonymous user: {user_id}")
                 return True
             else:
-                print(f"❌ Failed to create user: {user_id}")
+                print(f"Failed to create user: {user_id}")
                 return False
 
         except Exception as e:
             # User might have been created by another request (race condition)
             if 'duplicate key' in str(e).lower() or 'unique constraint' in str(e).lower():
-                print(f"✅ User already exists (race condition): {user_id}")
+                print(f"User already exists (race condition): {user_id}")
                 return True
             print(f"User creation error: {e}")
             return False
@@ -113,7 +113,7 @@ class SupabaseManager:
                     .execute()
 
                 if response.data:
-                    print(f"✅ Cache HIT for URL: {image_url[:50]}...")
+                    print(f"Cache HIT for URL: {image_url[:50]}...")
                     return response.data
 
             # Try by hash if URL miss
@@ -126,10 +126,10 @@ class SupabaseManager:
                     .execute()
 
                 if response.data:
-                    print(f"✅ Cache HIT for hash: {image_hash[:16]}...")
+                    print(f"Cache HIT for hash: {image_hash[:16]}...")
                     return response.data
 
-            print(f"❌ Cache MISS for image")
+            print(f"Cache MISS for image")
             return None
 
         except Exception as e:
@@ -172,7 +172,7 @@ class SupabaseManager:
 
             if response.data:
                 cache_id = response.data[0]['id']
-                print(f"✅ Stored in cache: {cache_id}")
+                print(f"Stored in cache: {cache_id}")
                 return cache_id
 
             return None
@@ -225,7 +225,7 @@ class SupabaseManager:
 
             if response.data:
                 search_id = response.data[0]['id']
-                print(f"✅ Created user search: {search_id}")
+                print(f"Created user search: {search_id}")
                 return search_id
 
             return None
@@ -291,7 +291,7 @@ class SupabaseManager:
 
             if response.data:
                 favorite_id = response.data[0]['id']
-                print(f"✅ Added favorite: {favorite_id}")
+                print(f"Added favorite: {favorite_id}")
                 return favorite_id
 
             return None
@@ -373,7 +373,7 @@ class SupabaseManager:
 
             if response.data:
                 saved_id = response.data[0]['id']
-                print(f"✅ Saved search: {saved_id}")
+                print(f"Saved search: {saved_id}")
                 return saved_id
 
             return None

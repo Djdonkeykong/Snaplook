@@ -100,7 +100,7 @@ async def analyze_with_caching(
 
         # Step 2: Cache HIT - Return instant results
         if cache_entry:
-            print(f"✅ CACHE HIT - Returning instant results")
+            print(f"CACHE HIT - Returning instant results")
 
             # Calculate cache age
             cache_age = None
@@ -127,7 +127,7 @@ async def analyze_with_caching(
                         source_username=request.source_username
                     )
                 else:
-                    print(f"⚠️ Could not ensure user exists: {request.user_id}")
+                    print(f"WARNING: Could not ensure user exists: {request.user_id}")
 
             return AnalyzeResponse(
                 success=True,
@@ -141,7 +141,7 @@ async def analyze_with_caching(
             )
 
         # Step 3: Cache MISS - Run full analysis
-        print(f"❌ CACHE MISS - Running full analysis")
+        print(f"CACHE MISS - Running full analysis")
 
         # Import the existing detection function
         # NOTE: You'll need to modify fashion_detector_server.py to export this function
@@ -201,7 +201,7 @@ async def analyze_with_caching(
         )
 
     except Exception as e:
-        print(f"❌ Analyze endpoint error: {e}")
+        print(f"ERROR: Analyze endpoint error: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
