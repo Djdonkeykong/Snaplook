@@ -24,6 +24,7 @@ import 'src/shared/services/video_preloader.dart';
 import 'src/shared/services/share_import_status.dart';
 import 'src/services/link_scraper_service.dart';
 import 'src/services/share_extension_config_service.dart';
+import 'src/features/auth/domain/services/auth_service.dart';
 import 'dart:io';
 import 'core/theme/theme_mode_notifier.dart';
 
@@ -99,6 +100,14 @@ void main() async {
       localStorage: SharedPreferencesLocalStorage(),
     ),
   );
+
+  // Sync auth state to share extension
+  try {
+    final authService = AuthService();
+    await authService.syncAuthState();
+  } catch (e) {
+    debugPrint('[Auth] Failed to sync auth state: $e');
+  }
 
   // Preload video immediately on app startup
   VideoPreloader.instance.preloadShareVideo();

@@ -12,6 +12,11 @@ class AuthService {
 
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
+  // Initialize and sync current auth state to share extension
+  Future<void> syncAuthState() async {
+    await _updateAuthFlag(isAuthenticated);
+  }
+
   // Update the authentication flag and user ID for share extension via method channel
   Future<void> _updateAuthFlag(bool isAuthenticated) async {
     try {
