@@ -138,3 +138,6 @@ flutter:
     - family: snaplook-add-icon
       fonts:
         - asset: assets/fonts/snaplook-add-icon.ttf
+    - family: solar--history-bold-new
+      fonts:
+        - asset: assets/fonts/solar--history-bold-new.ttf

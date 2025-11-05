@@ -9,6 +9,7 @@ import '../../../favorites/domain/models/favorite_item.dart';
 import '../../../product/presentation/pages/product_detail_page.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
+import '../../../../../core/constants/history_icon.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 
 class WishlistPage extends ConsumerStatefulWidget {
@@ -75,8 +76,9 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         actions: [
           IconButton(
             icon: Icon(
-              Icons.history,
+              Solar__history_bold_new.solarHistoryBoldNew,
               color: colorScheme.onSurface,
+              size: 24,
             ),
             onPressed: () {
               Navigator.of(context).pushNamed('/history');
