@@ -46,10 +46,6 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   Widget build(BuildContext context) {
     final selectedImage = ref.watch(selectedImageProvider);
     final detectionState = ref.watch(detectionProvider);
-    final notifier = ref.read(detectionProvider.notifier);
-
-    const categories = ['all'];
-    const selectedCategory = 'all';
     final results = detectionState.results;
 
     final spacing = context.spacing;
@@ -159,57 +155,20 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
                       ),
                     ),
                     SizedBox(height: spacing.m),
-                    // Category filter chips - edge to edge with 16px content inset
-                    SizedBox(
-                      height: 50,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: EdgeInsets.symmetric(horizontal: spacing.m),
-                        itemCount: categories.length,
-                        itemBuilder: (context, index) {
-                          final category = categories[index];
-                          final isSelected =
-                              selectedCategory == category.toLowerCase();
-                          return Container(
-                            margin: EdgeInsets.only(
-                              right: index < categories.length - 1
-                                  ? spacing.sm
-                                  : 0,
-                            ),
-                            child: FilterChip(
-                              label: Text(
-                                category[0].toUpperCase() +
-                                    category.substring(1),
-                                style: TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: isSelected ? Colors.white : Colors.black,
-                                ),
-                              ),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                notifier.setSelectedCategory(category);
-                              },
-                              backgroundColor: Colors.white,
-                              selectedColor: const Color(0xFFf2003c),
-                              showCheckmark: false,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                side: BorderSide(
-                                  color: isSelected
-                                      ? const Color(0xFFf2003c)
-                                      : const Color(0xFFD1D5DB),
-                                  width: 1,
-                                ),
-                              ),
-                              side: BorderSide.none,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          );
-                        },
+                    // Category filter chips - mirror share extension styling
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: SizedBox(
+                        height: 36,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                          child: Row(
+                            children: const [
+                              _AllResultsChip(),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                     SizedBox(height: spacing.sm),
@@ -405,6 +364,36 @@ class _ResultsBackground extends StatelessWidget {
     }
 
     return SizedBox.expand(child: child);
+  }
+}
+
+class _AllResultsChip extends StatelessWidget {
+  const _AllResultsChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2003C),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFFAFAFB4),
+          width: 1,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'All',
+        style: TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+          color: Colors.white,
+        ),
+      ),
+    );
   }
 }
 
