@@ -237,8 +237,16 @@ struct DetectionResultItem: Codable {
         return nil
     }
 
+    var normalizedCategoryAssignment: NormalizedCategoryAssignment {
+        CategoryNormalizer.shared.assignment(for: self)
+    }
+
     var normalizedCategories: [NormalizedCategory] {
-        CategoryNormalizer.shared.normalizedCategories(for: self)
+        normalizedCategoryAssignment.categories
+    }
+
+    var normalizedCategoryConfidence: Int {
+        normalizedCategoryAssignment.confidence
     }
 }
 
@@ -283,6 +291,11 @@ enum NormalizedCategory: String, CaseIterable, Hashable {
 private struct CategoryRuleSet {
     let positives: [String]
     let negatives: [String]
+}
+
+struct NormalizedCategoryAssignment {
+    let categories: [NormalizedCategory]
+    let confidence: Int
 }
 
 final class CategoryNormalizer {
@@ -355,14 +368,14 @@ final class CategoryNormalizer {
         )
     ]
 
-    private let minimumScore = 2
+    private let minimumScore = 3
 
-    func normalizedCategories(for item: DetectionResultItem) -> [NormalizedCategory] {
+    func assignment(for item: DetectionResultItem) -> NormalizedCategoryAssignment {
         let normalizedCategoryKey = item.category.lowercased()
         var scores: [NormalizedCategory: Int] = [:]
 
         if let mapped = baseMappings[normalizedCategoryKey] {
-            scores[mapped, default: 0] += 3
+            scores[mapped, default: 0] += 2
         }
 
         let sourceText = [
@@ -374,14 +387,31 @@ final class CategoryNormalizer {
             .joined(separator: " ")
             .lowercased()
             .replacingOccurrences(of: "[^a-z0-9\\s]", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let tokens: Set<String> = Set(
+            sourceText
+                .split(separator: " ")
+                .map { String($0) }
+                .filter { !$0.isEmpty }
+        )
+
+        func containsKeyword(_ keyword: String) -> Bool {
+            let key = keyword.lowercased()
+            if key.contains(" ") {
+                return sourceText.contains(key)
+            }
+            return tokens.contains(key)
+        }
 
         for (category, ruleSet) in ruleSets {
             var score = scores[category, default: 0]
-            for keyword in ruleSet.positives where sourceText.contains(keyword) {
-                score += 1
+            for keyword in ruleSet.positives where containsKeyword(keyword) {
+                score += 2
             }
-            for keyword in ruleSet.negatives where sourceText.contains(keyword) {
-                score -= 2
+            for keyword in ruleSet.negatives where containsKeyword(keyword) {
+                score -= 3
             }
             scores[category] = score
         }
@@ -392,21 +422,21 @@ final class CategoryNormalizer {
 
         var chosen = sorted.filter { $0.value >= max(minimumScore, bestScore - 1) && $0.value > 0 }.map { $0.key }
 
-        if chosen.isEmpty, let mapped = baseMappings[normalizedCategoryKey] {
-            chosen = [mapped]
-        }
-
-        if chosen.isEmpty {
-            chosen = [.other]
-        } else if chosen.count > 2 {
+        if chosen.count > 2 {
             chosen = Array(chosen.prefix(2))
         }
 
-        if chosen.contains(.other), chosen.count > 1 {
+        let finalConfidence = max(bestScore, 0)
+
+        if chosen.isEmpty || finalConfidence < minimumScore {
+            return NormalizedCategoryAssignment(categories: [.other], confidence: 0)
+        }
+
+        if chosen.contains(.other) && chosen.count > 1 {
             chosen.removeAll { $0 == .other }
         }
 
-        return chosen
+        return NormalizedCategoryAssignment(categories: chosen, confidence: finalConfidence)
     }
 }
 
@@ -1400,6 +1430,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         generator.impactOccurred()
 
                         shareLog("Calling showDetectionResults with \(self.detectionResults.count) items")
+                        for (index, item) in self.detectionResults.prefix(10).enumerated() {
+                            let categories = item.normalizedCategories.map { $0.displayName }.joined(separator: ", ")
+                            shareLog("Category normalization [\(index)]: \(categories) (confidence: \(item.normalizedCategoryConfidence)) for \(item.product_name)")
+                        }
                         self.showDetectionResults()
                     }
                 } else {
