@@ -2385,15 +2385,39 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func getUserId() -> String {
         // Get Supabase auth user ID from shared UserDefaults
-        if let defaults = UserDefaults(suiteName: appGroupId),
-           let userId = defaults.string(forKey: "supabase_user_id"),
-           !userId.isEmpty {
-            return userId
+        guard let defaults = UserDefaults(suiteName: appGroupId) else {
+            shareLog("ERROR: Could not access shared UserDefaults with appGroupId: \(appGroupId)")
+            if let deviceId = UIDevice.current.identifierForVendor?.uuidString {
+                return deviceId
+            }
+            return "anonymous"
+        }
+
+        // Check if user is authenticated
+        let isAuthenticated = defaults.bool(forKey: "is_authenticated")
+        shareLog("getUserId - isAuthenticated flag: \(isAuthenticated)")
+
+        // Try to get Supabase user ID
+        if let userId = defaults.string(forKey: "supabase_user_id") {
+            if userId.isEmpty {
+                shareLog("WARNING: supabase_user_id exists but is EMPTY")
+            } else {
+                shareLog("getUserId - Using Supabase user ID: \(userId)")
+                return userId
+            }
+        } else {
+            shareLog("WARNING: supabase_user_id key NOT FOUND in UserDefaults")
+        }
+
+        // Debug: List all keys in UserDefaults
+        if let allKeys = defaults.dictionaryRepresentation().keys as? [String] {
+            shareLog("DEBUG: All UserDefaults keys: \(allKeys.joined(separator: ", "))")
         }
 
         // Fallback to device ID (should not happen if user is authenticated)
         shareLog("WARNING: No Supabase user ID found, using device ID fallback")
         if let deviceId = UIDevice.current.identifierForVendor?.uuidString {
+            shareLog("Using device ID: \(deviceId)")
             return deviceId
         }
         return "anonymous"

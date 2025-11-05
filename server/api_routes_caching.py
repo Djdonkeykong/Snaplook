@@ -242,14 +242,17 @@ async def analyze_with_caching(
 
 @router.post("/favorites")
 async def add_favorite(request: FavoriteRequest):
-    """Add product to favorites table"""
+    """Add product to favorites table (idempotent)"""
     if not supabase_manager.enabled:
         raise HTTPException(status_code=503, detail="Database not available")
 
     product = request.product
+    product_id = product.get('id', product.get('product_id', ''))
+
+    # Try to add favorite
     favorite_id = supabase_manager.add_favorite(
         user_id=request.user_id,
-        product_id=product.get('id', product.get('product_id', '')),
+        product_id=product_id,
         product_name=product.get('product_name', ''),
         brand=product.get('brand', ''),
         price=float(product.get('price', 0)),
@@ -259,9 +262,15 @@ async def add_favorite(request: FavoriteRequest):
     )
 
     if favorite_id:
-        return {"success": True, "favorite_id": favorite_id}
+        return {"success": True, "favorite_id": favorite_id, "already_existed": False}
     else:
-        raise HTTPException(status_code=400, detail="Failed to add favorite or already exists")
+        # If it returns None, it means it already exists (duplicate)
+        # Make this idempotent - check if it exists and return success
+        existing = supabase_manager.get_existing_favorite(request.user_id, product_id)
+        if existing:
+            return {"success": True, "favorite_id": existing['id'], "already_existed": True}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to add favorite")
 
 
 @router.delete("/favorites/{favorite_id}")

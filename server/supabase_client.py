@@ -302,6 +302,35 @@ class SupabaseManager:
             print(f"Add favorite error: {e}")
             return None
 
+    def get_existing_favorite(
+        self,
+        user_id: str,
+        product_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Check if a favorite already exists for this user and product.
+        Returns the favorite entry if it exists, None otherwise.
+        """
+        if not self.enabled:
+            return None
+
+        try:
+            response = self.client.table('favorites')\
+                .select('*')\
+                .eq('user_id', user_id)\
+                .eq('product_id', product_id)\
+                .limit(1)\
+                .execute()
+
+            if response.data and len(response.data) > 0:
+                return response.data[0]
+
+            return None
+
+        except Exception as e:
+            print(f"Get existing favorite error: {e}")
+            return None
+
     def remove_favorite(self, user_id: str, favorite_id: str) -> bool:
         """Remove a favorite"""
         if not self.enabled:

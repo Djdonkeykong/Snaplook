@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 class AuthService {
   final _supabase = Supabase.instance.client;
   static const _authChannel = MethodChannel('snaplook/auth');
+  StreamSubscription<AuthState>? _authSubscription;
 
   User? get currentUser => _supabase.auth.currentUser;
   bool get isAuthenticated => currentUser != null;
@@ -15,19 +16,38 @@ class AuthService {
   // Initialize and sync current auth state to share extension
   Future<void> syncAuthState() async {
     await _updateAuthFlag(isAuthenticated);
+
+    // Also listen for auth state changes and sync automatically
+    _authSubscription?.cancel();
+    _authSubscription = _supabase.auth.onAuthStateChange.listen((authState) {
+      print('[Auth] Auth state changed: ${authState.event}');
+      _updateAuthFlag(authState.session != null);
+    });
+  }
+
+  void dispose() {
+    _authSubscription?.cancel();
   }
 
   // Update the authentication flag and user ID for share extension via method channel
   Future<void> _updateAuthFlag(bool isAuthenticated) async {
     try {
       final userId = isAuthenticated ? currentUser?.id : null;
+
+      // IMPORTANT: Always send the current state, even if null
+      // This ensures old user_id values are cleared from UserDefaults
       await _authChannel.invokeMethod('setAuthFlag', {
         'isAuthenticated': isAuthenticated,
-        'userId': userId,
+        'userId': userId,  // Will be null if not authenticated, clearing old values
       });
-      print('Auth flag set to: $isAuthenticated, userId: $userId');
+
+      if (isAuthenticated && userId != null) {
+        print('[Auth] Synced to share extension - authenticated with userId: $userId');
+      } else {
+        print('[Auth] Synced to share extension - NOT authenticated, cleared user_id');
+      }
     } catch (e) {
-      print('Error updating auth flag: $e');
+      print('[Auth] Error updating auth flag: $e');
     }
   }
 
