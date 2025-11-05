@@ -2073,17 +2073,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareText += "Get Snaplook to find your fashion matches: https://snaplook.app"
 
-        // Prepare items to share
-        var itemsToShare: [Any] = [shareText]
-        var imageAdded = false
+        // Prepare items to share - build array with image first for proper iOS preview
+        var itemsToShare: [Any] = []
+        var shareImage: UIImage?
 
-        // Try to add the analyzed image if available
+        // Try to get the analyzed image
         if let imageData = analyzedImageData {
             shareLog("Attempting to create UIImage from \(imageData.count) bytes")
             if let image = UIImage(data: imageData) {
-                itemsToShare.insert(image, at: 0) // Image first, then text
-                shareLog("✅ Successfully added analyzed image to share (size: \(image.size))")
-                imageAdded = true
+                shareImage = image
+                shareLog("✅ Successfully loaded analyzed image (size: \(image.size))")
             } else {
                 shareLog("❌ ERROR: Failed to create UIImage from imageData")
             }
@@ -2092,7 +2091,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         // Fallback: Try to use the first product's image if original image unavailable
-        if !imageAdded && !detectionResults.isEmpty {
+        if shareImage == nil && !detectionResults.isEmpty {
             if let firstProduct = detectionResults.first {
                 let imageUrlString = firstProduct.image_url
                 if !imageUrlString.isEmpty, let imageUrl = URL(string: imageUrlString) {
@@ -2101,9 +2100,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     // Download image synchronously (we're already in share flow)
                     if let imageData = try? Data(contentsOf: imageUrl),
                        let image = UIImage(data: imageData) {
-                        itemsToShare.insert(image, at: 0)
-                        shareLog("✅ Successfully added product image as fallback (size: \(image.size))")
-                        imageAdded = true
+                        shareImage = image
+                        shareLog("✅ Successfully loaded product image as fallback (size: \(image.size))")
                     } else {
                         shareLog("❌ Failed to download fallback image")
                     }
@@ -2111,8 +2109,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
         }
 
-        if !imageAdded {
-            shareLog("⚠️ No image could be added to share sheet - sharing text only")
+        // Build items array: image MUST be first for iOS preview thumbnail
+        if let image = shareImage {
+            itemsToShare.append(image)
+            itemsToShare.append(shareText)
+            shareLog("✅ Share items: [image, text] - iOS should show image preview")
+        } else {
+            itemsToShare.append(shareText)
+            shareLog("⚠️ Share items: [text only] - no image available")
         }
 
         // Present iOS share sheet
