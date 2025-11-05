@@ -373,6 +373,34 @@ class SupabaseManager:
             print(f"Get user favorites error: {e}")
             return []
 
+    def check_favorited_products(
+        self,
+        user_id: str,
+        product_ids: List[str]
+    ) -> List[str]:
+        """
+        Check which product IDs from the list are already favorited by this user.
+        Returns a list of product_ids that exist in favorites.
+        """
+        if not self.enabled or not product_ids:
+            return []
+
+        try:
+            response = self.client.table('favorites')\
+                .select('product_id')\
+                .eq('user_id', user_id)\
+                .in_('product_id', product_ids)\
+                .execute()
+
+            if response.data:
+                return [fav['product_id'] for fav in response.data]
+
+            return []
+
+        except Exception as e:
+            print(f"Check favorited products error: {e}")
+            return []
+
     # ============================================
     # SAVED SEARCHES
     # ============================================

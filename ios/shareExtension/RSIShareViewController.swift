@@ -610,6 +610,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingPostMessage: String?
     private let maxInstagramScrapeAttempts = 2
     private var detectionResults: [DetectionResultItem] = []
+    private var favoritedProductIds: Set<String> = []
     private var filteredResults: [DetectionResultItem] = []
     private var resultsTableView: UITableView?
     private var downloadedImageUrl: String?
@@ -1950,6 +1951,86 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
+    // Check which products are already favorited
+    private func checkFavoriteStatus(completion: @escaping () -> Void) {
+        guard let serverBaseUrl = getServerBaseUrl() else {
+            shareLog("Cannot check favorites - no server URL")
+            completion()
+            return
+        }
+
+        let productIds = detectionResults.map { $0.id }
+        guard !productIds.isEmpty else {
+            completion()
+            return
+        }
+
+        let userId = getUserId()
+        let endpoint = serverBaseUrl + "/api/v1/users/\(userId)/favorites/check"
+
+        guard let url = URL(string: endpoint) else {
+            shareLog("Invalid favorites check URL")
+            completion()
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: productIds) else {
+            shareLog("Failed to serialize product IDs")
+            completion()
+            return
+        }
+
+        request.httpBody = jsonData
+        request.timeoutInterval = 10.0
+
+        shareLog("Checking favorite status for \(productIds.count) products")
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else {
+                completion()
+                return
+            }
+
+            if let error = error {
+                shareLog("Favorites check network error: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion() }
+                return
+            }
+
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            shareLog("Favorites check response - status code: \(statusCode)")
+
+            guard statusCode == 200, let data = data else {
+                shareLog("Favorites check failed or returned non-200 status")
+                DispatchQueue.main.async { completion() }
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let favoritedIds = json["favorited_product_ids"] as? [String] {
+                    shareLog("Found \(favoritedIds.count) already-favorited products")
+                    DispatchQueue.main.async {
+                        self.favoritedProductIds = Set(favoritedIds)
+                        completion()
+                    }
+                } else {
+                    shareLog("Failed to parse favorites check response")
+                    DispatchQueue.main.async { completion() }
+                }
+            } catch {
+                shareLog("Error parsing favorites check: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion() }
+            }
+        }
+
+        task.resume()
+    }
+
     // Show detection results in table view
     private func showDetectionResults() {
         shareLog("=== showDetectionResults START ===")
@@ -1973,6 +2054,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // REQUEST EXTENDED EXECUTION TIME to prevent iOS from killing the extension
         // while user is browsing results. Critical for real device stability.
         requestExtendedExecution()
+
+        // Check which products are already favorited before showing UI
+        checkFavoriteStatus {
+            self.displayResultsUI()
+        }
+    }
+
+    private func displayResultsUI() {
 
         // Hide loading indicator
         activityIndicator?.stopAnimating()
@@ -3957,20 +4046,25 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "ResultCell", for: indexPath) as! ResultCell
         let result = filteredResults[indexPath.row]
-        cell.configure(with: result)
+        let isFavorited = favoritedProductIds.contains(result.id)
+        cell.configure(with: result, isFavorited: isFavorited)
 
         // Set favorite toggle callback
         cell.onFavoriteToggle = { [weak self] product, isFavorite in
             if isFavorite {
                 // Add to favorites
+                self?.favoritedProductIds.insert(product.id)
                 self?.addFavoriteToBackend(product: product) { success in
                     if !success {
                         shareLog("Failed to add favorite to backend")
+                        // Revert on failure
+                        self?.favoritedProductIds.remove(product.id)
                     }
                 }
             } else {
-                // TODO: Implement remove favorite
-                // For now, favorites are only added, not removed from backend
+                // Remove from local set
+                self?.favoritedProductIds.remove(product.id)
+                // TODO: Implement remove favorite from backend
                 shareLog("Remove favorite - not yet implemented")
             }
         }
@@ -4182,7 +4276,7 @@ class ResultCell: UITableViewCell {
         ])
     }
 
-    func configure(with result: DetectionResultItem) {
+    func configure(with result: DetectionResultItem, isFavorited: Bool = false) {
         // Store product for favorite callback
         self.product = result
 
@@ -4213,8 +4307,8 @@ class ResultCell: UITableViewCell {
             }.resume()
         }
 
-        // Reset favorite state for reused cells
-        isFavorite = false
+        // Set favorite state (checking if already favorited)
+        isFavorite = isFavorited
         updateFavoriteAppearance(animated: false)
     }
 

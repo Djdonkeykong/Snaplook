@@ -303,6 +303,22 @@ async def get_favorites(user_id: str, limit: int = 50, offset: int = 0):
     }
 
 
+@router.post("/users/{user_id}/favorites/check")
+async def check_favorites(user_id: str, product_ids: List[str]):
+    """
+    Check which product IDs are already favorited by the user.
+    Returns a list of product_ids that are in favorites.
+    """
+    if not supabase_manager.enabled:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    favorited_ids = supabase_manager.check_favorited_products(user_id, product_ids)
+
+    return {
+        "favorited_product_ids": favorited_ids
+    }
+
+
 # ============================================
 # SAVED SEARCHES ENDPOINTS
 # ============================================
