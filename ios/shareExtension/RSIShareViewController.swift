@@ -1482,6 +1482,122 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     // Call detection API with image URL and base64 payload
+    private func checkCacheForInstagram(url: String, completion: @escaping (Bool) -> Void) {
+        shareLog("Checking cache for Instagram URL: \(url)")
+
+        guard let serverBaseUrl = getServerBaseUrl() else {
+            shareLog("ERROR: Could not determine server base URL for cache check")
+            completion(false)
+            return
+        }
+
+        // Construct cache check endpoint with query parameter
+        guard var components = URLComponents(string: serverBaseUrl + "/api/v1/cache/check") else {
+            shareLog("ERROR: Failed to create URL components for cache check")
+            completion(false)
+            return
+        }
+
+        components.queryItems = [URLQueryItem(name: "source_url", value: url)]
+
+        guard let checkUrl = components.url else {
+            shareLog("ERROR: Failed to build cache check URL")
+            completion(false)
+            return
+        }
+
+        var request = URLRequest(url: checkUrl)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 10.0
+
+        shareLog("Sending cache check request to: \(checkUrl)")
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else {
+                completion(false)
+                return
+            }
+
+            if let error = error {
+                shareLog("Cache check network error: \(error.localizedDescription)")
+                completion(false)
+                return
+            }
+
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            shareLog("Cache check response - status code: \(statusCode)")
+
+            guard statusCode == 200, let data = data else {
+                shareLog("Cache check failed or returned non-200 status")
+                completion(false)
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let cached = json["cached"] as? Bool ?? false
+
+                    if cached {
+                        shareLog("Cache HIT - processing cached results")
+
+                        // Extract cached data
+                        let totalResults = json["total_results"] as? Int ?? 0
+                        let cacheId = json["cache_id"] as? String
+                        let detectedGarmentsArray = json["detected_garments"] as? [[String: Any]] ?? []
+                        let searchResultsArray = json["search_results"] as? [[String: Any]] ?? []
+
+                        shareLog("Cache data: \(totalResults) results, cache_id: \(cacheId ?? "nil")")
+
+                        // Convert JSON arrays to DetectionResultItem
+                        var results: [DetectionResultItem] = []
+                        for resultDict in searchResultsArray {
+                            if let jsonData = try? JSONSerialization.data(withJSONObject: resultDict),
+                               let item = try? JSONDecoder().decode(DetectionResultItem.self, from: jsonData) {
+                                results.append(item)
+                            }
+                        }
+
+                        shareLog("Parsed \(results.count) cached results")
+
+                        // Store cache_id for favorites functionality
+                        self.currentImageCacheId = cacheId
+
+                        // Note: We don't have a search_id from cache check endpoint
+                        // search_id is only created when user actually analyzes (not when checking cache)
+                        self.currentSearchId = nil
+
+                        // Update UI with cached results
+                        DispatchQueue.main.async {
+                            self.updateProgress(1.0, status: "Loaded from cache")
+                            self.stopSmoothProgress()
+
+                            let sanitized = self.sanitize(results: results)
+                            self.detectionResults = sanitized
+                            self.isShowingDetectionResults = true
+
+                            // Haptic feedback for successful cache hit
+                            let generator = UIImpactFeedbackGenerator(style: .medium)
+                            generator.impactOccurred()
+
+                            shareLog("Displaying \(self.detectionResults.count) cached results")
+                            self.showDetectionResults()
+                        }
+
+                        completion(true)
+                    } else {
+                        shareLog("Cache MISS - no cached results available")
+                        completion(false)
+                    }
+                }
+            } catch {
+                shareLog("ERROR: Failed to parse cache check response: \(error.localizedDescription)")
+                completion(false)
+            }
+        }
+
+        task.resume()
+    }
+
     private func runDetectionAnalysis(imageUrl: String?, imageBase64: String) {
         let urlForLog = imageUrl ?? "<nil>"
         shareLog("START runDetectionAnalysis - imageUrl: \(urlForLog), base64 length: \(imageBase64.count)")
@@ -3685,58 +3801,75 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Check if this is an Instagram URL (before download) or direct image (after download)
         if let instagramUrl = pendingInstagramUrl {
-            shareLog("Downloading Instagram media and starting detection")
+            shareLog("Instagram URL detected - checking cache first")
 
-            // Start download process with detection flow
+            // Start UI setup early
             updateProcessingStatus("processing")
             setupLoadingUI()
 
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
 
-                // Stop the default status polling since we're now managing status ourselves
                 self.stopStatusPolling()
-
                 self.startSmoothProgress()
                 self.targetProgress = 0.05
 
-                // Start rotating status messages for the fetch phase
-                let fetchMessages = [
-                    "Fetching your photo...",
-                    "Downloading image..."
-                ]
-                self.startStatusRotation(messages: fetchMessages, interval: 2.5)
+                let checkingMessages = ["Checking cache..."]
+                self.startStatusRotation(messages: checkingMessages, interval: 2.5)
             }
 
-            downloadInstagramMedia(from: instagramUrl) { [weak self] result in
+            // Check cache before downloading
+            checkCacheForInstagram(url: instagramUrl) { [weak self] isCached in
                 guard let self = self else { return }
 
-                switch result {
-                case .success(let downloaded):
-                    if downloaded.isEmpty {
-                        shareLog("Instagram download succeeded but returned no files")
-                        self.dismissWithError()
-                    } else {
-                        // Get the first downloaded file and start detection
-                        if let firstFile = downloaded.first,
-                           let fileURL = URL(string: firstFile.path),
-                           let imageData = try? Data(contentsOf: fileURL) {
-                            shareLog("Downloaded Instagram image, starting detection with \(imageData.count) bytes")
-                            self.uploadAndDetect(imageData: imageData)
-                        } else {
-                            shareLog("ERROR: Could not read downloaded Instagram file")
+                if isCached {
+                    shareLog("Cache HIT - skipping Instagram download")
+                    // Results already displayed by checkCacheForInstagram
+                    self.pendingInstagramCompletion = nil
+                    self.pendingInstagramUrl = nil
+                } else {
+                    shareLog("Cache MISS - proceeding with Instagram download")
+
+                    DispatchQueue.main.async {
+                        // Start rotating status messages for the fetch phase
+                        let fetchMessages = [
+                            "Fetching your photo...",
+                            "Downloading image..."
+                        ]
+                        self.startStatusRotation(messages: fetchMessages, interval: 2.5)
+                    }
+
+                    self.downloadInstagramMedia(from: instagramUrl) { [weak self] result in
+                        guard let self = self else { return }
+
+                        switch result {
+                        case .success(let downloaded):
+                            if downloaded.isEmpty {
+                                shareLog("Instagram download succeeded but returned no files")
+                                self.dismissWithError()
+                            } else {
+                                // Get the first downloaded file and start detection
+                                if let firstFile = downloaded.first,
+                                   let fileURL = URL(string: firstFile.path),
+                                   let imageData = try? Data(contentsOf: fileURL) {
+                                    shareLog("Downloaded Instagram image, starting detection with \(imageData.count) bytes")
+                                    self.uploadAndDetect(imageData: imageData)
+                                } else {
+                                    shareLog("ERROR: Could not read downloaded Instagram file")
+                                    self.dismissWithError()
+                                }
+                            }
+
+                            // DON'T call completion - we're analyzing now, not redirecting
+                            // The extension will stay open for detection results
+                            self.pendingInstagramCompletion = nil
+                            self.pendingInstagramUrl = nil
+
+                        case .failure(let error):
+                            shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
                             self.dismissWithError()
                         }
                     }
-
-                    // DON'T call completion - we're analyzing now, not redirecting
-                    // The extension will stay open for detection results
-                    self.pendingInstagramCompletion = nil
-                    self.pendingInstagramUrl = nil
-
-                case .failure(let error):
-                    shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
-                    self.dismissWithError()
                 }
             }
         } else if let imageData = pendingImageData {

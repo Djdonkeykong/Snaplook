@@ -57,6 +57,33 @@ class SaveSearchRequest(BaseModel):
 
 
 # ============================================
+# CACHE CHECK ENDPOINT
+# ============================================
+
+@router.get("/cache/check")
+async def check_cache(source_url: str):
+    """
+    Check if we have cached results for an Instagram/source URL.
+    Returns cache status and results if found.
+    """
+    if not supabase_manager.enabled:
+        return {"cached": False}
+
+    cache_entry = supabase_manager.check_cache_by_source(source_url)
+
+    if cache_entry:
+        return {
+            "cached": True,
+            "cache_id": cache_entry.get('id'),
+            "total_results": cache_entry.get('total_results', 0),
+            "detected_garments": cache_entry.get('detected_garments', []),
+            "search_results": cache_entry.get('search_results', [])
+        }
+    else:
+        return {"cached": False}
+
+
+# ============================================
 # ANALYZE ENDPOINT WITH CACHING
 # ============================================
 
