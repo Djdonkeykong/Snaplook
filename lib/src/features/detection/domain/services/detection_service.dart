@@ -558,6 +558,17 @@ class DetectionService {
     ];
     if (banned.any((term) => lower.contains(term))) return false;
 
+    const bannedPatterns = [
+      r'\bwig\b',
+      r'\bwigs\b',
+      r'\bwiglets?\b',
+      r'\bwig[-\s]?caps?\b',
+      r'\blace[-\s]?front\b',
+    ];
+    for (final pattern in bannedPatterns) {
+      if (RegExp(pattern).hasMatch(lower)) return false;
+    }
+
     // Γ£à expected garment keywords
     const garmentKeywords = [
       'dress',

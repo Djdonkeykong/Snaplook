@@ -14,7 +14,7 @@ class DetectionState {
     this.isAnalyzing = false,
     this.error,
     this.results = const [],
-    this.selectedCategory = 'all', // ✅ default "All"
+    this.selectedCategory = 'all', // default "All"
   });
 
   DetectionState copyWith({
@@ -38,6 +38,14 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
 
   DetectionNotifier(this._detectionService) : super(const DetectionState());
 
+  static final List<RegExp> _bannedResultPatterns = [
+    RegExp(r'\bwig\b', caseSensitive: false),
+    RegExp(r'\bwigs\b', caseSensitive: false),
+    RegExp(r'\bwiglets?\b', caseSensitive: false),
+    RegExp(r'\bwig[-\s]?caps?\b', caseSensitive: false),
+    RegExp(r'\blace[-\s]?front\b', caseSensitive: false),
+  ];
+
   // === Core image analysis ===
   Future<List<DetectionResult>> analyzeImage(
     XFile? image, {
@@ -56,14 +64,22 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
       );
       print('DetectionProvider: Analysis completed, ${results.length} results');
 
-      // ✅ Ensure category resets to "All" on each new detection
+      final sanitizedResults =
+          results.where(_isAllowedResult).toList(growable: false);
+      if (sanitizedResults.length != results.length) {
+        print(
+          'DetectionProvider: Filtered ${results.length - sanitizedResults.length} banned results',
+        );
+      }
+
+      // Ensure category resets to "All" on each new detection
       state = state.copyWith(
         isAnalyzing: false,
-        results: results,
+        results: sanitizedResults,
         selectedCategory: 'all',
       );
 
-      return results;
+      return sanitizedResults;
     } catch (e) {
       print('DetectionProvider: Analysis failed - $e');
       state = state.copyWith(
@@ -81,7 +97,7 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
 
   // === Clear ===
   void clearResults() {
-    // ✅ Reset everything including selectedCategory = "all"
+    // Reset everything including selectedCategory = "all"
     state = const DetectionState(selectedCategory: 'all');
   }
 
@@ -116,6 +132,23 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
         .where((r) => r.category.toLowerCase() == state.selectedCategory)
         .toList();
   }
+
+  bool _isAllowedResult(DetectionResult result) {
+    final fields = [
+      result.productName,
+      result.brand,
+      result.description ?? '',
+      result.purchaseUrl ?? '',
+      ...result.tags,
+    ].join(' ');
+
+    for (final pattern in _bannedResultPatterns) {
+      if (pattern.hasMatch(fields)) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 /// === Providers ===
@@ -127,3 +160,4 @@ final detectionProvider =
     StateNotifierProvider<DetectionNotifier, DetectionState>((ref) {
   return DetectionNotifier(ref.watch(detectionServiceProvider));
 });
+

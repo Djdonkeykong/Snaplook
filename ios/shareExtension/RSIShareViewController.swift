@@ -608,6 +608,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var headerContainerView: UIView?
     private var headerLogoImageView: UIImageView?
     private var cancelButtonView: UIButton?
+    private let bannedKeywordPatterns: [NSRegularExpression] = [
+        try! NSRegularExpression(pattern: "\\bwig\\b", options: [.caseInsensitive]),
+        try! NSRegularExpression(pattern: "\\bwigs\\b", options: [.caseInsensitive]),
+        try! NSRegularExpression(pattern: "\\bwiglets?\\b", options: [.caseInsensitive]),
+        try! NSRegularExpression(pattern: "\\bwig[-\\s]?caps?\\b", options: [.caseInsensitive]),
+        try! NSRegularExpression(pattern: "\\blace[-\\s]?front\\b", options: [.caseInsensitive])
+    ]
 
     private static let bannedContentDomainRoots: Set<String> = [
         "facebook.com","instagram.com","twitter.com","x.com","pinterest.com",
@@ -1547,8 +1554,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     self.updateProgress(1.0, status: "Analysis complete")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self.stopSmoothProgress()
-                        // Server already filters banned domains, trust the server results
-                        self.detectionResults = detectionResponse.results
+                        let serverResults = detectionResponse.results
+                        let sanitized = self.sanitize(results: serverResults)
+                        if sanitized.count != serverResults.count {
+                            shareLog("Sanitized \(serverResults.count - sanitized.count) banned keyword results")
+                        }
+                        self.detectionResults = sanitized
                         self.isShowingDetectionResults = true
 
                         // Haptic feedback for successful analysis
@@ -1975,6 +1986,27 @@ open class RSIShareViewController: SLComposeServiceViewController {
         filteredResults = detectionResults
         resultsTableView?.reloadData()
         shareLog("Filtered to \(filteredResults.count) results for category: All")
+    }
+
+    private func sanitize(results: [DetectionResultItem]) -> [DetectionResultItem] {
+        return results.filter { isAllowed(result: $0) }
+    }
+
+    private func isAllowed(result: DetectionResultItem) -> Bool {
+        let fields = [
+            result.product_name,
+            result.brand ?? "",
+            result.description ?? "",
+            result.purchase_url ?? ""
+        ].joined(separator: " ")
+
+        let range = NSRange(location: 0, length: (fields as NSString).length)
+        for regex in bannedKeywordPatterns {
+            if regex.firstMatch(in: fields, options: [], range: range) != nil {
+                return false
+            }
+        }
+        return true
     }
 
     @objc private func saveAllTapped() {

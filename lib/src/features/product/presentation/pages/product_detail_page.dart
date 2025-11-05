@@ -285,10 +285,23 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                     ),
                   ),
                   onTap: () {
+                    final renderBox = context.findRenderObject() as RenderBox?;
+                    final mediaSize = MediaQuery.of(context).size;
+
+                    Rect shareOrigin = Offset.zero & mediaSize;
+                    if (renderBox != null && renderBox.hasSize) {
+                      final size = renderBox.size;
+                      if (!size.isEmpty) {
+                        final position = renderBox.localToGlobal(Offset.zero);
+                        shareOrigin = position & size;
+                      }
+                    }
+
                     Navigator.pop(context);
                     Share.share(
                       'Check out this $productBrand $productTitle on Snaplook! $productUrl',
                       subject: '$productBrand $productTitle',
+                      sharePositionOrigin: shareOrigin,
                     );
                   },
                 ),

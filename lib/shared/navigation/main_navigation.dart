@@ -255,9 +255,22 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   }
 
   void _shareApp() {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    final mediaSize = MediaQuery.of(context).size;
+
+    Rect shareOrigin = Offset.zero & mediaSize;
+    if (renderBox != null && renderBox.hasSize) {
+      final size = renderBox.size;
+      if (!size.isEmpty) {
+        final position = renderBox.localToGlobal(Offset.zero);
+        shareOrigin = position & size;
+      }
+    }
+
     Share.share(
       'Check out Snaplook - The AI-powered fashion discovery app! Find similar clothing items by taking photos. Download now!',
       subject: 'Discover Fashion with Snaplook',
+      sharePositionOrigin: shareOrigin,
     );
   }
 }
