@@ -762,13 +762,13 @@ def fashion_score(result: dict, price: Union[float, int, str, dict, list, tuple,
 def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
     """
     Deduplicate results by domain with caps:
-    - Marketplaces/aggregators: max 1
-    - Tier-1: max 7
-    - Trusted retail: max 5
-    - Others: max 3
+    - Marketplaces/aggregators: max 5 (increased from 1)
+    - Tier-1: max 10 (increased from 7)
+    - Trusted retail: max 8 (increased from 5)
+    - Others: max 5 (increased from 3)
 
     Prefer PDPs over collection pages within each domain.
-    Ported from Flutter detection_service.dart
+    More generous caps to ensure users get 10+ good results per garment.
     """
     # Sort by fashion score
     results.sort(key=lambda r: fashion_score(r), reverse=True)
@@ -792,15 +792,17 @@ def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
         is_aggregator = domain_matches_any(domain, AGGREGATOR_DOMAINS)
         is_trusted_retail = domain_matches_any(domain, TRUSTED_RETAIL_DOMAINS)
 
-        # Determine cap
-        if is_marketplace or is_aggregator:
-            cap = 1
+        # Determine cap - INCREASED caps for better results
+        if is_aggregator:
+            cap = 3  # Aggregators still capped lower
+        elif is_marketplace:
+            cap = 5  # Allow multiple products from Amazon, eBay, etc.
         elif is_tier1:
-            cap = 7
+            cap = 10  # Premium retailers get more slots
         elif is_trusted_retail:
-            cap = 5
+            cap = 8  # Good retailers like Zara, H&M get plenty of slots
         else:
-            cap = 3
+            cap = 5  # Even unknown domains get more chances
 
         if domain not in by_domain:
             by_domain[domain] = []
@@ -1107,6 +1109,13 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
 
     filtered = list(deduped.values())
 
+    # Enforce minimum shoe confidence
+    before_shoe_filter = len(filtered)
+    filtered = [d for d in filtered if not (d['label'] == 'shoe' and d.get('score', 0.0) < 0.8)]
+    removed_shoes = before_shoe_filter - len(filtered)
+    if removed_shoes > 0:
+        print(f"?? Removing {removed_shoes} shoe detection(s) below confidence 0.80")
+
     # Sort + limit
     filtered = sorted(
         filtered,
@@ -1211,7 +1220,7 @@ def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List
                 'price': price,
             })
 
-            if len(results) >= max_results * 2:  # Fetch extra before dedup
+            if len(results) >= max_results * 3:  # Fetch more before dedup (increased from 2x to 3x)
                 break
 
     except requests.exceptions.Timeout:
@@ -1478,7 +1487,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
             1 for r in all_results
             if not looks_like_collection(r.get('purchase_url', ''), r.get('product_name', ''))
         )
-        if pdp_count >= 10:
+        if pdp_count >= 15:  # Only remove collection pages if we have plenty of PDPs (increased from 10)
             before = len(all_results)
             all_results = [
                 r for r in all_results
@@ -1657,3 +1666,4 @@ def debug_detect(req: DetectRequest):
 @app.get("/")
 def root():
     return {"message": "Fashion Detector API is running!"}
+
