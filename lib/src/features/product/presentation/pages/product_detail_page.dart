@@ -383,9 +383,9 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                       ElevatedButton(
                         onPressed: () async {
                           try {
-                            final productUrl = widget.product['url'] as String?;
+                            final productUrl = _resolveProductUrl(widget.product);
 
-                            if (productUrl == null || productUrl.isEmpty) {
+                            if (productUrl.isEmpty) {
                               _showSnackBar('No product link available');
                               return;
                             }

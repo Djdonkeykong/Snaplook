@@ -331,13 +331,12 @@ class _FavoriteCard extends ConsumerWidget {
   String _resolveProductUrl() {
     final candidates = [
       favorite.purchaseUrl,
-      favorite.productId,
     ];
 
     for (final candidate in candidates) {
       if (candidate == null) continue;
       final trimmed = candidate.trim();
-      if (trimmed.isNotEmpty && trimmed.startsWith('http')) {
+      if (trimmed.isNotEmpty) {
         return trimmed;
       }
     }
