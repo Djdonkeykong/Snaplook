@@ -17,17 +17,16 @@ class SupabaseService {
         '[SupabaseService] getUserSearches user=$userId limit=$limit offset=$offset',
       );
 
-      final response = await client
-          .from('user_searches')
-          .select(
-            'id, user_id, search_type, source_url, source_username, created_at, image_cache_id, '
-            'saved:user_saved_searches!left (id)',
-          )
-          .eq('user_id', userId)
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
+      final response = await client.rpc(
+        'get_user_searches_with_cache',
+        params: {
+          'p_user_id': userId,
+          'p_limit': limit,
+          'p_offset': offset,
+        },
+      );
 
-      final searches = List<Map<String, dynamic>>.from(response);
+      final searches = List<Map<String, dynamic>>.from(response as List);
       final cacheIds = searches
           .map((search) => search['image_cache_id'] as String?)
           .whereType<String>()
