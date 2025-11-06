@@ -18,6 +18,7 @@ final historyProvider =
     return const [];
   }
 
+  debugPrint('[History] Fetching history for user $userId');
   return await supabaseService.getUserSearches(userId: userId);
 });
 

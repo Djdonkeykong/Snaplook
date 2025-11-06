@@ -13,6 +13,7 @@ class SupabaseService {
     int offset = 0,
   }) async {
     try {
+      print('[SupabaseService] getUserSearches user=$userId limit=$limit offset=$offset');
       final response = await client
           .from('v_user_recent_searches')
           .select()
@@ -20,6 +21,7 @@ class SupabaseService {
           .order('created_at', ascending: false)
           .range(offset, offset + limit - 1);
 
+      print('[SupabaseService] getUserSearches returned ${response.length} rows');
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       print('Error fetching user searches: $e');
