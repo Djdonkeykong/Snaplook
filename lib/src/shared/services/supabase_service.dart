@@ -37,6 +37,11 @@ class SupabaseService {
         final totalResults =
             (imageCache['total_results'] as num?)?.toInt() ?? 0;
 
+        print(
+          '[SupabaseService] mapped search id=${search['id']} cache=${imageCache['id']} '
+          'cloudinary=${imageCache['cloudinary_url']} total=$totalResults',
+        );
+
         return {
           'id': search['id'],
           'user_id': search['user_id'],
