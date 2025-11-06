@@ -3,14 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/services/supabase_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-final historyProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+final historyProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final supabaseService = SupabaseService();
-  // TODO: Replace with actual user ID from auth
-  const userId = 'temp-user-id';
+  final userId = Supabase.instance.client.auth.currentUser?.id;
+
+  if (userId == null) {
+    debugPrint('[History] No authenticated user - returning empty history');
+    return const [];
+  }
+
   return await supabaseService.getUserSearches(userId: userId);
 });
 
