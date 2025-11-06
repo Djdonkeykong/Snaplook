@@ -29,9 +29,10 @@ class SupabaseService {
 
       final searches = List<Map<String, dynamic>>.from(response);
       final mapped = <Map<String, dynamic>>[];
+
       for (final search in searches) {
         final cacheId = search['image_cache_id'] as String?;
-        Map<String, dynamic> imageCache = {};
+        Map<String, dynamic> cacheData = {};
         int totalResults = 0;
         List<dynamic>? detectedGarments;
         List<dynamic>? searchResults;
@@ -47,13 +48,16 @@ class SupabaseService {
                 .maybeSingle();
 
             if (cacheResponse != null) {
-              imageCache = Map<String, dynamic>.from(cacheResponse);
+              print(
+                '[SupabaseService] cache response for $cacheId -> $cacheResponse',
+              );
+              cacheData = Map<String, dynamic>.from(cacheResponse);
               totalResults =
-                  (imageCache['total_results'] as num?)?.toInt() ?? 0;
+                  (cacheData['total_results'] as num?)?.toInt() ?? 0;
               detectedGarments =
-                  imageCache['detected_garments'] as List<dynamic>?;
+                  cacheData['detected_garments'] as List<dynamic>?;
               searchResults =
-                  imageCache['search_results'] as List<dynamic>?;
+                  cacheData['search_results'] as List<dynamic>?;
             }
           } catch (e) {
             print('Error fetching cache entry $cacheId: $e');
@@ -64,7 +68,7 @@ class SupabaseService {
 
         print(
           '[SupabaseService] mapped search id=${search['id']} cache=$cacheId '
-          'cloudinary=${imageCache['cloudinary_url']} total=$totalResults',
+          'cloudinary=${cacheData['cloudinary_url']} total=$totalResults',
         );
 
         mapped.add({
@@ -74,8 +78,8 @@ class SupabaseService {
           'source_url': search['source_url'],
           'source_username': search['source_username'],
           'created_at': search['created_at'],
-          'image_cache_id': search['image_cache_id'],
-          'cloudinary_url': imageCache['cloudinary_url'],
+          'image_cache_id': cacheId,
+          'cloudinary_url': cacheData['cloudinary_url'],
           'total_results': totalResults,
           'detected_garments': detectedGarments,
           'search_results': searchResults,
