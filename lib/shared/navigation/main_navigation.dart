@@ -167,6 +167,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                           onTap: () => _handleTabTap(1),
                           iconSize: 25.0,
                           selectedIconSize: 29.0,
+                          iconOffset: const Offset(-2, 0),
+                          selectedIconOffset: Offset.zero,
                         ),
                         if (favoritesCount > 0)
                           Positioned(
