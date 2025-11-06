@@ -218,6 +218,58 @@ class _HistoryCard extends StatelessWidget {
     required this.radius,
   });
 
+  void _shareSearch(BuildContext context) {
+    final sourceLabel = _getSourceLabel();
+    final totalResults = (search['total_results'] as num?)?.toInt() ?? 0;
+    final resultsLabel =
+        totalResults == 1 ? '1 product' : '$totalResults products';
+    final sourceUrl = (search['source_url'] as String?)?.trim() ?? '';
+
+    final message = sourceUrl.isNotEmpty
+        ? 'Check out this $sourceLabel Snaplook search – $resultsLabel found: $sourceUrl'
+        : 'Check out this $sourceLabel Snaplook search – $resultsLabel found!';
+
+    Share.share(
+      message,
+      subject: 'Snaplook $sourceLabel search',
+    );
+  }
+
+  void _copyLink(BuildContext context) {
+    final messenger = ScaffoldMessenger.of(context);
+    final sourceUrl = (search['source_url'] as String?)?.trim() ?? '';
+
+    if (sourceUrl.isEmpty) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'No link available for this search.',
+            style: context.snackTextStyle(
+              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    Clipboard.setData(ClipboardData(text: sourceUrl));
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          'Search link copied to clipboard',
+          style: context.snackTextStyle(
+            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+          ),
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   String _getSourceLabel() {
     final searchType = search['search_type'] as String?;
     switch (searchType) {
