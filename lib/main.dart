@@ -25,6 +25,7 @@ import 'src/shared/services/share_import_status.dart';
 import 'src/services/link_scraper_service.dart';
 import 'src/services/share_extension_config_service.dart';
 import 'src/features/auth/domain/services/auth_service.dart';
+import 'src/features/favorites/domain/providers/favorites_provider.dart';
 import 'dart:io';
 import 'core/theme/theme_mode_notifier.dart';
 
@@ -301,6 +302,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       _checkForPendingSharedMediaOnResume();
       // Also sync auth state when app resumes
       _syncAuthState();
+      _refreshFavoritesOnResume();
     }
     super.didChangeAppLifecycleState(state);
   }
@@ -326,6 +328,25 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       debugPrint('[Auth] Sync complete');
     } catch (e) {
       debugPrint('[Auth] Failed to sync auth state: $e');
+    }
+  }
+
+  void _refreshFavoritesOnResume() {
+    if (!mounted) {
+      return;
+    }
+
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      debugPrint('[Favorites] Skipping refresh - no authenticated user');
+      return;
+    }
+
+    try {
+      debugPrint('[Favorites] Refreshing favorites after resume');
+      unawaited(ref.read(favoritesProvider.notifier).refresh());
+    } catch (e) {
+      debugPrint('[Favorites] Failed to refresh favorites on resume: $e');
     }
   }
 
