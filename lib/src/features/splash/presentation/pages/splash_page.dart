@@ -44,15 +44,11 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     // Now check if user is authenticated
     final isAuthenticated = ref.read(isAuthenticatedProvider);
 
-    // Set auth flag for share extension via method channel
-    try {
-      const authChannel = MethodChannel('snaplook/auth');
-      await authChannel.invokeMethod('setAuthFlag', {
-        'isAuthenticated': isAuthenticated,
-      });
-      print('Auth flag set on app start: $isAuthenticated');
-    } catch (e) {
-      print('Error setting auth flag on app start: $e');
+    // Ensure share extension receives the latest auth state via AuthService.
+    // This avoids racing MethodChannel calls that might send a null userId.
+    if (mounted) {
+      final authService = ref.read(authServiceProvider);
+      await authService.syncAuthState();
     }
 
     final nextPage =
