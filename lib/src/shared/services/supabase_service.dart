@@ -17,58 +17,57 @@ class SupabaseService {
         '[SupabaseService] getUserSearches user=$userId limit=$limit offset=$offset',
       );
 
-      final response = await client.rpc(
-        'get_user_searches_with_cache',
-        params: {
-          'p_user_id': userId,
-          'p_limit': limit,
-          'p_offset': offset,
-        },
-      );
+      final response = await client
+          .from('user_searches')
+          .select(
+            'id, user_id, search_type, source_url, source_username, created_at, image_cache_id, '
+            'saved:user_saved_searches!left (id)',
+          )
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
 
-      final searches = List<Map<String, dynamic>>.from(response as List);
-      final cacheIds = searches
-          .map((search) => search['image_cache_id'] as String?)
-          .whereType<String>()
-          .toSet()
-          .toList();
-
-      final Map<String, Map<String, dynamic>> cacheById = {};
-      if (cacheIds.isNotEmpty) {
-        try {
-          final quotedIds = cacheIds.map((id) => "'$id'").join(',');
-          final cacheResponse = await client
-              .from('image_cache')
-              .select(
-                'id, cloudinary_url, total_results, detected_garments, search_results',
-              )
-              .filter('id', 'in', '($quotedIds)');
-
-          final cacheList = List<Map<String, dynamic>>.from(cacheResponse);
-          for (final cache in cacheList) {
-            final cacheId = cache['id'];
-            if (cacheId is String) {
-              cacheById[cacheId] = cache;
-            }
-          }
-        } catch (e) {
-          print('Error fetching image cache entries: $e');
-        }
-      }
-
-      final mapped = searches.map<Map<String, dynamic>>((search) {
+      final searches = List<Map<String, dynamic>>.from(response);
+      final mapped = <Map<String, dynamic>>[];
+      for (final search in searches) {
         final cacheId = search['image_cache_id'] as String?;
-        final imageCache = cacheId != null ? cacheById[cacheId] ?? {} : {};
+        Map<String, dynamic> imageCache = {};
+        int totalResults = 0;
+        List<dynamic>? detectedGarments;
+        List<dynamic>? searchResults;
+
+        if (cacheId != null) {
+          try {
+            final cacheResponse = await client
+                .from('image_cache')
+                .select(
+                  'cloudinary_url, total_results, detected_garments, search_results',
+                )
+                .eq('id', cacheId)
+                .maybeSingle();
+
+            if (cacheResponse != null) {
+              imageCache = Map<String, dynamic>.from(cacheResponse);
+              totalResults =
+                  (imageCache['total_results'] as num?)?.toInt() ?? 0;
+              detectedGarments =
+                  imageCache['detected_garments'] as List<dynamic>?;
+              searchResults =
+                  imageCache['search_results'] as List<dynamic>?;
+            }
+          } catch (e) {
+            print('Error fetching cache entry $cacheId: $e');
+          }
+        }
+
         final savedEntries = (search['saved'] as List<dynamic>?);
-        final totalResults =
-            (imageCache['total_results'] as num?)?.toInt() ?? 0;
 
         print(
           '[SupabaseService] mapped search id=${search['id']} cache=$cacheId '
           'cloudinary=${imageCache['cloudinary_url']} total=$totalResults',
         );
 
-        return {
+        mapped.add({
           'id': search['id'],
           'user_id': search['user_id'],
           'search_type': search['search_type'],
@@ -78,11 +77,11 @@ class SupabaseService {
           'image_cache_id': search['image_cache_id'],
           'cloudinary_url': imageCache['cloudinary_url'],
           'total_results': totalResults,
-          'detected_garments': imageCache['detected_garments'],
-          'search_results': imageCache['search_results'],
+          'detected_garments': detectedGarments,
+          'search_results': searchResults,
           'is_saved': savedEntries != null && savedEntries.isNotEmpty,
-        };
-      }).toList();
+        });
+      }
 
       print(
         '[SupabaseService] getUserSearches returned ${mapped.length} rows',
