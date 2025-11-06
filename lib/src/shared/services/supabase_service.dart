@@ -58,6 +58,8 @@ class SupabaseService {
                   cacheData['detected_garments'] as List<dynamic>?;
               searchResults =
                   cacheData['search_results'] as List<dynamic>?;
+            } else {
+              print('[SupabaseService] cache miss for $cacheId');
             }
           } catch (e) {
             print('Error fetching cache entry $cacheId: $e');
