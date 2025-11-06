@@ -64,26 +64,33 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         elevation: 0,
         scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
+        centerTitle: false,
+        titleSpacing: spacing.l,
         title: Text(
           'My Wishlist',
-          style: textTheme.headlineMedium?.copyWith(
-            fontSize: 24,
-            letterSpacing: -0.5,
+          style: TextStyle(
+            fontSize: 30,
+            fontFamily: 'PlusJakartaSans',
+            letterSpacing: -1.0,
             fontWeight: FontWeight.bold,
+            height: 1.3,
             color: colorScheme.onSurface,
           ),
         ),
         actions: [
-          IconButton(
-            icon: Icon(
-              Solar__history_bold_new.solarHistoryBoldNew,
-              color: colorScheme.onSurface,
-              size: 24,
+          Padding(
+            padding: EdgeInsets.only(right: spacing.l),
+            child: IconButton(
+              icon: Icon(
+                Solar__history_bold_new.solarHistoryBoldNew,
+                color: colorScheme.onSurface,
+                size: 24,
+              ),
+              onPressed: () {
+                Navigator.of(context).pushNamed('/history');
+              },
+              tooltip: 'Search History',
             ),
-            onPressed: () {
-              Navigator.of(context).pushNamed('/history');
-            },
-            tooltip: 'Search History',
           ),
         ],
       ),
