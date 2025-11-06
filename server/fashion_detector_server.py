@@ -1443,9 +1443,14 @@ def run_full_detection_pipeline(
             {"garment": det, "crop_url": url}
             for det, url in results if url
         ]
-        # Set main cloudinary_url to first crop
         if crops_with_urls:
-            uploaded_cloudinary_url = crops_with_urls[0]["crop_url"]
+            # Upload the full original image so we can persist a holistic preview for history.
+            full_image_url = upload_to_cloudinary(image, "full-image")
+            if full_image_url:
+                uploaded_cloudinary_url = full_image_url
+            else:
+                # Fallback to the first crop if full upload fails.
+                uploaded_cloudinary_url = crops_with_urls[0]["crop_url"]
     else:
         return {'success': False, 'message': 'No image available for processing'}
 
