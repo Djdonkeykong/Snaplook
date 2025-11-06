@@ -153,7 +153,7 @@ class AppConstants {
     );
     return isLocal
         ? 'http://10.0.0.25:8000/detect'
-        : 'https://snaplook-fastapi-detector.onrender.com/detect';
+        : 'https://46316c23a294.ngrok-free.app/detect';
   }
 
   static String _defaultDetectAndSearchEndpoint() {
@@ -163,7 +163,7 @@ class AppConstants {
     );
     return isLocal
         ? 'http://10.0.0.25:8000/detect-and-search'
-        : 'https://snaplook-fastapi-detector.onrender.com/detect-and-search';
+        : 'https://46316c23a294.ngrok-free.app/detect-and-search';
   }
 
   // === 🐝 ScrapingBee Keys ===
