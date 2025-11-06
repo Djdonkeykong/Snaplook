@@ -138,17 +138,18 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               children: [
                 Expanded(
                   child: Center(
-                    child: _NavigationItem(
-                      icon: SnaplookIcons.homeOutline,
-                      selectedIcon: SnaplookIcons.homeFilled,
-                      label: 'Home',
-                      index: 0,
-                      isSelected: selectedIndex == 0,
-                      onTap: () => _handleTabTap(0),
-                      iconSize: 25.0,
-                      selectedIconSize: 26.0,
-                      iconOffset: const Offset(-12, 0),
-                      selectedIconOffset: const Offset(-12, 0),
+                    child: Transform.translate(
+                      offset: const Offset(-8, 0),
+                      child: _NavigationItem(
+                        icon: SnaplookIcons.homeOutline,
+                        selectedIcon: SnaplookIcons.homeFilled,
+                        label: 'Home',
+                        index: 0,
+                        isSelected: selectedIndex == 0,
+                        onTap: () => _handleTabTap(0),
+                        iconSize: 25.0,
+                        selectedIconSize: 26.0,
+                      ),
                     ),
                   ),
                 ),
@@ -166,8 +167,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                           onTap: () => _handleTabTap(1),
                           iconSize: 25.0,
                           selectedIconSize: 29.0,
-                          selectedIconOffset: Offset.zero,
-                          iconOffset: Offset.zero,
                         ),
                         if (favoritesCount > 0)
                           Positioned(
@@ -209,17 +208,18 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                 ),
                 Expanded(
                   child: Center(
-                    child: _NavigationItem(
-                      icon: SnaplookIcons.profileOutline,
-                      selectedIcon: SnaplookIcons.profileFilled,
-                      label: 'Profile',
-                      index: 2,
-                      isSelected: selectedIndex == 2,
-                      onTap: () => _handleTabTap(2),
-                      iconSize: 25.0,
-                      selectedIconSize: 26.0,
-                      iconOffset: const Offset(12, 0),
-                      selectedIconOffset: const Offset(12, 0),
+                    child: Transform.translate(
+                      offset: const Offset(8, 0),
+                      child: _NavigationItem(
+                        icon: SnaplookIcons.profileOutline,
+                        selectedIcon: SnaplookIcons.profileFilled,
+                        label: 'Profile',
+                        index: 2,
+                        isSelected: selectedIndex == 2,
+                        onTap: () => _handleTabTap(2),
+                        iconSize: 25.0,
+                        selectedIconSize: 26.0,
+                      ),
                     ),
                   ),
                 ),
