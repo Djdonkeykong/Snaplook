@@ -37,12 +37,13 @@ class SupabaseService {
       final Map<String, Map<String, dynamic>> cacheById = {};
       if (cacheIds.isNotEmpty) {
         try {
+          final quotedIds = cacheIds.map((id) => "'$id'").join(',');
           final cacheResponse = await client
               .from('image_cache')
               .select(
                 'id, cloudinary_url, total_results, detected_garments, search_results',
               )
-              .filter('id', 'in', '(${cacheIds.join(',')})');
+              .filter('id', 'in', '($quotedIds)');
 
           final cacheList = List<Map<String, dynamic>>.from(cacheResponse);
           for (final cache in cacheList) {
