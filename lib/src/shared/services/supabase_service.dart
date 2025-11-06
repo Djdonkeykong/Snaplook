@@ -20,8 +20,7 @@ class SupabaseService {
       final response = await client
           .from('user_searches')
           .select(
-            'id, user_id, search_type, source_url, source_username, created_at, '
-            'image_cache:image_cache_id (id, cloudinary_url, total_results, detected_garments, search_results), '
+            'id, user_id, search_type, source_url, source_username, created_at, image_cache_id, '
             'saved:user_saved_searches!left (id)',
           )
           .eq('user_id', userId)
@@ -29,16 +28,43 @@ class SupabaseService {
           .range(offset, offset + limit - 1);
 
       final searches = List<Map<String, dynamic>>.from(response);
+      final cacheIds = searches
+          .map((search) => search['image_cache_id'] as String?)
+          .whereType<String>()
+          .toSet()
+          .toList();
+
+      final Map<String, Map<String, dynamic>> cacheById = {};
+      if (cacheIds.isNotEmpty) {
+        try {
+          final cacheResponse = await client
+              .from('image_cache')
+              .select(
+                'id, cloudinary_url, total_results, detected_garments, search_results',
+              )
+              .in_('id', cacheIds);
+
+          final cacheList = List<Map<String, dynamic>>.from(cacheResponse);
+          for (final cache in cacheList) {
+            final cacheId = cache['id'];
+            if (cacheId is String) {
+              cacheById[cacheId] = cache;
+            }
+          }
+        } catch (e) {
+          print('Error fetching image cache entries: $e');
+        }
+      }
 
       final mapped = searches.map<Map<String, dynamic>>((search) {
-        final imageCache =
-            (search['image_cache'] as Map<String, dynamic>?) ?? {};
+        final cacheId = search['image_cache_id'] as String?;
+        final imageCache = cacheId != null ? cacheById[cacheId] ?? {} : {};
         final savedEntries = (search['saved'] as List<dynamic>?);
         final totalResults =
             (imageCache['total_results'] as num?)?.toInt() ?? 0;
 
         print(
-          '[SupabaseService] mapped search id=${search['id']} cache=${imageCache['id']} '
+          '[SupabaseService] mapped search id=${search['id']} cache=$cacheId '
           'cloudinary=${imageCache['cloudinary_url']} total=$totalResults',
         );
 
@@ -49,7 +75,7 @@ class SupabaseService {
           'source_url': search['source_url'],
           'source_username': search['source_username'],
           'created_at': search['created_at'],
-          'image_cache_id': imageCache['id'],
+          'image_cache_id': search['image_cache_id'],
           'cloudinary_url': imageCache['cloudinary_url'],
           'total_results': totalResults,
           'detected_garments': imageCache['detected_garments'],
