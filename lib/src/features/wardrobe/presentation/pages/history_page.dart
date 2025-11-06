@@ -254,7 +254,7 @@ class _HistoryCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final cloudinaryUrl = search['cloudinary_url'] as String?;
-    final totalResults = search['total_results'] as int? ?? 0;
+    final totalResults = (search['total_results'] as num?)?.toInt() ?? 0;
     final createdAt = search['created_at'] as String?;
     final sourceUsername = search['source_username'] as String?;
     final isSaved = search['is_saved'] as bool? ?? false;

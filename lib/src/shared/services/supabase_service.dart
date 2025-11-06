@@ -34,6 +34,8 @@ class SupabaseService {
         final imageCache =
             (search['image_cache'] as Map<String, dynamic>?) ?? {};
         final savedEntries = (search['saved'] as List<dynamic>?);
+        final totalResults =
+            (imageCache['total_results'] as num?)?.toInt() ?? 0;
 
         return {
           'id': search['id'],
@@ -44,7 +46,7 @@ class SupabaseService {
           'created_at': search['created_at'],
           'image_cache_id': imageCache['id'],
           'cloudinary_url': imageCache['cloudinary_url'],
-          'total_results': imageCache['total_results'],
+          'total_results': totalResults,
           'detected_garments': imageCache['detected_garments'],
           'search_results': imageCache['search_results'],
           'is_saved': savedEntries != null && savedEntries.isNotEmpty,
