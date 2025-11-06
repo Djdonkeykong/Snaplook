@@ -87,7 +87,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                 size: 24,
               ),
               onPressed: () {
-                Navigator.of(context).pushNamed('/history');
+                Navigator.of(context, rootNavigator: true).pushNamed('/history');
               },
               tooltip: 'Search History',
             ),
