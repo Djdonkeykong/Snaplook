@@ -130,10 +130,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
           ),
         ),
         child: SafeArea(
-          minimum: const EdgeInsets.only(bottom: 6),
+          minimum: const EdgeInsets.only(bottom: 4),
           child: Container(
-            height: 64, // slightly taller for easier tap
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+            height: 56, // slimmer bar for a lighter footprint
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Row(
               children: [
                 Expanded(
@@ -147,6 +147,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                       onTap: () => _handleTabTap(0),
                       iconSize: 25.0,
                       selectedIconSize: 26.0,
+                      iconOffset: const Offset(-12, 0),
+                      selectedIconOffset: const Offset(-12, 0),
                     ),
                   ),
                 ),
@@ -164,8 +166,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                           onTap: () => _handleTabTap(1),
                           iconSize: 25.0,
                           selectedIconSize: 29.0,
-                          selectedIconOffset: const Offset(0, 0),
-                          iconOffset: const Offset(-2, 0),
+                          selectedIconOffset: Offset.zero,
+                          iconOffset: Offset.zero,
                         ),
                         if (favoritesCount > 0)
                           Positioned(
@@ -216,6 +218,8 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                       onTap: () => _handleTabTap(2),
                       iconSize: 25.0,
                       selectedIconSize: 26.0,
+                      iconOffset: const Offset(12, 0),
+                      selectedIconOffset: const Offset(12, 0),
                     ),
                   ),
                 ),
@@ -385,7 +389,7 @@ class _NavigationItemState extends State<_NavigationItem>
       highlightColor: Colors.transparent,
       child: SizedBox(
         width: 80,
-        height: 56,
+        height: 48,
         child: Center(
           child: Padding(
             padding: EdgeInsets.only(top: widget.topPadding ?? 0.0),
