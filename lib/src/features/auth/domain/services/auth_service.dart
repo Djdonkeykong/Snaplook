@@ -20,7 +20,22 @@ class AuthService {
     print('[AuthService] isAuthenticated: $isAuthenticated');
     print('[AuthService] currentUser: ${currentUser?.id ?? "null"}');
 
-    await _updateAuthFlag(isAuthenticated);
+    User? initialUser;
+    if (isAuthenticated) {
+      initialUser = await _waitForAuthenticatedUser(
+        context: 'initial sync',
+        timeout: const Duration(seconds: 2),
+      );
+
+      if (initialUser == null) {
+        print('[Auth] WARNING: Unable to resolve user for initial sync - deferring until auth events fire');
+      }
+    }
+
+    await _updateAuthFlag(
+      isAuthenticated,
+      userId: initialUser?.id,
+    );
 
     // Also listen for auth state changes and sync automatically
     _authSubscription?.cancel();
@@ -37,8 +52,9 @@ class AuthService {
 
       if (hasSession && hasUser) {
         // Valid authenticated state - sync it
-        print('[Auth] Valid auth state - syncing userId: ${authState.session!.user.id}');
-        _updateAuthFlag(true);
+        final userId = authState.session!.user.id;
+        print('[Auth] Valid auth state - syncing userId: $userId');
+        _updateAuthFlag(true, userId: userId);
       } else if (!hasSession) {
         // Explicitly signed out - clear auth
         print('[Auth] No session - clearing auth state');
@@ -57,25 +73,45 @@ class AuthService {
   }
 
   // Update the authentication flag and user ID for share extension via method channel
-  Future<void> _updateAuthFlag(bool isAuthenticated) async {
+  Future<void> _updateAuthFlag(
+    bool isAuthenticated, {
+    String? userId,
+  }) async {
     try {
-      final userId = isAuthenticated ? currentUser?.id : null;
+      String? effectiveUserId = userId;
+      if (isAuthenticated) {
+        effectiveUserId ??= currentUser?.id;
+
+        if (effectiveUserId == null) {
+          print('[Auth] INFO: Authenticated but userId not yet available - waiting briefly before syncing');
+          final resolvedUser = await _waitForAuthenticatedUser(
+            context: 'authenticated sync',
+            timeout: const Duration(seconds: 2),
+          );
+          effectiveUserId = resolvedUser?.id;
+        }
+
+        if (effectiveUserId == null) {
+          print('[Auth] WARNING: Skipping auth sync - userId still null after waiting');
+          return;
+        }
+      }
 
       print('[Auth] Calling setAuthFlag method channel...');
       print('[Auth]   - isAuthenticated: $isAuthenticated');
-      print('[Auth]   - userId: $userId');
+      print('[Auth]   - userId: $effectiveUserId');
 
       // IMPORTANT: Always send the current state, even if null
       // This ensures old user_id values are cleared from UserDefaults
       final result = await _authChannel.invokeMethod('setAuthFlag', {
         'isAuthenticated': isAuthenticated,
-        'userId': userId,  // Will be null if not authenticated, clearing old values
+        'userId': effectiveUserId,  // Will be null if not authenticated, clearing old values
       });
 
       print('[Auth] Method channel call completed, result: $result');
 
-      if (isAuthenticated && userId != null) {
-        print('[Auth] Synced to share extension - authenticated with userId: $userId');
+      if (isAuthenticated && effectiveUserId != null) {
+        print('[Auth] Synced to share extension - authenticated with userId: $effectiveUserId');
       } else {
         print('[Auth] Synced to share extension - NOT authenticated, cleared user_id');
       }
@@ -115,7 +151,10 @@ class AuthService {
       );
 
       // Update auth flag for share extension
-      await _updateAuthFlag(true);
+      await _updateAuthFlag(
+        true,
+        userId: response.user?.id,
+      );
 
       return response;
     } catch (e) {
@@ -145,7 +184,10 @@ class AuthService {
       );
 
       // Update auth flag for share extension
-      await _updateAuthFlag(true);
+      await _updateAuthFlag(
+        true,
+        userId: response.user?.id,
+      );
 
       return response;
     } catch (e) {
@@ -159,7 +201,10 @@ class AuthService {
       final response = await _supabase.auth.signInAnonymously();
 
       // Update auth flag for share extension
-      await _updateAuthFlag(true);
+      await _updateAuthFlag(
+        true,
+        userId: response.user?.id,
+      );
 
       return response;
     } catch (e) {
@@ -204,12 +249,45 @@ class AuthService {
       );
 
       // Update auth flag for share extension
-      await _updateAuthFlag(true);
+      await _updateAuthFlag(
+        true,
+        userId: response.user?.id,
+      );
 
       return response;
     } catch (e) {
       print('OTP verification error: $e');
       rethrow;
+    }
+  }
+
+  Future<User?> _waitForAuthenticatedUser({
+    required String context,
+    required Duration timeout,
+  }) async {
+    if (!isAuthenticated) {
+      print('[Auth] INFO: Skipping user wait for $context - not authenticated');
+      return null;
+    }
+
+    final stopwatch = Stopwatch()..start();
+    const pollInterval = Duration(milliseconds: 100);
+
+    while (stopwatch.elapsed < timeout) {
+      final user = _supabase.auth.currentUser;
+      if (user != null) {
+        return user;
+      }
+      await Future.delayed(pollInterval);
+    }
+
+    try {
+      print('[Auth] INFO: Polling timed out for $context - attempting direct user fetch');
+      final response = await _supabase.auth.getUser();
+      return response.user;
+    } catch (e) {
+      print('[Auth] WARNING: Failed to fetch user for $context: $e');
+      return null;
     }
   }
 }
