@@ -611,6 +611,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private let maxInstagramScrapeAttempts = 2
     private var detectionResults: [DetectionResultItem] = []
     private var favoritedProductIds: Set<String> = []
+    private var favoriteIdByProductId: [String: String] = [:]
     private var filteredResults: [DetectionResultItem] = []
     private var resultsTableView: UITableView?
     private var downloadedImageUrl: String?
@@ -2016,6 +2017,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     shareLog("Found \(favoritedIds.count) already-favorited products")
                     DispatchQueue.main.async {
                         self.favoritedProductIds = Set(favoritedIds)
+                        self.updateFavoriteMappings(for: favoritedIds)
                         completion()
                     }
                 } else {
@@ -2454,22 +2456,265 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                shareLog("ERROR: Add favorite request failed: \(error.localizedDescription)")
-                completion(false)
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else {
+                DispatchQueue.main.async { completion(false) }
                 return
             }
 
-            if let httpResponse = response as? HTTPURLResponse {
-                shareLog("Add favorite response status: \(httpResponse.statusCode)")
-                completion(httpResponse.statusCode == 200)
+            if let error = error {
+                shareLog("ERROR: Add favorite request failed: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                shareLog("ERROR: Add favorite response missing HTTP status")
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
+
+            shareLog("Add favorite response status: \(httpResponse.statusCode)")
+
+            guard httpResponse.statusCode == 200 else {
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
+
+            var favoriteId: String?
+            var alreadyExisted = false
+
+            if let data = data {
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        favoriteId = json["favorite_id"] as? String
+                        alreadyExisted = json["already_existed"] as? Bool ?? false
+                    }
+                } catch {
+                    shareLog("ERROR: Unable to parse add favorite response: \(error.localizedDescription)")
+                }
             } else {
-                completion(false)
+                shareLog("WARNING: Add favorite response contained no body")
+            }
+
+            if let favoriteId = favoriteId {
+                DispatchQueue.main.async {
+                    self.favoriteIdByProductId[product.id] = favoriteId
+                    shareLog("Add favorite success - favorite_id: \(favoriteId), already existed: \(alreadyExisted)")
+                    completion(true)
+                }
+            } else {
+                shareLog("WARNING: favorite_id missing after add favorite, attempting mapping refresh")
+                self.updateFavoriteMappings(for: [product.id]) { _ in
+                    completion(true)
+                }
             }
         }
 
         task.resume()
+    }
+
+    private func removeFavoriteFromBackend(
+        product: DetectionResultItem,
+        completion: @escaping (Bool) -> Void
+    ) {
+        ensureFavoriteId(for: product.id) { [weak self] favoriteId in
+            guard let self = self else {
+                completion(false)
+                return
+            }
+
+            guard let favoriteId = favoriteId else {
+                shareLog("ERROR: Unable to resolve favorite_id for product \(product.id)")
+                completion(false)
+                return
+            }
+
+            guard let serverBaseUrl = self.getServerBaseUrl() else {
+                shareLog("ERROR: Could not determine server URL for remove favorite")
+                completion(false)
+                return
+            }
+
+            guard var components = URLComponents(string: serverBaseUrl + "/api/v1/favorites/\(favoriteId)") else {
+                shareLog("ERROR: Invalid remove favorite URL for id \(favoriteId)")
+                completion(false)
+                return
+            }
+
+            components.queryItems = [
+                URLQueryItem(name: "user_id", value: self.getUserId())
+            ]
+
+            guard let url = components.url else {
+                shareLog("ERROR: Failed to construct remove favorite URL")
+                completion(false)
+                return
+            }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "DELETE"
+            request.timeoutInterval = 10.0
+
+            URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
+                guard let self = self else {
+                    DispatchQueue.main.async { completion(false) }
+                    return
+                }
+
+                if let error = error {
+                    shareLog("ERROR: Remove favorite request failed: \(error.localizedDescription)")
+                    DispatchQueue.main.async { completion(false) }
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    shareLog("ERROR: Remove favorite response missing HTTP status")
+                    DispatchQueue.main.async { completion(false) }
+                    return
+                }
+
+                shareLog("Remove favorite response status: \(httpResponse.statusCode)")
+
+                guard httpResponse.statusCode == 200 else {
+                    DispatchQueue.main.async { completion(false) }
+                    return
+                }
+
+                DispatchQueue.main.async {
+                    self.favoriteIdByProductId.removeValue(forKey: product.id)
+                    completion(true)
+                }
+            }.resume()
+        }
+    }
+
+    private func ensureFavoriteId(
+        for productId: String,
+        completion: @escaping (String?) -> Void
+    ) {
+        if let cachedId = favoriteIdByProductId[productId] {
+            completion(cachedId)
+            return
+        }
+
+        updateFavoriteMappings(for: [productId]) { [weak self] mappings in
+            guard let self = self else {
+                completion(nil)
+                return
+            }
+
+            let resolvedId = mappings[productId] ?? self.favoriteIdByProductId[productId]
+            if let resolvedId = resolvedId {
+                shareLog("Resolved favorite_id \(resolvedId) for product \(productId)")
+            } else {
+                shareLog("WARNING: Unable to resolve favorite_id for product \(productId)")
+            }
+            completion(resolvedId)
+        }
+    }
+
+    private func updateFavoriteMappings(
+        for productIds: [String],
+        completion: (([String: String]) -> Void)? = nil
+    ) {
+        let uniqueIds = Array(Set(productIds))
+        let unresolvedIds = uniqueIds.filter { favoriteIdByProductId[$0] == nil }
+
+        if !uniqueIds.isEmpty && unresolvedIds.isEmpty {
+            DispatchQueue.main.async { completion?([:]) }
+            return
+        }
+
+        guard let serverBaseUrl = getServerBaseUrl() else {
+            shareLog("Cannot refresh favorite mappings - no server URL available")
+            DispatchQueue.main.async { completion?([:]) }
+            return
+        }
+
+        let userId = getUserId()
+        var components = URLComponents(string: serverBaseUrl + "/api/v1/users/\(userId)/favorites")
+        components?.queryItems = [
+            URLQueryItem(name: "limit", value: "200"),
+            URLQueryItem(name: "offset", value: "0")
+        ]
+
+        guard let url = components?.url else {
+            shareLog("Invalid URL when refreshing favorite mappings")
+            DispatchQueue.main.async { completion?([:]) }
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 10.0
+
+        let filterSet: Set<String>? = uniqueIds.isEmpty ? nil : Set(unresolvedIds)
+        let fetchDescriptionText: String
+        if let filterSet = filterSet {
+            fetchDescriptionText = "\(filterSet.count)"
+        } else {
+            fetchDescriptionText = "all available"
+        }
+        shareLog("Refreshing favorite mappings for \(fetchDescriptionText) products (requested \(uniqueIds.count))")
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else {
+                DispatchQueue.main.async { completion?([:]) }
+                return
+            }
+
+            var mappingUpdates: [String: String] = [:]
+
+            if let error = error {
+                shareLog("ERROR: Favorite mappings fetch failed: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion?(mappingUpdates) }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                shareLog("ERROR: Favorite mappings response missing HTTP status")
+                DispatchQueue.main.async { completion?(mappingUpdates) }
+                return
+            }
+
+            shareLog("Favorite mappings fetch status: \(httpResponse.statusCode)")
+
+            guard httpResponse.statusCode == 200, let data = data else {
+                shareLog("Favorite mappings fetch failed or returned no data")
+                DispatchQueue.main.async { completion?(mappingUpdates) }
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let favorites = json["favorites"] as? [[String: Any]] {
+                    for entry in favorites {
+                        guard
+                            let productId = entry["product_id"] as? String,
+                            let favoriteId = entry["id"] as? String
+                        else { continue }
+
+                        if let filterSet = filterSet, !filterSet.contains(productId) {
+                            continue
+                        }
+
+                        mappingUpdates[productId] = favoriteId
+                    }
+                } else {
+                    shareLog("WARNING: Unexpected favorites payload when refreshing mappings")
+                }
+            } catch {
+                shareLog("ERROR: Failed to parse favorite mappings: \(error.localizedDescription)")
+            }
+
+            DispatchQueue.main.async {
+                if !mappingUpdates.isEmpty {
+                    self.favoriteIdByProductId.merge(mappingUpdates) { _, new in new }
+                }
+                completion?(mappingUpdates)
+            }
+        }.resume()
     }
 
     private func getUserId() -> String {
@@ -4050,22 +4295,36 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
         cell.configure(with: result, isFavorited: isFavorited)
 
         // Set favorite toggle callback
+        let currentIndexPath = indexPath
         cell.onFavoriteToggle = { [weak self] product, isFavorite in
+            guard let self = self else { return }
+
             if isFavorite {
-                // Add to favorites
-                self?.favoritedProductIds.insert(product.id)
-                self?.addFavoriteToBackend(product: product) { success in
+                self.favoritedProductIds.insert(product.id)
+                self.addFavoriteToBackend(product: product) { success in
                     if !success {
                         shareLog("Failed to add favorite to backend")
-                        // Revert on failure
-                        self?.favoritedProductIds.remove(product.id)
+                        self.favoritedProductIds.remove(product.id)
+                        if let tableView = self.resultsTableView,
+                           currentIndexPath.row < self.filteredResults.count {
+                            tableView.reloadRows(at: [currentIndexPath], with: .none)
+                        }
                     }
                 }
             } else {
-                // Remove from local set
-                self?.favoritedProductIds.remove(product.id)
-                // TODO: Implement remove favorite from backend
-                shareLog("Remove favorite - not yet implemented")
+                self.favoritedProductIds.remove(product.id)
+                self.removeFavoriteFromBackend(product: product) { success in
+                    if success {
+                        shareLog("Removed favorite for product \(product.id)")
+                    } else {
+                        shareLog("Failed to remove favorite from backend")
+                        self.favoritedProductIds.insert(product.id)
+                        if let tableView = self.resultsTableView,
+                           currentIndexPath.row < self.filteredResults.count {
+                            tableView.reloadRows(at: [currentIndexPath], with: .none)
+                        }
+                    }
+                }
             }
         }
 
