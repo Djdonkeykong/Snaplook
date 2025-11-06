@@ -220,7 +220,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                         isSelected: selectedIndex == 2,
                         onTap: () => _handleTabTap(2),
                         iconSize: 25.0,
-                        selectedIconSize: 26.0,
+                        selectedIconSize: 25.0,
                       ),
                     ),
                   ),
