@@ -13,16 +13,49 @@ class SupabaseService {
     int offset = 0,
   }) async {
     try {
-      print('[SupabaseService] getUserSearches user=$userId limit=$limit offset=$offset');
+      print(
+        '[SupabaseService] getUserSearches user=$userId limit=$limit offset=$offset',
+      );
+
       final response = await client
-          .from('v_user_recent_searches')
-          .select()
+          .from('user_searches')
+          .select(
+            'id, user_id, search_type, source_url, source_username, created_at, '
+            'image_cache:image_cache_id (id, cloudinary_url, total_results, detected_garments, search_results), '
+            'saved:user_saved_searches!left (id)',
+          )
           .eq('user_id', userId)
           .order('created_at', ascending: false)
           .range(offset, offset + limit - 1);
 
-      print('[SupabaseService] getUserSearches returned ${response.length} rows');
-      return List<Map<String, dynamic>>.from(response);
+      final searches = List<Map<String, dynamic>>.from(response);
+
+      final mapped = searches.map<Map<String, dynamic>>((search) {
+        final imageCache =
+            (search['image_cache'] as Map<String, dynamic>?) ?? {};
+        final savedEntries = (search['saved'] as List<dynamic>?);
+
+        return {
+          'id': search['id'],
+          'user_id': search['user_id'],
+          'search_type': search['search_type'],
+          'source_url': search['source_url'],
+          'source_username': search['source_username'],
+          'created_at': search['created_at'],
+          'image_cache_id': imageCache['id'],
+          'cloudinary_url': imageCache['cloudinary_url'],
+          'total_results': imageCache['total_results'],
+          'detected_garments': imageCache['detected_garments'],
+          'search_results': imageCache['search_results'],
+          'is_saved': savedEntries != null && savedEntries.isNotEmpty,
+        };
+      }).toList();
+
+      print(
+        '[SupabaseService] getUserSearches returned ${mapped.length} rows',
+      );
+
+      return mapped;
     } catch (e) {
       print('Error fetching user searches: $e');
       return [];
