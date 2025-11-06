@@ -42,7 +42,7 @@ class SupabaseService {
               .select(
                 'id, cloudinary_url, total_results, detected_garments, search_results',
               )
-              .in_('id', cacheIds);
+              .filter('id', 'in', '(${cacheIds.join(',')})');
 
           final cacheList = List<Map<String, dynamic>>.from(cacheResponse);
           for (final cache in cacheList) {
