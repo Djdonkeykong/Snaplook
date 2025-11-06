@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/services/supabase_service.dart';
@@ -233,22 +234,6 @@ class _HistoryCard extends StatelessWidget {
     }
   }
 
-  IconData _getSourceIcon() {
-    final searchType = search['search_type'] as String?;
-    switch (searchType) {
-      case 'instagram':
-        return Icons.camera_alt;
-      case 'photos':
-        return Icons.photo_library;
-      case 'camera':
-        return Icons.camera;
-      case 'web':
-        return Icons.language;
-      default:
-        return Icons.search;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -268,6 +253,10 @@ class _HistoryCard extends StatelessWidget {
       }
     }
 
+    final trimmedUsername = sourceUsername?.trim();
+    final hasUsername = trimmedUsername != null && trimmedUsername.isNotEmpty;
+    final createdLabel = createdDate != null ? timeago.format(createdDate) : null;
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
@@ -286,10 +275,10 @@ class _HistoryCard extends StatelessWidget {
       },
       child: Container(
         margin: EdgeInsets.only(bottom: spacing.m),
+        color: Colors.transparent,
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Square Image
             ClipRRect(
               borderRadius: BorderRadius.circular(radius.medium),
               child: SizedBox(
@@ -321,71 +310,116 @@ class _HistoryCard extends StatelessWidget {
                       ),
               ),
             ),
-
             SizedBox(width: spacing.m),
-
-            // Search Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Icon(
-                        _getSourceIcon(),
-                        size: 14,
-                        color: colorScheme.secondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _getSourceLabel(),
-                        style: textTheme.labelSmall?.copyWith(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.secondary,
+                      Expanded(
+                        child: Text(
+                          _getSourceLabel(),
+                          style: textTheme.titleMedium?.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (isSaved) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Icon(
                           Icons.bookmark,
-                          size: 14,
-                          color: colorScheme.onSurfaceVariant,
+                          size: 16,
+                          color: colorScheme.secondary,
                         ),
                       ],
                     ],
                   ),
                   const SizedBox(height: 4),
-                  if (sourceUsername != null) ...[
+                  if (hasUsername) ...[
                     Text(
-                      '@$sourceUsername',
-                      style: textTheme.titleSmall?.copyWith(
+                      '@$trimmedUsername',
+                      style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                   ],
                   Text(
-                    '$totalResults products found',
-                    style: textTheme.bodySmall?.copyWith(
-                      fontSize: 13,
+                    totalResults == 1
+                        ? '1 product found'
+                        : '$totalResults products found',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontSize: 14,
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  if (createdDate != null) ...[
-                    const SizedBox(height: 2),
+                  if (createdLabel != null) ...[
+                    const SizedBox(height: 4),
                     Text(
-                      timeago.format(createdDate),
+                      createdLabel,
                       style: textTheme.bodySmall?.copyWith(
                         fontSize: 12,
                         color: colorScheme.onSurfaceVariant.withOpacity(0.7),
                       ),
                     ),
                   ],
+                ],
+              ),
+            ),
+            SizedBox(width: spacing.sm),
+            SizedBox(
+              height: 100,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () => _shareSearch(context),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: colorScheme.secondary,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.share_outlined,
+                        color: colorScheme.onSecondary,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _copyLink(context),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: colorScheme.onSurface,
+                          width: 1.0,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.link,
+                          color: colorScheme.onSurface,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
