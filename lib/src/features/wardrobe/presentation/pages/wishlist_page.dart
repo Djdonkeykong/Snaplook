@@ -11,6 +11,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../../core/constants/history_icon.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
+import 'history_page.dart';
 
 class WishlistPage extends ConsumerStatefulWidget {
   const WishlistPage({super.key});
@@ -87,7 +88,12 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                 size: 24,
               ),
               onPressed: () {
-                Navigator.of(context, rootNavigator: true).pushNamed('/history');
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const HistoryPage(),
+                    settings: const RouteSettings(name: '/history'),
+                  ),
+                );
               },
               tooltip: 'Search History',
             ),
