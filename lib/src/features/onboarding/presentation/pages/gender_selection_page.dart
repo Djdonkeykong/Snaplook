@@ -5,6 +5,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../widgets/progress_indicator.dart';
+import '../widgets/onboarding_bottom_bar.dart';
 import 'discovery_source_page.dart';
 
 enum Gender { male, female, other }
@@ -246,44 +247,43 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                       ],
                     ),
                   ),
-
-                  // Next Button
-                  Container(
-                    width: double.infinity,
-                    height: 56,
-                    margin: EdgeInsets.only(bottom: spacing.xxl),
-                    child: ElevatedButton(
-                      onPressed: selectedGender != null
-                          ? () {
-                              HapticFeedback.mediumImpact();
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const DiscoverySourcePage(),
-                                ),
-                              );
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedGender != null ? const Color(0xFFf2003c) : Colors.grey.shade300,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                      ),
-                      child: Text(
-                        'Next',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -0.2,
-                          color: selectedGender != null ? Colors.white : Colors.grey.shade600,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: OnboardingBottomBar(
+        primaryButton: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: selectedGender != null
+                ? () {
+                    HapticFeedback.mediumImpact();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const DiscoverySourcePage(),
+                      ),
+                    );
+                  }
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: selectedGender != null ? const Color(0xFFf2003c) : Colors.grey.shade300,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            child: Text(
+              'Continue',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'PlusJakartaSans',
+                letterSpacing: -0.2,
+                color: selectedGender != null ? Colors.white : Colors.grey.shade600,
               ),
             ),
           ),
