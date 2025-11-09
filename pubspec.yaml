@@ -75,6 +75,9 @@ dependencies:
   equatable: ^2.0.5
   crypto: ^3.0.3
 
+  # In-App Purchases
+  purchases_flutter: ^8.2.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
