@@ -27,6 +27,7 @@ import 'src/services/link_scraper_service.dart';
 import 'src/services/share_extension_config_service.dart';
 import 'src/features/auth/domain/services/auth_service.dart';
 import 'src/features/favorites/domain/providers/favorites_provider.dart';
+import 'src/features/paywall/initialization/paywall_initialization.dart';
 import 'dart:io';
 
 // Custom LocalStorage implementation using SharedPreferences
@@ -107,6 +108,14 @@ void main() async {
       localStorage: SharedPreferencesLocalStorage(),
     ),
   );
+
+  // Initialize RevenueCat paywall system
+  try {
+    await initializePaywallSystem();
+    debugPrint('[Paywall] RevenueCat initialized successfully');
+  } catch (e) {
+    debugPrint('[Paywall] Failed to initialize RevenueCat: $e');
+  }
 
   // Sync auth state to share extension
   try {

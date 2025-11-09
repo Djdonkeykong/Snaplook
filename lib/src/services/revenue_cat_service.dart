@@ -16,8 +16,8 @@ class RevenueCatService {
 
   // Replace these with your actual RevenueCat API keys
   // Get them from: https://app.revenuecat.com/settings/api-keys
-  static const String _appleApiKey = 'YOUR_APPLE_API_KEY';
-  static const String _googleApiKey = 'YOUR_GOOGLE_API_KEY';
+  static const String _appleApiKey = 'sk_WBFENSAwHStcnHwASjgjkuCargpHt';
+  static const String _googleApiKey = 'sk_ElMqQMznRmlmeKxjkNMqSYgINEXOW';
 
   // Entitlement identifier (must match your RevenueCat dashboard)
   static const String premiumEntitlementId = 'premium';
