@@ -293,7 +293,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.friendOrFamily,
                                 label: 'Friend or family',
-                                icon: Icon(Snaplook_people.biPeopleFill, size: 24, color: Colors.grey.shade700),
+                                icon: Icon(Snaplook_people.biPeopleFill, size: 24, color: Colors.black),
                                 isSelected: selectedSource == DiscoverySource.friendOrFamily,
                                 onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.friendOrFamily,
                               ),
@@ -313,7 +313,10 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.other,
                                 label: 'Other',
-                                icon: Icon(Snaplook_more_and_family.icRoundLayers, size: 28, color: Colors.grey.shade700),
+                                icon: Transform.translate(
+                                  offset: const Offset(-2, -1),
+                                  child: Icon(Snaplook_more_and_family.icRoundLayers, size: 28, color: Colors.black),
+                                ),
                                 isSelected: selectedSource == DiscoverySource.other,
                                 onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.other,
                               ),
