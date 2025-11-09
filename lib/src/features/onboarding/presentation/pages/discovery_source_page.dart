@@ -4,12 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/constants/snaplook-more-and-family_icons.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'awesome_intro_page.dart';
 
-enum DiscoverySource { instagram, facebook, tiktok, youtube, google, tv, other }
+enum DiscoverySource { instagram, facebook, tiktok, youtube, google, tv, friendOrFamily, other }
 
 final selectedDiscoverySourceProvider = StateProvider<DiscoverySource?>((ref) => null);
 
@@ -32,7 +33,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
   void initState() {
     super.initState();
 
-    _animationControllers = List.generate(7, (index) {
+    _animationControllers = List.generate(8, (index) {
       return AnimationController(
         duration: const Duration(milliseconds: 400),
         vsync: this,
@@ -162,7 +163,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
               child: ListView.separated(
                 padding: EdgeInsets.only(bottom: spacing.l),
                 physics: const BouncingScrollPhysics(),
-                itemCount: 7,
+                itemCount: 8,
                 separatorBuilder: (_, __) => SizedBox(height: spacing.l),
                 itemBuilder: (context, index) {
                   switch (index) {
@@ -281,7 +282,6 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                         },
                       );
                     case 6:
-                    default:
                       return AnimatedBuilder(
                         animation: _animationControllers[6],
                         builder: (context, child) {
@@ -290,9 +290,29 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                             child: ScaleTransition(
                               scale: _scaleAnimations[6],
                               child: _DiscoverySourceOption(
+                                source: DiscoverySource.friendOrFamily,
+                                label: 'Friend or family',
+                                icon: Icon(Snaplook_more_and_family.fluentMdl2Family, size: 24, color: Colors.grey.shade700),
+                                isSelected: selectedSource == DiscoverySource.friendOrFamily,
+                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.friendOrFamily,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    case 7:
+                    default:
+                      return AnimatedBuilder(
+                        animation: _animationControllers[7],
+                        builder: (context, child) {
+                          return FadeTransition(
+                            opacity: _fadeAnimations[7],
+                            child: ScaleTransition(
+                              scale: _scaleAnimations[7],
+                              child: _DiscoverySourceOption(
                                 source: DiscoverySource.other,
                                 label: 'Other',
-                                icon: Icon(Icons.more_horiz, size: 24, color: Colors.grey.shade700),
+                                icon: Icon(Snaplook_more_and_family.icRoundLayers, size: 24, color: Colors.grey.shade700),
                                 isSelected: selectedSource == DiscoverySource.other,
                                 onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.other,
                               ),
