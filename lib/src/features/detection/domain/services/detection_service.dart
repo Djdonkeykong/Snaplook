@@ -8,16 +8,20 @@ import '../../../../core/constants/trusted_domains.dart';
 import '../models/detection_result.dart';
 import '../../../../core/constants/category_rules.dart';
 import '../../../../services/cloudinary_service.dart';
+import '../../../user/repositories/user_profile_repository.dart';
 
 /// Detection pipeline powered by the backend SerpAPI service (with optional legacy fallback).
 class DetectionService {
   DetectionService({
     http.Client? client,
     this.strictMode = true, // Γ£à Strict mode ON by default
-  }) : _client = client ?? http.Client();
+    UserProfileRepository? userProfileRepository,
+  })  : _client = client ?? http.Client(),
+        _userProfileRepo = userProfileRepository ?? UserProfileRepository();
 
   final http.Client _client;
   final bool strictMode;
+  final UserProfileRepository _userProfileRepo;
 
   static const int _maxGarments = 5;
   static const int _maxResultsPerGarment =
@@ -91,9 +95,29 @@ class DetectionService {
       throw Exception('No image or URL provided');
     }
 
-    final location = AppConstants.searchApiLocation;
-    if (location != null && location.isNotEmpty) {
-      payload['location'] = location;
+    // Get user's profile for localization (country + language)
+    final userProfile = await _userProfileRepo.getCurrentUserProfile();
+    if (userProfile != null) {
+      // Use country code if available (PREFERRED by SearchAPI)
+      if (userProfile.countryCode != null && userProfile.countryCode!.isNotEmpty) {
+        payload['country'] = userProfile.countryCode; // e.g., 'US', 'NO', 'GB'
+        debugPrint('≡ƒîÄ Using country code: ${userProfile.countryCode}');
+      } else if (userProfile.location != null) {
+        // Fallback to location string
+        payload['location'] = userProfile.location; // e.g., 'United States'
+        debugPrint('≡ƒîÄ Using location: ${userProfile.location}');
+      }
+
+      // Add language preference
+      if (userProfile.preferredLanguage.isNotEmpty) {
+        payload['language'] = userProfile.preferredLanguage; // e.g., 'en', 'nb'
+        debugPrint('≡ƒ£ò Using language: ${userProfile.preferredLanguage}');
+      }
+    } else {
+      // No profile - use defaults
+      payload['country'] = 'US';
+      payload['language'] = 'en';
+      debugPrint('≡ƒîÄ No user profile - using defaults (US, en)');
     }
 
     debugPrint('≡ƒÜÇ Sending image to detector+search endpoint: $endpoint');

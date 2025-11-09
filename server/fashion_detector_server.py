@@ -404,7 +404,9 @@ class DetectAndSearchRequest(BaseModel):
     expand_ratio: Optional[float] = Field(default=EXPAND_RATIO)
     max_crops: Optional[int] = Field(default=MAX_GARMENTS)
     max_results_per_garment: Optional[int] = Field(default=10)
-    location: Optional[str] = Field(default=None)  # Country code for search results (e.g., 'us', 'uk', 'ca')
+    location: Optional[str] = Field(default=None)  # Legacy: SearchAPI location string (e.g., 'United States')
+    country: Optional[str] = Field(default=None)  # PREFERRED: ISO 3166-1 alpha-2 country code (e.g., 'US', 'NO', 'GB')
+    language: Optional[str] = Field(default='en')  # Language code for interface (e.g., 'en', 'nb', 'fr')
     skip_detection: Optional[bool] = Field(default=False)  # Skip YOLO detection for user-cropped images
 
     @model_validator(mode="after")
@@ -1474,7 +1476,13 @@ def run_full_detection_pipeline(
         crop_url = item['crop_url']
         label = garment['label']
         t_search = time.time()
-        search_results = search_visual_products(crop_url, max_results_per_garment, location)
+        search_results = search_visual_products(
+            crop_url,
+            max_results_per_garment,
+            location=location,
+            country=None,  # TODO: Add country/language params to run_full_detection_pipeline
+            language='en',
+        )
         print(f"{label} search took {time.time() - t_search:.2f}s ({len(search_results)} results)")
 
         return [
@@ -1655,7 +1663,9 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
             search_results = search_visual_products(
                 crop_url,
                 req.max_results_per_garment,
-                req.location,
+                location=req.location,
+                country=req.country,
+                language=req.language,
             )
             print(f"[SerpAPI] {label} search took {time.time() - t_search:.2f}s ({len(search_results)} results)")
 
@@ -1787,40 +1797,120 @@ def search_visual_products(
     image_url: str,
     max_results: int = 10,
     location: str = None,
+    country: str = None,
+    language: str = None,
 ):
-    """SerpAPI optimized Google Lens search for fashion products."""
-    params = {
-        "engine": "google_lens",
-        "api_key": SERPAPI_KEY,
-        "url": image_url,
-        "type": "products",  # CRITICAL: Only fetch products, not all visual matches
-        "location": location or SERPAPI_LOCATION,  # Location-specific results
-        "hl": "en",  # English interface
-    }
+    """
+    SerpAPI optimized Google Lens search with SMART pagination and proper localization.
 
-    http_timeout = 30.0
+    Based on SearchAPI best practices:
+    - Use country (2-letter code) for market localization
+    - Use hl (language) for interface language
+    - Only fetch products (search_type=products)
 
-    try:
-        response = requests.get("https://serpapi.com/search.json", params=params, timeout=http_timeout)
-        response.raise_for_status()
-    except requests.exceptions.Timeout:
-        print(f"[SerpAPI] HTTP timeout after {http_timeout:.1f}s")
-        return []
-    except requests.RequestException as exc:
-        print(f"[SerpAPI] Request error: {exc}")
-        return []
+    Strategy for fast UX:
+    - Fetch page 1 immediately (2-3s typical response)
+    - Only fetch page 2 if page 1 has < 15 quality results
+    - Skip page 3 entirely to keep total time under 5 seconds
+    - Use 15s timeout per request to fail faster
 
-    data = response.json()
-    if data.get("error"):
-        print(f"[SerpAPI] API error: {data['error']}")
-        return []
+    Args:
+        image_url: Publicly accessible image URL
+        max_results: Number of results to fetch per garment
+        location: Legacy SearchAPI location string (e.g., "United States")
+        country: ISO 3166-1 alpha-2 country code (e.g., "US", "NO", "GB") - PREFERRED
+        language: Language code (e.g., "en", "nb", "fr")
 
-    # SerpAPI returns results in visual_matches array
-    matches = data.get("visual_matches", [])
-    if not isinstance(matches, list):
-        matches = []
+    Returns up to max_results * 2 raw matches for downstream filtering.
+    """
+    all_matches = []
+    next_token = None
+    page = 1
+    max_pages = 2  # Reduced from 3 to keep UX snappy (2-5s vs 6-9s)
 
-    return matches[:max_results]
+    # Derive country code from location if not provided
+    # E.g., "United States" -> "US", "United Kingdom" -> "GB"
+    if not country and location:
+        location_to_country = {
+            'united states': 'US',
+            'united kingdom': 'GB',
+            'canada': 'CA',
+            'australia': 'AU',
+            'france': 'FR',
+            'germany': 'DE',
+            'italy': 'IT',
+            'spain': 'ES',
+            'norway': 'NO',
+            'sweden': 'SE',
+            'denmark': 'DK',
+        }
+        country = location_to_country.get(location.lower(), 'US')
+
+    # Default country and language
+    country = country or 'US'
+    language = language or 'en'
+
+    while page <= max_pages and len(all_matches) < max_results * 2:
+        params = {
+            "engine": "google_lens",
+            "api_key": SERPAPI_KEY,
+            "url": image_url,
+            "search_type": "products",  # CRITICAL: Only products (SearchAPI recommends search_type over type)
+            "country": country,  # Market localization (2-letter code)
+            "hl": language,  # Interface language
+            "no_cache": "false",  # Use cache for faster results
+        }
+
+        # Add pagination token if available
+        if next_token:
+            params["next_page_token"] = next_token
+
+        http_timeout = 15.0  # Reduced from 30s for faster failure/retry
+
+        try:
+            response = requests.get("https://serpapi.com/search.json", params=params, timeout=http_timeout)
+            response.raise_for_status()
+        except requests.exceptions.Timeout:
+            print(f"[SerpAPI] HTTP timeout after {http_timeout:.1f}s on page {page}")
+            break
+        except requests.RequestException as exc:
+            print(f"[SerpAPI] Request error on page {page}: {exc}")
+            break
+
+        data = response.json()
+        if data.get("error"):
+            print(f"[SerpAPI] API error on page {page}: {data['error']}")
+            break
+
+        # SerpAPI returns results in visual_matches array
+        matches = data.get("visual_matches", [])
+        if not isinstance(matches, list):
+            matches = []
+
+        if not matches:
+            print(f"[SerpAPI] No matches on page {page}, stopping pagination")
+            break
+
+        all_matches.extend(matches)
+        print(f"[SerpAPI] Page {page}: fetched {len(matches)} matches (total: {len(all_matches)})")
+
+        # SMART EARLY TERMINATION: Skip page 2 if page 1 returned enough results
+        if page == 1 and len(matches) >= 15:
+            print(f"[SerpAPI] Page 1 returned {len(matches)} matches (sufficient), skipping page 2 for speed")
+            break
+
+        # Check for next page token
+        pagination = data.get("serpapi_pagination", {})
+        next_token = pagination.get("next_page_token")
+
+        if not next_token:
+            print(f"[SerpAPI] No more pages available after page {page}")
+            break
+
+        page += 1
+
+    print(f"[SerpAPI] Search complete: {len(all_matches)} total matches from {page} page(s)")
+    return all_matches[:max_results * 2]  # Return 2x for deduplication
 
 
 # === DEBUG ENDPOINT ===
