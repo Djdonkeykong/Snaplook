@@ -39,7 +39,7 @@ class AppTheme {
         backgroundColor: Colors.black,
         contentTextStyle: baseSnackTextStyle.copyWith(
           color: Colors.white,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w500,
         ),
         actionTextColor: AppColors.secondary,
         behavior: SnackBarBehavior.fixed,
@@ -87,7 +87,7 @@ class AppTheme {
         backgroundColor: Colors.white,
         contentTextStyle: baseSnackTextStyle.copyWith(
           color: Colors.black,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w500,
         ),
         actionTextColor: AppColors.secondary,
         behavior: SnackBarBehavior.fixed,
