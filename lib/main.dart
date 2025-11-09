@@ -3,6 +3,7 @@ import 'package:path_provider_foundation/path_provider_foundation.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
@@ -64,6 +65,12 @@ class SharedPreferencesLocalStorage extends LocalStorage {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Lock orientation to portrait mode only
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   if (Platform.isIOS) {
     PathProviderPlatform.instance = PathProviderFoundation();
