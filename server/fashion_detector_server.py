@@ -1788,39 +1788,73 @@ def search_visual_products(
     max_results: int = 10,
     location: str = None,
 ):
-    """SerpAPI optimized Google Lens search for fashion products."""
-    params = {
-        "engine": "google_lens",
-        "api_key": SERPAPI_KEY,
-        "url": image_url,
-        "type": "products",  # CRITICAL: Only fetch products, not all visual matches
-        "location": location or SERPAPI_LOCATION,  # Location-specific results
-        "hl": "en",  # English interface
-    }
+    """
+    SerpAPI optimized Google Lens search for fashion products with pagination support.
 
-    http_timeout = 30.0
+    Fetches multiple pages to ensure we get enough high-quality results before deduplication.
+    Returns up to max_results * 3 raw matches for downstream filtering.
+    """
+    all_matches = []
+    next_token = None
+    page = 1
+    max_pages = 3  # Limit to 3 pages to control API costs
 
-    try:
-        response = requests.get("https://serpapi.com/search.json", params=params, timeout=http_timeout)
-        response.raise_for_status()
-    except requests.exceptions.Timeout:
-        print(f"[SerpAPI] HTTP timeout after {http_timeout:.1f}s")
-        return []
-    except requests.RequestException as exc:
-        print(f"[SerpAPI] Request error: {exc}")
-        return []
+    while page <= max_pages and len(all_matches) < max_results * 3:
+        params = {
+            "engine": "google_lens",
+            "api_key": SERPAPI_KEY,
+            "url": image_url,
+            "type": "products",  # CRITICAL: Only fetch products, not all visual matches
+            "location": location or SERPAPI_LOCATION,  # Location-specific results
+            "hl": "en",  # English interface
+            "no_cache": "false",  # Use cache for faster results (set to "true" for testing)
+        }
 
-    data = response.json()
-    if data.get("error"):
-        print(f"[SerpAPI] API error: {data['error']}")
-        return []
+        # Add pagination token if available
+        if next_token:
+            params["next_page_token"] = next_token
 
-    # SerpAPI returns results in visual_matches array
-    matches = data.get("visual_matches", [])
-    if not isinstance(matches, list):
-        matches = []
+        http_timeout = 30.0
 
-    return matches[:max_results]
+        try:
+            response = requests.get("https://serpapi.com/search.json", params=params, timeout=http_timeout)
+            response.raise_for_status()
+        except requests.exceptions.Timeout:
+            print(f"[SerpAPI] HTTP timeout after {http_timeout:.1f}s on page {page}")
+            break
+        except requests.RequestException as exc:
+            print(f"[SerpAPI] Request error on page {page}: {exc}")
+            break
+
+        data = response.json()
+        if data.get("error"):
+            print(f"[SerpAPI] API error on page {page}: {data['error']}")
+            break
+
+        # SerpAPI returns results in visual_matches array
+        matches = data.get("visual_matches", [])
+        if not isinstance(matches, list):
+            matches = []
+
+        if not matches:
+            print(f"[SerpAPI] No matches on page {page}, stopping pagination")
+            break
+
+        all_matches.extend(matches)
+        print(f"[SerpAPI] Page {page}: fetched {len(matches)} matches (total: {len(all_matches)})")
+
+        # Check for next page token
+        pagination = data.get("serpapi_pagination", {})
+        next_token = pagination.get("next_page_token")
+
+        if not next_token:
+            print(f"[SerpAPI] No more pages available after page {page}")
+            break
+
+        page += 1
+
+    print(f"[SerpAPI] Pagination complete: {len(all_matches)} total matches from {page} page(s)")
+    return all_matches[:max_results * 3]  # Return extra for deduplication
 
 
 # === DEBUG ENDPOINT ===
