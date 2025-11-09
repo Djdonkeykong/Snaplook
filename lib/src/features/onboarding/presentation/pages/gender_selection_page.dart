@@ -135,55 +135,47 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height -
-                         MediaQuery.of(context).padding.top -
-                         MediaQuery.of(context).padding.bottom -
-                         kToolbarHeight,
-            ),
-            child: IntrinsicHeight(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: spacing.l),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: spacing.l),
 
-                  // Title
-                  const Text(
-                    'Choose your style',
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontFamily: 'PlusJakartaSans',
-                      letterSpacing: -1.0,
-                      height: 1.3,
-                    ),
-                  ),
+              // Title
+              const Text(
+                'Choose your style',
+                style: TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  fontFamily: 'PlusJakartaSans',
+                  letterSpacing: -1.0,
+                  height: 1.3,
+                ),
+              ),
 
-                  SizedBox(height: spacing.m),
+              SizedBox(height: spacing.m),
 
-                  // Subtitle
-                  const Text(
-                    'Select your style preference to personalize\nyour experience.',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
+              // Subtitle
+              const Text(
+                'Select your style preference to personalize\nyour experience.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black,
+                  fontFamily: 'PlusJakartaSans',
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.3,
+                ),
+              ),
 
-                  SizedBox(height: spacing.l),
+              SizedBox(height: spacing.l),
 
-                  // Gender Options
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
+              // Gender Options
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                         // Men's Clothing
                         AnimatedBuilder(
                           animation: _animationControllers[0],
@@ -251,8 +243,6 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
               ),
             ),
           ),
-        ),
-      ),
       bottomNavigationBar: OnboardingBottomBar(
         primaryButton: SizedBox(
           width: double.infinity,
