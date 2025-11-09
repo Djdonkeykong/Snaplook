@@ -133,6 +133,7 @@ class ShareExtensionPage extends ConsumerWidget {
           },
           child: const SizedBox(
             width: double.infinity,
+            height: 56,
             child: Center(
               child: Text(
                 'Skip',

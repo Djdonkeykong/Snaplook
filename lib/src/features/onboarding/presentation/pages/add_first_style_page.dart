@@ -188,30 +188,33 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
         ),
       ),
       bottomNavigationBar: OnboardingBottomBar(
-        secondaryButton: GestureDetector(
-          onTap: () {
-            HapticFeedback.mediumImpact();
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const TrialIntroPage(),
-              ),
-            );
-          },
-          child: const SizedBox(
-            width: double.infinity,
-            child: Center(
-              child: Text(
-                'Skip',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.2,
-                  decoration: TextDecoration.underline,
-                  decorationColor: Colors.black,
-                  decorationThickness: 1.5,
+        secondaryButton: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const TrialIntroPage(),
                 ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFf2003c),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            child: const Text(
+              'Skip',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'PlusJakartaSans',
+                letterSpacing: -0.2,
               ),
             ),
           ),
