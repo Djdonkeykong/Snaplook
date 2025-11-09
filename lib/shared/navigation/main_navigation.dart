@@ -128,6 +128,14 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               width: 0.5,
             ),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+              spreadRadius: 0,
+            ),
+          ],
         ),
         child: SafeArea(
           minimum: const EdgeInsets.only(bottom: 4),

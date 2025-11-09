@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
+import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
 import 'trial_intro_page.dart';
 
@@ -136,73 +137,69 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
               ),
             ),
 
-            SizedBox(height: spacing.xl * 2),
-
-            // Show me how button
-            Container(
-              width: double.infinity,
-              height: 56,
-              margin: EdgeInsets.only(bottom: spacing.m),
-              child: ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const AddFirstStylePage(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFf2003c),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: const Text(
-                  'Show me how',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ),
-            ),
-
-            // Skip Button
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const TrialIntroPage(),
-                  ),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                margin: EdgeInsets.only(bottom: spacing.xxl),
-                child: const Center(
-                  child: Text(
-                    'Skip',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black,
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.2,
-                      decoration: TextDecoration.underline,
-                      decorationColor: Colors.black,
-                      decorationThickness: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            SizedBox(height: spacing.l),
           ],
+        ),
+      ),
+      bottomNavigationBar: OnboardingBottomBar(
+        primaryButton: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const AddFirstStylePage(),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFf2003c),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            child: const Text(
+              'Show me how',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'PlusJakartaSans',
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
+        ),
+        secondaryButton: GestureDetector(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const TrialIntroPage(),
+              ),
+            );
+          },
+          child: const SizedBox(
+            width: double.infinity,
+            child: Center(
+              child: Text(
+                'Skip',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black,
+                  fontFamily: 'PlusJakartaSans',
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                  decoration: TextDecoration.underline,
+                  decorationColor: Colors.black,
+                  decorationThickness: 1.5,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
