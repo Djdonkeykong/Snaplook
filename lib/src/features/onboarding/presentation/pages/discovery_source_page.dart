@@ -372,7 +372,7 @@ class _DiscoverySourceOption extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
-        height: 56,
+        height: 64,
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFf2003c) : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(16),
