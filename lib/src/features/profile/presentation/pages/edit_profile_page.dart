@@ -240,10 +240,8 @@ class _RoundedField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(radius),
-              borderSide: BorderSide(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white
-                      : AppColors.secondary,
+              borderSide: const BorderSide(
+                  color: AppColors.secondary,
                   width: 1.5),
             ),
           ),
@@ -272,15 +270,14 @@ class _MembershipStatusCard extends StatelessWidget {
     final spacing = context.spacing;
     final radius = context.radius.large;
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isPremium
-        ? (isDark ? Colors.white.withOpacity(0.12) : AppColors.secondary.withOpacity(0.12))
+        ? AppColors.secondary.withOpacity(0.12)
         : colorScheme.surfaceVariant;
     final borderColor = isPremium
-        ? (isDark ? Colors.white : AppColors.secondary)
+        ? AppColors.secondary
         : colorScheme.outlineVariant;
     final iconColor = isPremium
-        ? (isDark ? Colors.white : AppColors.secondary)
+        ? AppColors.secondary
         : colorScheme.onSurfaceVariant;
     final descriptionColor = colorScheme.onSurfaceVariant;
 

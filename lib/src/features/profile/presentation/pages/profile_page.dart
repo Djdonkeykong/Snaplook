@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:super_cupertino_navigation_bar/super_cupertino_navigation_bar.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
-import '../../../../../core/theme/theme_mode_notifier.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
@@ -61,9 +60,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white
-                  : AppColors.secondary,
+              foregroundColor: AppColors.secondary,
               textStyle: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 fontWeight: FontWeight.w600,
@@ -105,29 +102,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
-  Future<void> _showThemeModeSheet() async {
-    final currentMode = ref.read(themeModeProvider);
-    final selectedMode = await showModalBottomSheet<ThemeMode>(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (context) => _ThemeModeBottomSheet(currentMode: currentMode),
-    );
-    if (selectedMode != null) {
-      await ref.read(themeModeProvider.notifier).setThemeMode(selectedMode);
-    }
-  }
-
-  String _themeModeLabel(ThemeMode mode) {
-    switch (mode) {
-      case ThemeMode.light:
-        return 'Light';
-      case ThemeMode.dark:
-        return 'Dark';
-      case ThemeMode.system:
-        return 'System';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     // Listen to scroll to top trigger for profile tab (index 2)
@@ -144,7 +118,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final spacing = context.spacing;
-    final themeMode = ref.watch(themeModeProvider);
     final user = ref.watch(currentUserProvider);
     final userEmail = user?.email ?? 'user@example.com';
     final initials = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
@@ -269,11 +242,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   title: 'Notifications',
                   onTap: () {},
                 ),
-                _SimpleSettingItem(
-                  title: 'Appearance',
-                  trailingText: _themeModeLabel(themeMode),
-                  onTap: _showThemeModeSheet,
-                ),
 
                 SizedBox(height: spacing.l),
 
@@ -325,16 +293,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _SectionHeader(title: 'Account'),
                 _SimpleSettingItem(
                   title: 'Logout',
-                  textColor: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white
-                      : AppColors.secondary,
+                  textColor: AppColors.secondary,
                   onTap: _handleLogout,
                 ),
                 _SimpleSettingItem(
                   title: 'Delete Account',
-                  textColor: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white
-                      : AppColors.secondary,
+                  textColor: AppColors.secondary,
                   onTap: () {},
                 ),
 
@@ -459,182 +423,6 @@ class _SimpleSettingItem extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ThemeModeBottomSheet extends StatelessWidget {
-  final ThemeMode currentMode;
-
-  const _ThemeModeBottomSheet({required this.currentMode});
-
-  @override
-  Widget build(BuildContext context) {
-    final spacing = context.spacing;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final radius = context.radius.large;
-
-    const options = [
-      _ThemeModeOption(
-        mode: ThemeMode.system,
-        title: 'Use system setting',
-        description: 'Automatically follow your device appearance.',
-        icon: Icons.auto_mode_outlined,
-      ),
-      _ThemeModeOption(
-        mode: ThemeMode.light,
-        title: 'Light',
-        description: 'Bright background with dark text.',
-        icon: Icons.light_mode_outlined,
-      ),
-      _ThemeModeOption(
-        mode: ThemeMode.dark,
-        title: 'Dark',
-        description: 'Dim background with light text.',
-        icon: Icons.dark_mode_outlined,
-      ),
-    ];
-
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: spacing.l,
-          right: spacing.l,
-          top: spacing.m,
-          bottom: spacing.l + MediaQuery.of(context).padding.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colorScheme.outlineVariant,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            SizedBox(height: spacing.m),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Appearance',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'PlusJakartaSans',
-                  color: colorScheme.onSurface,
-                ),
-              ),
-            ),
-            SizedBox(height: spacing.s),
-            ...options.map(
-              (option) => Padding(
-                padding: EdgeInsets.only(bottom: spacing.s),
-                child: _ThemeModeOptionTile(
-                  option: option,
-                  isSelected: option.mode == currentMode,
-                  borderRadius: radius,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ThemeModeOptionTile extends StatelessWidget {
-  final _ThemeModeOption option;
-  final bool isSelected;
-  final double borderRadius;
-
-  const _ThemeModeOptionTile({
-    required this.option,
-    required this.isSelected,
-    required this.borderRadius,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final spacing = context.spacing;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(borderRadius),
-      onTap: () => Navigator.of(context).pop(option.mode),
-      child: Container(
-        padding: EdgeInsets.all(spacing.m),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              option.icon,
-              size: 24,
-              color:
-                  isSelected ? colorScheme.secondary : colorScheme.onSurface,
-            ),
-            SizedBox(width: spacing.m),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          option.title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'PlusJakartaSans',
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check_circle,
-                          size: 20,
-                          color: colorScheme.secondary,
-                        ),
-                    ],
-                  ),
-                  SizedBox(height: spacing.xs),
-                  Text(
-                    option.description,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                      fontFamily: 'PlusJakartaSans',
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ThemeModeOption {
-  final ThemeMode mode;
-  final String title;
-  final String description;
-  final IconData icon;
-
-  const _ThemeModeOption({
-    required this.mode,
-    required this.title,
-    required this.description,
-    required this.icon,
-  });
 }
 
 class _MembershipBadge extends StatelessWidget {

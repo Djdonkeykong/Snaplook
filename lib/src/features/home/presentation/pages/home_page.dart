@@ -765,12 +765,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                       children: [
                         Text(
                           '$creditsRemaining',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : const Color(0xFFf2003c),
+                            color: Color(0xFFf2003c),
                             fontFamily: 'PlusJakartaSans',
                             letterSpacing: -2,
                           ),
@@ -808,10 +806,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         value: creditsPercentage,
                         minHeight: 6,
                         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : const Color(0xFFf2003c)),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFf2003c)),
                       ),
                     ),
 
