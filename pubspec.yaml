@@ -148,3 +148,6 @@ flutter:
     - family: snaplook-more-and-family
       fonts:
         - asset: assets/fonts/snaplook-more-and-family.ttf
+    - family: snaplook-people
+      fonts:
+        - asset: assets/fonts/snaplook-people.ttf

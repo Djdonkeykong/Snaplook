@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/constants/snaplook-more-and-family_icons.dart';
+import '../../../../../core/constants/snaplook-people_icons.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -292,7 +293,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.friendOrFamily,
                                 label: 'Friend or family',
-                                icon: Icon(Snaplook_more_and_family.fluentMdl2Family, size: 24, color: Colors.grey.shade700),
+                                icon: Icon(Snaplook_people.biPeopleFill, size: 24, color: Colors.grey.shade700),
                                 isSelected: selectedSource == DiscoverySource.friendOrFamily,
                                 onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.friendOrFamily,
                               ),
@@ -312,7 +313,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.other,
                                 label: 'Other',
-                                icon: Icon(Snaplook_more_and_family.icRoundLayers, size: 24, color: Colors.grey.shade700),
+                                icon: Icon(Snaplook_more_and_family.icRoundLayers, size: 28, color: Colors.grey.shade700),
                                 isSelected: selectedSource == DiscoverySource.other,
                                 onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.other,
                               ),
