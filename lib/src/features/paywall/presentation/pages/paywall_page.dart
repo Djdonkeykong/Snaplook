@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
+import '../../providers/credit_provider.dart';
 
 enum SubscriptionPlan { monthly, yearly }
 
 final selectedPlanProvider = StateProvider<SubscriptionPlan>((ref) => SubscriptionPlan.yearly);
+final offeringsProvider = FutureProvider<Offerings?>((ref) async {
+  final purchaseController = ref.read(purchaseControllerProvider);
+  return await purchaseController.getOfferings();
+});
+final isPurchasingProvider = StateProvider<bool>((ref) => false);
 
 class PaywallPage extends ConsumerWidget {
   const PaywallPage({super.key});
@@ -17,6 +24,9 @@ class PaywallPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedPlan = ref.watch(selectedPlanProvider);
     final spacing = context.spacing;
+    final offerings = ref.watch(offeringsProvider);
+    final isPurchasing = ref.watch(isPurchasingProvider);
+    final creditBalance = ref.watch(creditBalanceProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -188,34 +198,36 @@ class PaywallPage extends ConsumerWidget {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  // Start trial and navigate to account creation
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const AccountCreationPage(),
-                    ),
-                  );
-                },
+                onPressed: isPurchasing ? null : () => _handlePurchase(context, ref, offerings.value),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFf2003c),
                   foregroundColor: Colors.white,
                   elevation: 0,
+                  disabledBackgroundColor: Colors.grey.shade300,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                child: Text(
-                  selectedPlan == SubscriptionPlan.yearly
-                      ? 'Start My 3-Day Free Trial'
-                      : 'Subscribe Now',
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.2,
-                  ),
-                ),
+                child: isPurchasing
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        selectedPlan == SubscriptionPlan.yearly
+                            ? 'Start My 3-Day Free Trial'
+                            : 'Subscribe Now',
+                        style: const TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
               ),
             ),
 
@@ -238,9 +250,186 @@ class PaywallPage extends ConsumerWidget {
               ),
             ),
 
-            SizedBox(height: spacing.xxl),
+            SizedBox(height: spacing.m),
+
+            // Restore purchases button
+            Center(
+              child: TextButton(
+                onPressed: isPurchasing ? null : () => _handleRestore(context, ref),
+                child: const Text(
+                  'Restore Purchases',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 14,
+                    color: Color(0xFF6B7280),
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+
+            SizedBox(height: spacing.l),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Handle purchase flow
+  Future<void> _handlePurchase(BuildContext context, WidgetRef ref, Offerings? offerings) async {
+    try {
+      HapticFeedback.mediumImpact();
+
+      if (offerings == null || offerings.current == null) {
+        _showErrorDialog(context, 'No subscription plans available. Please try again later.');
+        return;
+      }
+
+      final selectedPlan = ref.read(selectedPlanProvider);
+      final purchaseController = ref.read(purchaseControllerProvider);
+
+      // Find the appropriate package based on selected plan
+      Package? targetPackage;
+      final currentOffering = offerings.current!;
+
+      if (selectedPlan == SubscriptionPlan.yearly) {
+        // Look for yearly package
+        targetPackage = currentOffering.annual ??
+                       currentOffering.availablePackages.firstWhere(
+                         (p) => p.packageType == PackageType.annual,
+                         orElse: () => currentOffering.availablePackages.first,
+                       );
+      } else {
+        // Look for monthly package
+        targetPackage = currentOffering.monthly ??
+                       currentOffering.availablePackages.firstWhere(
+                         (p) => p.packageType == PackageType.monthly,
+                         orElse: () => currentOffering.availablePackages.first,
+                       );
+      }
+
+      // Set purchasing state
+      ref.read(isPurchasingProvider.notifier).state = true;
+
+      // Attempt purchase
+      final success = await purchaseController.purchasePackage(targetPackage);
+
+      // Reset purchasing state
+      ref.read(isPurchasingProvider.notifier).state = false;
+
+      if (success) {
+        HapticFeedback.mediumImpact();
+
+        // Show success message
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Subscription activated! Enjoy unlimited access.',
+                style: TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+
+          // Navigate back or to main app
+          Navigator.of(context).pop();
+        }
+      } else {
+        if (context.mounted) {
+          _showErrorDialog(context, 'Purchase was not completed. Please try again.');
+        }
+      }
+    } on PlatformException catch (e) {
+      ref.read(isPurchasingProvider.notifier).state = false;
+
+      final errorCode = PurchasesErrorHelper.getErrorCode(e);
+      if (errorCode != PurchasesErrorCode.purchaseCancelledError) {
+        // Don't show error for user cancellation
+        if (context.mounted) {
+          _showErrorDialog(context, e.message ?? 'Purchase failed. Please try again.');
+        }
+      }
+    } catch (e) {
+      ref.read(isPurchasingProvider.notifier).state = false;
+
+      if (context.mounted) {
+        _showErrorDialog(context, 'An error occurred. Please try again.');
+      }
+    }
+  }
+
+  /// Handle restore purchases
+  Future<void> _handleRestore(BuildContext context, WidgetRef ref) async {
+    try {
+      HapticFeedback.mediumImpact();
+
+      ref.read(isPurchasingProvider.notifier).state = true;
+
+      final purchaseController = ref.read(purchaseControllerProvider);
+      final success = await purchaseController.restorePurchases();
+
+      ref.read(isPurchasingProvider.notifier).state = false;
+
+      if (success) {
+        HapticFeedback.mediumImpact();
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Purchases restored successfully!',
+                style: TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+
+          Navigator.of(context).pop();
+        }
+      } else {
+        if (context.mounted) {
+          _showErrorDialog(context, 'No purchases found to restore.');
+        }
+      }
+    } catch (e) {
+      ref.read(isPurchasingProvider.notifier).state = false;
+
+      if (context.mounted) {
+        _showErrorDialog(context, 'Failed to restore purchases. Please try again.');
+      }
+    }
+  }
+
+  /// Show error dialog
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Error',
+          style: TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'OK',
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                color: Color(0xFFf2003c),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
