@@ -29,8 +29,12 @@ class SubscriptionStatus extends Equatable {
       isActive: isActive,
       isInTrialPeriod: entitlement?.periodType == PeriodType.trial,
       productIdentifier: entitlement?.productIdentifier,
-      expirationDate: entitlement?.expirationDate,
-      purchaseDate: entitlement?.latestPurchaseDate,
+      expirationDate: entitlement?.expirationDate != null
+          ? DateTime.tryParse(entitlement!.expirationDate!)
+          : null,
+      purchaseDate: entitlement?.latestPurchaseDate != null
+          ? DateTime.tryParse(entitlement!.latestPurchaseDate!)
+          : null,
       entitlementInfo: entitlement,
     );
   }

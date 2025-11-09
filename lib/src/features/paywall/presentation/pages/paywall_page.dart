@@ -8,9 +8,9 @@ import '../../../onboarding/presentation/pages/account_creation_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../providers/credit_provider.dart';
 
-enum SubscriptionPlan { monthly, yearly }
+enum PaywallPlanType { monthly, yearly }
 
-final selectedPlanProvider = StateProvider<SubscriptionPlan>((ref) => SubscriptionPlan.yearly);
+final selectedPlanProvider = StateProvider<PaywallPlanType>((ref) => PaywallPlanType.yearly);
 final offeringsProvider = FutureProvider<Offerings?>((ref) async {
   final purchaseController = ref.read(purchaseControllerProvider);
   return await purchaseController.getOfferings();
@@ -60,7 +60,7 @@ class PaywallPage extends ConsumerWidget {
 
             // Main heading
             Text(
-              selectedPlan == SubscriptionPlan.monthly
+              selectedPlan == PaywallPlanType.monthly
                 ? 'Unlock everything Snaplook offers.'
                 : 'Start your 3-day FREE\ntrial to continue.',
               style: const TextStyle(
@@ -76,7 +76,7 @@ class PaywallPage extends ConsumerWidget {
             SizedBox(height: spacing.xl),
 
             // Dynamic content based on selected plan
-            selectedPlan == SubscriptionPlan.monthly
+            selectedPlan == PaywallPlanType.monthly
               ? Column(
                   children: [
                     _FeatureItem(
@@ -137,24 +137,24 @@ class PaywallPage extends ConsumerWidget {
                       // Monthly plan
                       Expanded(
                         child: _PlanOption(
-                          plan: SubscriptionPlan.monthly,
+                          plan: PaywallPlanType.monthly,
                           title: 'Monthly',
                           price: '\$7.99/mo',
                           subtitle: '', // Empty subtitle to match yearly plan height
-                          isSelected: selectedPlan == SubscriptionPlan.monthly,
-                          onTap: () => ref.read(selectedPlanProvider.notifier).state = SubscriptionPlan.monthly,
+                          isSelected: selectedPlan == PaywallPlanType.monthly,
+                          onTap: () => ref.read(selectedPlanProvider.notifier).state = PaywallPlanType.monthly,
                         ),
                       ),
                       SizedBox(width: spacing.m),
                       // Yearly plan
                       Expanded(
                         child: _PlanOption(
-                          plan: SubscriptionPlan.yearly,
+                          plan: PaywallPlanType.yearly,
                           title: 'Yearly',
                           price: '\$4.99/mo',
                           subtitle: '3 DAYS FREE',
-                          isSelected: selectedPlan == SubscriptionPlan.yearly,
-                          onTap: () => ref.read(selectedPlanProvider.notifier).state = SubscriptionPlan.yearly,
+                          isSelected: selectedPlan == PaywallPlanType.yearly,
+                          onTap: () => ref.read(selectedPlanProvider.notifier).state = PaywallPlanType.yearly,
                           isPopular: true,
                         ),
                       ),
@@ -177,7 +177,7 @@ class PaywallPage extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  selectedPlan == SubscriptionPlan.yearly
+                  selectedPlan == PaywallPlanType.yearly
                       ? 'No Payment Due Now'
                       : 'No Commitment - Cancel Anytime',
                   style: const TextStyle(
@@ -218,7 +218,7 @@ class PaywallPage extends ConsumerWidget {
                         ),
                       )
                     : Text(
-                        selectedPlan == SubscriptionPlan.yearly
+                        selectedPlan == PaywallPlanType.yearly
                             ? 'Start My 3-Day Free Trial'
                             : 'Subscribe Now',
                         style: const TextStyle(
@@ -236,7 +236,7 @@ class PaywallPage extends ConsumerWidget {
             // Bottom pricing text
             Center(
               child: Text(
-                selectedPlan == SubscriptionPlan.yearly
+                selectedPlan == PaywallPlanType.yearly
                     ? '3 days free, then \$59.99 per year (\$4.99/mo)'
                     : 'Just \$7.99 per month',
                 textAlign: TextAlign.center,
@@ -293,7 +293,7 @@ class PaywallPage extends ConsumerWidget {
       Package? targetPackage;
       final currentOffering = offerings.current!;
 
-      if (selectedPlan == SubscriptionPlan.yearly) {
+      if (selectedPlan == PaywallPlanType.yearly) {
         // Look for yearly package
         targetPackage = currentOffering.annual ??
                        currentOffering.availablePackages.firstWhere(
@@ -586,7 +586,7 @@ class _TimelineItem extends StatelessWidget {
 }
 
 class _PlanOption extends StatelessWidget {
-  final SubscriptionPlan plan;
+  final PaywallPlanType plan;
   final String title;
   final String price;
   final String? subtitle;

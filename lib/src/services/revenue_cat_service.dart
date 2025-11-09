@@ -99,12 +99,12 @@ class RevenueCatService {
   Future<CustomerInfo?> purchasePackage(Package package) async {
     try {
       final purchaserInfo = await Purchases.purchasePackage(package);
-      _currentCustomerInfo = purchaserInfo.customerInfo;
+      _currentCustomerInfo = purchaserInfo;
 
       // Check if purchase was successful
-      if (purchaserInfo.customerInfo.entitlements.active.containsKey(premiumEntitlementId)) {
+      if (purchaserInfo.entitlements.active.containsKey(premiumEntitlementId)) {
         debugPrint('Purchase successful!');
-        return purchaserInfo.customerInfo;
+        return purchaserInfo;
       } else {
         debugPrint('Purchase completed but entitlement not active');
         return null;
@@ -208,7 +208,8 @@ class RevenueCatService {
     try {
       final customerInfo = await Purchases.getCustomerInfo();
       final entitlement = customerInfo.entitlements.active[premiumEntitlementId];
-      return entitlement?.expirationDate;
+      final expirationDateString = entitlement?.expirationDate;
+      return expirationDateString != null ? DateTime.tryParse(expirationDateString) : null;
     } catch (e) {
       debugPrint('Error getting expiration date: $e');
       return null;
@@ -261,12 +262,12 @@ class RevenueCatService {
   }
 
   /// Show management UI (opens store subscription management)
+  /// Note: This uses platform-specific URLs since RevenueCat removed showManagementUI
   Future<void> showManagementUI() async {
-    try {
-      await Purchases.showManagementUI();
-    } catch (e) {
-      debugPrint('Error showing management UI: $e');
-      rethrow;
-    }
+    // RevenueCat removed showManagementUI method in newer versions
+    // Users should be directed to platform-specific subscription management:
+    // iOS: Settings > Apple ID > Subscriptions
+    // Android: Play Store > Menu > Subscriptions
+    debugPrint('Note: Direct management UI not available. Users should manage subscriptions via platform settings.');
   }
 }

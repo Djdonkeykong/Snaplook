@@ -297,7 +297,7 @@ class _MembershipStatusCard extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: isPremium
-                  ? (isDark ? Colors.white.withOpacity(0.1) : AppColors.secondary.withOpacity(0.1))
+                  ? AppColors.secondary.withOpacity(0.1)
                   : colorScheme.surface,
               shape: BoxShape.circle,
             ),
