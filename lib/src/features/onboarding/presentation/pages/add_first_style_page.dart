@@ -6,6 +6,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../widgets/progress_indicator.dart';
+import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_intro_page.dart';
 import 'instagram_tutorial_page.dart';
 import 'pinterest_tutorial_page.dart';
@@ -183,40 +184,37 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
                 scaleAnimations: _scaleAnimations,
               ),
             ),
-
-            SizedBox(height: spacing.l),
-
-            // Skip Button
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const TrialIntroPage(),
-                  ),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                margin: EdgeInsets.only(bottom: spacing.xxl),
-                child: const Center(
-                  child: Text(
-                    'Skip',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black,
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.2,
-                      decoration: TextDecoration.underline,
-                      decorationColor: Colors.black,
-                      decorationThickness: 1.5,
-                    ),
-                  ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: OnboardingBottomBar(
+        secondaryButton: GestureDetector(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const TrialIntroPage(),
+              ),
+            );
+          },
+          child: const SizedBox(
+            width: double.infinity,
+            child: Center(
+              child: Text(
+                'Skip',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black,
+                  fontFamily: 'PlusJakartaSans',
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                  decoration: TextDecoration.underline,
+                  decorationColor: Colors.black,
+                  decorationThickness: 1.5,
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

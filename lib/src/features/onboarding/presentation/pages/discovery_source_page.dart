@@ -6,9 +6,10 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../widgets/progress_indicator.dart';
+import '../widgets/onboarding_bottom_bar.dart';
 import 'awesome_intro_page.dart';
 
-enum DiscoverySource { instagram, facebook, tiktok, youtube, google, tv }
+enum DiscoverySource { instagram, facebook, tiktok, youtube, google, tv, other }
 
 final selectedDiscoverySourceProvider = StateProvider<DiscoverySource?>((ref) => null);
 
@@ -31,7 +32,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
   void initState() {
     super.initState();
 
-    _animationControllers = List.generate(6, (index) {
+    _animationControllers = List.generate(7, (index) {
       return AnimationController(
         duration: const Duration(milliseconds: 400),
         vsync: this,
@@ -161,7 +162,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
               child: ListView.separated(
                 padding: EdgeInsets.only(bottom: spacing.l),
                 physics: const BouncingScrollPhysics(),
-                itemCount: 6,
+                itemCount: 7,
                 separatorBuilder: (_, __) => SizedBox(height: spacing.l),
                 itemBuilder: (context, index) {
                   switch (index) {
@@ -261,7 +262,6 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                         },
                       );
                     case 5:
-                    default:
                       return AnimatedBuilder(
                         animation: _animationControllers[5],
                         builder: (context, child) {
@@ -280,48 +280,67 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                           );
                         },
                       );
+                    case 6:
+                    default:
+                      return AnimatedBuilder(
+                        animation: _animationControllers[6],
+                        builder: (context, child) {
+                          return FadeTransition(
+                            opacity: _fadeAnimations[6],
+                            child: ScaleTransition(
+                              scale: _scaleAnimations[6],
+                              child: _DiscoverySourceOption(
+                                source: DiscoverySource.other,
+                                label: 'Other',
+                                icon: Icon(Icons.more_horiz, size: 24, color: Colors.grey.shade700),
+                                isSelected: selectedSource == DiscoverySource.other,
+                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.other,
+                              ),
+                            ),
+                          );
+                        },
+                      );
                   }
                 },
               ),
             ),
-
-            // Next Button
-            Container(
-              width: double.infinity,
-              height: 56,
-              margin: EdgeInsets.only(bottom: spacing.xxl),
-              child: ElevatedButton(
-                onPressed: selectedSource != null
-                    ? () {
-                        HapticFeedback.mediumImpact();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const AwesomeIntroPage(),
-                          ),
-                        );
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedSource != null ? const Color(0xFFf2003c) : Colors.grey.shade300,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                child: Text(
-                  'Next',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -0.2,
-                    color: selectedSource != null ? Colors.white : Colors.grey.shade600,
-                  ),
-                ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: OnboardingBottomBar(
+        primaryButton: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: selectedSource != null
+                ? () {
+                    HapticFeedback.mediumImpact();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const AwesomeIntroPage(),
+                      ),
+                    );
+                  }
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: selectedSource != null ? const Color(0xFFf2003c) : Colors.grey.shade300,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
               ),
             ),
-          ],
+            child: Text(
+              'Continue',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'PlusJakartaSans',
+                letterSpacing: -0.2,
+                color: selectedSource != null ? Colors.white : Colors.grey.shade600,
+              ),
+            ),
+          ),
         ),
       ),
     );

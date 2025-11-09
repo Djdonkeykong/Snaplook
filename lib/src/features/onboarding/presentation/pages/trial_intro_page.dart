@@ -6,6 +6,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../src/shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
+import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_reminder_page.dart';
 
 class TrialIntroPage extends ConsumerStatefulWidget {
@@ -131,19 +132,25 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage> with WidgetsBin
               ),
             ),
 
-            SizedBox(height: spacing.xl),
-
+            SizedBox(height: spacing.l),
+          ],
+        ),
+      ),
+      bottomNavigationBar: OnboardingBottomBar(
+        primaryButton: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             // No Payment Due Now
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.check,
                   color: Colors.green,
                   size: 16,
                 ),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'No Payment Due Now',
                   style: TextStyle(
                     fontSize: 14,
@@ -155,11 +162,9 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage> with WidgetsBin
                 ),
               ],
             ),
-
-            SizedBox(height: spacing.m),
-
+            const SizedBox(height: 16),
             // Try For $0.00 button
-            Container(
+            SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
@@ -190,27 +195,21 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage> with WidgetsBin
                 ),
               ),
             ),
-
-            SizedBox(height: spacing.m),
-
-            // Pricing text
-            const Align(
-              alignment: Alignment.center,
-              child: Text(
-                'Just \$59.99 per year (\$4.99/mo)',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF6B7280),
-                  fontFamily: 'PlusJakartaSans',
-                  fontWeight: FontWeight.w500,
-                  height: 1.5,
-                ),
-              ),
-            ),
-
-            SizedBox(height: spacing.xxl),
           ],
+        ),
+        secondaryButton: const Align(
+          alignment: Alignment.center,
+          child: Text(
+            'Just \$59.99 per year (\$4.99/mo)',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+              fontFamily: 'PlusJakartaSans',
+              fontWeight: FontWeight.w500,
+              height: 1.5,
+            ),
+          ),
         ),
       ),
     );
