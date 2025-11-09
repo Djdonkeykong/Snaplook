@@ -454,10 +454,20 @@ class _AppCard extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: iconWidget,
+              Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: iconWidget,
+                  ),
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
