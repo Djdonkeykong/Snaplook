@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
-import 'package:sliding_up_panel/sliding_up_panel.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../domain/services/tutorial_service.dart';
 import 'trial_intro_page.dart';
@@ -72,6 +71,8 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
           tutorialResults = results;
           _isLoading = false;
         });
+        // Show modal after products are loaded
+        _showResultsModal();
       }
     } catch (e) {
       print('Error loading tutorial products: $e');
@@ -79,6 +80,8 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
         setState(() {
           _isLoading = false;
         });
+        // Show modal even if there's an error
+        _showResultsModal();
       }
     }
   }
@@ -91,15 +94,6 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
 
   @override
   Widget build(BuildContext context) {
-    final categories = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Headwear', 'Accessories'];
-    final spacing = context.spacing;
-    final radius = context.radius;
-    final mediaQuery = MediaQuery.of(context);
-    final safeAreaBottom = mediaQuery.padding.bottom;
-    final sheetMaxHeight = mediaQuery.size.height * 0.85;
-    final sheetInitialHeight = sheetMaxHeight * 0.55;
-    final sheetMinHeight = sheetInitialHeight;
-
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
@@ -134,176 +128,49 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
             ),
           ),
 
-          // Sliding Up Panel matching real results page
-          SlidingUpPanel(
-            minHeight: sheetMinHeight,
-            maxHeight: sheetMaxHeight,
-            parallaxEnabled: false,
-            panelSnapping: true,
-            snapPoint: (sheetInitialHeight / sheetMaxHeight).clamp(0.0, 1.0),
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(12),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 12,
-                offset: const Offset(0, -4),
-              ),
-            ],
-            body: const SizedBox.shrink(),
-            panelBuilder: (scrollController) {
-              return SafeArea(
-                top: false,
-                bottom: false,
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: spacing.m,
-                        right: spacing.m,
-                        top: spacing.l,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[400],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: spacing.m),
-                          Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Similar matches',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'PlusJakartaSans',
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '${_getFilteredResults().length} results',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'PlusJakartaSans',
-                                  ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: spacing.m),
-                    // Category filter chips
-                    SizedBox(
-                      height: 50,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: EdgeInsets.symmetric(horizontal: spacing.m),
-                        itemCount: categories.length,
-                        itemBuilder: (context, index) {
-                          final category = categories[index];
-                          final isSelected = selectedCategory == category;
-                          return Container(
-                            margin: EdgeInsets.only(
-                              right: index < categories.length - 1
-                                  ? spacing.sm
-                                  : 0,
-                            ),
-                            child: FilterChip(
-                              label: Text(
-                                category,
-                                style: TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                  color: isSelected ? Colors.white : Colors.black,
-                                ),
-                              ),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                setState(() {
-                                  selectedCategory = category;
-                                });
-                              },
-                              backgroundColor: Colors.white,
-                              selectedColor: const Color(0xFFf2003c),
-                              showCheckmark: false,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                side: BorderSide(
-                                  color: const Color(0xFFf2003c),
-                                  width: 1,
-                                ),
-                              ),
-                              side: BorderSide.none,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    SizedBox(height: spacing.sm),
-                    Expanded(
-                      child: _isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFFf2003c),
-                              ),
-                            )
-                          : ListView.separated(
-                              controller: scrollController,
-                              physics: const ClampingScrollPhysics(),
-                              padding: EdgeInsets.fromLTRB(
-                                spacing.m,
-                                0,
-                                spacing.m,
-                                safeAreaBottom + spacing.l,
-                              ),
-                              itemCount: _getFilteredResults().length,
-                              separatorBuilder: (context, index) {
-                                return Padding(
-                                  padding: EdgeInsets.only(left: spacing.m),
-                                  child: Divider(
-                                    color: Colors.grey[300],
-                                    height: 1,
-                                    thickness: 1,
-                                  ),
-                                );
-                              },
-                              itemBuilder: (context, index) {
-                                final result = _getFilteredResults()[index];
-                                return _ProductCard(
-                                  result: result,
-                                  onTap: () => _openProduct(result),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-
           // Congratulations Overlay
           if (_showCongratulations)
             _buildCongratulationsOverlay(),
         ],
+      ),
+    );
+  }
+
+  void _showResultsModal() {
+    final categories = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Headwear', 'Accessories'];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false, // Don't allow dismissing in tutorial
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.55,
+        minChildSize: 0.55,
+        maxChildSize: 0.85,
+        snap: true,
+        snapSizes: const [0.55, 0.85],
+        builder: (context, scrollController) {
+          return StatefulBuilder(
+            builder: (context, setModalState) {
+              return _TutorialModalContent(
+                categories: categories,
+                selectedCategory: selectedCategory,
+                onCategorySelected: (category) {
+                  setState(() {
+                    selectedCategory = category;
+                  });
+                  setModalState(() {});
+                },
+                filteredResults: _getFilteredResults(),
+                isLoading: _isLoading,
+                scrollController: scrollController,
+                onProductTap: _openProduct,
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -444,6 +311,185 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
         await launchUrl(uri);
       }
     }
+  }
+}
+
+class _TutorialModalContent extends StatelessWidget {
+  final List<String> categories;
+  final String selectedCategory;
+  final Function(String) onCategorySelected;
+  final List<DetectionResult> filteredResults;
+  final bool isLoading;
+  final ScrollController scrollController;
+  final Function(DetectionResult) onProductTap;
+
+  const _TutorialModalContent({
+    required this.categories,
+    required this.selectedCategory,
+    required this.onCategorySelected,
+    required this.filteredResults,
+    required this.isLoading,
+    required this.scrollController,
+    required this.onProductTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+    final mediaQuery = MediaQuery.of(context);
+    final safeAreaBottom = mediaQuery.padding.bottom;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                left: spacing.m,
+                right: spacing.m,
+                top: spacing.l,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: spacing.m),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Similar matches',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${filteredResults.length} results',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: spacing.m),
+            // Category filter chips
+            SizedBox(
+              height: 50,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final category = categories[index];
+                  final isSelected = selectedCategory == category;
+                  return Container(
+                    margin: EdgeInsets.only(
+                      right: index < categories.length - 1 ? spacing.sm : 0,
+                    ),
+                    child: FilterChip(
+                      label: Text(
+                        category,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: isSelected ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      selected: isSelected,
+                      onSelected: (selected) => onCategorySelected(category),
+                      backgroundColor: Colors.white,
+                      selectedColor: const Color(0xFFf2003c),
+                      showCheckmark: false,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        side: BorderSide(
+                          color: const Color(0xFFf2003c),
+                          width: 1,
+                        ),
+                      ),
+                      side: BorderSide.none,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: spacing.sm),
+            Expanded(
+              child: isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFf2003c),
+                      ),
+                    )
+                  : ListView.separated(
+                      controller: scrollController,
+                      physics: const ClampingScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(
+                        spacing.m,
+                        0,
+                        spacing.m,
+                        safeAreaBottom + spacing.l,
+                      ),
+                      itemCount: filteredResults.length,
+                      separatorBuilder: (context, index) {
+                        return Padding(
+                          padding: EdgeInsets.only(left: spacing.m),
+                          child: Divider(
+                            color: Colors.grey[300],
+                            height: 1,
+                            thickness: 1,
+                          ),
+                        );
+                      },
+                      itemBuilder: (context, index) {
+                        final result = filteredResults[index];
+                        return _ProductCard(
+                          result: result,
+                          onTap: () => onProductTap(result),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

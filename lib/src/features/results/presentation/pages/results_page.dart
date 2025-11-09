@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../detection/domain/models/detection_result.dart';
@@ -34,6 +33,11 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+
+    // Show modal bottom sheet after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showResultsModal();
+    });
   }
 
   @override
@@ -45,16 +49,6 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   @override
   Widget build(BuildContext context) {
     final selectedImage = ref.watch(selectedImageProvider);
-    final detectionState = ref.watch(detectionProvider);
-    final results = detectionState.results;
-
-    final spacing = context.spacing;
-    final radius = context.radius;
-    final mediaQuery = MediaQuery.of(context);
-    final safeAreaBottom = mediaQuery.padding.bottom;
-    final sheetMaxHeight = mediaQuery.size.height * 0.85;
-    final sheetInitialHeight = sheetMaxHeight * 0.55;
-    final sheetMinHeight = sheetInitialHeight;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -76,146 +70,43 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: _ResultsBackground(
-              selectedImage: selectedImage,
-              originalImageUrl: widget.originalImageUrl,
-            ),
-          ),
-          SlidingUpPanel(
-            minHeight: sheetMinHeight,
-            maxHeight: sheetMaxHeight,
-            parallaxEnabled: false,
-            panelSnapping: true,
-            snapPoint: (sheetInitialHeight / sheetMaxHeight).clamp(0.0, 1.0),
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(12),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 12,
-                offset: const Offset(0, -4),
-              ),
-            ],
-            body: const SizedBox.shrink(),
-            panelBuilder: (scrollController) {
-              return SafeArea(
-                top: false,
-                bottom: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(
-                        left: spacing.m,
-                        right: spacing.m,
-                        top: spacing.l,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[400],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: spacing.m),
-                          Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Similar matches',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'PlusJakartaSans',
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '${results.length} results',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'PlusJakartaSans',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: spacing.m),
-                    // Category filter chips - mirror share extension styling
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: SizedBox(
-                        height: 36,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            padding: EdgeInsets.symmetric(horizontal: spacing.m),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                _AllResultsChip(),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: spacing.sm),
-                    Expanded(
-                      child: ListView.separated(
-                        controller: scrollController,
-                        physics: const ClampingScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(
-                          spacing.m,
-                          0,
-                          spacing.m,
-                          safeAreaBottom + spacing.l,
-                        ),
-                        itemCount: results.length,
-                        separatorBuilder: (context, index) {
-                          return Padding(
-                            padding: EdgeInsets.only(left: spacing.m),
-                            child: Divider(
-                              color: Colors.grey[300],
-                              height: 1,
-                              thickness: 1,
-                            ),
-                          );
-                        },
-                        itemBuilder: (context, index) {
-                          final result = results[index];
-                          return _ProductCard(
-                            result: result,
-                            onTap: () => _openProduct(result),
-                            isFirst: index == 0,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
+      body: _ResultsBackground(
+        selectedImage: selectedImage,
+        originalImageUrl: widget.originalImageUrl,
       ),
     );
+  }
+
+  void _showResultsModal() {
+    final detectionState = ref.read(detectionProvider);
+    final results = detectionState.results;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.55,
+        minChildSize: 0.55,
+        maxChildSize: 0.85,
+        snap: true,
+        snapSizes: const [0.55, 0.85],
+        builder: (context, scrollController) {
+          return _ResultsModalContent(
+            results: results,
+            scrollController: scrollController,
+            onProductTap: _openProduct,
+          );
+        },
+      ),
+    ).then((_) {
+      // When modal is dismissed, pop the entire page
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
   }
 
   void _shareResults() {
@@ -240,6 +131,148 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
         await launchUrl(uri);
       }
     }
+  }
+}
+
+class _ResultsModalContent extends StatelessWidget {
+  final List<DetectionResult> results;
+  final ScrollController scrollController;
+  final Function(DetectionResult) onProductTap;
+
+  const _ResultsModalContent({
+    required this.results,
+    required this.scrollController,
+    required this.onProductTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+    final mediaQuery = MediaQuery.of(context);
+    final safeAreaBottom = mediaQuery.padding.bottom;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                left: spacing.m,
+                right: spacing.m,
+                top: spacing.l,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: spacing.m),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Similar matches',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${results.length} results',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: spacing.m),
+            // Category filter chips
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: SizedBox(
+                height: 36,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        _AllResultsChip(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: spacing.sm),
+            Expanded(
+              child: ListView.separated(
+                controller: scrollController,
+                physics: const ClampingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  spacing.m,
+                  0,
+                  spacing.m,
+                  safeAreaBottom + spacing.l,
+                ),
+                itemCount: results.length,
+                separatorBuilder: (context, index) {
+                  return Padding(
+                    padding: EdgeInsets.only(left: spacing.m),
+                    child: Divider(
+                      color: Colors.grey[300],
+                      height: 1,
+                      thickness: 1,
+                    ),
+                  );
+                },
+                itemBuilder: (context, index) {
+                  final result = results[index];
+                  return _ProductCard(
+                    result: result,
+                    onTap: () => onProductTap(result),
+                    isFirst: index == 0,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
