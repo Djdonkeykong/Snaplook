@@ -28,7 +28,6 @@ import 'src/services/share_extension_config_service.dart';
 import 'src/features/auth/domain/services/auth_service.dart';
 import 'src/features/favorites/domain/providers/favorites_provider.dart';
 import 'dart:io';
-import 'core/theme/theme_mode_notifier.dart';
 
 // Custom LocalStorage implementation using SharedPreferences
 // This avoids flutter_secure_storage crash on iOS 18.6.2
@@ -776,8 +775,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeModeProvider);
-
     return MaterialApp(
       navigatorKey: navigatorKey,
       builder: (context, child) {
@@ -796,8 +793,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       title: 'Snaplook',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
       navigatorObservers: [routeObserver],
       home: const SplashPage(),
       onGenerateRoute: (settings) {

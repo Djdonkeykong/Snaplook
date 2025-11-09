@@ -157,17 +157,6 @@ class AppNavigationExtension extends ThemeExtension<AppNavigationExtension> {
     actionBarLabel: Colors.white,
   );
 
-  static const AppNavigationExtension dark = AppNavigationExtension(
-    navBarBackground: Colors.black,
-    navBarActiveIcon: Colors.white,
-    navBarInactiveIcon: Color(0x8CFFFFFF),
-    navBarBadgeBackground: Colors.black,
-    navBarBadgeBorder: Colors.white,
-    actionBarBackground: Colors.black,
-    actionBarIcon: Colors.white,
-    actionBarLabel: Colors.white,
-  );
-
   @override
   AppNavigationExtension copyWith({
     Color? navBarBackground,

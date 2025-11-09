@@ -400,12 +400,8 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : const Color(0xFFf2003c),
-                          foregroundColor: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.black
-                              : Colors.white,
+                          backgroundColor: const Color(0xFFf2003c),
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 32),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(28),
