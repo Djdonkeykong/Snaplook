@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import '../features/paywall/models/subscription_plan.dart';
 import '../features/paywall/models/subscription_status.dart';
 
 /// Service for managing RevenueCat purchases and subscriptions
@@ -14,10 +13,12 @@ class RevenueCatService {
   bool _isConfigured = false;
   CustomerInfo? _currentCustomerInfo;
 
-  // Replace these with your actual RevenueCat API keys
+  // RevenueCat API keys - using test key for development
+  // Production keys: Replace test key before release
   // Get them from: https://app.revenuecat.com/settings/api-keys
-  static const String _appleApiKey = 'sk_WBFENSAwHStcnHwASjgjkuCargpHt';
-  static const String _googleApiKey = 'sk_ElMqQMznRmlmeKxjkNMqSYgINEXOW';
+  static const String _testApiKey = 'test_BwftAgotTKZWtqHYPcgoaqhbwbV';
+  static const String _appleApiKey = _testApiKey; // Replace with production key
+  static const String _googleApiKey = _testApiKey; // Replace with production key
 
   // Entitlement identifier (must match your RevenueCat dashboard)
   static const String premiumEntitlementId = 'premium';

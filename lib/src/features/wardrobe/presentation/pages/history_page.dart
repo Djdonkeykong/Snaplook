@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../shared/services/supabase_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -117,9 +118,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               ),
             );
           },
-          loading: () => Center(
+          loading: () => const Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.secondary),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
               strokeWidth: 2,
             ),
           ),

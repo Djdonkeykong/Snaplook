@@ -18,6 +18,8 @@ export 'providers/credit_provider.dart';
 // Pages
 export 'presentation/pages/paywall_page.dart';
 export 'presentation/pages/subscription_management_page.dart';
+export 'presentation/pages/revenuecat_paywall_page.dart';
+export 'presentation/pages/customer_center_page.dart';
 
 // Widgets
 export 'presentation/widgets/credit_check_widget.dart';
