@@ -3,11 +3,29 @@ workflows:
     name: iOS Workflow
     max_build_duration: 120
     instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Snaplook Codemagic
     environment:
       flutter: stable
       xcode: 16.4
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.snaplook.snaplook
     scripts:
+      - name: Set up keychain
+        script: |
+          keychain initialize
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files com.snaplook.snaplook --type IOS_APP_STORE --create
+          app-store-connect fetch-signing-files com.snaplook.snaplook.shareExtension --type IOS_APP_STORE --create
+      - name: Add certificates to keychain
+        script: |
+          keychain add-certificates
+      - name: Set up signing in Xcode project
+        script: |
+          xcode-project use-profiles
       - name: Install dependencies
         script: |
           flutter pub get
@@ -16,7 +34,11 @@ workflows:
           flutter pub run build_runner build --delete-conflicting-outputs
       - name: Build iOS
         script: |
-          flutter build ipa --release
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
