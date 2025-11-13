@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:super_cupertino_navigation_bar/super_cupertino_navigation_bar.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import '../../../paywall/providers/credit_provider.dart';
 import 'edit_profile_page.dart';
 import 'help_faq_page.dart';
 import 'contact_support_page.dart';
@@ -121,47 +121,50 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final user = ref.watch(currentUserProvider);
     final userEmail = user?.email ?? 'user@example.com';
     final initials = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
-    final metadata = user?.userMetadata ?? <String, dynamic>{};
-    final membershipValue = metadata['membership'];
-    final membershipLabel = _formatMembershipLabel(membershipValue);
-    final isPremiumMembership = _isPremiumMembership(membershipValue);
+
+    // Get subscription status from RevenueCat
+    final subscriptionStatusAsync = ref.watch(subscriptionStatusProvider);
+    final membershipLabel = subscriptionStatusAsync.when(
+      data: (status) {
+        if (status.isInTrialPeriod) return 'Trial';
+        if (status.isActive) return 'Premium';
+        return 'Free';
+      },
+      loading: () => 'Free',
+      error: (_, __) => 'Free',
+    );
+    final isPremiumMembership = subscriptionStatusAsync.when(
+      data: (status) => status.isActive || status.isInTrialPeriod,
+      loading: () => false,
+      error: (_, __) => false,
+    );
 
     return Scaffold(
       backgroundColor: colorScheme.background,
-      body: SuperScaffold(
-        scrollController: _scrollController,
-        appBar: SuperAppBar(
-          title: Text(
-            'Settings',
-            style: TextStyle(
-              fontSize: 17,
-              fontFamily: 'PlusJakartaSans',
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          backgroundColor: colorScheme.surface,
-          searchBar: SuperSearchBar(enabled: false),
-          largeTitle: SuperLargeTitle(
-            largeTitle: 'Settings',
-            textStyle: TextStyle(
-              fontSize: 30,
-              fontFamily: 'PlusJakartaSans',
-              letterSpacing: -1.0,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-              height: 1.3,
-            ),
-            padding: EdgeInsets.symmetric(horizontal: spacing.l),
+      appBar: AppBar(
+        backgroundColor: colorScheme.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: Text(
+          'Settings',
+          style: TextStyle(
+            fontSize: 22,
+            fontFamily: 'PlusJakartaSans',
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+            letterSpacing: -0.3,
           ),
         ),
-        body: SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: EdgeInsets.only(top: spacing.m),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          padding: EdgeInsets.only(top: spacing.m),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
                 // Profile Section
                 Material(
                   color: colorScheme.surface,
@@ -220,9 +223,33 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   ),
                                 ),
                                 SizedBox(height: spacing.xs),
-                                _MembershipBadge(
-                                  label: membershipLabel,
-                                  isPremium: isPremiumMembership,
+                                Row(
+                                  children: [
+                                    _MembershipBadge(
+                                      label: membershipLabel,
+                                      isPremium: isPremiumMembership,
+                                    ),
+                                    SizedBox(width: spacing.xs),
+                                    // Show trial days or expiration info
+                                    subscriptionStatusAsync.when(
+                                      data: (status) {
+                                        if (status.isInTrialPeriod && status.daysRemainingInTrial != null) {
+                                          final days = status.daysRemainingInTrial!;
+                                          return Text(
+                                            '$days ${days == 1 ? "day" : "days"} left',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontFamily: 'PlusJakartaSans',
+                                              color: colorScheme.onSurfaceVariant,
+                                            ),
+                                          );
+                                        }
+                                        return const SizedBox.shrink();
+                                      },
+                                      loading: () => const SizedBox.shrink(),
+                                      error: (_, __) => const SizedBox.shrink(),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -235,6 +262,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ),
                 SizedBox(height: spacing.m),
+
+                // Subscription Section
+                _SectionHeader(title: 'Subscription'),
+                _SimpleSettingItem(
+                  title: 'Manage Subscription',
+                  onTap: () async {
+                    final purchaseController = ref.read(purchaseControllerProvider);
+                    await purchaseController.showManagementUI();
+                  },
+                ),
+
+                SizedBox(height: spacing.l),
 
                 // Settings Section
                 _SectionHeader(title: 'Settings'),
@@ -318,9 +357,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ),
 
-                SizedBox(height: spacing.xl),
-              ],
-            ),
+              SizedBox(height: spacing.xl),
+            ],
           ),
         ),
       ),
@@ -482,32 +520,4 @@ class _MembershipBadge extends StatelessWidget {
       ),
     );
   }
-}
-
-String _formatMembershipLabel(dynamic membershipValue) {
-  final raw = (membershipValue is String
-          ? membershipValue
-          : membershipValue?.toString() ?? '')
-      .trim();
-  if (raw.isEmpty) {
-    return 'Free';
-  }
-  final normalized = raw.replaceAll(RegExp(r'[_-]+'), ' ').trim();
-  final segments = normalized
-      .split(RegExp(r'\s+'))
-      .where((segment) => segment.isNotEmpty)
-      .map(
-        (segment) =>
-            segment[0].toUpperCase() + segment.substring(1).toLowerCase(),
-      )
-      .toList();
-  return segments.isEmpty ? 'Free' : segments.join(' ');
-}
-
-bool _isPremiumMembership(dynamic membershipValue) {
-  final raw = (membershipValue is String
-          ? membershipValue
-          : membershipValue?.toString() ?? '')
-      .toLowerCase();
-  return raw.contains('premium') || raw.contains('pro');
 }

@@ -9,7 +9,6 @@ import '../../../detection/domain/models/detection_result.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
-import '../../../detection/presentation/providers/detection_provider.dart';
 
 class ResultsPage extends ConsumerStatefulWidget {
   final List<DetectionResult> results;
@@ -27,21 +26,34 @@ class ResultsPage extends ConsumerStatefulWidget {
 
 class _ResultsPageState extends ConsumerState<ResultsPage>
     with SingleTickerProviderStateMixin {
+  static const double _minSheetExtent = 0.18;
+  static const double _initialSheetExtent = 0.6;
+  static const double _maxSheetExtent = 0.85;
+  static const double _dismissExtent = 0.3;
+
   late TabController _tabController;
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
+  bool _isSheetVisible = false;
+  bool _isClosingSheet = false;
+  double _currentSheetExtent = _initialSheetExtent;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
 
-    // Show modal bottom sheet after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showResultsModal();
+      if (!mounted) return;
+      setState(() {
+        _isSheetVisible = true;
+      });
     });
   }
 
   @override
   void dispose() {
+    _sheetController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -70,43 +82,62 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
           ),
         ],
       ),
-      body: _ResultsBackground(
-        selectedImage: selectedImage,
-        originalImageUrl: widget.originalImageUrl,
+      body: Stack(
+        children: [
+          _ResultsBackground(
+            selectedImage: selectedImage,
+            originalImageUrl: widget.originalImageUrl,
+          ),
+          if (_isSheetVisible) ...[
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _dismissResults,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  color: Colors.black.withOpacity(_overlayOpacity),
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height,
+                child:
+                    NotificationListener<DraggableScrollableNotification>(
+                  onNotification: (notification) {
+                    if (!mounted) return false;
+                    final extent = notification.extent
+                        .clamp(_minSheetExtent, _maxSheetExtent)
+                        .toDouble();
+                    setState(() => _currentSheetExtent = extent);
+                    if (!_isClosingSheet && extent <= _dismissExtent) {
+                      _dismissResults();
+                    }
+                    return false;
+                  },
+                  child: DraggableScrollableSheet(
+                    controller: _sheetController,
+                    initialChildSize: _initialSheetExtent,
+                    minChildSize: _minSheetExtent,
+                    maxChildSize: _maxSheetExtent,
+                    snap: false,
+                    expand: false,
+                    builder: (context, scrollController) {
+                      return _ResultsModalContent(
+                        results: widget.results,
+                        scrollController: scrollController,
+                        onProductTap: _openProduct,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
-  }
-
-  void _showResultsModal() {
-    final detectionState = ref.read(detectionProvider);
-    final results = detectionState.results;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      isDismissible: true,
-      enableDrag: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.55,
-        minChildSize: 0.55,
-        maxChildSize: 0.85,
-        snap: true,
-        snapSizes: const [0.55, 0.85],
-        builder: (context, scrollController) {
-          return _ResultsModalContent(
-            results: results,
-            scrollController: scrollController,
-            onProductTap: _openProduct,
-          );
-        },
-      ),
-    ).then((_) {
-      // When modal is dismissed, pop the entire page
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    });
   }
 
   void _shareResults() {
@@ -131,6 +162,21 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
         await launchUrl(uri);
       }
     }
+  }
+
+  double get _overlayOpacity {
+    final range = _maxSheetExtent - _minSheetExtent;
+    if (range <= 0) return 0.7;
+    final normalized =
+        ((_currentSheetExtent - _minSheetExtent) / range).clamp(0.0, 1.0);
+    return 0.15 + (0.55 * normalized);
+  }
+
+  void _dismissResults() {
+    if (_isClosingSheet) return;
+    _isClosingSheet = true;
+    setState(() => _isSheetVisible = false);
+    Navigator.of(context).pop();
   }
 }
 

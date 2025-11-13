@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:super_cupertino_navigation_bar/super_cupertino_navigation_bar.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 
@@ -13,96 +12,83 @@ class TermsPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colorScheme.background,
-      body: SuperScaffold(
-        appBar: SuperAppBar(
-          title: Text(
-            'Terms and Conditions',
-            style: TextStyle(
-              color: colorScheme.onSurface,
-              fontFamily: 'PlusJakartaSans',
-              fontWeight: FontWeight.w600,
-              fontSize: 17,
-            ),
-          ),
-          leadingWidth: 64,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: 12),
-            child: SnaplookBackButton(
-              onPressed: () => Navigator.of(context).pop(),
-              showBackground: false,
-            ),
-          ),
-          automaticallyImplyLeading: false,
-          backgroundColor: colorScheme.surface,
-          searchBar: SuperSearchBar(enabled: false),
-          largeTitle: SuperLargeTitle(
-            largeTitle: 'Terms and Conditions',
-            textStyle: TextStyle(
-              fontSize: 30,
-              fontFamily: 'PlusJakartaSans',
-              letterSpacing: -1.0,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-              height: 1.3,
-            ),
-            padding: EdgeInsets.symmetric(horizontal: spacing.l),
+      appBar: AppBar(
+        backgroundColor: colorScheme.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        title: Text(
+          'Terms and Conditions',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'PlusJakartaSans',
+            color: colorScheme.onSurface,
+            letterSpacing: -0.3,
           ),
         ),
-        body: SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(spacing.l),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: spacing.m),
-                Text(
-                  'Last updated: ${DateTime.now().year}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: colorScheme.onSurfaceVariant,
-                    fontFamily: 'PlusJakartaSans',
-                  ),
+        leadingWidth: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: SnaplookBackButton(
+            onPressed: () => Navigator.of(context).pop(),
+            showBackground: false,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(spacing.l),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: spacing.m),
+              Text(
+                'Last updated: ${DateTime.now().year}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colorScheme.onSurfaceVariant,
+                  fontFamily: 'PlusJakartaSans',
                 ),
-                SizedBox(height: spacing.xl),
-                _TermsSection(
-                  title: '1. Acceptance of Terms',
-                  content:
-                      'By accessing and using Snaplook, you accept and agree to be bound by the terms and conditions of this agreement.',
-                ),
-                SizedBox(height: spacing.l),
-                _TermsSection(
-                  title: '2. Use License',
-                  content:
-                      'Permission is granted to temporarily use Snaplook for personal, non-commercial purposes. This is the grant of a license, not a transfer of title.',
-                ),
-                SizedBox(height: spacing.l),
-                _TermsSection(
-                  title: '3. User Accounts',
-                  content:
-                      'You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account.',
-                ),
-                SizedBox(height: spacing.l),
-                _TermsSection(
-                  title: '4. Content',
-                  content:
-                      'Our service allows you to post, link, store, share and otherwise make available certain information. You are responsible for the content that you post on or through the service.',
-                ),
-                SizedBox(height: spacing.l),
-                _TermsSection(
-                  title: '5. Prohibited Uses',
-                  content:
-                      'You may not use our service for any illegal or unauthorized purpose, to violate any laws, or to harm others in any way.',
-                ),
-                SizedBox(height: spacing.l),
-                _TermsSection(
-                  title: '6. Limitation of Liability',
-                  content:
-                      'Snaplook shall not be liable for any indirect, incidental, special, consequential or punitive damages resulting from your use of or inability to use the service.',
-                ),
-                SizedBox(height: spacing.xl),
-              ],
-            ),
+              ),
+              SizedBox(height: spacing.xl),
+              _TermsSection(
+                title: '1. Acceptance of Terms',
+                content:
+                    'By accessing and using Snaplook, you accept and agree to be bound by the terms and conditions of this agreement.',
+              ),
+              SizedBox(height: spacing.l),
+              _TermsSection(
+                title: '2. Use License',
+                content:
+                    'Permission is granted to temporarily use Snaplook for personal, non-commercial purposes. This is the grant of a license, not a transfer of title.',
+              ),
+              SizedBox(height: spacing.l),
+              _TermsSection(
+                title: '3. User Accounts',
+                content:
+                    'You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account.',
+              ),
+              SizedBox(height: spacing.l),
+              _TermsSection(
+                title: '4. Content',
+                content:
+                    'Our service allows you to post, link, store, share and otherwise make available certain information. You are responsible for the content that you post on or through the service.',
+              ),
+              SizedBox(height: spacing.l),
+              _TermsSection(
+                title: '5. Prohibited Uses',
+                content:
+                    'You may not use our service for any illegal or unauthorized purpose, to violate any laws, or to harm others in any way.',
+              ),
+              SizedBox(height: spacing.l),
+              _TermsSection(
+                title: '6. Limitation of Liability',
+                content:
+                    'Snaplook shall not be liable for any indirect, incidental, special, consequential or punitive damages resulting from your use of or inability to use the service.',
+              ),
+              SizedBox(height: spacing.xl),
+            ],
           ),
         ),
       ),

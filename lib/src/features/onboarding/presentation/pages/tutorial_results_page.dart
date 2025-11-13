@@ -30,9 +30,16 @@ class TutorialResultsPage extends ConsumerStatefulWidget {
 }
 
 class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
-  String selectedCategory = 'All';
+    with SingleTickerProviderStateMixin {
+  static const double _minSheetExtent = 0.35;
+  static const double _initialSheetExtent = 0.6;
+  static const double _maxSheetExtent = 0.85;
+
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
+  bool _isSheetVisible = false;
+  double _currentSheetExtent = _initialSheetExtent;
+
   bool _showCongratulations = true;
   List<DetectionResult> tutorialResults = [];
   bool _isLoading = true;
@@ -41,7 +48,6 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
 
     // Load tutorial products from database
     _loadTutorialProducts();
@@ -61,6 +67,14 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
         });
       }
     });
+
+    // Show sheet after a short delay
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        _isSheetVisible = true;
+      });
+    });
   }
 
   Future<void> _loadTutorialProducts() async {
@@ -71,8 +85,6 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
           tutorialResults = results;
           _isLoading = false;
         });
-        // Show modal after products are loaded
-        _showResultsModal();
       }
     } catch (e) {
       print('Error loading tutorial products: $e');
@@ -80,15 +92,13 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
         setState(() {
           _isLoading = false;
         });
-        // Show modal even if there's an error
-        _showResultsModal();
       }
     }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _sheetController.dispose();
     super.dispose();
   }
 
@@ -131,81 +141,66 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
           // Congratulations Overlay
           if (_showCongratulations)
             _buildCongratulationsOverlay(),
+
+          // Dynamic overlay behind sheet (only when sheet is visible and congrats is done)
+          if (_isSheetVisible && !_showCongratulations) ...[
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {}, // Do nothing - can't dismiss in tutorial
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  color: Colors.black.withOpacity(_overlayOpacity),
+                ),
+              ),
+            ),
+            // Bottom sheet
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height,
+                child: NotificationListener<DraggableScrollableNotification>(
+                  onNotification: (notification) {
+                    if (!mounted) return false;
+                    final extent = notification.extent
+                        .clamp(_minSheetExtent, _maxSheetExtent)
+                        .toDouble();
+                    setState(() => _currentSheetExtent = extent);
+                    return false;
+                  },
+                  child: DraggableScrollableSheet(
+                    controller: _sheetController,
+                    initialChildSize: _initialSheetExtent,
+                    minChildSize: _minSheetExtent,
+                    maxChildSize: _maxSheetExtent,
+                    snap: false,
+                    expand: false,
+                    builder: (context, scrollController) {
+                      return _TutorialModalContent(
+                        filteredResults: tutorialResults,
+                        isLoading: _isLoading,
+                        scrollController: scrollController,
+                        onProductTap: _openProduct,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  void _showResultsModal() {
-    final categories = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Headwear', 'Accessories'];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      isDismissible: false, // Don't allow dismissing in tutorial
-      enableDrag: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.55,
-        minChildSize: 0.55,
-        maxChildSize: 0.85,
-        snap: true,
-        snapSizes: const [0.55, 0.85],
-        builder: (context, scrollController) {
-          return StatefulBuilder(
-            builder: (context, setModalState) {
-              return _TutorialModalContent(
-                categories: categories,
-                selectedCategory: selectedCategory,
-                onCategorySelected: (category) {
-                  setState(() {
-                    selectedCategory = category;
-                  });
-                  setModalState(() {});
-                },
-                filteredResults: _getFilteredResults(),
-                isLoading: _isLoading,
-                scrollController: scrollController,
-                onProductTap: _openProduct,
-              );
-            },
-          );
-        },
-      ),
-    );
+  double get _overlayOpacity {
+    final range = _maxSheetExtent - _minSheetExtent;
+    if (range <= 0) return 0.7;
+    final normalized =
+        ((_currentSheetExtent - _minSheetExtent) / range).clamp(0.0, 1.0);
+    return 0.15 + (0.55 * normalized);
   }
 
-  List<DetectionResult> _getFilteredResults() {
-    List<DetectionResult> filtered;
-    if (selectedCategory == 'All') {
-      filtered = List.from(tutorialResults);
-    } else {
-      filtered = tutorialResults
-          .where((result) => result.category.toLowerCase().contains(selectedCategory.toLowerCase()))
-          .toList();
-    }
-
-    // Sort by confidence score (highest first) to show best matches first
-    filtered.sort((a, b) => b.confidence.compareTo(a.confidence));
-    return filtered;
-  }
-
-  bool _hasHighQualityMatches() {
-    return tutorialResults.any((result) => result.confidence >= 0.85);
-  }
-
-  String _getSearchInsightText() {
-    final highQualityCount = tutorialResults.where((r) => r.confidence >= 0.85).length;
-    final mediumQualityCount = tutorialResults.where((r) => r.confidence >= 0.75 && r.confidence < 0.85).length;
-
-    if (highQualityCount > 0) {
-      return 'Found ${highQualityCount} precise color matches using smart matching';
-    } else if (mediumQualityCount > 0) {
-      return 'Found ${mediumQualityCount} good matches using enhanced color database';
-    } else {
-      return 'Smart search analyzed ${tutorialResults.length} potential matches';
-    }
-  }
 
   void _launchConfetti() {
     // Launch multiple confetti bursts for better effect
@@ -315,18 +310,12 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
 }
 
 class _TutorialModalContent extends StatelessWidget {
-  final List<String> categories;
-  final String selectedCategory;
-  final Function(String) onCategorySelected;
   final List<DetectionResult> filteredResults;
   final bool isLoading;
   final ScrollController scrollController;
   final Function(DetectionResult) onProductTap;
 
   const _TutorialModalContent({
-    required this.categories,
-    required this.selectedCategory,
-    required this.onCategorySelected,
     required this.filteredResults,
     required this.isLoading,
     required this.scrollController,
@@ -405,48 +394,23 @@ class _TutorialModalContent extends StatelessWidget {
             ),
             SizedBox(height: spacing.m),
             // Category filter chips
-            SizedBox(
-              height: 50,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: spacing.m),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-                  final isSelected = selectedCategory == category;
-                  return Container(
-                    margin: EdgeInsets.only(
-                      right: index < categories.length - 1 ? spacing.sm : 0,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: SizedBox(
+                height: 36,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        _AllResultsChip(),
+                      ],
                     ),
-                    child: FilterChip(
-                      label: Text(
-                        category,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: isSelected ? Colors.white : Colors.black,
-                        ),
-                      ),
-                      selected: isSelected,
-                      onSelected: (selected) => onCategorySelected(category),
-                      backgroundColor: Colors.white,
-                      selectedColor: const Color(0xFFf2003c),
-                      showCheckmark: false,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(28),
-                        side: BorderSide(
-                          color: const Color(0xFFf2003c),
-                          width: 1,
-                        ),
-                      ),
-                      side: BorderSide.none,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
             SizedBox(height: spacing.sm),
@@ -482,6 +446,7 @@ class _TutorialModalContent extends StatelessWidget {
                         return _ProductCard(
                           result: result,
                           onTap: () => onProductTap(result),
+                          isFirst: index == 0,
                         );
                       },
                     ),
@@ -496,10 +461,12 @@ class _TutorialModalContent extends StatelessWidget {
 class _ProductCard extends StatelessWidget {
   final DetectionResult result;
   final VoidCallback onTap;
+  final bool isFirst;
 
   const _ProductCard({
     required this.result,
     required this.onTap,
+    required this.isFirst,
   });
 
   @override
@@ -510,8 +477,9 @@ class _ProductCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(
-          vertical: spacing.m,
+        padding: EdgeInsets.only(
+          top: isFirst ? 0 : spacing.m,
+          bottom: spacing.m,
         ),
         color: Theme.of(context).colorScheme.surface,
         child: Row(
@@ -588,6 +556,36 @@ class _ProductCard extends StatelessWidget {
               color: AppColors.textTertiary,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AllResultsChip extends StatelessWidget {
+  const _AllResultsChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2003C),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFFF2003C),
+          width: 1,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'All',
+        style: TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+          color: Colors.white,
         ),
       ),
     );

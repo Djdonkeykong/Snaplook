@@ -9,7 +9,9 @@ import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
+import '../../../paywall/providers/credit_provider.dart';
 import '../widgets/progress_indicator.dart';
+import 'gender_selection_page.dart';
 
 class AccountCreationPage extends ConsumerWidget {
   const AccountCreationPage({super.key});
@@ -97,15 +99,27 @@ class AccountCreationPage extends ConsumerWidget {
                                 await authService.signInWithApple();
 
                                 if (context.mounted) {
-                                  // Reset tab to home and refresh providers
-                                  ref.read(selectedIndexProvider.notifier).state = 0;
-                                  ref.invalidate(inspirationProvider);
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(
-                                      builder: (context) => const MainNavigation(),
-                                    ),
-                                    (route) => false,
-                                  );
+                                  // Check if user has active subscription
+                                  final hasActiveSubscription = ref.read(hasActiveSubscriptionProvider);
+
+                                  if (hasActiveSubscription) {
+                                    // User already paid → go to main app
+                                    ref.read(selectedIndexProvider.notifier).state = 0;
+                                    ref.invalidate(inspirationProvider);
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (context) => const MainNavigation(),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  } else {
+                                    // No subscription → continue onboarding (gender page)
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) => const GenderSelectionPage(),
+                                      ),
+                                    );
+                                  }
                                 }
                               } catch (e) {
                                 if (context.mounted) {
@@ -142,15 +156,27 @@ class AccountCreationPage extends ConsumerWidget {
                                 await authService.signInWithGoogle();
 
                                 if (context.mounted) {
-                                  // Reset tab to home and refresh providers
-                                  ref.read(selectedIndexProvider.notifier).state = 0;
-                                  ref.invalidate(inspirationProvider);
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(
-                                      builder: (context) => const MainNavigation(),
-                                    ),
-                                    (route) => false,
-                                  );
+                                  // Check if user has active subscription
+                                  final hasActiveSubscription = ref.read(hasActiveSubscriptionProvider);
+
+                                  if (hasActiveSubscription) {
+                                    // User already paid → go to main app
+                                    ref.read(selectedIndexProvider.notifier).state = 0;
+                                    ref.invalidate(inspirationProvider);
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (context) => const MainNavigation(),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  } else {
+                                    // No subscription → continue onboarding (gender page)
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) => const GenderSelectionPage(),
+                                      ),
+                                    );
+                                  }
                                 }
                               } catch (e) {
                                 if (context.mounted) {

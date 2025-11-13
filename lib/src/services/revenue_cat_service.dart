@@ -21,7 +21,7 @@ class RevenueCatService {
   static const String _googleApiKey = _testApiKey; // Replace with production key
 
   // Entitlement identifier (must match your RevenueCat dashboard)
-  static const String premiumEntitlementId = 'premium';
+  static const String premiumEntitlementId = 'Snaplook Premium';
 
   /// Initialize RevenueCat SDK
   Future<void> initialize({String? userId}) async {
@@ -99,13 +99,14 @@ class RevenueCatService {
   /// Purchase a subscription package
   Future<CustomerInfo?> purchasePackage(Package package) async {
     try {
-      final purchaserInfo = await Purchases.purchasePackage(package);
-      _currentCustomerInfo = purchaserInfo;
+      final purchaseResult = await Purchases.purchasePackage(package);
+      final customerInfo = purchaseResult.customerInfo;
+      _currentCustomerInfo = customerInfo;
 
       // Check if purchase was successful
-      if (purchaserInfo.entitlements.active.containsKey(premiumEntitlementId)) {
+      if (customerInfo.entitlements.active.containsKey(premiumEntitlementId)) {
         debugPrint('Purchase successful!');
-        return purchaserInfo;
+        return customerInfo;
       } else {
         debugPrint('Purchase completed but entitlement not active');
         return null;

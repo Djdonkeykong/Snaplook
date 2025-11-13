@@ -35,6 +35,7 @@ class OnboardingBottomBar extends StatelessWidget {
         ],
       ),
       child: SafeArea(
+        top: false,
         minimum: EdgeInsets.only(
           left: spacing.l,
           right: spacing.l,

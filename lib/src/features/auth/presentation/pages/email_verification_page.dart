@@ -6,6 +6,8 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
+import '../../../paywall/providers/credit_provider.dart';
+import '../../../onboarding/presentation/pages/gender_selection_page.dart';
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
@@ -95,15 +97,28 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
       );
 
       if (mounted) {
-        // Reset tab to home and refresh providers
-        ref.read(selectedIndexProvider.notifier).state = 0;
-        ref.invalidate(inspirationProvider);
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const MainNavigation(),
-          ),
-          (route) => false,
-        );
+        // Check if user has active subscription
+        final hasActiveSubscription = ref.read(hasActiveSubscriptionProvider);
+
+        if (hasActiveSubscription) {
+          // User already paid → go to main app
+          ref.read(selectedIndexProvider.notifier).state = 0;
+          ref.invalidate(inspirationProvider);
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const MainNavigation(),
+            ),
+            (route) => false,
+          );
+        } else {
+          // No subscription → continue onboarding (gender page)
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const GenderSelectionPage(),
+            ),
+            (route) => false,
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

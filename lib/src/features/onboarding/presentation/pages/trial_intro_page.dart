@@ -104,35 +104,35 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage> with WidgetsBin
 
             // Video player
             Expanded(
-              child: Center(
-                child: _controller != null && VideoPreloader.instance.isTrialVideoInitialized
-                    ? Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Center(
-                            child: AspectRatio(
-                              aspectRatio: _controller!.value.aspectRatio,
-                              child: VideoPlayer(_controller!),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: FractionallySizedBox(
+                  widthFactor: 0.92,
+                  child: _controller != null && VideoPreloader.instance.isTrialVideoInitialized
+                      ? Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Center(
+                              child: AspectRatio(
+                                aspectRatio: _controller!.value.aspectRatio,
+                                child: VideoPlayer(_controller!),
+                              ),
                             ),
                           ),
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
-                      )
-                    : Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
+                ),
               ),
             ),
-
-            SizedBox(height: spacing.l),
           ],
         ),
       ),

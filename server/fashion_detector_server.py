@@ -405,8 +405,8 @@ class DetectAndSearchRequest(BaseModel):
     max_crops: Optional[int] = Field(default=MAX_GARMENTS)
     max_results_per_garment: Optional[int] = Field(default=10)
     location: Optional[str] = Field(default=None)  # Legacy: SearchAPI location string (e.g., 'United States')
-    country: Optional[str] = Field(default=None)  # PREFERRED: ISO 3166-1 alpha-2 country code (e.g., 'US', 'NO', 'GB')
-    language: Optional[str] = Field(default='en')  # Language code for interface (e.g., 'en', 'nb', 'fr')
+    country: Optional[str] = Field(default='NO')  # PREFERRED: ISO 3166-1 alpha-2 country code (e.g., 'US', 'NO', 'GB') - TESTING: Defaulting to Norway
+    language: Optional[str] = Field(default='nb')  # Language code for interface (e.g., 'en', 'nb', 'fr') - TESTING: Defaulting to Norwegian
     skip_detection: Optional[bool] = Field(default=False)  # Skip YOLO detection for user-cropped images
 
     @model_validator(mode="after")
@@ -529,6 +529,66 @@ def is_relevant_result(title: str) -> bool:
         return True
 
     return False
+
+def is_buyable_product(match: dict, merchant_whitelist: Set[str] = None, require_price: bool = False) -> bool:
+    """
+    Enhanced quality filter for SerpAPI results - only keep BUYABLE products.
+
+    Based on SearchAPI best practices:
+    1. Optionally check for price (SerpAPI visual_matches often don't have prices)
+    2. Must be from approved merchant (if whitelist provided)
+    3. Must NOT be out of stock
+    4. Must have valid product link
+
+    Args:
+        match: SerpAPI visual_match result
+        merchant_whitelist: Optional set of approved domains (uses TIER1_RETAIL_DOMAINS if None)
+        require_price: If True, reject products without price (default: False for visual_matches)
+
+    Returns:
+        True if product is buyable, False otherwise
+    """
+    # 1. Check for price (OPTIONAL for visual_matches - they often don't include prices)
+    if require_price:
+        price_obj = match.get('price') or match.get('extracted_price')
+        has_price = False
+
+        if isinstance(price_obj, dict):
+            # Check for extracted_value, value, amount, etc.
+            has_price = bool(price_obj.get('extracted_value', 0) or
+                            price_obj.get('value', 0) or
+                            price_obj.get('amount', 0))
+        elif isinstance(price_obj, (int, float)):
+            has_price = price_obj > 0
+        elif isinstance(price_obj, str):
+            # Try to parse price from string
+            has_price = bool(re.search(r'[0-9]+', price_obj))
+
+        if not has_price:
+            return False
+
+    # 2. Check merchant domain (if whitelist provided)
+    link = match.get('link', '')
+    if merchant_whitelist:
+        try:
+            domain = urlparse(link).netloc.lower()
+            # Remove 'www.' prefix
+            domain = domain.replace('www.', '')
+            if not domain_matches_any(domain, merchant_whitelist):
+                return False
+        except Exception:
+            return False
+
+    # 3. Check stock availability (only filter if explicitly marked out of stock)
+    stock_info = match.get('stock_information', '').lower()
+    if stock_info and any(term in stock_info for term in ['out of stock', 'sold out', 'unavailable']):
+        return False
+
+    # 4. Must have valid product link
+    if not link or not link.startswith('http'):
+        return False
+
+    return True
 
 def format_title(title: str) -> str:
     """Format title by removing marketing fluff and cleaning up"""
@@ -1155,24 +1215,43 @@ def download_image_from_url(image_url: str) -> Image.Image:
         raise Exception(f"Failed to download image: {response.status_code}")
     return Image.open(io.BytesIO(response.content)).convert("RGB")
 
-def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List[dict]:
+def search_serp_api(
+    image_url: str,
+    api_key: str,
+    max_results: int = 10,
+    merchant_hints: str = None,
+    use_strict_filtering: bool = True
+) -> List[dict]:
     """
     Search Google Lens via SerpAPI using ONLY the 'products' engine.
-    No fallback to visual_matches - products only for shopping results.
+    Enhanced with quality filtering for buyable products only.
+
+    Args:
+        image_url: Cloudinary or public image URL
+        api_key: SerpAPI key
+        max_results: Number of quality results to return
+        merchant_hints: Optional query to bias toward merchants (e.g., "Zalando OR ASOS OR H&M")
+        use_strict_filtering: If True, only allow products from TIER1_RETAIL_DOMAINS
+
+    Returns:
+        List of filtered, buyable product results
     """
     print(f"🔍 Searching SerpAPI for image: {image_url[:80]}...")
 
     results = []
 
-    # Only use products engine - no fallback
-    rail = 'products'
-    print(f"🔎 Using {rail} engine (no fallback)...")
+    print(f"🔎 Using Google Lens products (strict filtering: {use_strict_filtering})...")
     params = {
         'engine': 'google_lens',
         'api_key': api_key,
         'url': image_url,
-        'type': rail,
+        'type': 'products',  # Only product results
     }
+
+    # Add merchant hints if provided
+    if merchant_hints:
+        params['q'] = merchant_hints
+        print(f"💡 Using merchant hints: {merchant_hints}")
 
     try:
         # Increased timeout to 20s to allow for slower SerpAPI responses
@@ -1209,10 +1288,16 @@ def search_serp_api(image_url: str, api_key: str, max_results: int = 10) -> List
             if not link or not title:
                 continue
 
-            # Apply sophisticated filtering (ported from Flutter)
+            # PRIORITY 1: Check if product is actually buyable (price + stock + valid link)
+            merchant_whitelist = TIER1_RETAIL_DOMAINS if use_strict_filtering else None
+            if not is_buyable_product(match, merchant_whitelist):
+                continue
+
+            # PRIORITY 2: Apply sophisticated filtering (ported from Flutter)
             if not is_ecommerce_result(link, source, title, snippet):
                 continue
 
+            # PRIORITY 3: Semantic relevance
             if not is_relevant_result(title):
                 continue
 
@@ -1799,14 +1884,16 @@ def search_visual_products(
     location: str = None,
     country: str = None,
     language: str = None,
+    merchant_hints: str = None,
 ):
     """
     SerpAPI optimized Google Lens search with SMART pagination and proper localization.
 
-    Based on SearchAPI best practices:
-    - Use country (2-letter code) for market localization
+    Based on SearchAPI best practices (adapted for SerpAPI):
+    - Use gl (2-letter code) for market localization (SerpAPI Google Lens uses 'gl')
     - Use hl (language) for interface language
-    - Only fetch products (search_type=products)
+    - Filter products on our side (Google Lens doesn't support type parameter)
+    - Optional merchant hints via 'q' parameter to bias results (e.g., "Zalando OR ASOS OR H&M")
 
     Strategy for fast UX:
     - Fetch page 1 immediately (2-3s typical response)
@@ -1820,6 +1907,7 @@ def search_visual_products(
         location: Legacy SearchAPI location string (e.g., "United States")
         country: ISO 3166-1 alpha-2 country code (e.g., "US", "NO", "GB") - PREFERRED
         language: Language code (e.g., "en", "nb", "fr")
+        merchant_hints: Optional query to bias toward specific merchants
 
     Returns up to max_results * 2 raw matches for downstream filtering.
     """
@@ -1844,7 +1932,7 @@ def search_visual_products(
             'sweden': 'SE',
             'denmark': 'DK',
         }
-        country = location_to_country.get(location.lower(), 'US')
+        country = location_to_country.get(location.lower(), 'US')  # Fallback to US
 
     # Default country and language
     country = country or 'US'
@@ -1855,11 +1943,16 @@ def search_visual_products(
             "engine": "google_lens",
             "api_key": SERPAPI_KEY,
             "url": image_url,
-            "search_type": "products",  # CRITICAL: Only products (SearchAPI recommends search_type over type)
-            "country": country,  # Market localization (2-letter code)
-            "hl": language,  # Interface language
-            "no_cache": "false",  # Use cache for faster results
+            "type": "products",  # Filter to only product results
         }
+
+        # NOTE: SerpAPI Google Lens does NOT support gl/hl localization parameters
+        # It only returns US market results regardless of parameters
+        # For proper localization, you need to switch to SearchAPI (supports country/hl params)
+
+        # Add merchant hints if provided
+        if merchant_hints:
+            params["q"] = merchant_hints
 
         # Add pagination token if available
         if next_token:
@@ -1883,20 +1976,41 @@ def search_visual_products(
             break
 
         # SerpAPI returns results in visual_matches array
-        matches = data.get("visual_matches", [])
-        if not isinstance(matches, list):
-            matches = []
+        raw_matches = data.get("visual_matches", [])
+        if not isinstance(raw_matches, list):
+            raw_matches = []
 
-        if not matches:
+        if not raw_matches:
             print(f"[SerpAPI] No matches on page {page}, stopping pagination")
             break
 
-        all_matches.extend(matches)
-        print(f"[SerpAPI] Page {page}: fetched {len(matches)} matches (total: {len(all_matches)})")
+        # ENHANCED FILTERING: Only keep buyable products
+        filtered_matches = []
+        for match in raw_matches:
+            # Apply enhanced quality filter (price + stock + link)
+            if not is_buyable_product(match, merchant_whitelist=None):
+                continue
 
-        # SMART EARLY TERMINATION: Skip page 2 if page 1 returned enough results
-        if page == 1 and len(matches) >= 15:
-            print(f"[SerpAPI] Page 1 returned {len(matches)} matches (sufficient), skipping page 2 for speed")
+            # Apply domain and relevance filters
+            link = match.get('link', '')
+            title = match.get('title', '')
+            source = match.get('source', '')
+            snippet = match.get('snippet', '')
+
+            if not is_ecommerce_result(link, source, title, snippet):
+                continue
+
+            if not is_relevant_result(title):
+                continue
+
+            filtered_matches.append(match)
+
+        all_matches.extend(filtered_matches)
+        print(f"[SerpAPI] Page {page}: fetched {len(raw_matches)} matches, filtered to {len(filtered_matches)} buyable (total: {len(all_matches)})")
+
+        # SMART EARLY TERMINATION: Skip page 2 if page 1 returned enough quality results
+        if page == 1 and len(filtered_matches) >= 15:
+            print(f"[SerpAPI] Page 1 returned {len(filtered_matches)} quality matches (sufficient), skipping page 2 for speed")
             break
 
         # Check for next page token
@@ -1909,7 +2023,7 @@ def search_visual_products(
 
         page += 1
 
-    print(f"[SerpAPI] Search complete: {len(all_matches)} total matches from {page} page(s)")
+    print(f"[SerpAPI] Search complete: {len(all_matches)} quality matches from {page} page(s)")
     return all_matches[:max_results * 2]  # Return 2x for deduplication
 
 

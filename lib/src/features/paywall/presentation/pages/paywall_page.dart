@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -269,6 +270,24 @@ class PaywallPage extends ConsumerWidget {
               ),
             ),
 
+            if (!kReleaseMode) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton(
+                  onPressed: () => _skipPaywallForDevelopment(context),
+                  child: const Text(
+                    'Skip paywall (dev)',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 13,
+                      color: Color(0xFF9CA3AF),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
             SizedBox(height: spacing.l),
           ],
         ),
@@ -334,8 +353,12 @@ class PaywallPage extends ConsumerWidget {
             ),
           );
 
-          // Navigate back or to main app
-          Navigator.of(context).pop();
+          // Navigate to account creation/login page
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const AccountCreationPage(),
+            ),
+          );
         }
       } else {
         if (context.mounted) {
@@ -388,7 +411,11 @@ class PaywallPage extends ConsumerWidget {
             ),
           );
 
-          Navigator.of(context).pop();
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const AccountCreationPage(),
+            ),
+          );
         }
       } else {
         if (context.mounted) {
@@ -430,6 +457,15 @@ class PaywallPage extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Temporary dev-only shortcut to reach the next onboarding step
+  void _skipPaywallForDevelopment(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AccountCreationPage(),
       ),
     );
   }

@@ -54,20 +54,15 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         backgroundColor: colorScheme.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: colorScheme.onSurface,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        centerTitle: true,
         title: Text(
           'Search History',
-          style: textTheme.headlineMedium?.copyWith(
-            fontSize: 24,
-            letterSpacing: -0.5,
+          style: TextStyle(
+            fontSize: 22,
             fontWeight: FontWeight.bold,
+            fontFamily: 'PlusJakartaSans',
             color: colorScheme.onSurface,
+            letterSpacing: -0.3,
           ),
         ),
       ),

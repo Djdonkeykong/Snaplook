@@ -114,7 +114,7 @@ class DetectionService {
         debugPrint('≡ƒ£ò Using language: ${userProfile.preferredLanguage}');
       }
     } else {
-      // No profile - use defaults
+      // No profile - use US defaults
       payload['country'] = 'US';
       payload['language'] = 'en';
       debugPrint('≡ƒîÄ No user profile - using defaults (US, en)');

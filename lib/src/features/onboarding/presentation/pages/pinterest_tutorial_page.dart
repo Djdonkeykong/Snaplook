@@ -1,6 +1,27 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
+
+const bool _kShowTouchTargets = false;
+
+// Step 1 tap area placements
+const double _step1TapAreaTopFraction = 0.87;
+const double _step1TapAreaLeftFraction = 0.25;
+const double _step1TapAreaWidthFraction = 0.20;
+const double _step1TapAreaHeightFraction = 0.08;
+
+// Step 2 tap area placements
+const double _step2TapAreaTopFraction = 0.85;
+const double _step2TapAreaLeftFraction = 0.5;
+const double _step2TapAreaWidthFraction = 0.25;
+const double _step2TapAreaHeightFraction = 0.12;
+
+// Step 3 tap area placements
+const double _step3TapAreaTopFraction = 0.70;
+const double _step3TapAreaLeftFraction = 0.0;
+const double _step3TapAreaWidthFraction = 0.25;
+const double _step3TapAreaHeightFraction = 0.12;
 
 enum PinterestTutorialStep {
   step1,
@@ -8,139 +29,171 @@ enum PinterestTutorialStep {
   step3,
 }
 
-final pinterestTutorialStepProvider = StateProvider<PinterestTutorialStep>((ref) => PinterestTutorialStep.step1);
+enum TutorialPhase {
+  showingInstruction,
+  waitingForAction,
+}
 
-class PinterestTutorialPage extends ConsumerWidget {
+final pinterestTutorialStepProvider = StateProvider<PinterestTutorialStep>((ref) => PinterestTutorialStep.step1);
+final pinterestTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
+final pinterestHasUserTappedProvider = StateProvider<bool>((ref) => false);
+
+class PinterestTutorialPage extends ConsumerStatefulWidget {
   const PinterestTutorialPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentStep = ref.watch(pinterestTutorialStepProvider);
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
+  ConsumerState<PinterestTutorialPage> createState() => _PinterestTutorialPageState();
+}
 
-    // Define tap areas as fractions of screen size
-    Map<String, dynamic> getStepConfig() {
-      switch (currentStep) {
-        case PinterestTutorialStep.step1:
-          return {
-            'image': 'assets/images/pinterest_step1.png',
-            'tapAreaTop': screenHeight * 0.87, // Further down
-            'tapAreaLeft': screenWidth * 0.25, // Further to the left
-            'tapAreaWidth': screenWidth * 0.20,
-            'tapAreaHeight': screenHeight * 0.08,
-          };
-        case PinterestTutorialStep.step2:
-          return {
-            'image': 'assets/images/pinterest_step2.png',
-            'tapAreaTop': screenHeight * 0.85, // Bottom popup area
-            'tapAreaLeft': screenWidth * 0.5,
-            'tapAreaWidth': screenWidth * 0.25,
-            'tapAreaHeight': screenHeight * 0.12,
-          };
-        case PinterestTutorialStep.step3:
-          return {
-            'image': 'assets/images/pinterest_step3.png',
-            'tapAreaTop': screenHeight * 0.70, // Bottom share button
-            'tapAreaLeft': screenWidth * 0.0,
-            'tapAreaWidth': screenWidth * 0.25,
-            'tapAreaHeight': screenHeight * 0.12,
-          };
-      }
+class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Reset to initial state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(pinterestTutorialStepProvider.notifier).state = PinterestTutorialStep.step1;
+      ref.read(pinterestTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+      ref.read(pinterestHasUserTappedProvider.notifier).state = false;
+    });
+  }
+
+  String _getInstructionText(PinterestTutorialStep step) {
+    switch (step) {
+      case PinterestTutorialStep.step1:
+        return "When you find a clothing item you love on Pinterest, tap the share button.";
+      case PinterestTutorialStep.step2:
+        return "Now tap Share to open the sharing options.";
+      case PinterestTutorialStep.step3:
+        return "Finally, tap on Snaplook to share the image with our app.";
     }
+  }
 
-    final config = getStepConfig();
+  void _onInstructionComplete() {
+    ref.read(pinterestTutorialPhaseProvider.notifier).state = TutorialPhase.waitingForAction;
+    // Don't reset hasUserTapped here - we want to keep popups visible
+  }
+
+  void _onActionComplete(PinterestTutorialStep nextStep) {
+    // Set flag to show popup immediately after tap
+    ref.read(pinterestHasUserTappedProvider.notifier).state = true;
+
+    // Wait briefly to show the popup, then show next instruction
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) {
+        ref.read(pinterestTutorialStepProvider.notifier).state = nextStep;
+        ref.read(pinterestTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+        // Keep hasUserTapped true so popup stays visible during instruction
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentStep = ref.watch(pinterestTutorialStepProvider);
+    final currentPhase = ref.watch(pinterestTutorialPhaseProvider);
+    final hasUserTapped = ref.watch(pinterestHasUserTappedProvider);
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Background image - always show step 1 image
-          Image.asset(
-            'assets/images/pinterest_step1.png',
-            fit: BoxFit.fill,
-            width: screenWidth,
-            height: screenHeight,
+          // Full-screen Pinterest screenshot (step 1 - ALWAYS visible)
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/pinterest_step1.png',
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+            ),
           ),
 
-          // Dark overlay on background image - light in step 2, darker in step 3
-          if (currentStep == PinterestTutorialStep.step2)
+          // Dark overlay when popup appears
+          if (hasUserTapped && (currentStep == PinterestTutorialStep.step2 || currentStep == PinterestTutorialStep.step3))
             Positioned.fill(
-              child: IgnorePointer(
-                child: Container(
-                  color: Colors.black.withOpacity(0.3),
-                ),
-              ),
-            ),
-          if (currentStep == PinterestTutorialStep.step3)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Container(
-                  color: Colors.black.withOpacity(0.5),
-                ),
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.3),
               ),
             ),
 
-          // Overlay image for step 2 - stays visible in step 3
-          if (currentStep == PinterestTutorialStep.step2 || currentStep == PinterestTutorialStep.step3)
+          // Popup overlay for step 2 (after tapping share button) - stays visible in step 3
+          if (hasUserTapped && (currentStep == PinterestTutorialStep.step2 || currentStep == PinterestTutorialStep.step3))
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              child: RepaintBoundary(
-                child: Image.asset(
-                  'assets/images/pinterest_step2.png',
-                  fit: BoxFit.fitWidth,
-                  gaplessPlayback: true,
-                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                    // Show immediately without fade
-                    return child;
-                  },
-                ),
+              child: Image.asset(
+                'assets/images/pinterest_step2.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
               ),
             ),
 
-          // Dark overlay on step 2 image when step 3 is showing
-          if (currentStep == PinterestTutorialStep.step3)
+          // Additional dark overlay for step 3
+          if (hasUserTapped && currentStep == PinterestTutorialStep.step3)
             Positioned.fill(
-              child: IgnorePointer(
-                child: Container(
-                  color: Colors.black.withOpacity(0.3),
-                ),
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.3),
               ),
             ),
 
-          // Overlay image for step 3 - appears on top of step 2
-          if (currentStep == PinterestTutorialStep.step3)
+          // Popup overlay for step 3 (after tapping Share)
+          if (hasUserTapped && currentStep == PinterestTutorialStep.step3)
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              child: RepaintBoundary(
-                child: Image.asset(
-                  'assets/images/pinterest_step3.png',
-                  fit: BoxFit.fitWidth,
-                  gaplessPlayback: true,
-                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                    // Show immediately without fade
-                    return child;
-                  },
+              child: Image.asset(
+                'assets/images/pinterest_step3.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Step 1 tap area (tap share button)
+          if (currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.step1)
+            Positioned(
+              top: screenHeight * _step1TapAreaTopFraction,
+              left: screenWidth * _step1TapAreaLeftFraction,
+              child: GestureDetector(
+                onTap: () => _onActionComplete(PinterestTutorialStep.step2),
+                child: Container(
+                  width: screenWidth * _step1TapAreaWidthFraction,
+                  height: screenHeight * _step1TapAreaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
                 ),
               ),
             ),
 
-          // Tap detection area - positioned dynamically
-          Positioned(
-            top: config['tapAreaTop'],
-            left: config['tapAreaLeft'],
-            child: GestureDetector(
-              onTap: () {
-                if (currentStep == PinterestTutorialStep.step1) {
-                  ref.read(pinterestTutorialStepProvider.notifier).state = PinterestTutorialStep.step2;
-                } else if (currentStep == PinterestTutorialStep.step2) {
-                  ref.read(pinterestTutorialStepProvider.notifier).state = PinterestTutorialStep.step3;
-                } else {
-                  // Navigate to analysis page with Pinterest image
+          // Step 2 tap area (tap Share option) - only active when popup is visible
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.step2)
+            Positioned(
+              top: screenHeight * _step2TapAreaTopFraction,
+              left: screenWidth * _step2TapAreaLeftFraction,
+              child: GestureDetector(
+                onTap: () => _onActionComplete(PinterestTutorialStep.step3),
+                child: Container(
+                  width: screenWidth * _step2TapAreaWidthFraction,
+                  height: screenHeight * _step2TapAreaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Step 3 tap area (tap Snaplook) - only active when popup is visible
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.step3)
+            Positioned(
+              top: screenHeight * _step3TapAreaTopFraction,
+              left: screenWidth * _step3TapAreaLeftFraction,
+              child: GestureDetector(
+                onTap: () {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => const TutorialImageAnalysisPage(
@@ -150,16 +203,187 @@ class PinterestTutorialPage extends ConsumerWidget {
                       allowSnapshotting: false,
                     ),
                   );
-                }
-              },
-              child: Container(
-                width: config['tapAreaWidth'],
-                height: config['tapAreaHeight'],
-                color: Colors.transparent,
+                },
+                child: Container(
+                  width: screenWidth * _step3TapAreaWidthFraction,
+                  height: screenHeight * _step3TapAreaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
               ),
             ),
-          ),
+
+          // Instruction overlay (shows during instruction phase)
+          if (currentPhase == TutorialPhase.showingInstruction)
+            _InstructionOverlay(
+              text: _getInstructionText(currentStep),
+              onComplete: _onInstructionComplete,
+            ),
         ],
+      ),
+    );
+  }
+}
+
+// Animated instruction overlay with streaming text effect
+class _InstructionOverlay extends StatefulWidget {
+  final String text;
+  final VoidCallback onComplete;
+
+  const _InstructionOverlay({
+    required this.text,
+    required this.onComplete,
+  });
+
+  @override
+  State<_InstructionOverlay> createState() => _InstructionOverlayState();
+}
+
+class _InstructionOverlayState extends State<_InstructionOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  final _streamController = StreamController<String>();
+  final List<String> _words = [];
+  late final List<String> _tokens;
+  late final Timer _timer;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
+    );
+
+    _fadeController.forward();
+
+    // Split text into words
+    _tokens = widget.text.split(RegExp(r'\s+'));
+
+    // Stream words one by one
+    _timer = Timer.periodic(const Duration(milliseconds: 80), (timer) {
+      if (_currentIndex >= _tokens.length) {
+        timer.cancel();
+        _streamController.close();
+        _onStreamingComplete();
+        return;
+      }
+      _streamController.add(_tokens[_currentIndex++]);
+    });
+
+    // Listen to stream and update words list
+    _streamController.stream.listen((word) {
+      if (mounted) {
+        setState(() => _words.add(word));
+      }
+    });
+  }
+
+  void _onStreamingComplete() {
+    // Wait 2 seconds after streaming completes for reading
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (mounted) {
+        _fadeController.reverse().then((_) {
+          if (mounted) {
+            widget.onComplete();
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    _streamController.close();
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.70),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40.0),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              children: List.generate(_words.length, (index) {
+                return _FadeInWord(
+                  key: ValueKey('word_$index'),
+                  word: _words[index],
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Widget that fades in each word individually
+class _FadeInWord extends StatefulWidget {
+  final String word;
+
+  const _FadeInWord({
+    super.key,
+    required this.word,
+  });
+
+  @override
+  State<_FadeInWord> createState() => _FadeInWordState();
+}
+
+class _FadeInWordState extends State<_FadeInWord>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+    )..forward();
+    _opacity = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 5.0),
+        child: Text(
+          widget.word,
+          style: const TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            height: 1.5,
+          ),
+        ),
       ),
     );
   }

@@ -57,9 +57,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     return Scaffold(
       backgroundColor: colorScheme.background,
       appBar: AppBar(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: colorScheme.background,
         elevation: 0,
+        scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
+        centerTitle: true,
         leadingWidth: 64,
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
@@ -68,15 +70,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             showBackground: false,
           ),
         ),
-        titleSpacing: 0,
-        centerTitle: true,
         title: Text(
           'Profile',
           style: TextStyle(
-            color: colorScheme.onSurface,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
             fontFamily: 'PlusJakartaSans',
-            fontWeight: FontWeight.w600,
-            fontSize: 17,
+            color: colorScheme.onSurface,
+            letterSpacing: -0.3,
           ),
         ),
       ),

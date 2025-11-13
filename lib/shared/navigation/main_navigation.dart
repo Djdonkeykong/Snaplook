@@ -130,6 +130,12 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
           ),
           boxShadow: [
             BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 24,
+              offset: const Offset(0, -8),
+              spreadRadius: 2,
+            ),
+            BoxShadow(
               color: Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, -2),

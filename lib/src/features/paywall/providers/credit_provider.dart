@@ -4,6 +4,7 @@ import '../models/credit_balance.dart';
 import '../models/subscription_status.dart';
 import '../../../services/credit_service.dart';
 import '../../../services/revenue_cat_service.dart';
+import '../../../services/subscription_sync_service.dart';
 
 /// Provider for credit service
 final creditServiceProvider = Provider<CreditService>((ref) {
@@ -156,6 +157,7 @@ class PurchaseController {
   final RevenueCatService _revenueCatService;
   final CreditBalanceNotifier _creditNotifier;
   final SubscriptionStatusNotifier _subscriptionNotifier;
+  final _subscriptionSyncService = SubscriptionSyncService();
 
   PurchaseController(
     this._revenueCatService,
@@ -171,6 +173,10 @@ class PurchaseController {
         // Purchase successful - sync credit balance and subscription status
         await _creditNotifier.syncWithSubscription();
         await _subscriptionNotifier.refresh();
+
+        // Sync subscription data to Supabase
+        await _subscriptionSyncService.syncSubscriptionToSupabase();
+
         return true;
       }
       return false;
@@ -187,6 +193,10 @@ class PurchaseController {
         // Restore successful - sync credit balance and subscription status
         await _creditNotifier.syncWithSubscription();
         await _subscriptionNotifier.refresh();
+
+        // Sync subscription data to Supabase
+        await _subscriptionSyncService.syncSubscriptionToSupabase();
+
         return true;
       }
       return false;

@@ -64,23 +64,21 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         backgroundColor: colorScheme.background,
         elevation: 0,
         scrolledUnderElevation: 0,
+        centerTitle: true,
         automaticallyImplyLeading: false,
-        centerTitle: false,
-        titleSpacing: spacing.l,
         title: Text(
           'My Wishlist',
           style: TextStyle(
-            fontSize: 30,
-            fontFamily: 'PlusJakartaSans',
-            letterSpacing: -1.0,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
-            height: 1.3,
+            fontFamily: 'PlusJakartaSans',
             color: colorScheme.onSurface,
+            letterSpacing: -0.3,
           ),
         ),
         actions: [
           Padding(
-            padding: EdgeInsets.only(right: spacing.l),
+            padding: EdgeInsets.only(right: spacing.s),
             child: IconButton(
               icon: Icon(
                 Solar__history_bold_new.solarHistoryBoldNew,
@@ -101,31 +99,11 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         ],
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Subtitle
-            Padding(
-              padding: EdgeInsets.only(
-                left: spacing.l,
-                right: spacing.l,
-                bottom: spacing.m,
-              ),
-              child: Text(
-                'These are the items you liked the most.',
-                style: textTheme.bodyMedium?.copyWith(
-                  fontSize: 14,
-                  color: colorScheme.onSurface.withOpacity(0.7),
-                ),
-              ),
-            ),
-
-            // Favorites List
-            Expanded(
-              child: _buildAllFavoritesTab(
-                  isInitialLoading, hasError, favorites, spacing),
-            ),
-          ],
+        child: _buildAllFavoritesTab(
+          isInitialLoading,
+          hasError,
+          favorites,
+          spacing,
         ),
       ),
     );

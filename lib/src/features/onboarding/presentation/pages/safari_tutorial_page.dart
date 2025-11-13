@@ -1,7 +1,27 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'tutorial_image_analysis_page.dart';
+
+const bool _kShowTouchTargets = false;
+
+// Step 1 tap area placements (long press on image)
+const double _step1TapAreaTopFraction = 0.1;
+const double _step1TapAreaLeftFraction = 0.0;
+const double _step1TapAreaWidthFraction = 1.0;
+const double _step1TapAreaHeightFraction = 0.55;
+
+// Step 2 tap area placements
+const double _step2TapAreaTopFraction = 0.645;
+const double _step2TapAreaLeftFraction = 0.2;
+const double _step2TapAreaWidthFraction = 0.61;
+const double _step2TapAreaHeightFraction = 0.07;
+
+// Step 3 tap area placements
+const double _step3TapAreaTopFraction = 0.70;
+const double _step3TapAreaLeftFraction = 0.22;
+const double _step3TapAreaWidthFraction = 0.25;
+const double _step3TapAreaHeightFraction = 0.1;
 
 enum SafariTutorialStep {
   step1,
@@ -9,41 +29,149 @@ enum SafariTutorialStep {
   step3,
 }
 
-final safariTutorialStepProvider =
-    StateProvider<SafariTutorialStep>((ref) => SafariTutorialStep.step1);
+enum TutorialPhase {
+  showingInstruction,
+  waitingForAction,
+}
 
-class SafariTutorialPage extends ConsumerWidget {
+final safariTutorialStepProvider = StateProvider<SafariTutorialStep>((ref) => SafariTutorialStep.step1);
+final safariTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
+final safariHasUserTappedProvider = StateProvider<bool>((ref) => false);
+
+class SafariTutorialPage extends ConsumerStatefulWidget {
   const SafariTutorialPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SafariTutorialPage> createState() => _SafariTutorialPageState();
+}
+
+class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Reset to initial state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(safariTutorialStepProvider.notifier).state = SafariTutorialStep.step1;
+      ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+      ref.read(safariHasUserTappedProvider.notifier).state = false;
+    });
+  }
+
+  String _getInstructionText(SafariTutorialStep step) {
+    switch (step) {
+      case SafariTutorialStep.step1:
+        return "When you find a clothing item you love on Safari, press and hold the image.";
+      case SafariTutorialStep.step2:
+        return "Now tap Share to open the sharing options.";
+      case SafariTutorialStep.step3:
+        return "Finally, tap on Snaplook to share the image with our app.";
+    }
+  }
+
+  void _onInstructionComplete() {
+    ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.waitingForAction;
+    // Don't reset hasUserTapped here - we want to keep popups visible
+  }
+
+  void _onActionComplete(SafariTutorialStep nextStep) {
+    // Set flag to show popup immediately after tap
+    ref.read(safariHasUserTappedProvider.notifier).state = true;
+
+    // Wait briefly to show the popup, then show next instruction
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) {
+        ref.read(safariTutorialStepProvider.notifier).state = nextStep;
+        ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+        // Keep hasUserTapped true so popup stays visible during instruction
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentStep = ref.watch(safariTutorialStepProvider);
-    final size = MediaQuery.of(context).size;
-    final config = _getConfig(currentStep);
+    final currentPhase = ref.watch(safariTutorialPhaseProvider);
+    final hasUserTapped = ref.watch(safariHasUserTappedProvider);
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
+          // Full-screen Safari screenshot (step 1 - ALWAYS visible)
           Positioned.fill(
             child: Image.asset(
-              config.imagePath,
+              'assets/images/safari_step1.png',
               fit: BoxFit.cover,
-              width: size.width,
-              height: size.height,
+              gaplessPlayback: true,
             ),
           ),
 
-          // Tap detection area
-          Positioned(
-            top: size.height * config.tapTopFraction,
-            left: size.width * config.tapLeftFraction,
-            child: GestureDetector(
-              onTap: currentStep != SafariTutorialStep.step1 ? () {
-                final notifier = ref.read(safariTutorialStepProvider.notifier);
-                if (currentStep == SafariTutorialStep.step2) {
-                  notifier.state = SafariTutorialStep.step3;
-                } else {
+          // Popup overlay for step 2 (after long-pressing image)
+          if (hasUserTapped && (currentStep == SafariTutorialStep.step2 || currentStep == SafariTutorialStep.step3))
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/safari_step2.png',
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Popup overlay for step 3 (after tapping Share)
+          if (hasUserTapped && currentStep == SafariTutorialStep.step3)
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/safari_step3.png',
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Step 1 tap area (long press on image)
+          if (currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.step1)
+            Positioned(
+              top: screenHeight * _step1TapAreaTopFraction,
+              left: screenWidth * _step1TapAreaLeftFraction,
+              child: GestureDetector(
+                onLongPress: () => _onActionComplete(SafariTutorialStep.step2),
+                child: Container(
+                  width: screenWidth * _step1TapAreaWidthFraction,
+                  height: screenHeight * _step1TapAreaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Step 2 tap area (tap Share option) - only active when popup is visible
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.step2)
+            Positioned(
+              top: screenHeight * _step2TapAreaTopFraction,
+              left: screenWidth * _step2TapAreaLeftFraction,
+              child: GestureDetector(
+                onTap: () => _onActionComplete(SafariTutorialStep.step3),
+                child: Container(
+                  width: screenWidth * _step2TapAreaWidthFraction,
+                  height: screenHeight * _step2TapAreaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Step 3 tap area (tap Snaplook) - only active when popup is visible
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.step3)
+            Positioned(
+              top: screenHeight * _step3TapAreaTopFraction,
+              left: screenWidth * _step3TapAreaLeftFraction,
+              child: GestureDetector(
+                onTap: () {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => const TutorialImageAnalysisPage(
@@ -53,68 +181,188 @@ class SafariTutorialPage extends ConsumerWidget {
                       allowSnapshotting: false,
                     ),
                   );
-                }
-              } : null,
-              onLongPress: currentStep == SafariTutorialStep.step1 ? () {
-                final notifier = ref.read(safariTutorialStepProvider.notifier);
-                notifier.state = SafariTutorialStep.step2;
-              } : null,
-              child: Container(
-                width: size.width * config.tapWidthFraction,
-                height: size.height * config.tapHeightFraction,
-                color: Colors.transparent,
+                },
+                child: Container(
+                  width: screenWidth * _step3TapAreaWidthFraction,
+                  height: screenHeight * _step3TapAreaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
               ),
             ),
-          ),
 
+          // Instruction overlay (shows during instruction phase)
+          if (currentPhase == TutorialPhase.showingInstruction)
+            _InstructionOverlay(
+              text: _getInstructionText(currentStep),
+              onComplete: _onInstructionComplete,
+            ),
         ],
       ),
     );
   }
 }
 
-class _SafariStepConfig {
-  const _SafariStepConfig({
-    required this.imagePath,
-    required this.tapTopFraction,
-    required this.tapLeftFraction,
-    required this.tapWidthFraction,
-    required this.tapHeightFraction,
+// Animated instruction overlay with streaming text effect
+class _InstructionOverlay extends StatefulWidget {
+  final String text;
+  final VoidCallback onComplete;
+
+  const _InstructionOverlay({
+    required this.text,
+    required this.onComplete,
   });
 
-  final String imagePath;
-  final double tapTopFraction;
-  final double tapLeftFraction;
-  final double tapWidthFraction;
-  final double tapHeightFraction;
+  @override
+  State<_InstructionOverlay> createState() => _InstructionOverlayState();
 }
 
-_SafariStepConfig _getConfig(SafariTutorialStep step) {
-  switch (step) {
-    case SafariTutorialStep.step1:
-      return const _SafariStepConfig(
-        imagePath: 'assets/images/safari_step1.png',
-        tapTopFraction: 0.1,
-        tapLeftFraction: 0.0,
-        tapWidthFraction: 1,
-        tapHeightFraction: 0.55,
-      );
-    case SafariTutorialStep.step2:
-      return const _SafariStepConfig(
-        imagePath: 'assets/images/safari_step2.png',
-        tapTopFraction: 0.645,
-        tapLeftFraction: 0.2,
-        tapWidthFraction: 0.61,
-        tapHeightFraction: 0.07,
-      );
-    case SafariTutorialStep.step3:
-    default:
-      return const _SafariStepConfig(
-        imagePath: 'assets/images/safari_step3.png',
-        tapTopFraction: 0.7,
-        tapLeftFraction: 0.22,
-        tapWidthFraction: 0.25,
-        tapHeightFraction: 0.1,
-      );
+class _InstructionOverlayState extends State<_InstructionOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  final _streamController = StreamController<String>();
+  final List<String> _words = [];
+  late final List<String> _tokens;
+  late final Timer _timer;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
+    );
+
+    _fadeController.forward();
+
+    // Split text into words
+    _tokens = widget.text.split(RegExp(r'\s+'));
+
+    // Stream words one by one
+    _timer = Timer.periodic(const Duration(milliseconds: 80), (timer) {
+      if (_currentIndex >= _tokens.length) {
+        timer.cancel();
+        _streamController.close();
+        _onStreamingComplete();
+        return;
+      }
+      _streamController.add(_tokens[_currentIndex++]);
+    });
+
+    // Listen to stream and update words list
+    _streamController.stream.listen((word) {
+      if (mounted) {
+        setState(() => _words.add(word));
+      }
+    });
+  }
+
+  void _onStreamingComplete() {
+    // Wait 2 seconds after streaming completes for reading
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (mounted) {
+        _fadeController.reverse().then((_) {
+          if (mounted) {
+            widget.onComplete();
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    _streamController.close();
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.70),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40.0),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              children: List.generate(_words.length, (index) {
+                return _FadeInWord(
+                  key: ValueKey('word_$index'),
+                  word: _words[index],
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Widget that fades in each word individually
+class _FadeInWord extends StatefulWidget {
+  final String word;
+
+  const _FadeInWord({
+    super.key,
+    required this.word,
+  });
+
+  @override
+  State<_FadeInWord> createState() => _FadeInWordState();
+}
+
+class _FadeInWordState extends State<_FadeInWord>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+    )..forward();
+    _opacity = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 5.0),
+        child: Text(
+          widget.word,
+          style: const TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            height: 1.5,
+          ),
+        ),
+      ),
+    );
   }
 }

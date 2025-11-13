@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter/services.dart';
+import '../../../../services/subscription_sync_service.dart';
 
 class AuthService {
   final _supabase = Supabase.instance.client;
@@ -156,6 +157,11 @@ class AuthService {
         userId: response.user?.id,
       );
 
+      // Sync subscription from RevenueCat to Supabase
+      if (response.user != null) {
+        await SubscriptionSyncService().linkRevenueCatUser(response.user!.id);
+      }
+
       return response;
     } catch (e) {
       print('Google sign in error: $e');
@@ -189,6 +195,11 @@ class AuthService {
         userId: response.user?.id,
       );
 
+      // Sync subscription from RevenueCat to Supabase
+      if (response.user != null) {
+        await SubscriptionSyncService().linkRevenueCatUser(response.user!.id);
+      }
+
       return response;
     } catch (e) {
       print('Apple sign in error: $e');
@@ -206,6 +217,11 @@ class AuthService {
         userId: response.user?.id,
       );
 
+      // Sync subscription from RevenueCat to Supabase
+      if (response.user != null) {
+        await SubscriptionSyncService().linkRevenueCatUser(response.user!.id);
+      }
+
       return response;
     } catch (e) {
       print('Anonymous sign in error: $e');
@@ -219,6 +235,9 @@ class AuthService {
 
       // Clear auth flag for share extension
       await _updateAuthFlag(false);
+
+      // Unlink RevenueCat user
+      await SubscriptionSyncService().unlinkRevenueCatUser();
     } catch (e) {
       print('Sign out error: $e');
       rethrow;
@@ -253,6 +272,11 @@ class AuthService {
         true,
         userId: response.user?.id,
       );
+
+      // Sync subscription from RevenueCat to Supabase
+      if (response.user != null) {
+        await SubscriptionSyncService().linkRevenueCatUser(response.user!.id);
+      }
 
       return response;
     } catch (e) {
