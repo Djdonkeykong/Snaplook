@@ -6,13 +6,16 @@ workflows:
     integrations:
       app_store_connect: Snaplook
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.snaplook.snaplook
       flutter: stable
       xcode: 16.4
       cocoapods: default
     scripts:
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files com.snaplook.snaplook --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Install dependencies
         script: |
           flutter pub get
@@ -21,7 +24,7 @@ workflows:
           flutter pub run build_runner build --delete-conflicting-outputs
       - name: Build iOS
         script: |
-          flutter build ipa --release
+          flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
