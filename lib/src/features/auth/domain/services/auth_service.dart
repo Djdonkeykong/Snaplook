@@ -73,12 +73,21 @@ class AuthService {
     _authSubscription?.cancel();
   }
 
+  // Track if this is the first call (to add delay for Flutter engine init)
+  static bool _firstAuthFlagCall = true;
+
   // Update the authentication flag and user ID for share extension via method channel
   Future<void> _updateAuthFlag(
     bool isAuthenticated, {
     String? userId,
   }) async {
     try {
+      // On first call, add small delay to ensure Flutter engine is ready
+      if (_firstAuthFlagCall) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        _firstAuthFlagCall = false;
+      }
+
       String? effectiveUserId = userId;
       if (isAuthenticated) {
         effectiveUserId ??= currentUser?.id;
