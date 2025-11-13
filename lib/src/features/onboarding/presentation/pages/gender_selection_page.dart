@@ -106,13 +106,16 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
     final selectedGender = ref.watch(selectedGenderProvider);
     final spacing = context.spacing;
 
+    // Check if we can pop (if there are routes to go back to)
+    final canPop = Navigator.of(context).canPop();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
+        leading: canPop ? IconButton(
           onPressed: () => Navigator.of(context).pop(),
           icon: Container(
             width: 40,
@@ -127,7 +130,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
               size: 20,
             ),
           ),
-        ),
+        ) : null,
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 1,
