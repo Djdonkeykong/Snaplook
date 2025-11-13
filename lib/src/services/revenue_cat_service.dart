@@ -17,8 +17,8 @@ class RevenueCatService {
   // Production keys: Replace test key before release
   // Get them from: https://app.revenuecat.com/settings/api-keys
   static const String _testApiKey = 'test_BwftAgotTKZWtqHYPcgoaqhbwbV';
-  static const String _appleApiKey = _testApiKey; // Replace with production key
-  static const String _googleApiKey = _testApiKey; // Replace with production key
+  static const String _appleApiKey = 'sk_WBFENSAwHStcnHwASjgjkuCargpHt';
+  static const String _googleApiKey = _testApiKey; // Replace with production key when you have Android
 
   // Entitlement identifier (must match your RevenueCat dashboard)
   static const String premiumEntitlementId = 'Snaplook Premium';
