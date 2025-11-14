@@ -17,7 +17,6 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
-import '../../../paywall/providers/credit_provider.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show scrollToTopTriggerProvider, isAtHomeRootProvider;
 
@@ -703,33 +702,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   void _showInfoBottomSheet(BuildContext context) {
     final spacing = context.spacing;
 
-    // Get subscription status
-    final subscriptionStatusAsync = ref.read(subscriptionStatusProvider);
-    final creditBalanceAsync = ref.read(creditBalanceProvider);
-
-    final membershipType = subscriptionStatusAsync.when(
-      data: (status) {
-        if (status.isInTrialPeriod) return 'Trial';
-        if (status.isActive) return 'Premium';
-        return 'Free';
-      },
-      loading: () => 'Free',
-      error: (_, __) => 'Free',
-    );
-
-    final creditsRemaining = creditBalanceAsync.when(
-      data: (balance) => balance.availableCredits,
-      loading: () => 0,
-      error: (_, __) => 0,
-    );
-
-    final maxCredits = creditBalanceAsync.when(
-      data: (balance) => balance.totalCredits,
-      loading: () => 0,
-      error: (_, __) => 0,
-    );
-
-    final creditsPercentage = maxCredits > 0 ? creditsRemaining / maxCredits : 0.0;
+    // TODO: Replace with actual user data from provider
+    final membershipType = 'Trial';
+    final creditsRemaining = 42;
+    final maxCredits = 50;
+    final creditsPercentage = creditsRemaining / maxCredits;
 
     showModalBottomSheet(
       context: context,
@@ -768,7 +745,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
                     // Membership type
                     Text(
-                      membershipType,
+                      'Premium',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w600,
@@ -788,10 +765,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                       children: [
                         Text(
                           '$creditsRemaining',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFFf2003c),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : const Color(0xFFf2003c),
                             fontFamily: 'PlusJakartaSans',
                             letterSpacing: -2,
                           ),
@@ -829,50 +808,22 @@ class _HomePageState extends ConsumerState<HomePage> {
                         value: creditsPercentage,
                         minHeight: 6,
                         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFf2003c)),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : const Color(0xFFf2003c)),
                       ),
                     ),
 
                     SizedBox(height: spacing.m),
 
-                    // Info text - subscription details
-                    subscriptionStatusAsync.when(
-                      data: (status) {
-                        String infoText = 'Credits reset monthly';
-
-                        if (status.isInTrialPeriod && status.daysRemainingInTrial != null) {
-                          final days = status.daysRemainingInTrial!;
-                          infoText = 'Trial ends in $days ${days == 1 ? "day" : "days"}';
-                        } else if (status.isActive && status.expirationDate != null) {
-                          final expirationDate = status.expirationDate!;
-                          final formatted = '${expirationDate.month}/${expirationDate.day}/${expirationDate.year}';
-                          infoText = 'Renews on $formatted';
-                        }
-
-                        return Text(
-                          infoText,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                        );
-                      },
-                      loading: () => Text(
-                        'Credits reset monthly',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontFamily: 'PlusJakartaSans',
-                        ),
-                      ),
-                      error: (_, __) => Text(
-                        'Credits reset monthly',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontFamily: 'PlusJakartaSans',
-                        ),
+                    // Info text
+                    Text(
+                      'Resets monthly on the 1st',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontFamily: 'PlusJakartaSans',
                       ),
                     ),
 
@@ -1421,7 +1372,6 @@ class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
             widget.imageUrl,
             fit: currentFit,
             alignment: Alignment.center,
-            gaplessPlayback: true,
             // Removed cache size limits to preserve original image quality
             headers: const {
               'User-Agent': 'Mozilla/5.0 (compatible; Flutter app)',

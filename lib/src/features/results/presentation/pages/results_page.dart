@@ -1,13 +1,16 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../../../core/theme/theme_extensions.dart';
-import '../widgets/results_bottom_sheet.dart';
+import '../../../favorites/presentation/widgets/favorite_button.dart';
+import '../../../detection/presentation/providers/detection_provider.dart';
 
 class ResultsPage extends ConsumerStatefulWidget {
   final List<DetectionResult> results;
@@ -25,33 +28,16 @@ class ResultsPage extends ConsumerStatefulWidget {
 
 class _ResultsPageState extends ConsumerState<ResultsPage>
     with SingleTickerProviderStateMixin {
-  static const double _minSheetExtent = 0.4;
-  static const double _initialSheetExtent = 0.6;
-  static const double _maxSheetExtent = 0.85;
-
   late TabController _tabController;
-  final DraggableScrollableController _sheetController =
-      DraggableScrollableController();
-  bool _isSheetVisible = false;
-  bool _isClosingSheet = false;
-  double _currentSheetExtent = _initialSheetExtent;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {
-        _isSheetVisible = true;
-      });
-    });
   }
 
   @override
   void dispose() {
-    _sheetController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -59,6 +45,16 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
   @override
   Widget build(BuildContext context) {
     final selectedImage = ref.watch(selectedImageProvider);
+    final detectionState = ref.watch(detectionProvider);
+    final results = detectionState.results;
+
+    final spacing = context.spacing;
+    final radius = context.radius;
+    final mediaQuery = MediaQuery.of(context);
+    final safeAreaBottom = mediaQuery.padding.bottom;
+    final sheetMaxHeight = mediaQuery.size.height * 0.85;
+    final sheetInitialHeight = sheetMaxHeight * 0.55;
+    final sheetMinHeight = sheetInitialHeight;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -82,54 +78,141 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
       ),
       body: Stack(
         children: [
-          _ResultsBackground(
-            selectedImage: selectedImage,
-            originalImageUrl: widget.originalImageUrl,
+          Positioned.fill(
+            child: _ResultsBackground(
+              selectedImage: selectedImage,
+              originalImageUrl: widget.originalImageUrl,
+            ),
           ),
-          if (_isSheetVisible) ...[
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _dismissResults,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  color: Colors.black.withOpacity(_overlayOpacity),
-                ),
-              ),
+          SlidingUpPanel(
+            minHeight: sheetMinHeight,
+            maxHeight: sheetMaxHeight,
+            parallaxEnabled: false,
+            panelSnapping: true,
+            snapPoint: (sheetInitialHeight / sheetMaxHeight).clamp(0.0, 1.0),
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(12),
             ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height,
-                child:
-                    NotificationListener<DraggableScrollableNotification>(
-                  onNotification: (notification) {
-                    if (!mounted) return false;
-                    final extent = notification.extent
-                        .clamp(_minSheetExtent, _maxSheetExtent)
-                        .toDouble();
-                    setState(() => _currentSheetExtent = extent);
-                    return false;
-                  },
-                  child: DraggableScrollableSheet(
-                    controller: _sheetController,
-                    initialChildSize: _initialSheetExtent,
-                    minChildSize: _minSheetExtent,
-                    maxChildSize: _maxSheetExtent,
-                    snap: false,
-                    expand: false,
-                    builder: (context, scrollController) {
-                      return ResultsBottomSheetContent(
-                        results: widget.results,
-                        scrollController: scrollController,
-                        onProductTap: _openProduct,
-                      );
-                    },
-                  ),
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 12,
+                offset: const Offset(0, -4),
               ),
-            ),
-          ],
+            ],
+            body: const SizedBox.shrink(),
+            panelBuilder: (scrollController) {
+              return SafeArea(
+                top: false,
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: spacing.m,
+                        right: spacing.m,
+                        top: spacing.l,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[400],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: spacing.m),
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Similar matches',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'PlusJakartaSans',
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '${results.length} results',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'PlusJakartaSans',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: spacing.m),
+                    // Category filter chips - mirror share extension styling
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: SizedBox(
+                        height: 36,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                _AllResultsChip(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: spacing.sm),
+                    Expanded(
+                      child: ListView.separated(
+                        controller: scrollController,
+                        physics: const ClampingScrollPhysics(),
+                        padding: EdgeInsets.fromLTRB(
+                          spacing.m,
+                          0,
+                          spacing.m,
+                          safeAreaBottom + spacing.l,
+                        ),
+                        itemCount: results.length,
+                        separatorBuilder: (context, index) {
+                          return Padding(
+                            padding: EdgeInsets.only(left: spacing.m),
+                            child: Divider(
+                              color: Colors.grey[300],
+                              height: 1,
+                              thickness: 1,
+                            ),
+                          );
+                        },
+                        itemBuilder: (context, index) {
+                          final result = results[index];
+                          return _ProductCard(
+                            result: result,
+                            onTap: () => _openProduct(result),
+                            isFirst: index == 0,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -158,20 +241,109 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
       }
     }
   }
+}
 
-  double get _overlayOpacity {
-    final range = _maxSheetExtent - _minSheetExtent;
-    if (range <= 0) return 0.7;
-    final normalized =
-        ((_currentSheetExtent - _minSheetExtent) / range).clamp(0.0, 1.0);
-    return 0.15 + (0.55 * normalized);
-  }
+class _ProductCard extends StatelessWidget {
+  final DetectionResult result;
+  final VoidCallback onTap;
+  final bool isFirst;
 
-  void _dismissResults() {
-    if (_isClosingSheet) return;
-    _isClosingSheet = true;
-    setState(() => _isSheetVisible = false);
-    Navigator.of(context).pop();
+  const _ProductCard({
+    required this.result,
+    required this.onTap,
+    required this.isFirst,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+    final radius = context.radius;
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.only(
+          top: isFirst ? 0 : spacing.m,
+          bottom: spacing.m,
+        ),
+        color: Theme.of(context).colorScheme.surface,
+        child: Row(
+          children: [
+              // Image
+              Stack(
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(radius.small),
+                      color: Colors.grey[100],
+                      image: DecorationImage(
+                        image: CachedNetworkImageProvider(result.imageUrl),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 4,
+                    right: 4,
+                    child: FavoriteButton(
+                      product: result,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(width: spacing.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      result.brand.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    SizedBox(height: spacing.xs),
+                    Text(
+                      result.productName,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: spacing.sm),
+                    Text(
+                      result.price > 0
+                          ? '\$${result.price.toStringAsFixed(2)}'
+                          : 'See store',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFf2003c),
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: AppColors.textTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -191,38 +363,48 @@ class _ResultsBackground extends StatelessWidget {
       child = Image.network(
         originalImageUrl!,
         fit: BoxFit.cover,
-        gaplessPlayback: true,
-        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-          if (wasSynchronouslyLoaded) return child;
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: frame != null
-                ? child
-                : Container(color: Colors.black),
-          );
-        },
         errorBuilder: (context, _, __) => Container(color: Colors.black),
       );
     } else if (selectedImage != null) {
       child = Image.file(
         File(selectedImage!.path),
         fit: BoxFit.cover,
-        gaplessPlayback: true,
-        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-          if (wasSynchronouslyLoaded) return child;
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: frame != null
-                ? child
-                : Container(color: Colors.black),
-          );
-        },
       );
     } else {
       child = const ColoredBox(color: Colors.black);
     }
 
     return SizedBox.expand(child: child);
+  }
+}
+
+class _AllResultsChip extends StatelessWidget {
+  const _AllResultsChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2003C),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFFF2003C),
+          width: 1,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'All',
+        style: TextStyle(
+          fontFamily: 'PlusJakartaSans',
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+          color: Colors.white,
+        ),
+      ),
+    );
   }
 }
 
