@@ -9,7 +9,7 @@ import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../domain/services/tutorial_service.dart';
-import 'trial_intro_page.dart';
+import 'account_creation_page.dart';
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -117,7 +117,7 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
             onPressed: () {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
-                  builder: (context) => const TrialIntroPage(),
+                  builder: (context) => const AccountCreationPage(),
                 ),
               );
             },

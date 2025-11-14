@@ -6,7 +6,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
-import 'trial_intro_page.dart';
+import 'account_creation_page.dart';
 
 class AwesomeIntroPage extends ConsumerStatefulWidget {
   const AwesomeIntroPage({super.key});
@@ -178,7 +178,7 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
             HapticFeedback.mediumImpact();
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => const TrialIntroPage(),
+                builder: (context) => const AccountCreationPage(),
               ),
             );
           },
