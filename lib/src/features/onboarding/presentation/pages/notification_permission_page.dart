@@ -31,9 +31,9 @@ class _NotificationPermissionPageState
       final status = await Permission.notification.request();
 
       if (mounted) {
-        // Navigate to account creation regardless of permission status
-        // User can always enable notifications later in settings
-        Navigator.of(context).pushReplacement(
+        // Navigate to account creation - use push not pushReplacement
+        // so user can navigate back to this page
+        Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => const AccountCreationPage(),
           ),
@@ -43,7 +43,7 @@ class _NotificationPermissionPageState
       print('[NotificationPermission] Error requesting permission: $e');
       if (mounted) {
         // Even if there's an error, still navigate forward
-        Navigator.of(context).pushReplacement(
+        Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => const AccountCreationPage(),
           ),
@@ -60,7 +60,7 @@ class _NotificationPermissionPageState
 
   void _skipNotifications() {
     HapticFeedback.lightImpact();
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const AccountCreationPage(),
       ),
@@ -104,11 +104,11 @@ class _NotificationPermissionPageState
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
             children: [
-              const Spacer(flex: 2),
+              const Spacer(flex: 1),
 
               // Title
               const Text(
-                'Stay updated with\nnotifications',
+                'Reach your goals with\nnotifications',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 34,
@@ -120,74 +120,87 @@ class _NotificationPermissionPageState
                 ),
               ),
 
-              SizedBox(height: spacing.m),
+              const Spacer(flex: 2),
 
-              // Subtitle
-              const Text(
-                'Get notified when new fashion trends\nand styles match your preferences',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF6B7280),
-                  fontFamily: 'PlusJakartaSans',
-                  height: 1.5,
-                ),
-              ),
-
-              const Spacer(flex: 1),
-
-              // Illustration container
+              // Mock iOS notification dialog
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(spacing.xl),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9F9F9),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: const Color(0xFFE5E7EB),
-                    width: 1.5,
-                  ),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    // Bell icon
                     Container(
-                      width: 80,
-                      height: 80,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFf2003c).withOpacity(0.1),
-                        shape: BoxShape.circle,
+                        color: const Color(0xFFD1D1D6),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(
-                        Icons.notifications_active_outlined,
-                        size: 40,
-                        color: Color(0xFFf2003c),
+                      padding: const EdgeInsets.all(16),
+                      child: const Column(
+                        children: [
+                          Text(
+                            'Snaplook would like to send you\nNotifications',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                              fontFamily: 'PlusJakartaSans',
+                              height: 1.3,
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          Divider(
+                            color: Color(0xFFACACAC),
+                            height: 1,
+                            thickness: 0.5,
+                          ),
+                          SizedBox(height: 1),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _DialogButton(
+                                  text: "Don't Allow",
+                                  isPrimary: false,
+                                ),
+                              ),
+                              SizedBox(
+                                width: 1,
+                                height: 44,
+                                child: ColoredBox(
+                                  color: Color(0xFFACACAC),
+                                ),
+                              ),
+                              Expanded(
+                                child: _DialogButton(
+                                  text: 'Allow',
+                                  isPrimary: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(height: spacing.l),
-
-                    // Benefits list
-                    _BenefitItem(
-                      icon: Icons.favorite_outline,
-                      text: 'New items matching your style',
-                    ),
-                    SizedBox(height: spacing.m),
-                    _BenefitItem(
-                      icon: Icons.local_offer_outlined,
-                      text: 'Exclusive deals and discounts',
-                    ),
-                    SizedBox(height: spacing.m),
-                    _BenefitItem(
-                      icon: Icons.auto_awesome_outlined,
-                      text: 'Personalized fashion insights',
+                    const SizedBox(height: 16),
+                    const Text(
+                      '👆',
+                      style: TextStyle(fontSize: 48),
                     ),
                   ],
                 ),
               ),
 
-              const Spacer(flex: 2),
-
-              // Enable notifications button
+              const Spacer(flex: 3),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(spacing.l, 0, spacing.l, spacing.l),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Primary button
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -212,7 +225,7 @@ class _NotificationPermissionPageState
                           ),
                         )
                       : const Text(
-                          'Enable Notifications',
+                          'Continue',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -222,14 +235,12 @@ class _NotificationPermissionPageState
                         ),
                 ),
               ),
-
               SizedBox(height: spacing.m),
-
               // Skip button
               TextButton(
                 onPressed: _skipNotifications,
                 child: const Text(
-                  'Maybe later',
+                  'Skip',
                   style: TextStyle(
                     fontSize: 16,
                     color: Color(0xFF6B7280),
@@ -238,8 +249,6 @@ class _NotificationPermissionPageState
                   ),
                 ),
               ),
-
-              SizedBox(height: spacing.l),
             ],
           ),
         ),
@@ -248,37 +257,29 @@ class _NotificationPermissionPageState
   }
 }
 
-class _BenefitItem extends StatelessWidget {
-  final IconData icon;
+class _DialogButton extends StatelessWidget {
   final String text;
+  final bool isPrimary;
 
-  const _BenefitItem({
-    required this.icon,
+  const _DialogButton({
     required this.text,
+    required this.isPrimary,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 20,
-          color: const Color(0xFFf2003c),
+    return Container(
+      height: 44,
+      alignment: Alignment.center,
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 17,
+          fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w400,
+          color: const Color(0xFF007AFF),
+          fontFamily: 'PlusJakartaSans',
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black,
-              fontFamily: 'PlusJakartaSans',
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
