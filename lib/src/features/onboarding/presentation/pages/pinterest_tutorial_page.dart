@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
 
@@ -62,7 +63,7 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
       case PinterestTutorialStep.step1:
         return "When you find a clothing item you love on Pinterest, tap the share button.";
       case PinterestTutorialStep.step2:
-        return "Now tap Share to open the sharing options.";
+        return "Now tap \"More Apps\" to open the sharing options.";
       case PinterestTutorialStep.step3:
         return "Finally, tap on Snaplook to share the image with our app.";
     }
@@ -157,7 +158,10 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
               top: screenHeight * _step1TapAreaTopFraction,
               left: screenWidth * _step1TapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () => _onActionComplete(PinterestTutorialStep.step2),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(PinterestTutorialStep.step2);
+                },
                 child: Container(
                   width: screenWidth * _step1TapAreaWidthFraction,
                   height: screenHeight * _step1TapAreaHeightFraction,
@@ -175,7 +179,10 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
               top: screenHeight * _step2TapAreaTopFraction,
               left: screenWidth * _step2TapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () => _onActionComplete(PinterestTutorialStep.step3),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(PinterestTutorialStep.step3);
+                },
                 child: Container(
                   width: screenWidth * _step2TapAreaWidthFraction,
                   height: screenHeight * _step2TapAreaHeightFraction,
@@ -194,6 +201,7 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
               left: screenWidth * _step3TapAreaLeftFraction,
               child: GestureDetector(
                 onTap: () {
+                  HapticFeedback.mediumImpact();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => const TutorialImageAnalysisPage(

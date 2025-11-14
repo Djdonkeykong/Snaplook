@@ -153,7 +153,7 @@ class AppConstants {
     );
     return isLocal
         ? 'http://10.0.0.25:8000/detect'
-        : 'https://60bfa7d32433.ngrok-free.app/detect';
+        : 'https://dbe2949bbeaf.ngrok-free.app/detect';
   }
 
   static String _defaultDetectAndSearchEndpoint() {
@@ -163,7 +163,7 @@ class AppConstants {
     );
     return isLocal
         ? 'http://10.0.0.25:8000/detect-and-search'
-        : 'https://60bfa7d32433.ngrok-free.app/detect-and-search';
+        : 'https://dbe2949bbeaf.ngrok-free.app/detect-and-search';
   }
 
   // === 🐝 ScrapingBee Keys ===

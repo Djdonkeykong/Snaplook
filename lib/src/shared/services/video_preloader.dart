@@ -66,7 +66,7 @@ class VideoPreloader {
 
     try {
       _loginVideoController = VideoPlayerController.asset(
-        'assets/videos/IntroFinalNewest.mp4',
+        'assets/videos/IntroFinal.mp4',
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: true,
           allowBackgroundPlayback: false,
@@ -102,7 +102,7 @@ class VideoPreloader {
 
     try {
       _trialVideoController = VideoPlayerController.asset(
-        'assets/videos/IntroFinalNewest.mp4',
+        'assets/videos/IntroFinal.mp4',
         videoPlayerOptions: VideoPlayerOptions(
           mixWithOthers: true,
           allowBackgroundPlayback: false,

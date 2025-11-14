@@ -1,11 +1,16 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_confetti/flutter_confetti.dart';
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../../../core/theme/theme_extensions.dart';
-import 'tutorial_results_page.dart';
+import '../../../detection/domain/models/detection_result.dart';
+import '../../../results/presentation/widgets/results_bottom_sheet.dart';
+import '../../domain/services/tutorial_service.dart';
+import 'trial_intro_page.dart';
 
 class TutorialImageAnalysisPage extends ConsumerStatefulWidget {
   final String? imagePath;
@@ -32,6 +37,20 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
   bool _showInstruction = true;
   double _currentProgress = 0.0;
   Timer? _progressTimer;
+
+  // Results sheet state
+  static const double _minSheetExtent = 0.4;
+  static const double _initialSheetExtent = 0.6;
+  static const double _maxSheetExtent = 0.85;
+
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
+  bool _isResultsSheetVisible = false;
+  bool _showCongratulations = false;
+  double _currentSheetExtent = _initialSheetExtent;
+  List<DetectionResult> _tutorialResults = [];
+  bool _isLoading = true;
+  final TutorialService _tutorialService = TutorialService();
 
   @override
   void initState() {
@@ -64,6 +83,7 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
   void dispose() {
     _animationController.dispose();
     _progressTimer?.cancel();
+    _sheetController.dispose();
     super.dispose();
   }
 
@@ -77,6 +97,39 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
+        actions: _isAnalyzing || _showInstruction
+            ? null
+            : _isResultsSheetVisible
+                ? [
+                    Container(
+                      margin: const EdgeInsets.all(8),
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) => const TrialIntroPage(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.check, color: Colors.black, size: 20),
+                      ),
+                    ),
+                  ]
+                : null,
       ),
       body: AnimatedBuilder(
         animation: _fadeAnimation,
@@ -116,7 +169,7 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
                   _buildDetectionOverlay(),
 
                 // Bottom Controls
-                if (!_isAnalyzing)
+                if (!_isAnalyzing && !_isResultsSheetVisible)
                   Positioned(
                     bottom: 80,
                     left: 0,
@@ -131,6 +184,58 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
                       ],
                     ),
                   ),
+
+                // Results sheet overlay
+                if (_isResultsSheetVisible) ...[
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: IgnorePointer(
+                      ignoring: true,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        color: Colors.black.withOpacity(_resultsOverlayOpacity),
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SizedBox(
+                      height: MediaQuery.of(context).size.height,
+                      child: NotificationListener<DraggableScrollableNotification>(
+                        onNotification: (notification) {
+                          if (!mounted) return false;
+                          final extent = notification.extent
+                              .clamp(_minSheetExtent, _maxSheetExtent)
+                              .toDouble();
+                          setState(() => _currentSheetExtent = extent);
+                          return false;
+                        },
+                        child: DraggableScrollableSheet(
+                          controller: _sheetController,
+                          initialChildSize: _initialSheetExtent,
+                          minChildSize: _minSheetExtent,
+                          maxChildSize: _maxSheetExtent,
+                          snap: false,
+                          expand: false,
+                          builder: (context, scrollController) {
+                            return ResultsBottomSheetContent(
+                              results: _tutorialResults,
+                              scrollController: scrollController,
+                              onProductTap: _openProduct,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
+                // Congratulations overlay
+                if (_showCongratulations)
+                  _buildCongratulationsOverlay(),
 
                 // Instruction overlay (shows on page load)
                 if (_showInstruction)
@@ -242,6 +347,9 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
       _currentProgress = 0.0;
     });
 
+    // Load tutorial products
+    _loadTutorialProducts();
+
     // Simple linear progress from 0 to 100% over 2 seconds
     const totalDuration = 2000; // 2 seconds in milliseconds
     const updateInterval = 30; // Update every 30ms
@@ -259,23 +367,158 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
         _currentProgress = (_currentProgress + incrementPerStep).clamp(0.0, 1.0);
       });
 
-      // Stop timer and navigate when complete
+      // Stop timer and show results sheet when complete
       if (_currentProgress >= 1.0) {
         timer.cancel();
         Future.delayed(const Duration(milliseconds: 200), () {
           if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => TutorialResultsPage(
-                  imagePath: widget.imagePath,
-                  scenario: widget.scenario,
-                ),
-              ),
-            );
+            setState(() {
+              _isAnalyzing = false;
+              _showCongratulations = true;
+              _isResultsSheetVisible = true;
+            });
+            HapticFeedback.mediumImpact();
+            _launchConfetti();
+            // Hide congratulations after 2.5 seconds
+            Future.delayed(const Duration(milliseconds: 2500), () {
+              if (mounted) {
+                setState(() {
+                  _showCongratulations = false;
+                });
+              }
+            });
           }
         });
       }
     });
+  }
+
+  Future<void> _loadTutorialProducts() async {
+    try {
+      final results = await _tutorialService.getTutorialProducts(scenario: widget.scenario);
+      if (mounted) {
+        setState(() {
+          _tutorialResults = results;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading tutorial products: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _openProduct(DetectionResult result) async {
+    // Do nothing in tutorial mode
+  }
+
+  double get _resultsOverlayOpacity {
+    if (!_isResultsSheetVisible) return 0;
+    final range = _maxSheetExtent - _minSheetExtent;
+    if (range <= 0) return 0.7;
+    final normalized = ((_currentSheetExtent - _minSheetExtent) / range)
+        .clamp(0.0, 1.0);
+    return 0.15 + (0.55 * normalized);
+  }
+
+  void _launchConfetti() {
+    Confetti.launch(
+      context,
+      options: const ConfettiOptions(
+        particleCount: 100,
+        spread: 70,
+        y: 0.6,
+        colors: [
+          Color(0xFFf2003c),
+          Colors.yellow,
+          Colors.blue,
+          Colors.green,
+          Colors.purple,
+          Colors.orange,
+        ],
+      ),
+    );
+
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        Confetti.launch(
+          context,
+          options: const ConfettiOptions(
+            particleCount: 50,
+            spread: 55,
+            angle: 60,
+            x: 0.1,
+            y: 0.7,
+            colors: [
+              Color(0xFFf2003c),
+              Colors.yellow,
+              Colors.blue,
+              Colors.green,
+            ],
+          ),
+        );
+      }
+    });
+
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        Confetti.launch(
+          context,
+          options: const ConfettiOptions(
+            particleCount: 50,
+            spread: 55,
+            angle: 120,
+            x: 0.9,
+            y: 0.7,
+            colors: [
+              Color(0xFFf2003c),
+              Colors.yellow,
+              Colors.blue,
+              Colors.green,
+            ],
+          ),
+        );
+      }
+    });
+  }
+
+  Widget _buildCongratulationsOverlay() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Container(
+          color: Colors.black.withOpacity(0.8),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Congratulations!',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontFamily: 'PlusJakartaSans',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '${widget.scenario} insights unlocked.',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Colors.white70,
+                    fontFamily: 'PlusJakartaSans',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

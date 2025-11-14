@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
 
@@ -135,7 +136,10 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               top: screenHeight * _step1TapAreaTopFraction,
               left: screenWidth * _step1TapAreaLeftFraction,
               child: GestureDetector(
-                onLongPress: () => _onActionComplete(SafariTutorialStep.step2),
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(SafariTutorialStep.step2);
+                },
                 child: Container(
                   width: screenWidth * _step1TapAreaWidthFraction,
                   height: screenHeight * _step1TapAreaHeightFraction,
@@ -153,7 +157,10 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               top: screenHeight * _step2TapAreaTopFraction,
               left: screenWidth * _step2TapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () => _onActionComplete(SafariTutorialStep.step3),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(SafariTutorialStep.step3);
+                },
                 child: Container(
                   width: screenWidth * _step2TapAreaWidthFraction,
                   height: screenHeight * _step2TapAreaHeightFraction,
@@ -172,6 +179,7 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               left: screenWidth * _step3TapAreaLeftFraction,
               child: GestureDetector(
                 onTap: () {
+                  HapticFeedback.mediumImpact();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => const TutorialImageAnalysisPage(

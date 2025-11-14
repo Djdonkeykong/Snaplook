@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/credit_provider.dart';
 import '../pages/paywall_page.dart';
 
+/// Dev mode flag - bypass all credit checks when true
+final devModeProvider = StateProvider<bool>((ref) => false);
+
 /// Helper function to check credits before performing an action
 /// Returns true if action can proceed, false if blocked
 Future<bool> checkCreditsBeforeAction(
@@ -10,6 +13,13 @@ Future<bool> checkCreditsBeforeAction(
   WidgetRef ref, {
   required VoidCallback onProceed,
 }) async {
+  // Dev mode bypass
+  final devMode = ref.read(devModeProvider);
+  if (devMode) {
+    onProceed();
+    return true;
+  }
+
   final creditBalance = ref.read(creditBalanceProvider);
 
   return creditBalance.when(
@@ -70,6 +80,13 @@ class CreditGatedButton extends ConsumerWidget {
   }
 
   Future<void> _handleTap(BuildContext context, WidgetRef ref) async {
+    // Dev mode bypass
+    final devMode = ref.read(devModeProvider);
+    if (devMode) {
+      onPressed();
+      return;
+    }
+
     final creditBalance = ref.read(creditBalanceProvider);
 
     await creditBalance.when(

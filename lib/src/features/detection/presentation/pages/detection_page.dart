@@ -2,17 +2,19 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../home/domain/providers/image_provider.dart';
-import '../../../results/presentation/pages/results_page.dart';
+import '../../../results/presentation/widgets/results_bottom_sheet.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../detection/domain/models/detection_result.dart';
 import '../providers/detection_provider.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
@@ -43,6 +45,16 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   final List<Timer> _overlayTimers = [];
   int _statusIndex = 0;
 
+  // Results sheet state
+  static const double _resultsMinExtent = 0.4;
+  static const double _resultsInitialExtent = 0.6;
+  static const double _resultsMaxExtent = 0.85;
+  final DraggableScrollableController _resultsSheetController =
+      DraggableScrollableController();
+  double _currentResultsExtent = _resultsInitialExtent;
+  bool _isResultsSheetVisible = false;
+  List<DetectionResult> _results = [];
+
   static const List<String> _detectionPhaseMessages = [
     'Detecting garments...',
     'Analyzing clothing...',
@@ -70,6 +82,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   void dispose() {
     _hideAnalysisOverlay();
     _pageController.dispose();
+    _resultsSheetController.dispose();
     super.dispose();
   }
 
@@ -86,14 +99,27 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         "[DETECTION PAGE] hasMultipleImages: ${imagesState.hasMultipleImages}");
     print("[DETECTION PAGE] totalImages: ${imagesState.totalImages}");
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      extendBodyBehindAppBar: true,
-      extendBody: true,
-      appBar: AppBar(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarBrightness: Brightness.dark,
+          statusBarIconBrightness: Brightness.light,
+        ),
         leading: _isAnalysisOverlayVisible
             ? null
             : Container(
@@ -125,9 +151,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: _isCropMode
-                        ? const Color(0xFFf2003c)
-                        : Colors.white.withOpacity(0.9),
+                    color: Colors.white.withOpacity(0.9),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -139,30 +163,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                   ),
                   child: IconButton(
                     padding: EdgeInsets.zero,
-                    onPressed: () {
-                      setState(() {
-                        if (!_isCropMode) {
-                          // Entering crop mode - initialize crop rect if needed
-                          if (_cropRect == null) {
-                            final screenSize = MediaQuery.of(context).size;
-                            final cropSize = screenSize.width * 0.7;
-                            final left = (screenSize.width - cropSize) / 2;
-                            final top = (screenSize.height - cropSize) / 2;
-                            _cropRect =
-                                Rect.fromLTWH(left, top, cropSize, cropSize);
-                          }
-                        } else {
-                          // Exiting crop mode - clear cropped bytes
-                          _croppedImageBytes = null;
-                        }
-                        _isCropMode = !_isCropMode;
-                      });
-                    },
-                    icon: Icon(
-                      _isCropMode ? Icons.close : Icons.crop_free,
-                      color: _isCropMode ? Colors.white : Colors.black,
-                      size: 20,
-                    ),
+                    onPressed: _shareImage,
+                    icon: const Icon(Icons.ios_share, color: Colors.black, size: 20),
                   ),
                 ),
               ],
@@ -179,11 +181,35 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                 Positioned.fill(
                   child: widget.imageUrl != null
                       ? SizedBox.expand(
-                          child: Image.network(
-                            widget.imageUrl!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: Image.network(
+                                  widget.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  gaplessPlayback: true,
+                                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                    if (wasSynchronouslyLoaded) return child;
+                                    return AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      child: frame != null
+                                          ? child
+                                          : Container(color: Colors.black),
+                                    );
+                                  },
+                                ),
+                              ),
+                              if (_isAnalysisOverlayVisible)
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: Container(
+                                      color: Colors.black.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         )
                       : imagesState.hasMultipleImages
@@ -201,6 +227,16 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: double.infinity,
+                                  gaplessPlayback: true,
+                                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                    if (wasSynchronouslyLoaded) return child;
+                                    return AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      child: frame != null
+                                          ? child
+                                          : Container(color: Colors.black),
+                                    );
+                                  },
                                 );
                               },
                             )
@@ -209,6 +245,16 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
+                              gaplessPlayback: true,
+                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                if (wasSynchronouslyLoaded) return child;
+                                return AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: frame != null
+                                      ? child
+                                      : Container(color: Colors.black),
+                                );
+                              },
                             ),
                 ),
                 if (imagesState.hasMultipleImages)
@@ -228,15 +274,64 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                       const SizedBox(height: 16),
                       Center(
                         child: _isAnalysisOverlayVisible
+                            || _isResultsSheetVisible
                             ? const SizedBox.shrink()
                             : _buildScanButton(),
                       ),
                     ],
                   ),
                 ),
+                if (_isResultsSheetVisible && _results.isNotEmpty) ...[
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: IgnorePointer(
+                      ignoring: true,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        color: Colors.black
+                            .withOpacity(_resultsOverlayOpacity),
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SizedBox(
+                      height: MediaQuery.of(context).size.height,
+                      child:
+                          NotificationListener<DraggableScrollableNotification>(
+                        onNotification: (notification) {
+                          final extent = notification.extent
+                              .clamp(_resultsMinExtent, _resultsMaxExtent)
+                              .toDouble();
+                          setState(() => _currentResultsExtent = extent);
+                          return false;
+                        },
+                        child: DraggableScrollableSheet(
+                          controller: _resultsSheetController,
+                          initialChildSize: _resultsInitialExtent,
+                          minChildSize: _resultsMinExtent,
+                          maxChildSize: _resultsMaxExtent,
+                          snap: false,
+                          expand: false,
+                          builder: (context, scrollController) {
+                            return ResultsBottomSheetContent(
+                              results: _results,
+                              scrollController: scrollController,
+                              onProductTap: _openProduct,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 if (_isAnalysisOverlayVisible) _buildDetectionOverlay(),
               ],
             ),
+      ),
     );
   }
 
@@ -293,6 +388,36 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _openProduct(DetectionResult result) async {
+    if (result.purchaseUrl != null) {
+      final uri = Uri.parse(result.purchaseUrl!);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    }
+  }
+
+  Future<void> _shareImage() async {
+    try {
+      if (widget.imageUrl != null) {
+        final uri = Uri.parse(widget.imageUrl!);
+        final response = await http.get(uri);
+        final bytes = response.bodyBytes;
+        final temp = await File('${Directory.systemTemp.path}/share_image.jpg').create();
+        await temp.writeAsBytes(bytes);
+        await Share.shareXFiles([XFile(temp.path)], text: 'Check out what I found with Snaplook!');
+      } else {
+        final imagesState = ref.read(selectedImagesProvider);
+        final selectedImage = imagesState.currentImage;
+        if (selectedImage != null) {
+          await Share.shareXFiles([XFile(selectedImage.path)], text: 'Check out what I found with Snaplook!');
+        }
+      }
+    } catch (e) {
+      print('Error sharing image: $e');
+    }
   }
 
   Widget _buildScanButton() {
@@ -741,6 +866,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     });
   }
 
+  double get _resultsOverlayOpacity {
+    if (!_isResultsSheetVisible) return 0;
+    final range = _resultsMaxExtent - _resultsMinExtent;
+    if (range <= 0) return 0.7;
+    final normalized = ((_currentResultsExtent - _resultsMinExtent) / range)
+        .clamp(0.0, 1.0);
+    return 0.15 + (0.55 * normalized);
+  }
+
   void _startSmoothProgressTimer() {
     _progressTimer?.cancel();
     _progressTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
@@ -843,6 +977,13 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         return;
       }
 
+      if (_isResultsSheetVisible || _results.isNotEmpty) {
+        setState(() {
+          _isResultsSheetVisible = false;
+          _results = [];
+        });
+      }
+
       HapticFeedback.mediumImpact();
       _showAnalysisOverlayIfNeeded();
 
@@ -925,14 +1066,13 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       if (mounted && results.isNotEmpty) {
         _finishOverlayForNavigation();
         await Future.delayed(const Duration(milliseconds: 320));
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => ResultsPage(
-              results: results,
-              originalImageUrl: widget.imageUrl, // Pass network image URL
-            ),
-          ),
-        );
+        if (!mounted) return;
+        setState(() {
+          _results = results;
+          _isResultsSheetVisible = true;
+          _currentResultsExtent = _resultsInitialExtent;
+        });
+        _hideAnalysisOverlay();
       } else {
         _hideAnalysisOverlay();
         if (mounted) {

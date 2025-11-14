@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
 
@@ -149,7 +150,10 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
               top: screenHeight * _step1TapAreaTopFraction,
               left: screenWidth * _step1TapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () => _onActionComplete(TikTokTutorialStep.step2),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(TikTokTutorialStep.step2);
+                },
                 child: Container(
                   width: screenWidth * _step1TapAreaWidthFraction,
                   height: screenHeight * _step1TapAreaHeightFraction,
@@ -167,7 +171,10 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
               top: screenHeight * _step2TapAreaTopFraction,
               left: screenWidth * _step2TapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () => _onActionComplete(TikTokTutorialStep.step3),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(TikTokTutorialStep.step3);
+                },
                 child: Container(
                   width: screenWidth * _step2TapAreaWidthFraction,
                   height: screenHeight * _step2TapAreaHeightFraction,
@@ -186,6 +193,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
               left: screenWidth * _step3TapAreaLeftFraction,
               child: GestureDetector(
                 onTap: () {
+                  HapticFeedback.mediumImpact();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => const TutorialImageAnalysisPage(

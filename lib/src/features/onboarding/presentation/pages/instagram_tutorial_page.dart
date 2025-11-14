@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
 
@@ -62,7 +63,7 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
       case TutorialStep.tapShare:
         return "When you find a clothing item you love on Instagram, tap the share button at the bottom.";
       case TutorialStep.selectSnaplook:
-        return "Now tap Share To to open the sharing options.";
+        return "Now tap \"Share to\" to open the sharing options.";
       case TutorialStep.confirmShare:
         return "Tap Snaplook to share the image with our app.";
     }
@@ -74,15 +75,14 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
   }
 
   void _onActionComplete(TutorialStep nextStep) {
-    // Set flag to show popup immediately after tap
-    ref.read(hasUserTappedProvider.notifier).state = true;
+    // Show instruction overlay first
+    ref.read(tutorialStepProvider.notifier).state = nextStep;
+    ref.read(tutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
 
-    // Wait briefly to show the popup, then show next instruction
-    Future.delayed(const Duration(milliseconds: 600), () {
+    // Then show popup image after a brief delay (150ms) so overlay appears first
+    Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
-        ref.read(tutorialStepProvider.notifier).state = nextStep;
-        ref.read(tutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
-        // Keep hasUserTapped true so popup stays visible during instruction
+        ref.read(hasUserTappedProvider.notifier).state = true;
       }
     });
   }
@@ -149,7 +149,10 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               bottom: screenHeight * _shareTapAreaBottomFraction,
               left: screenWidth * _shareTapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () => _onActionComplete(TutorialStep.selectSnaplook),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(TutorialStep.selectSnaplook);
+                },
                 child: Container(
                   width: screenWidth * _shareTapAreaWidthFraction,
                   height: screenHeight * _shareTapAreaHeightFraction,
@@ -167,7 +170,10 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               bottom: screenHeight * _selectTapAreaBottomFraction,
               left: screenWidth * _selectTapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () => _onActionComplete(TutorialStep.confirmShare),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(TutorialStep.confirmShare);
+                },
                 child: Container(
                   width: screenWidth * _selectTapAreaWidthFraction,
                   height: screenHeight * _selectTapAreaHeightFraction,
@@ -186,6 +192,7 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               right: screenWidth * _confirmTapAreaRightFraction,
               child: GestureDetector(
                 onTap: () {
+                  HapticFeedback.mediumImpact();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => const TutorialImageAnalysisPage(
@@ -379,5 +386,4 @@ class _FadeInWordState extends State<_FadeInWord>
     );
   }
 }
-
 

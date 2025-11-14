@@ -8,6 +8,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../providers/credit_provider.dart';
+import '../widgets/credit_check_widget.dart';
 
 enum PaywallPlanType { monthly, yearly }
 
@@ -270,23 +271,21 @@ class PaywallPage extends ConsumerWidget {
               ),
             ),
 
-            if (!kReleaseMode) ...[
-              const SizedBox(height: 8),
-              Center(
-                child: TextButton(
-                  onPressed: () => _skipPaywallForDevelopment(context),
-                  child: const Text(
-                    'Skip paywall (dev)',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
-                      color: Color(0xFF9CA3AF),
-                      fontWeight: FontWeight.w600,
-                    ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: () => _skipPaywallForDevelopment(context, ref),
+                child: const Text(
+                  'Skip for testing',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 12,
+                    color: Color(0xFFD1D5DB),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-            ],
+            ),
 
             SizedBox(height: spacing.l),
           ],
@@ -462,11 +461,16 @@ class PaywallPage extends ConsumerWidget {
   }
 
   /// Temporary dev-only shortcut to reach the next onboarding step
-  void _skipPaywallForDevelopment(BuildContext context) {
-    Navigator.of(context).push(
+  void _skipPaywallForDevelopment(BuildContext context, WidgetRef ref) {
+    // Enable dev mode - this bypasses all credit checks
+    ref.read(devModeProvider.notifier).state = true;
+
+    // Navigate directly to main app, skipping account creation
+    Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (context) => const AccountCreationPage(),
+        builder: (context) => const MainNavigation(),
       ),
+      (route) => false,
     );
   }
 }

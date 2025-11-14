@@ -1421,6 +1421,7 @@ class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
             widget.imageUrl,
             fit: currentFit,
             alignment: Alignment.center,
+            gaplessPlayback: true,
             // Removed cache size limits to preserve original image quality
             headers: const {
               'User-Agent': 'Mozilla/5.0 (compatible; Flutter app)',

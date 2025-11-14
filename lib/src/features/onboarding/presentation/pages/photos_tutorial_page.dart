@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
 
@@ -127,7 +128,10 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               top: screenHeight * _step1TapAreaTopFraction,
               left: screenWidth * _step1TapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () => _onActionComplete(PhotosTutorialStep.step2),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(PhotosTutorialStep.step2);
+                },
                 child: Container(
                   width: screenWidth * _step1TapAreaWidthFraction,
                   height: screenHeight * _step1TapAreaHeightFraction,
@@ -146,6 +150,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               left: screenWidth * _step2TapAreaLeftFraction,
               child: GestureDetector(
                 onTap: () {
+                  HapticFeedback.mediumImpact();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => const TutorialImageAnalysisPage(
