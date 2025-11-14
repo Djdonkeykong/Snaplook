@@ -3,9 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
-import '../../../../../shared/navigation/main_navigation.dart';
 import '../../domain/providers/auth_provider.dart';
-import '../../../home/domain/providers/inspiration_provider.dart';
+import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
@@ -95,12 +94,10 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
       );
 
       if (mounted) {
-        // User verified email and created account, go to main app
-        ref.read(selectedIndexProvider.notifier).state = 0;
-        ref.invalidate(inspirationProvider);
+        // User verified email and created account, show welcome page
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (context) => const MainNavigation(),
+            builder: (context) => const WelcomeFreeAnalysisPage(),
           ),
           (route) => false,
         );
