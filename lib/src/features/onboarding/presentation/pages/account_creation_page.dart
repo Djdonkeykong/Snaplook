@@ -11,6 +11,7 @@ import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../widgets/progress_indicator.dart';
 import 'welcome_free_analysis_page.dart';
 import 'gender_selection_page.dart';
+import 'notification_permission_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show MainNavigation, selectedIndexProvider, scrollToTopTriggerProvider, isAtHomeRootProvider;
 
@@ -133,56 +134,72 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                 final userId = authService.currentUser?.id;
                                 print('[AccountCreation] Apple - User ID after sign in: $userId');
                                 if (userId != null) {
-                                  try {
-                                    // Check if user has completed onboarding by looking at gender field
-                                    final supabase = Supabase.instance.client;
-                                    final userResponse = await supabase
-                                        .from('users')
-                                        .select('gender')
-                                        .eq('id', userId)
-                                        .maybeSingle();
+                                  // First check if user went through onboarding already (providers have values)
+                                  final selectedGender = ref.read(selectedGenderProvider);
+                                  print('[AccountCreation] Apple - Gender from provider: ${selectedGender?.name}');
 
-                                    print('[AccountCreation] Apple - User record found: ${userResponse != null}');
+                                  if (selectedGender != null) {
+                                    // User went through onboarding BEFORE creating account
+                                    // Go to welcome page which will save preferences and initialize credits
+                                    print('[AccountCreation] Apple - User completed onboarding, going to welcome page');
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (context) => const WelcomeFreeAnalysisPage(),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  } else {
+                                    // No provider values, check database to see if returning user
+                                    try {
+                                      final supabase = Supabase.instance.client;
+                                      final userResponse = await supabase
+                                          .from('users')
+                                          .select('gender')
+                                          .eq('id', userId)
+                                          .maybeSingle();
 
-                                    // Check if user has completed onboarding (gender will be set during onboarding)
-                                    final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
-                                    print('[AccountCreation] Apple - Has completed onboarding: $hasCompletedOnboarding');
+                                      print('[AccountCreation] Apple - User record found: ${userResponse != null}');
 
-                                    if (hasCompletedOnboarding) {
-                                      // Existing user who completed onboarding - go to main app
-                                      print('[AccountCreation] Apple - Existing user - navigating to main app');
-                                      // Reset to home tab
-                                      ref.read(selectedIndexProvider.notifier).state = 0;
-                                      // Invalidate all providers to refresh state
-                                      ref.invalidate(selectedIndexProvider);
-                                      ref.invalidate(scrollToTopTriggerProvider);
-                                      ref.invalidate(isAtHomeRootProvider);
-                                      Navigator.of(context).pushAndRemoveUntil(
-                                        MaterialPageRoute(
-                                          builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
-                                        ),
-                                        (route) => false,
-                                      );
-                                    } else {
-                                      // New user - start onboarding from gender selection
-                                      print('[AccountCreation] Apple - New user - navigating to gender selection');
-                                      Navigator.of(context).pushAndRemoveUntil(
-                                        MaterialPageRoute(
-                                          builder: (context) => const GenderSelectionPage(),
-                                        ),
-                                        (route) => false,
-                                      );
-                                    }
-                                  } catch (e) {
-                                    // If check fails, assume new user
-                                    print('[AccountCreation] Apple - Check error, assuming new user: $e');
-                                    if (context.mounted) {
-                                      Navigator.of(context).pushAndRemoveUntil(
-                                        MaterialPageRoute(
-                                          builder: (context) => const GenderSelectionPage(),
-                                        ),
-                                        (route) => false,
-                                      );
+                                      // Check if user has completed onboarding (gender will be set during onboarding)
+                                      final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
+                                      print('[AccountCreation] Apple - Has completed onboarding in DB: $hasCompletedOnboarding');
+
+                                      if (hasCompletedOnboarding) {
+                                        // Existing user who completed onboarding - go to main app
+                                        print('[AccountCreation] Apple - Existing user - navigating to main app');
+                                        // Reset to home tab
+                                        ref.read(selectedIndexProvider.notifier).state = 0;
+                                        // Invalidate all providers to refresh state
+                                        ref.invalidate(selectedIndexProvider);
+                                        ref.invalidate(scrollToTopTriggerProvider);
+                                        ref.invalidate(isAtHomeRootProvider);
+                                        Navigator.of(context).pushAndRemoveUntil(
+                                          MaterialPageRoute(
+                                            builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
+                                          ),
+                                          (route) => false,
+                                        );
+                                      } else {
+                                        // New user - start onboarding from gender selection
+                                        print('[AccountCreation] Apple - New user - navigating to gender selection');
+                                        Navigator.of(context).pushAndRemoveUntil(
+                                          MaterialPageRoute(
+                                            builder: (context) => const GenderSelectionPage(),
+                                          ),
+                                          (route) => false,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      // If check fails, assume new user
+                                      print('[AccountCreation] Apple - Check error, assuming new user: $e');
+                                      if (context.mounted) {
+                                        Navigator.of(context).pushAndRemoveUntil(
+                                          MaterialPageRoute(
+                                            builder: (context) => const GenderSelectionPage(),
+                                          ),
+                                          (route) => false,
+                                        );
+                                      }
                                     }
                                   }
                                 }
@@ -233,56 +250,72 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                 final userId = authService.currentUser?.id;
                                 print('[AccountCreation] Google - User ID after sign in: $userId');
                                 if (userId != null) {
-                                  try {
-                                    // Check if user has completed onboarding by looking at gender field
-                                    final supabase = Supabase.instance.client;
-                                    final userResponse = await supabase
-                                        .from('users')
-                                        .select('gender')
-                                        .eq('id', userId)
-                                        .maybeSingle();
+                                  // First check if user went through onboarding already (providers have values)
+                                  final selectedGender = ref.read(selectedGenderProvider);
+                                  print('[AccountCreation] Google - Gender from provider: ${selectedGender?.name}');
 
-                                    print('[AccountCreation] Google - User record found: ${userResponse != null}');
+                                  if (selectedGender != null) {
+                                    // User went through onboarding BEFORE creating account
+                                    // Go to welcome page which will save preferences and initialize credits
+                                    print('[AccountCreation] Google - User completed onboarding, going to welcome page');
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (context) => const WelcomeFreeAnalysisPage(),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  } else {
+                                    // No provider values, check database to see if returning user
+                                    try {
+                                      final supabase = Supabase.instance.client;
+                                      final userResponse = await supabase
+                                          .from('users')
+                                          .select('gender')
+                                          .eq('id', userId)
+                                          .maybeSingle();
 
-                                    // Check if user has completed onboarding (gender will be set during onboarding)
-                                    final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
-                                    print('[AccountCreation] Google - Has completed onboarding: $hasCompletedOnboarding');
+                                      print('[AccountCreation] Google - User record found: ${userResponse != null}');
 
-                                    if (hasCompletedOnboarding) {
-                                      // Existing user who completed onboarding - go to main app
-                                      print('[AccountCreation] Google - Existing user - navigating to main app');
-                                      // Reset to home tab
-                                      ref.read(selectedIndexProvider.notifier).state = 0;
-                                      // Invalidate all providers to refresh state
-                                      ref.invalidate(selectedIndexProvider);
-                                      ref.invalidate(scrollToTopTriggerProvider);
-                                      ref.invalidate(isAtHomeRootProvider);
-                                      Navigator.of(context).pushAndRemoveUntil(
-                                        MaterialPageRoute(
-                                          builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
-                                        ),
-                                        (route) => false,
-                                      );
-                                    } else {
-                                      // New user - start onboarding from gender selection
-                                      print('[AccountCreation] Google - New user - navigating to gender selection');
-                                      Navigator.of(context).pushAndRemoveUntil(
-                                        MaterialPageRoute(
-                                          builder: (context) => const GenderSelectionPage(),
-                                        ),
-                                        (route) => false,
-                                      );
-                                    }
-                                  } catch (e) {
-                                    // If check fails, assume new user
-                                    print('[AccountCreation] Google - Check error, assuming new user: $e');
-                                    if (context.mounted) {
-                                      Navigator.of(context).pushAndRemoveUntil(
-                                        MaterialPageRoute(
-                                          builder: (context) => const GenderSelectionPage(),
-                                        ),
-                                        (route) => false,
-                                      );
+                                      // Check if user has completed onboarding (gender will be set during onboarding)
+                                      final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
+                                      print('[AccountCreation] Google - Has completed onboarding in DB: $hasCompletedOnboarding');
+
+                                      if (hasCompletedOnboarding) {
+                                        // Existing user who completed onboarding - go to main app
+                                        print('[AccountCreation] Google - Existing user - navigating to main app');
+                                        // Reset to home tab
+                                        ref.read(selectedIndexProvider.notifier).state = 0;
+                                        // Invalidate all providers to refresh state
+                                        ref.invalidate(selectedIndexProvider);
+                                        ref.invalidate(scrollToTopTriggerProvider);
+                                        ref.invalidate(isAtHomeRootProvider);
+                                        Navigator.of(context).pushAndRemoveUntil(
+                                          MaterialPageRoute(
+                                            builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
+                                          ),
+                                          (route) => false,
+                                        );
+                                      } else {
+                                        // New user - start onboarding from gender selection
+                                        print('[AccountCreation] Google - New user - navigating to gender selection');
+                                        Navigator.of(context).pushAndRemoveUntil(
+                                          MaterialPageRoute(
+                                            builder: (context) => const GenderSelectionPage(),
+                                          ),
+                                          (route) => false,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      // If check fails, assume new user
+                                      print('[AccountCreation] Google - Check error, assuming new user: $e');
+                                      if (context.mounted) {
+                                        Navigator.of(context).pushAndRemoveUntil(
+                                          MaterialPageRoute(
+                                            builder: (context) => const GenderSelectionPage(),
+                                          ),
+                                          (route) => false,
+                                        );
+                                      }
                                     }
                                   }
                                 }

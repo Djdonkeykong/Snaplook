@@ -117,7 +117,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final spacing = context.spacing;
-    final user = ref.watch(currentUserProvider);
+    // Use read instead of watch to avoid rebuilding when user logs out
+    final user = ref.read(currentUserProvider);
     final userEmail = user?.email ?? 'user@example.com';
     final initials = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
 

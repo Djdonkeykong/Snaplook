@@ -1060,6 +1060,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         _finishOverlayForNavigation();
         await Future.delayed(const Duration(milliseconds: 320));
         if (!mounted) return;
+
+        // Trigger haptic feedback when results appear
+        HapticFeedback.mediumImpact();
+
         setState(() {
           _results = results;
           _isResultsSheetVisible = true;

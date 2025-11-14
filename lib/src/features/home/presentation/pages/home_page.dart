@@ -784,7 +784,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       builder: (sheetContext) {
         final spacing = sheetContext.spacing;
         return FractionallySizedBox(
-          heightFactor: 0.8,
+          heightFactor: 0.9,
           child: Container(
             decoration: BoxDecoration(
               color: Theme.of(sheetContext).colorScheme.surface,
@@ -1297,22 +1297,19 @@ class _StaggeredInspirationImageCardState
             Positioned.fill(
               child: GestureDetector(
                 onTap: widget.onTap,
-                child: Hero(
-                  tag: 'product_${widget.image['id']}_${widget.index}',
-                  child: imageUrl != null
-                      ? _AdaptiveProductImage(
-                          imageUrl: imageUrl,
-                          isShoeCategory: isShoeCategory,
-                        )
-                      : Container(
-                          color: AppColors.surface,
-                          child: Icon(
-                            Icons.image_outlined,
-                            size: 32,
-                            color: AppColors.tertiary.withOpacity(0.5),
-                          ),
+                child: imageUrl != null
+                    ? _AdaptiveProductImage(
+                        imageUrl: imageUrl,
+                        isShoeCategory: isShoeCategory,
+                      )
+                    : Container(
+                        color: AppColors.surface,
+                        child: Icon(
+                          Icons.image_outlined,
+                          size: 32,
+                          color: AppColors.tertiary.withOpacity(0.5),
                         ),
-                ),
+                      ),
               ),
             ),
             // Favorite button overlay - positioned at top right
@@ -1417,22 +1414,19 @@ class _MagazineStyleImageCard extends ConsumerWidget {
             Positioned.fill(
               child: GestureDetector(
                 onTap: onTap,
-                child: Hero(
-                  tag: 'product_${image['id']}_$index',
-                  child: imageUrl != null
-                      ? _AdaptiveProductImage(
-                          imageUrl: imageUrl,
-                          isShoeCategory: isShoeCategory,
-                        )
-                      : Container(
-                          color: AppColors.surface,
-                          child: Icon(
-                            Icons.image_outlined,
-                            size: isLarge ? 48 : 32,
-                            color: AppColors.tertiary.withOpacity(0.5),
-                          ),
+                child: imageUrl != null
+                    ? _AdaptiveProductImage(
+                        imageUrl: imageUrl,
+                        isShoeCategory: isShoeCategory,
+                      )
+                    : Container(
+                        color: AppColors.surface,
+                        child: Icon(
+                          Icons.image_outlined,
+                          size: isLarge ? 48 : 32,
+                          color: AppColors.tertiary.withOpacity(0.5),
                         ),
-                ),
+                      ),
               ),
             ),
             // Favorite button - positioned at bottom right

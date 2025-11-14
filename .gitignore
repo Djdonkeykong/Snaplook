@@ -76,3 +76,4 @@ scripts/.env
 
 # Storage and local data
 storage/
+codemagic_prebuild.sh

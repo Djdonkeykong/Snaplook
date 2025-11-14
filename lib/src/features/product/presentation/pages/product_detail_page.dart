@@ -352,12 +352,9 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                     color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
                   child: widget.product['image_url'] != null
-                      ? Hero(
-                          tag: widget.heroTag,
-                          child: _AdaptiveMainProductImage(
-                            imageUrl: widget.product['image_url'],
-                            category: (widget.product['category'] as String?)?.toLowerCase() ?? '',
-                          ),
+                      ? _AdaptiveMainProductImage(
+                          imageUrl: widget.product['image_url'],
+                          category: (widget.product['category'] as String?)?.toLowerCase() ?? '',
                         )
                       : Container(
                           color: Theme.of(context).colorScheme.surfaceContainerHighest,

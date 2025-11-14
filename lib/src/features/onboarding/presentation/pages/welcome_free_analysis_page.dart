@@ -120,39 +120,50 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
             children: [
               const Spacer(flex: 2),
 
-              // Success animation
-              Lottie.asset(
-                'assets/animations/success.json',
-                width: 200,
-                height: 200,
-                repeat: false,
-              ),
+              _CompletionBadge(),
 
-              SizedBox(height: spacing.xl),
+              SizedBox(height: spacing.l),
 
-              // Welcome message
-              const Text(
-                'Welcome to Snaplook!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -1.0,
-                  height: 1.3,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.check_circle, color: Color(0xFF2CDA94), size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'All done!',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF2CDA94),
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                ],
               ),
 
               SizedBox(height: spacing.m),
 
-              // Free analysis message
+              const Text(
+                'Your fashion search\nstarts now!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.tertiary,
+                  fontFamily: 'PlusJakartaSans',
+                  letterSpacing: -0.5,
+                  height: 1.3,
+                ),
+              ),
+
+              const Spacer(flex: 3),
+
               RichText(
                 textAlign: TextAlign.center,
                 text: const TextSpan(
                   text: 'You get ',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 12,
                     color: Color(0xFF6B7280),
                     fontFamily: 'PlusJakartaSans',
                     height: 1.5,
@@ -161,7 +172,7 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
                     TextSpan(
                       text: '1 free analysis',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 12,
                         color: Color(0xFFf2003c),
                         fontFamily: 'PlusJakartaSans',
                         fontWeight: FontWeight.bold,
@@ -169,9 +180,9 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
                       ),
                     ),
                     TextSpan(
-                      text: ' to discover amazing fashion finds!',
+                      text: ' to try the app!',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 12,
                         color: Color(0xFF6B7280),
                         fontFamily: 'PlusJakartaSans',
                         height: 1.5,
@@ -181,42 +192,7 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
                 ),
               ),
 
-              SizedBox(height: spacing.l),
-
-              // Visual representation
-              Container(
-                padding: EdgeInsets.all(spacing.l),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9F9F9),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFE5E7EB),
-                    width: 1.5,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.camera_alt_outlined,
-                      size: 48,
-                      color: Color(0xFFf2003c),
-                    ),
-                    SizedBox(height: spacing.m),
-                    const Text(
-                      'Upload any photo and discover\nall the fashion items in it',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF6B7280),
-                        fontFamily: 'PlusJakartaSans',
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const Spacer(flex: 3),
+              SizedBox(height: spacing.m),
 
               // Continue button
               SizedBox(
@@ -278,6 +254,23 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CompletionBadge extends StatelessWidget {
+  const _CompletionBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 180,
+      height: 180,
+      child: Lottie.asset(
+        'assets/animations/success.json',
+        repeat: false,
+        fit: BoxFit.contain,
       ),
     );
   }
