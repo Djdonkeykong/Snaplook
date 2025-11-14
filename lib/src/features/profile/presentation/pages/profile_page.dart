@@ -215,26 +215,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                       label: membershipLabel,
                                       isPremium: isPremiumMembership,
                                     ),
-                                    SizedBox(width: spacing.xs),
-                                    // Show trial days or expiration info
-                                    subscriptionStatusAsync.when(
-                                      data: (status) {
-                                        if (status.isInTrialPeriod && status.daysRemainingInTrial != null) {
-                                          final days = status.daysRemainingInTrial!;
-                                          return Text(
-                                            '$days ${days == 1 ? "day" : "days"} left',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontFamily: 'PlusJakartaSans',
-                                              color: colorScheme.onSurfaceVariant,
-                                            ),
-                                          );
-                                        }
-                                        return const SizedBox.shrink();
-                                      },
-                                      loading: () => const SizedBox.shrink(),
-                                      error: (_, __) => const SizedBox.shrink(),
-                                    ),
                                   ],
                                 ),
                               ],
@@ -248,18 +228,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                 ),
                 SizedBox(height: spacing.m),
-
-                // Subscription Section
-                _SectionHeader(title: 'Subscription'),
-                _SimpleSettingItem(
-                  title: 'Manage Subscription',
-                  onTap: () async {
-                    final purchaseController = ref.read(purchaseControllerProvider);
-                    await purchaseController.showManagementUI();
-                  },
-                ),
-
-                SizedBox(height: spacing.l),
 
                 // Settings Section
                 _SectionHeader(title: 'Settings'),

@@ -1104,14 +1104,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.0"
-  purchases_flutter:
-    dependency: "direct main"
-    description:
-      name: purchases_flutter
-      sha256: "4e537578451cb7c5e58075d497d507271ad1d06ac1ec12016a250d3882e41431"
-      url: "https://pub.dev"
-    source: hosted
-    version: "9.9.6"
   realtime_client:
     dependency: transitive
     description:
@@ -1301,6 +1293,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  sliding_up_panel:
+    dependency: "direct main"
+    description:
+      name: sliding_up_panel
+      sha256: "578e90956a6212d1e406373250b2436a0f3afece29aee3c24c8360094d6cf968"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0+1"
   snap_scroll_physics:
     dependency: transitive
     description:
