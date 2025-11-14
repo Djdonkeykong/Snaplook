@@ -5,7 +5,6 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
-import '../../../paywall/providers/credit_provider.dart';
 import 'edit_profile_page.dart';
 import 'help_faq_page.dart';
 import 'contact_support_page.dart';
@@ -122,22 +121,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final userEmail = user?.email ?? 'user@example.com';
     final initials = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
 
-    // Get subscription status from RevenueCat
-    final subscriptionStatusAsync = ref.watch(subscriptionStatusProvider);
-    final membershipLabel = subscriptionStatusAsync.when(
-      data: (status) {
-        if (status.isInTrialPeriod) return 'Trial';
-        if (status.isActive) return 'Premium';
-        return 'Free';
-      },
-      loading: () => 'Free',
-      error: (_, __) => 'Free',
-    );
-    final isPremiumMembership = subscriptionStatusAsync.when(
-      data: (status) => status.isActive || status.isInTrialPeriod,
-      loading: () => false,
-      error: (_, __) => false,
-    );
+    // No subscription system - all users are free
+    final membershipLabel = 'Free';
+    final isPremiumMembership = false;
 
     return Scaffold(
       backgroundColor: colorScheme.background,

@@ -77,9 +77,6 @@ dependencies:
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
 
-  # In-App Purchases
-  purchases_flutter: ^9.8.0
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

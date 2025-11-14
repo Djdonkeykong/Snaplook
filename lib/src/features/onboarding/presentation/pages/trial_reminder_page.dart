@@ -5,8 +5,6 @@ import 'package:video_player/video_player.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import '../../../paywall/presentation/pages/paywall_page.dart';
-import '../../../paywall/providers/credit_provider.dart';
 import 'account_creation_page.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
@@ -162,24 +160,12 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                 onPressed: () {
                   HapticFeedback.mediumImpact();
 
-                  // Check if user already has active subscription
-                  final hasActiveSubscription = ref.read(hasActiveSubscriptionProvider);
-
-                  if (hasActiveSubscription) {
-                    // User already paid → skip paywall, go to account creation
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const AccountCreationPage(),
-                      ),
-                    );
-                  } else {
-                    // No subscription → show paywall
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const PaywallPage(),
-                      ),
-                    );
-                  }
+                  // Continue to account creation
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AccountCreationPage(),
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFf2003c),

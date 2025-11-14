@@ -4,9 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
-import '../../../onboarding/presentation/pages/account_creation_page.dart';
-import '../../../paywall/providers/credit_provider.dart';
-import '../../../../services/subscription_sync_service.dart';
 import 'dart:ui';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -47,33 +44,21 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     // Check if user is authenticated
     final isAuthenticated = ref.read(isAuthenticatedProvider);
 
-    // Check if user has active subscription (RevenueCat)
-    final hasActiveSubscription = ref.read(hasActiveSubscriptionProvider);
-
     // Ensure share extension receives the latest auth state via AuthService.
     // This avoids racing MethodChannel calls that might send a null userId.
     if (mounted) {
       final authService = ref.read(authServiceProvider);
       await authService.syncAuthState();
-
-      // If user is authenticated, sync subscription data from RevenueCat to Supabase
-      // This ensures data stays in sync across devices and after restores
-      if (isAuthenticated) {
-        await SubscriptionSyncService().syncSubscriptionToSupabase();
-      }
     }
 
-    // Determine the next page based on auth + subscription status
+    // Determine the next page based on auth status
     Widget nextPage;
 
     if (isAuthenticated) {
       // User has account → go to main app
       nextPage = const MainNavigation();
-    } else if (hasActiveSubscription) {
-      // User paid but no account → go to account creation
-      nextPage = const AccountCreationPage();
     } else {
-      // No payment, no account → go to login/tutorials flow
+      // No account → go to login/tutorials flow
       nextPage = const LoginPage();
     }
 
