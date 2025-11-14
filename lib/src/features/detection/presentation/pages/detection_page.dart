@@ -1,18 +1,20 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui' as ui;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../home/domain/providers/image_provider.dart';
-import '../../../results/presentation/pages/results_page.dart';
-import '../../../../../core/constants/app_constants.dart';
+import '../../../results/presentation/widgets/results_bottom_sheet.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../detection/domain/models/detection_result.dart';
 import '../providers/detection_provider.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
@@ -26,12 +28,48 @@ class DetectionPage extends ConsumerStatefulWidget {
 
 class _DetectionPageState extends ConsumerState<DetectionPage> {
   final PageController _pageController = PageController();
-  final GlobalKey _imageKey = GlobalKey();
 
   // Crop selection state
   bool _isCropMode = false;
   Rect? _cropRect;
   Uint8List? _croppedImageBytes;
+
+  // Loading overlay state
+  bool _isAnalysisOverlayVisible = false;
+  bool _hasEnteredSearchPhase = false;
+  double _currentProgress = 0.0;
+  double _targetProgress = 0.0;
+  String _activeStatusText = 'Preparing photo...';
+  Timer? _progressTimer;
+  Timer? _statusRotationTimer;
+  final List<Timer> _overlayTimers = [];
+  int _statusIndex = 0;
+
+  // Results sheet state
+  static const double _resultsMinExtent = 0.4;
+  static const double _resultsInitialExtent = 0.6;
+  static const double _resultsMaxExtent = 0.85;
+  final DraggableScrollableController _resultsSheetController =
+      DraggableScrollableController();
+  double _currentResultsExtent = _resultsInitialExtent;
+  bool _isResultsSheetVisible = false;
+  List<DetectionResult> _results = [];
+
+  static const List<String> _detectionPhaseMessages = [
+    'Detecting garments...',
+    'Analyzing clothing...',
+    'Identifying items...',
+  ];
+
+  static const List<String> _searchPhaseMessages = [
+    'Searching for products...',
+    'Finding similar items...',
+    'Analyzing style...',
+    'Checking retailers...',
+    'Almost there...',
+    'Finalizing results...',
+    'Preparing your matches...',
+  ];
 
   @override
   void initState() {
@@ -42,7 +80,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
   @override
   void dispose() {
+    _hideAnalysisOverlay();
     _pageController.dispose();
+    _resultsSheetController.dispose();
     super.dispose();
   }
 
@@ -59,81 +99,75 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         "[DETECTION PAGE] hasMultipleImages: ${imagesState.hasMultipleImages}");
     print("[DETECTION PAGE] totalImages: ${imagesState.totalImages}");
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      extendBodyBehindAppBar: true,
-      extendBody: true,
-      appBar: AppBar(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: AppBar(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            padding: EdgeInsets.zero,
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close, color: Colors.black, size: 20),
-          ),
+        scrolledUnderElevation: 0,
+        automaticallyImplyLeading: false,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarBrightness: Brightness.dark,
+          statusBarIconBrightness: Brightness.light,
         ),
-        actions: [
-          if (!ref.watch(detectionProvider).isAnalyzing)
-            Container(
-              margin: const EdgeInsets.all(8),
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _isCropMode
-                    ? const Color(0xFFf2003c)
-                    : Colors.white.withOpacity(0.9),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: () {
-                  setState(() {
-                    if (!_isCropMode) {
-                      // Entering crop mode - initialize crop rect if needed
-                      if (_cropRect == null) {
-                        final screenSize = MediaQuery.of(context).size;
-                        final cropSize = screenSize.width * 0.7;
-                        final left = (screenSize.width - cropSize) / 2;
-                        final top = (screenSize.height - cropSize) / 2;
-                        _cropRect = Rect.fromLTWH(left, top, cropSize, cropSize);
-                      }
-                    } else {
-                      // Exiting crop mode - clear cropped bytes
-                      _croppedImageBytes = null;
-                    }
-                    _isCropMode = !_isCropMode;
-                  });
-                },
-                icon: Icon(
-                  _isCropMode ? Icons.close : Icons.crop_free,
-                  color: _isCropMode ? Colors.white : Colors.black,
-                  size: 20,
+        leading: _isAnalysisOverlayVisible
+            ? null
+            : Container(
+                margin: const EdgeInsets.all(8),
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close, color: Colors.black, size: 20),
                 ),
               ),
-            ),
-        ],
+        actions: _isAnalysisOverlayVisible
+            ? null
+            : [
+                Container(
+                  margin: const EdgeInsets.all(8),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: _shareImage,
+                    icon: const Icon(Icons.ios_share, color: Colors.black, size: 20),
+                  ),
+                ),
+              ],
       ),
       body: selectedImage == null && widget.imageUrl == null
           ? const Center(
@@ -147,11 +181,35 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                 Positioned.fill(
                   child: widget.imageUrl != null
                       ? SizedBox.expand(
-                          child: Image.network(
-                            widget.imageUrl!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: Image.network(
+                                  widget.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  gaplessPlayback: true,
+                                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                    if (wasSynchronouslyLoaded) return child;
+                                    return AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      child: frame != null
+                                          ? child
+                                          : Container(color: Colors.black),
+                                    );
+                                  },
+                                ),
+                              ),
+                              if (_isAnalysisOverlayVisible)
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: Container(
+                                      color: Colors.black.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         )
                       : imagesState.hasMultipleImages
@@ -169,6 +227,16 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: double.infinity,
+                                  gaplessPlayback: true,
+                                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                    if (wasSynchronouslyLoaded) return child;
+                                    return AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 200),
+                                      child: frame != null
+                                          ? child
+                                          : Container(color: Colors.black),
+                                    );
+                                  },
                                 );
                               },
                             )
@@ -177,9 +245,18 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
+                              gaplessPlayback: true,
+                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                if (wasSynchronouslyLoaded) return child;
+                                return AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: frame != null
+                                      ? child
+                                      : Container(color: Colors.black),
+                                );
+                              },
                             ),
                 ),
-                if (detectionState.isAnalyzing) _buildDetectionOverlay(),
                 if (imagesState.hasMultipleImages)
                   Positioned(
                     bottom: 40,
@@ -196,83 +273,151 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                     children: [
                       const SizedBox(height: 16),
                       Center(
-                        child: detectionState.isAnalyzing
-                            ? _buildAnalyzingButton()
+                        child: _isAnalysisOverlayVisible
+                            || _isResultsSheetVisible
+                            ? const SizedBox.shrink()
                             : _buildScanButton(),
                       ),
                     ],
                   ),
                 ),
+                if (_isResultsSheetVisible && _results.isNotEmpty) ...[
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: IgnorePointer(
+                      ignoring: true,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        color: Colors.black
+                            .withOpacity(_resultsOverlayOpacity),
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SizedBox(
+                      height: MediaQuery.of(context).size.height,
+                      child:
+                          NotificationListener<DraggableScrollableNotification>(
+                        onNotification: (notification) {
+                          final extent = notification.extent
+                              .clamp(_resultsMinExtent, _resultsMaxExtent)
+                              .toDouble();
+                          setState(() => _currentResultsExtent = extent);
+                          return false;
+                        },
+                        child: DraggableScrollableSheet(
+                          controller: _resultsSheetController,
+                          initialChildSize: _resultsInitialExtent,
+                          minChildSize: _resultsMinExtent,
+                          maxChildSize: _resultsMaxExtent,
+                          snap: false,
+                          expand: false,
+                          builder: (context, scrollController) {
+                            return ResultsBottomSheetContent(
+                              results: _results,
+                              scrollController: scrollController,
+                              onProductTap: _openProduct,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                if (_isAnalysisOverlayVisible) _buildDetectionOverlay(),
               ],
             ),
+      ),
     );
   }
 
   Widget _buildDetectionOverlay() {
+    final spacing = context.spacing;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final double clampedProgressWidth =
+        ((screenWidth * 0.45).clamp(160.0, 240.0)).toDouble();
+
     return Positioned.fill(
-      child: Stack(
-        children: [
-          // Smooth up-and-down scanning beam (clipped to crop area if active)
-          if (_isCropMode && _cropRect != null)
-            Positioned(
-              left: _cropRect!.left,
-              top: _cropRect!.top,
-              width: _cropRect!.width,
-              height: _cropRect!.height,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: _ScanningBeam(),
+      child: Container(
+        color: Colors.black.withOpacity(0.65),
+        padding: EdgeInsets.symmetric(horizontal: spacing.l),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CupertinoActivityIndicator(
+                radius: 18,
+                color: Colors.white,
               ),
-            )
-          else
-            _ScanningBeam(),
-          // "Analyzing..." text at bottom with red accent
-          Positioned(
-            bottom: 140,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFf2003c),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFf2003c).withOpacity(0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Analyzing...',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+              SizedBox(height: spacing.l * 1.1),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  _activeStatusText,
+                  key: ValueKey(_activeStatusText),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'PlusJakartaSans',
+                    color: Colors.white,
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ),
-            ),
+              SizedBox(height: spacing.l),
+              SizedBox(
+                width: clampedProgressWidth,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: _currentProgress.clamp(0.0, 1.0),
+                    minHeight: 5,
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Colors.white),
+                    backgroundColor: Colors.white24,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
+  }
+
+  Future<void> _openProduct(DetectionResult result) async {
+    if (result.purchaseUrl != null) {
+      final uri = Uri.parse(result.purchaseUrl!);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    }
+  }
+
+  Future<void> _shareImage() async {
+    try {
+      if (widget.imageUrl != null) {
+        final uri = Uri.parse(widget.imageUrl!);
+        final response = await http.get(uri);
+        final bytes = response.bodyBytes;
+        final temp = await File('${Directory.systemTemp.path}/share_image.jpg').create();
+        await temp.writeAsBytes(bytes);
+        await Share.shareXFiles([XFile(temp.path)], text: 'Check out what I found with Snaplook!');
+      } else {
+        final imagesState = ref.read(selectedImagesProvider);
+        final selectedImage = imagesState.currentImage;
+        if (selectedImage != null) {
+          await Share.shareXFiles([XFile(selectedImage.path)], text: 'Check out what I found with Snaplook!');
+        }
+      }
+    } catch (e) {
+      print('Error sharing image: $e');
+    }
   }
 
   Widget _buildScanButton() {
@@ -339,11 +484,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         ),
       ),
     );
-  }
-
-  Widget _buildAnalyzingButton() {
-    // Return empty widget - the overlay now handles the "Analyzing" text
-    return const SizedBox.shrink();
   }
 
   Widget _buildCropOverlay() {
@@ -651,10 +791,202 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     }
   }
 
+  void _showAnalysisOverlayIfNeeded() {
+    _clearOverlayTimers();
+    _stopStatusRotation();
+    _stopProgressTimer();
+
+    setState(() {
+      _isAnalysisOverlayVisible = true;
+      _hasEnteredSearchPhase = false;
+      _currentProgress = 0.0;
+      _targetProgress = 0.18;
+      _activeStatusText = 'Preparing photo...';
+      _statusIndex = 0;
+    });
+
+    _startSmoothProgressTimer();
+    _startStatusRotation(_detectionPhaseMessages);
+
+    _setTargetProgress(0.24);
+    _scheduleOverlayTimer(const Duration(milliseconds: 900),
+        () => _setTargetProgress(0.32));
+    _scheduleOverlayTimer(const Duration(milliseconds: 2100),
+        () => _setTargetProgress(0.45));
+    _scheduleOverlayTimer(const Duration(milliseconds: 3600),
+        () => _setTargetProgress(0.58));
+    _scheduleOverlayTimer(const Duration(milliseconds: 5200),
+        () => _setTargetProgress(0.68));
+  }
+
+  void _enterSearchPhase() {
+    if (!_isAnalysisOverlayVisible || _hasEnteredSearchPhase) return;
+    _hasEnteredSearchPhase = true;
+    _setTargetProgress(0.78);
+    _startStatusRotation(_searchPhaseMessages, stopAtLast: true);
+  }
+
+  void _finishOverlayForNavigation() {
+    if (!_isAnalysisOverlayVisible) return;
+    _enterSearchPhase();
+    _stopStatusRotation();
+    setState(() {
+      _activeStatusText = 'Opening results...';
+    });
+    _setTargetProgress(0.92);
+    _scheduleOverlayTimer(
+      const Duration(milliseconds: 180),
+      () => _setTargetProgress(1.0),
+    );
+  }
+
+  void _hideAnalysisOverlay() {
+    _clearOverlayTimers();
+    _stopStatusRotation();
+    _stopProgressTimer();
+
+    if (!_isAnalysisOverlayVisible) return;
+    if (!mounted) {
+      _isAnalysisOverlayVisible = false;
+      _currentProgress = 0.0;
+      _targetProgress = 0.0;
+      _activeStatusText = 'Preparing photo...';
+      _hasEnteredSearchPhase = false;
+      _statusIndex = 0;
+      return;
+    }
+
+    setState(() {
+      _isAnalysisOverlayVisible = false;
+      _currentProgress = 0.0;
+      _targetProgress = 0.0;
+      _activeStatusText = 'Preparing photo...';
+      _hasEnteredSearchPhase = false;
+      _statusIndex = 0;
+    });
+  }
+
+  double get _resultsOverlayOpacity {
+    if (!_isResultsSheetVisible) return 0;
+    final range = _resultsMaxExtent - _resultsMinExtent;
+    if (range <= 0) return 0.7;
+    final normalized = ((_currentResultsExtent - _resultsMinExtent) / range)
+        .clamp(0.0, 1.0);
+    return 0.15 + (0.55 * normalized);
+  }
+
+  void _startSmoothProgressTimer() {
+    _progressTimer?.cancel();
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
+      if (!mounted || !_isAnalysisOverlayVisible) {
+        timer.cancel();
+        return;
+      }
+
+      double nextProgress = _currentProgress;
+
+      if (_currentProgress < _targetProgress) {
+        const increment = 0.004;
+        nextProgress = (_currentProgress + increment).clamp(0.0, _targetProgress);
+      } else if (_currentProgress < 0.95) {
+        const slowIncrement = 0.0006;
+        nextProgress = (_currentProgress + slowIncrement).clamp(0.0, 0.95);
+      } else {
+        return;
+      }
+
+      if ((nextProgress - _currentProgress).abs() > 0.0001) {
+        setState(() {
+          _currentProgress = nextProgress;
+        });
+      }
+    });
+  }
+
+  void _stopProgressTimer() {
+    _progressTimer?.cancel();
+    _progressTimer = null;
+  }
+
+  void _setTargetProgress(double value) {
+    _targetProgress = value.clamp(0.0, 1.0);
+  }
+
+  void _startStatusRotation(List<String> messages, {bool stopAtLast = false}) {
+    if (messages.isEmpty) return;
+
+    _statusRotationTimer?.cancel();
+    _statusIndex = 0;
+
+    setState(() {
+      _activeStatusText = messages.first;
+    });
+
+    if (messages.length == 1 && stopAtLast) {
+      return;
+    }
+
+    _statusRotationTimer =
+        Timer.periodic(const Duration(milliseconds: 2500), (timer) {
+      if (!mounted || !_isAnalysisOverlayVisible) {
+        timer.cancel();
+        return;
+      }
+
+      if (stopAtLast && _statusIndex >= messages.length - 1) {
+        timer.cancel();
+        return;
+      }
+
+      _statusIndex = stopAtLast
+          ? (_statusIndex + 1).clamp(0, messages.length - 1)
+          : (_statusIndex + 1) % messages.length;
+
+      setState(() {
+        _activeStatusText = messages[_statusIndex];
+      });
+    });
+  }
+
+  void _stopStatusRotation() {
+    _statusRotationTimer?.cancel();
+    _statusRotationTimer = null;
+    _statusIndex = 0;
+  }
+
+  void _scheduleOverlayTimer(Duration delay, VoidCallback action) {
+    final timer = Timer(delay, () {
+      if (!mounted || !_isAnalysisOverlayVisible) return;
+      action();
+    });
+    _overlayTimers.add(timer);
+  }
+
+  void _clearOverlayTimers() {
+    for (final timer in _overlayTimers) {
+      timer.cancel();
+    }
+    _overlayTimers.clear();
+  }
+
   void _startDetection() async {
     print('Starting detection process...');
 
     try {
+      if (_isAnalysisOverlayVisible || ref.read(detectionProvider).isAnalyzing) {
+        return;
+      }
+
+      if (_isResultsSheetVisible || _results.isNotEmpty) {
+        setState(() {
+          _isResultsSheetVisible = false;
+          _results = [];
+        });
+      }
+
+      HapticFeedback.mediumImpact();
+      _showAnalysisOverlayIfNeeded();
+
       XFile? imageToAnalyze;
       String? imageUrl;
 
@@ -686,28 +1018,42 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         await file.writeAsBytes(_croppedImageBytes!);
         imageToAnalyze = XFile(file.path);
       } else if (widget.imageUrl != null) {
-        // Network image from scan button - download and create XFile
-        print('Downloading network image: ${widget.imageUrl}');
-        final response = await http.get(Uri.parse(widget.imageUrl!));
-        if (response.statusCode == 200) {
-          final tempDir = Directory.systemTemp;
-          final fileName = 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
-          final file = File('${tempDir.path}/$fileName');
-          await file.writeAsBytes(response.bodyBytes);
-          imageToAnalyze = XFile(file.path);
+        final remoteUri = Uri.tryParse(widget.imageUrl!);
+        final isCloudAsset =
+            remoteUri != null && remoteUri.host.contains('cloudinary');
+
+        if (isCloudAsset) {
+          print('Using existing Cloudinary URL for detection');
+          imageUrl = widget.imageUrl;
         } else {
-          throw Exception('Failed to download image');
+          print('Downloading network image: ${widget.imageUrl}');
+          final response = await http.get(Uri.parse(widget.imageUrl!));
+          if (response.statusCode == 200) {
+            final tempDir = Directory.systemTemp;
+            final fileName = 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            final file = File('${tempDir.path}/$fileName');
+            await file.writeAsBytes(response.bodyBytes);
+            imageToAnalyze = XFile(file.path);
+          } else {
+            throw Exception('Failed to download image');
+          }
         }
       } else {
         // Local image from camera/gallery - use existing logic
         final imagesState = ref.read(selectedImagesProvider);
         final selectedImage = imagesState.currentImage;
-        if (selectedImage == null) return;
+        if (selectedImage == null) {
+          _hideAnalysisOverlay();
+          return;
+        }
         imageToAnalyze = selectedImage;
       }
 
       // Skip YOLO detection if user manually cropped the image
       final skipDetection = _croppedImageBytes != null || (_isCropMode && _cropRect != null);
+
+      _enterSearchPhase();
+      _setTargetProgress(0.8);
 
       final results = await ref
           .read(detectionProvider.notifier)
@@ -718,18 +1064,36 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           );
 
       if (mounted && results.isNotEmpty) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => ResultsPage(
-              results: results,
-              originalImageUrl: widget.imageUrl, // Pass network image URL
+        _finishOverlayForNavigation();
+        await Future.delayed(const Duration(milliseconds: 320));
+        if (!mounted) return;
+        setState(() {
+          _results = results;
+          _isResultsSheetVisible = true;
+          _currentResultsExtent = _resultsInitialExtent;
+        });
+        _hideAnalysisOverlay();
+      } else {
+        _hideAnalysisOverlay();
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'No similar items found. Try another photo.',
+                style: context.snackTextStyle(
+                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                ),
+              ),
+              duration: const Duration(milliseconds: 2500),
             ),
-          ),
-        );
+          );
+        }
       }
     } catch (e) {
       print('DETECTION ERROR: $e');
       print('Error type: ${e.runtimeType}');
+      _hideAnalysisOverlay();
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -836,114 +1200,5 @@ class _CornerBracketPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CornerBracketPainter oldDelegate) {
     return oldDelegate.alignment != alignment;
-  }
-}
-
-// Custom scanning beam that animates up and down smoothly
-class _ScanningBeam extends StatefulWidget {
-  const _ScanningBeam();
-
-  @override
-  State<_ScanningBeam> createState() => _ScanningBeamState();
-}
-
-class _ScanningBeamState extends State<_ScanningBeam>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-  double? _previousValue;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
-
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.linear, // Linear for continuous smooth motion
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        final currentValue = _animation.value;
-        final isMovingDown = _previousValue == null ? true : currentValue > _previousValue!;
-        _previousValue = currentValue;
-
-        return CustomPaint(
-          painter: _ScanningBeamPainter(currentValue, isMovingDown),
-          child: Container(),
-        );
-      },
-    );
-  }
-}
-
-class _ScanningBeamPainter extends CustomPainter {
-  final double progress;
-  final bool isMovingDown;
-
-  _ScanningBeamPainter(this.progress, this.isMovingDown);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final beamHeight = 200.0;
-    final overshoot = 20.0; // Amount to extend beyond screen edges
-    // Position beam so bright edge goes from -overshoot to size.height + overshoot
-    // Bright edge is at 85% when moving down, 15% when moving up
-    final beamY = (size.height + overshoot * 2) * progress - overshoot - beamHeight * (isMovingDown ? 0.85 : 0.15);
-
-    // Gradient direction changes based on movement (subtle opacities)
-    final colors = isMovingDown
-        ? [
-            Colors.transparent,
-            const Color(0xFFf2003c).withOpacity(0.01),
-            const Color(0xFFf2003c).withOpacity(0.03),
-            const Color(0xFFf2003c).withOpacity(0.08),
-            const Color(0xFFf2003c).withOpacity(0.15),
-            const Color(0xFFf2003c).withOpacity(0.3),
-            const Color(0xFFf2003c).withOpacity(0.4), // Bright at bottom when moving down
-            Colors.transparent,
-          ]
-        : [
-            Colors.transparent,
-            const Color(0xFFf2003c).withOpacity(0.4), // Bright at top when moving up
-            const Color(0xFFf2003c).withOpacity(0.3),
-            const Color(0xFFf2003c).withOpacity(0.15),
-            const Color(0xFFf2003c).withOpacity(0.08),
-            const Color(0xFFf2003c).withOpacity(0.03),
-            const Color(0xFFf2003c).withOpacity(0.01),
-            Colors.transparent,
-          ];
-
-    final paint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: colors,
-        stops: const [0.0, 0.15, 0.25, 0.4, 0.6, 0.75, 0.85, 1.0],
-      ).createShader(Rect.fromLTWH(0, beamY, size.width, beamHeight));
-
-    canvas.drawRect(
-      Rect.fromLTWH(0, beamY, size.width, beamHeight),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ScanningBeamPainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.isMovingDown != isMovingDown;
   }
 }
