@@ -19,20 +19,21 @@ class _NotificationPermissionPageState
     extends ConsumerState<NotificationPermissionPage> {
   bool _isRequesting = false;
 
-  Future<void> _requestNotificationPermission() async {
+  Future<void> _handleAllow() async {
     if (_isRequesting) return;
 
     setState(() {
       _isRequesting = true;
     });
 
+    HapticFeedback.lightImpact();
+
     try {
       // Request notification permission
-      final status = await Permission.notification.request();
+      await Permission.notification.request();
 
       if (mounted) {
-        // Navigate to account creation - use push not pushReplacement
-        // so user can navigate back to this page
+        // Navigate to account creation
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => const AccountCreationPage(),
@@ -58,8 +59,9 @@ class _NotificationPermissionPageState
     }
   }
 
-  void _skipNotifications() {
+  void _handleDontAllow() {
     HapticFeedback.lightImpact();
+    // User declined, navigate to account creation anyway
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const AccountCreationPage(),
@@ -133,10 +135,10 @@ class _NotificationPermissionPageState
                         color: const Color(0xFFD1D1D6),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      padding: const EdgeInsets.all(16),
-                      child: const Column(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      child: Column(
                         children: [
-                          Text(
+                          const Text(
                             'Snaplook would like to send you\nNotifications',
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -147,22 +149,23 @@ class _NotificationPermissionPageState
                               height: 1.3,
                             ),
                           ),
-                          SizedBox(height: 12),
-                          Divider(
+                          const SizedBox(height: 16),
+                          const Divider(
                             color: Color(0xFFACACAC),
                             height: 1,
                             thickness: 0.5,
                           ),
-                          SizedBox(height: 1),
+                          const SizedBox(height: 1),
                           Row(
                             children: [
                               Expanded(
                                 child: _DialogButton(
                                   text: "Don't Allow",
                                   isPrimary: false,
+                                  onTap: _isRequesting ? null : _handleDontAllow,
                                 ),
                               ),
-                              SizedBox(
+                              const SizedBox(
                                 width: 1,
                                 height: 44,
                                 child: ColoredBox(
@@ -173,6 +176,8 @@ class _NotificationPermissionPageState
                                 child: _DialogButton(
                                   text: 'Allow',
                                   isPrimary: true,
+                                  onTap: _isRequesting ? null : _handleAllow,
+                                  isLoading: _isRequesting,
                                 ),
                               ),
                             ],
@@ -194,65 +199,6 @@ class _NotificationPermissionPageState
           ),
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(spacing.l, 0, spacing.l, spacing.l),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Primary button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isRequesting ? null : _requestNotificationPermission,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFf2003c),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    disabledBackgroundColor: const Color(0xFFf2003c).withOpacity(0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                  ),
-                  child: _isRequesting
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          'Continue',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'PlusJakartaSans',
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                ),
-              ),
-              SizedBox(height: spacing.m),
-              // Skip button
-              TextButton(
-                onPressed: _skipNotifications,
-                child: const Text(
-                  'Skip',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF6B7280),
-                    fontFamily: 'PlusJakartaSans',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -260,25 +206,51 @@ class _NotificationPermissionPageState
 class _DialogButton extends StatelessWidget {
   final String text;
   final bool isPrimary;
+  final VoidCallback? onTap;
+  final bool isLoading;
 
   const _DialogButton({
     required this.text,
     required this.isPrimary,
+    required this.onTap,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 17,
-          fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w400,
-          color: const Color(0xFF007AFF),
-          fontFamily: 'PlusJakartaSans',
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isPrimary ? const Color(0xFF007AFF) : Colors.transparent,
+          borderRadius: isPrimary
+              ? const BorderRadius.only(
+                  bottomRight: Radius.circular(12),
+                )
+              : const BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                ),
         ),
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(
+                text,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: isPrimary ? Colors.white : const Color(0xFF007AFF),
+                  fontFamily: 'PlusJakartaSans',
+                ),
+              ),
       ),
     );
   }
