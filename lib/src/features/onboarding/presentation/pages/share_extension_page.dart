@@ -41,8 +41,8 @@ class ShareExtensionPage extends ConsumerWidget {
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 4,
-          totalSteps: 6,
+          currentStep: 3,
+          totalSteps: 5,
         ),
       ),
       body: Padding(
