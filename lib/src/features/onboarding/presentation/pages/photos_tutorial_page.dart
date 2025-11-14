@@ -33,7 +33,12 @@ final photosTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => Tutori
 final photosHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class PhotosTutorialPage extends ConsumerStatefulWidget {
-  const PhotosTutorialPage({super.key});
+  final bool returnToOnboarding;
+
+  const PhotosTutorialPage({
+    super.key,
+    this.returnToOnboarding = true,
+  });
 
   @override
   ConsumerState<PhotosTutorialPage> createState() => _PhotosTutorialPageState();
@@ -153,9 +158,10 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
                   HapticFeedback.mediumImpact();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialImageAnalysisPage(
+                      builder: (context) => TutorialImageAnalysisPage(
                         imagePath: 'assets/images/photos_tutorial.jpg',
                         scenario: 'Photos',
+                        returnToOnboarding: widget.returnToOnboarding,
                       ),
                       allowSnapshotting: false,
                     ),

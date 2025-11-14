@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
+import '../../../onboarding/presentation/pages/gender_selection_page.dart';
+import '../../../../../shared/navigation/main_navigation.dart'
+    show MainNavigation, selectedIndexProvider, scrollToTopTriggerProvider, isAtHomeRootProvider;
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
@@ -93,16 +97,71 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
         token: code,
       );
 
+      // Wait briefly for auth state to fully propagate
+      await Future.delayed(const Duration(milliseconds: 500));
+
       if (mounted) {
-        // User verified email and created account, show welcome page
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const WelcomeFreeAnalysisPage(),
-          ),
-          (route) => false,
-        );
+        // Check if this is a new user or existing user
+        final userId = authService.currentUser?.id;
+        print('[EmailVerification] User ID after OTP verification: $userId');
+
+        if (userId != null) {
+          try {
+            // Check if user has completed onboarding by looking at gender field
+            final supabase = Supabase.instance.client;
+            final userResponse = await supabase
+                .from('users')
+                .select('gender')
+                .eq('id', userId)
+                .maybeSingle();
+
+            print('[EmailVerification] User record found: ${userResponse != null}');
+
+            // Check if user has completed onboarding (gender will be set during onboarding)
+            final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
+            print('[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
+
+            if (hasCompletedOnboarding) {
+              // Existing user who completed onboarding - go to main app
+              print('[EmailVerification] Existing user - navigating to main app');
+              // Reset to home tab
+              ref.read(selectedIndexProvider.notifier).state = 0;
+              // Invalidate all providers to refresh state
+              ref.invalidate(selectedIndexProvider);
+              ref.invalidate(scrollToTopTriggerProvider);
+              ref.invalidate(isAtHomeRootProvider);
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
+                ),
+                (route) => false,
+              );
+            } else {
+              // New user - start onboarding
+              print('[EmailVerification] New user - navigating to onboarding');
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const GenderSelectionPage(),
+                ),
+                (route) => false,
+              );
+            }
+          } catch (e) {
+            // If check fails, assume new user
+            print('[EmailVerification] Check error, assuming new user: $e');
+            if (mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const GenderSelectionPage(),
+                ),
+                (route) => false,
+              );
+            }
+          }
+        }
       }
     } catch (e) {
+      print('[EmailVerification] OTP verification error: $e');
       if (mounted) {
         // Clear all fields on error
         for (var controller in _controllers) {

@@ -15,6 +15,12 @@ import '../../../product/presentation/pages/detected_products_page.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
+import '../../../onboarding/presentation/pages/instagram_tutorial_page.dart';
+import '../../../onboarding/presentation/pages/pinterest_tutorial_page.dart';
+import '../../../onboarding/presentation/pages/tiktok_tutorial_page.dart';
+import '../../../onboarding/presentation/pages/safari_tutorial_page.dart';
+import '../../../onboarding/presentation/pages/photos_tutorial_page.dart';
+import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
@@ -37,6 +43,15 @@ String? _extractProductUrl(Map<String, dynamic> product) {
     }
   }
   return null;
+}
+
+enum _TutorialSource {
+  instagram,
+  pinterest,
+  tiktok,
+  safari,
+  photos,
+  otherApps,
 }
 
 class HomePage extends ConsumerStatefulWidget {
@@ -243,6 +258,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: _FloatingActionBar(
               onSnapTap: () => _pickImage(ImageSource.camera),
               onUploadTap: () => _pickImage(ImageSource.gallery),
+              onTutorialsTap: _showTutorialOptionsSheet,
               onInfoTap: () {
                 _showInfoBottomSheet(context);
               },
@@ -696,6 +712,211 @@ class _HomePageState extends ConsumerState<HomePage> {
       'Check out Snaplook - The AI-powered fashion discovery app! Find similar clothing items by taking photos. Download now!',
       subject: 'Discover Fashion with Snaplook',
       sharePositionOrigin: shareOrigin,
+    );
+  }
+
+  void _showTutorialOptionsSheet() {
+    final options = [
+      _TutorialOptionData(
+        label: 'Instagram',
+        source: _TutorialSource.instagram,
+        iconBuilder: () => Image.asset(
+          'assets/icons/insta.png',
+          width: 24,
+          height: 24,
+          gaplessPlayback: true,
+        ),
+      ),
+      _TutorialOptionData(
+        label: 'Pinterest',
+        source: _TutorialSource.pinterest,
+        iconBuilder: () => SvgPicture.asset(
+          'assets/icons/pinterest.svg',
+          width: 24,
+          height: 24,
+        ),
+      ),
+      _TutorialOptionData(
+        label: 'TikTok',
+        source: _TutorialSource.tiktok,
+        iconBuilder: () => SvgPicture.asset(
+          'assets/icons/4362958_tiktok_logo_social media_icon.svg',
+          width: 24,
+          height: 24,
+        ),
+      ),
+      _TutorialOptionData(
+        label: 'Safari',
+        source: _TutorialSource.safari,
+        iconBuilder: () => Image.asset(
+          'assets/icons/safari.png',
+          width: 24,
+          height: 24,
+          gaplessPlayback: true,
+        ),
+      ),
+      _TutorialOptionData(
+        label: 'Photos',
+        source: _TutorialSource.photos,
+        iconBuilder: () => Image.asset(
+          'assets/icons/photos.png',
+          width: 24,
+          height: 24,
+          gaplessPlayback: true,
+        ),
+      ),
+      _TutorialOptionData(
+        label: 'Other apps',
+        source: _TutorialSource.otherApps,
+        iconBuilder: () => Icon(
+          Icons.apps,
+          size: 24,
+          color: Colors.grey.shade700,
+        ),
+      ),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      builder: (sheetContext) {
+        final spacing = sheetContext.spacing;
+        return FractionallySizedBox(
+          heightFactor: 0.8,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(sheetContext).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: spacing.l,
+                      vertical: spacing.m,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: spacing.l * 2),
+                        const Text(
+                          'Add your first style',
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontFamily: 'PlusJakartaSans',
+                            letterSpacing: -1.0,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            height: 1.3,
+                          ),
+                        ),
+                        SizedBox(height: spacing.m),
+                        const Text(
+                          'Learn to share from your favorite apps',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'PlusJakartaSans',
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        SizedBox(height: spacing.l),
+                        Expanded(
+                          child: ListView.separated(
+                            physics: const BouncingScrollPhysics(),
+                            padding: EdgeInsets.only(bottom: spacing.l),
+                            itemCount: options.length,
+                            separatorBuilder: (_, __) =>
+                                SizedBox(height: spacing.l),
+                            itemBuilder: (_, index) {
+                              final option = options[index];
+                              return _TutorialAppCard(
+                                label: option.label,
+                                iconWidget: option.iconBuilder(),
+                                onTap: () {
+                                  Navigator.of(sheetContext).pop();
+                                  Future.delayed(
+                                    const Duration(milliseconds: 120),
+                                    () => _startTutorialFlow(option.source),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: Icon(
+                        Icons.close,
+                        color: Theme.of(sheetContext).colorScheme.onSurface,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _startTutorialFlow(_TutorialSource source) {
+    if (!mounted) return;
+
+    Widget destination;
+    switch (source) {
+      case _TutorialSource.instagram:
+        ref.read(tutorialStepProvider.notifier).state = TutorialStep.tapShare;
+        destination =
+            const InstagramTutorialPage(returnToOnboarding: false);
+        break;
+      case _TutorialSource.pinterest:
+        ref.read(pinterestTutorialStepProvider.notifier).state =
+            PinterestTutorialStep.step1;
+        destination =
+            const PinterestTutorialPage(returnToOnboarding: false);
+        break;
+      case _TutorialSource.tiktok:
+        ref.read(tiktokTutorialStepProvider.notifier).state =
+            TikTokTutorialStep.step1;
+        destination =
+            const TikTokTutorialPage(returnToOnboarding: false);
+        break;
+      case _TutorialSource.safari:
+        ref.read(safariTutorialStepProvider.notifier).state =
+            SafariTutorialStep.step1;
+        destination =
+            const SafariTutorialPage(returnToOnboarding: false);
+        break;
+      case _TutorialSource.photos:
+        ref.read(photosTutorialStepProvider.notifier).state =
+            PhotosTutorialStep.step1;
+        destination =
+            const PhotosTutorialPage(returnToOnboarding: false);
+        break;
+      case _TutorialSource.otherApps:
+        destination = const NotificationPermissionPage();
+        break;
+    }
+
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => destination),
     );
   }
 
@@ -1471,11 +1692,13 @@ class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
 class _FloatingActionBar extends StatelessWidget {
   final VoidCallback onSnapTap;
   final VoidCallback onUploadTap;
+  final VoidCallback onTutorialsTap;
   final VoidCallback onInfoTap;
 
   const _FloatingActionBar({
     required this.onSnapTap,
     required this.onUploadTap,
+    required this.onTutorialsTap,
     required this.onInfoTap,
   });
 
@@ -1532,7 +1755,7 @@ class _FloatingActionBar extends StatelessWidget {
               child: _FloatingActionButtonSvg(
                 svgIcon: 'assets/icons/tutorials_filled.svg',
                 label: 'Tutorials',
-                onTap: () {},
+                onTap: onTutorialsTap,
               ),
             ),
             const SizedBox(width: 4),
@@ -1544,6 +1767,88 @@ class _FloatingActionBar extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TutorialOptionData {
+  final String label;
+  final _TutorialSource source;
+  final Widget Function() iconBuilder;
+
+  const _TutorialOptionData({
+    required this.label,
+    required this.source,
+    required this.iconBuilder,
+  });
+}
+
+class _TutorialAppCard extends StatelessWidget {
+  final String label;
+  final Widget iconWidget;
+  final VoidCallback onTap;
+
+  const _TutorialAppCard({
+    required this.label,
+    required this.iconWidget,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        onTap();
+      },
+      child: Container(
+        width: double.infinity,
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: iconWidget,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.grey.shade400,
+              ),
+            ],
+          ),
         ),
       ),
     );

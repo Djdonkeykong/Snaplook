@@ -134,7 +134,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 1,
-          totalSteps: 5,
+          totalSteps: 6,
         ),
       ),
       body: SafeArea(
@@ -191,7 +191,11 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                                   gender: Gender.male,
                                   label: "Men's Clothing",
                                   isSelected: selectedGender == Gender.male,
-                                  onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.male,
+                                  onTap: () {
+                                    print('[GenderSelection] User selected: male');
+                                    ref.read(selectedGenderProvider.notifier).state = Gender.male;
+                                    print('[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
+                                  },
                                 ),
                               ),
                             );
@@ -212,7 +216,11 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                                   gender: Gender.female,
                                   label: "Women's Clothing",
                                   isSelected: selectedGender == Gender.female,
-                                  onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.female,
+                                  onTap: () {
+                                    print('[GenderSelection] User selected: female');
+                                    ref.read(selectedGenderProvider.notifier).state = Gender.female;
+                                    print('[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
+                                  },
                                 ),
                               ),
                             );
@@ -233,7 +241,11 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                                   gender: Gender.other,
                                   label: 'Both',
                                   isSelected: selectedGender == Gender.other,
-                                  onTap: () => ref.read(selectedGenderProvider.notifier).state = Gender.other,
+                                  onTap: () {
+                                    print('[GenderSelection] User selected: other');
+                                    ref.read(selectedGenderProvider.notifier).state = Gender.other;
+                                    print('[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
+                                  },
                                 ),
                               ),
                             );

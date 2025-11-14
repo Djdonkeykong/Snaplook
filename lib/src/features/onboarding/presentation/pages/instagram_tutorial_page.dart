@@ -40,7 +40,12 @@ final tutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => TutorialPhas
 final hasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class InstagramTutorialPage extends ConsumerStatefulWidget {
-  const InstagramTutorialPage({super.key});
+  final bool returnToOnboarding;
+
+  const InstagramTutorialPage({
+    super.key,
+    this.returnToOnboarding = true,
+  });
 
   @override
   ConsumerState<InstagramTutorialPage> createState() => _InstagramTutorialPageState();
@@ -195,8 +200,9 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   HapticFeedback.mediumImpact();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialImageAnalysisPage(
+                      builder: (context) => TutorialImageAnalysisPage(
                         scenario: 'Instagram',
+                        returnToOnboarding: widget.returnToOnboarding,
                       ),
                       allowSnapshotting: false,
                     ),
@@ -386,4 +392,3 @@ class _FadeInWordState extends State<_FadeInWord>
     );
   }
 }
-

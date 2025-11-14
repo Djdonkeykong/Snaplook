@@ -73,15 +73,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     if (confirmed == true && mounted) {
       try {
+        // Navigate immediately to prevent UI flash of default user
+        Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
+
+        // Sign out after navigation
         final authService = ref.read(authServiceProvider);
         await authService.signOut();
-
-        if (mounted) {
-          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const LoginPage()),
-            (route) => false,
-          );
-        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).clearSnackBars();

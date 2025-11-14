@@ -40,7 +40,12 @@ final pinterestTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => Tut
 final pinterestHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class PinterestTutorialPage extends ConsumerStatefulWidget {
-  const PinterestTutorialPage({super.key});
+  final bool returnToOnboarding;
+
+  const PinterestTutorialPage({
+    super.key,
+    this.returnToOnboarding = true,
+  });
 
   @override
   ConsumerState<PinterestTutorialPage> createState() => _PinterestTutorialPageState();
@@ -63,7 +68,7 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
       case PinterestTutorialStep.step1:
         return "When you find a clothing item you love on Pinterest, tap the share button.";
       case PinterestTutorialStep.step2:
-        return "Now tap \"More Apps\" to open the sharing options.";
+        return "Now tap \"More apps\" to open the sharing options.";
       case PinterestTutorialStep.step3:
         return "Finally, tap on Snaplook to share the image with our app.";
     }
@@ -204,9 +209,10 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
                   HapticFeedback.mediumImpact();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialImageAnalysisPage(
+                      builder: (context) => TutorialImageAnalysisPage(
                         imagePath: 'assets/images/pinterest_tutorial.jpg',
                         scenario: 'Pinterest',
+                        returnToOnboarding: widget.returnToOnboarding,
                       ),
                       allowSnapshotting: false,
                     ),

@@ -8,6 +8,8 @@ import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../credits/providers/credit_provider.dart';
+import 'gender_selection_page.dart';
+import 'notification_permission_page.dart';
 
 class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
   const WelcomeFreeAnalysisPage({super.key});
@@ -17,24 +19,91 @@ class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
 }
 
 class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPage> {
+  Future<void>? _initializationFuture;
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
-    // Initialize user's free analysis in the background
-    _initializeFreeAnalysis();
+    // Initialize user's free analysis
+    _initializationFuture = _initializeFreeAnalysis();
   }
 
   Future<void> _initializeFreeAnalysis() async {
     try {
       final userId = ref.read(authServiceProvider).currentUser?.id;
-      if (userId != null) {
-        final creditService = ref.read(creditServiceProvider);
-        await creditService.initializeNewUser(userId);
-        // Invalidate credit status to refresh UI
-        ref.invalidate(creditStatusProvider);
+      print('[WelcomePage] ==> Starting initialization');
+      print('[WelcomePage] User ID: $userId');
+
+      if (userId == null) {
+        print('[WelcomePage] ERROR: No user ID found!');
+        if (mounted) setState(() => _isInitialized = true);
+        return;
       }
-    } catch (e) {
-      print('[WelcomePage] Error initializing free analysis: $e');
+
+      // Save onboarding preferences FIRST
+      final selectedGender = ref.read(selectedGenderProvider);
+      final notificationGranted = ref.read(notificationPermissionGrantedProvider) ?? false;
+
+      print('[WelcomePage] Selected gender from provider: ${selectedGender?.name}');
+      print('[WelcomePage] Notification granted from provider: $notificationGranted');
+
+      if (selectedGender == null) {
+        print('[WelcomePage] ERROR: selectedGender is NULL! Cannot save preferences!');
+        print('[WelcomePage] This should not happen - user should have selected gender');
+        // Don't fail completely, but mark as initialized
+        if (mounted) setState(() => _isInitialized = true);
+        return;
+      }
+
+      print('[WelcomePage] Saving onboarding preferences...');
+      final userService = ref.read(userServiceProvider);
+
+      try {
+        await userService.saveOnboardingPreferences(
+          gender: selectedGender.name,
+          notificationEnabled: notificationGranted,
+        );
+        print('[WelcomePage] SUCCESS: Saved gender=${selectedGender.name}, notifications=$notificationGranted');
+      } catch (saveError) {
+        print('[WelcomePage] ERROR saving preferences: $saveError');
+        print('[WelcomePage] Stack trace: ${StackTrace.current}');
+        rethrow;
+      }
+
+      // Initialize credits
+      print('[WelcomePage] Initializing credits...');
+      final creditService = ref.read(creditServiceProvider);
+      await creditService.initializeNewUser(userId);
+      print('[WelcomePage] Credits initialized');
+
+      // Invalidate credit status to refresh UI
+      ref.invalidate(creditStatusProvider);
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+      print('[WelcomePage] ==> Initialization complete successfully');
+    } catch (e, stackTrace) {
+      print('[WelcomePage] CRITICAL ERROR during initialization: $e');
+      print('[WelcomePage] Stack trace: $stackTrace');
+
+      if (mounted) {
+        // Show error to user
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving preferences: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+
+        setState(() {
+          _isInitialized = true; // Allow navigation even if there's an error
+        });
+      }
     }
   }
 
@@ -154,17 +223,27 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     HapticFeedback.mediumImpact();
-                    // Reset to home tab and navigate to main app
-                    ref.read(selectedIndexProvider.notifier).state = 0;
-                    ref.invalidate(inspirationProvider);
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(
-                        builder: (context) => const MainNavigation(),
-                      ),
-                      (route) => false,
-                    );
+
+                    // Wait for initialization to complete before navigating
+                    if (_initializationFuture != null) {
+                      print('[WelcomePage] Waiting for initialization to complete...');
+                      await _initializationFuture;
+                      print('[WelcomePage] Initialization finished, navigating to app');
+                    }
+
+                    if (mounted) {
+                      // Reset to home tab and navigate to main app
+                      ref.read(selectedIndexProvider.notifier).state = 0;
+                      ref.invalidate(inspirationProvider);
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const MainNavigation(),
+                        ),
+                        (route) => false,
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFf2003c),
@@ -174,15 +253,24 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text(
-                    'Start Exploring',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'PlusJakartaSans',
-                      letterSpacing: -0.2,
-                    ),
-                  ),
+                  child: _isInitialized
+                      ? const Text(
+                          'Start Exploring',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'PlusJakartaSans',
+                            letterSpacing: -0.2,
+                          ),
+                        )
+                      : const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
                 ),
               ),
 

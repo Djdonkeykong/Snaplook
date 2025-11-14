@@ -6,6 +6,11 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
 import 'account_creation_page.dart';
+import 'welcome_free_analysis_page.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
+
+// Provider to store notification permission choice
+final notificationPermissionGrantedProvider = StateProvider<bool?>((ref) => null);
 
 class NotificationPermissionPage extends ConsumerStatefulWidget {
   const NotificationPermissionPage({super.key});
@@ -26,29 +31,62 @@ class _NotificationPermissionPageState
       _isRequesting = true;
     });
 
-    HapticFeedback.lightImpact();
+    HapticFeedback.mediumImpact();
 
     try {
-      // Request notification permission
-      await Permission.notification.request();
+      // Request notification permission and capture result
+      final status = await Permission.notification.request();
+      final granted = status.isGranted;
+
+      print('[NotificationPermission] Permission requested, granted: $granted');
+
+      // Store permission result in provider
+      ref.read(notificationPermissionGrantedProvider.notifier).state = granted;
 
       if (mounted) {
-        // Navigate to account creation
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => const AccountCreationPage(),
-          ),
-        );
+        // Check if user is already authenticated
+        final authService = ref.read(authServiceProvider);
+        final isAuthenticated = authService.currentUser != null;
+
+        if (isAuthenticated) {
+          // User already authenticated (came from email sign-in flow) - go to welcome
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const WelcomeFreeAnalysisPage(),
+            ),
+          );
+        } else {
+          // User not authenticated yet - go to account creation
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const AccountCreationPage(),
+            ),
+          );
+        }
       }
     } catch (e) {
       print('[NotificationPermission] Error requesting permission: $e');
+      // Default to false on error
+      ref.read(notificationPermissionGrantedProvider.notifier).state = false;
+
       if (mounted) {
         // Even if there's an error, still navigate forward
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => const AccountCreationPage(),
-          ),
-        );
+        final authService = ref.read(authServiceProvider);
+        final isAuthenticated = authService.currentUser != null;
+
+        if (isAuthenticated) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const WelcomeFreeAnalysisPage(),
+            ),
+          );
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const AccountCreationPage(),
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -60,13 +98,32 @@ class _NotificationPermissionPageState
   }
 
   void _handleDontAllow() {
-    HapticFeedback.lightImpact();
-    // User declined, navigate to account creation anyway
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const AccountCreationPage(),
-      ),
-    );
+    HapticFeedback.mediumImpact();
+
+    print('[NotificationPermission] User declined permission');
+
+    // Store that permission was denied
+    ref.read(notificationPermissionGrantedProvider.notifier).state = false;
+
+    // Check if user is already authenticated
+    final authService = ref.read(authServiceProvider);
+    final isAuthenticated = authService.currentUser != null;
+
+    if (isAuthenticated) {
+      // User already authenticated (came from email sign-in flow) - go to welcome
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const WelcomeFreeAnalysisPage(),
+        ),
+      );
+    } else {
+      // User not authenticated yet - go to account creation
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const AccountCreationPage(),
+        ),
+      );
+    }
   }
 
   @override
@@ -97,8 +154,8 @@ class _NotificationPermissionPageState
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 4,
-          totalSteps: 5,
+          currentStep: 5,
+          totalSteps: 6,
         ),
       ),
       body: SafeArea(
@@ -106,94 +163,76 @@ class _NotificationPermissionPageState
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
             children: [
-              const Spacer(flex: 1),
-
-              // Title
-              const Text(
-                'Reach your goals with\nnotifications',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -1.0,
-                  height: 1.3,
+              SizedBox(height: spacing.l),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: const Text(
+                  'Get reminders to find\nyour next look',
+                  textAlign: TextAlign.left,
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -1.0,
+                    height: 1.3,
+                  ),
                 ),
               ),
-
+              SizedBox(height: spacing.l),
               const Spacer(flex: 2),
-
-              // Mock iOS notification dialog
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD1D1D6),
-                        borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD1D1D6),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                        child: Text(
+                          'Snaplook Would Like To\nSend You Notifications',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                            fontFamily: 'SF Pro Display',
+                            height: 1.3,
+                          ),
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                      child: Column(
+                      Container(
+                        width: double.infinity,
+                        height: 1,
+                        color: const Color(0xFFB5B5B5),
+                      ),
+                      Row(
                         children: [
-                          const Text(
-                            'Snaplook would like to send you\nNotifications',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black,
-                              fontFamily: 'PlusJakartaSans',
-                              height: 1.3,
+                          Expanded(
+                            child: _DialogButton(
+                              text: "Don't Allow",
+                              isPrimary: false,
+                              onTap: _handleDontAllow,
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          const Divider(
-                            color: Color(0xFFACACAC),
-                            height: 1,
-                            thickness: 0.5,
-                          ),
-                          const SizedBox(height: 1),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _DialogButton(
-                                  text: "Don't Allow",
-                                  isPrimary: false,
-                                  onTap: _isRequesting ? null : _handleDontAllow,
-                                ),
-                              ),
-                              const SizedBox(
-                                width: 1,
-                                height: 44,
-                                child: ColoredBox(
-                                  color: Color(0xFFACACAC),
-                                ),
-                              ),
-                              Expanded(
-                                child: _DialogButton(
-                                  text: 'Allow',
-                                  isPrimary: true,
-                                  onTap: _isRequesting ? null : _handleAllow,
-                                  isLoading: _isRequesting,
-                                ),
-                              ),
-                            ],
+                          Expanded(
+                            child: _DialogButton(
+                              text: 'Allow',
+                              isPrimary: true,
+                              onTap: _handleAllow,
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      '👆',
-                      style: TextStyle(fontSize: 48),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-
               const Spacer(flex: 3),
             ],
           ),
@@ -206,14 +245,12 @@ class _NotificationPermissionPageState
 class _DialogButton extends StatelessWidget {
   final String text;
   final bool isPrimary;
-  final VoidCallback? onTap;
-  final bool isLoading;
+  final VoidCallback onTap;
 
   const _DialogButton({
     required this.text,
     required this.isPrimary,
     required this.onTap,
-    this.isLoading = false,
   });
 
   @override
@@ -221,36 +258,20 @@ class _DialogButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 44,
+        height: 60,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isPrimary ? const Color(0xFF007AFF) : Colors.transparent,
-          borderRadius: isPrimary
-              ? const BorderRadius.only(
-                  bottomRight: Radius.circular(12),
-                )
-              : const BorderRadius.only(
-                  bottomLeft: Radius.circular(12),
-                ),
+          color: isPrimary ? const Color(0xFFf2003c) : const Color(0xFFD1D1D6),
         ),
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                text,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: isPrimary ? Colors.white : const Color(0xFF007AFF),
-                  fontFamily: 'PlusJakartaSans',
-                ),
-              ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: isPrimary ? Colors.white : Colors.black,
+            fontFamily: 'SF Pro Text',
+          ),
+        ),
       ),
     );
   }

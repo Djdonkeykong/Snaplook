@@ -40,7 +40,12 @@ final safariTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => Tutori
 final safariHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class SafariTutorialPage extends ConsumerStatefulWidget {
-  const SafariTutorialPage({super.key});
+  final bool returnToOnboarding;
+
+  const SafariTutorialPage({
+    super.key,
+    this.returnToOnboarding = true,
+  });
 
   @override
   ConsumerState<SafariTutorialPage> createState() => _SafariTutorialPageState();
@@ -63,7 +68,7 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
       case SafariTutorialStep.step1:
         return "When you find a clothing item you love on Safari, press and hold the image.";
       case SafariTutorialStep.step2:
-        return "Now tap Share to open the sharing options.";
+        return "Now tap \"Share\" to open the sharing options.";
       case SafariTutorialStep.step3:
         return "Finally, tap on Snaplook to share the image with our app.";
     }
@@ -182,9 +187,10 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
                   HapticFeedback.mediumImpact();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialImageAnalysisPage(
+                      builder: (context) => TutorialImageAnalysisPage(
                         imagePath: 'assets/images/safari_tutorial.webp',
                         scenario: 'Safari',
+                        returnToOnboarding: widget.returnToOnboarding,
                       ),
                       allowSnapshotting: false,
                     ),

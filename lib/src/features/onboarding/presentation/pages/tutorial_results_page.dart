@@ -19,11 +19,13 @@ import '../../../favorites/presentation/widgets/favorite_button.dart';
 class TutorialResultsPage extends ConsumerStatefulWidget {
   final String? imagePath;
   final String scenario;
+  final bool returnToOnboarding;
 
   const TutorialResultsPage({
     super.key,
     this.imagePath,
     this.scenario = 'Instagram',
+    this.returnToOnboarding = true,
   });
 
   @override
@@ -38,6 +40,8 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
   List<DetectionResult> tutorialResults = [];
   bool _isLoading = true;
   final TutorialService _tutorialService = TutorialService();
+  final PanelController _panelController = PanelController();
+  double _panelOverlayOpacity = 0.15;
 
   @override
   void initState() {
@@ -115,11 +119,15 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
           _TopIconButton(
             icon: Icons.check,
             onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => const NotificationPermissionPage(),
-                ),
-              );
+              if (widget.returnToOnboarding) {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationPermissionPage(),
+                  ),
+                );
+              } else {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
             },
           ),
         ],
@@ -133,9 +141,20 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
               fit: BoxFit.cover,
             ),
           ),
+          if (_panelOverlayOpacity > 0)
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring: true,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  color: Colors.black.withOpacity(_panelOverlayOpacity),
+                ),
+              ),
+            ),
 
           // Sliding Up Panel matching real results page
           SlidingUpPanel(
+            controller: _panelController,
             minHeight: sheetMinHeight,
             maxHeight: sheetMaxHeight,
             parallaxEnabled: false,
@@ -153,6 +172,15 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
               ),
             ],
             body: const SizedBox.shrink(),
+            onPanelSlide: (position) {
+              final nextOpacity =
+                  (0.15 + (0.55 * position)).clamp(0.0, 0.7);
+              if ((nextOpacity - _panelOverlayOpacity).abs() > 0.01) {
+                setState(() {
+                  _panelOverlayOpacity = nextOpacity;
+                });
+              }
+            },
             panelBuilder: (scrollController) {
               return SafeArea(
                 top: false,

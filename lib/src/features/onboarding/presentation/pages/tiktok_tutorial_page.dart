@@ -40,7 +40,12 @@ final tiktokTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => Tutori
 final tiktokHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class TikTokTutorialPage extends ConsumerStatefulWidget {
-  const TikTokTutorialPage({super.key});
+  final bool returnToOnboarding;
+
+  const TikTokTutorialPage({
+    super.key,
+    this.returnToOnboarding = true,
+  });
 
   @override
   ConsumerState<TikTokTutorialPage> createState() => _TikTokTutorialPageState();
@@ -63,7 +68,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
       case TikTokTutorialStep.step1:
         return "When you find a clothing item you love on TikTok, tap the share button.";
       case TikTokTutorialStep.step2:
-        return "Now tap More to open the sharing options.";
+        return "Now tap \"More\" to open the sharing options.";
       case TikTokTutorialStep.step3:
         return "Finally, tap on Snaplook to share the image with our app.";
     }
@@ -196,9 +201,10 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
                   HapticFeedback.mediumImpact();
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => const TutorialImageAnalysisPage(
+                      builder: (context) => TutorialImageAnalysisPage(
                         imagePath: 'assets/images/tiktok_tutorial.jpg',
                         scenario: 'TikTok',
+                        returnToOnboarding: widget.returnToOnboarding,
                       ),
                       allowSnapshotting: false,
                     ),

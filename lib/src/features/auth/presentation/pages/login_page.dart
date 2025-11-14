@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -206,6 +207,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
 
   void _showSignInBottomSheet(BuildContext context) {
     final spacing = context.spacing;
+    // Capture the navigator before showing the bottom sheet
+    final navigator = Navigator.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -289,15 +292,45 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
 
                     if (context.mounted) {
                       Navigator.pop(context);
-                      // Reset tab to home and refresh providers
-                      ref.read(selectedIndexProvider.notifier).state = 0;
-                      ref.invalidate(inspirationProvider);
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (context) => const MainNavigation(),
-                        ),
-                        (route) => false,
-                      );
+
+                      // Check if user has completed onboarding
+                      final supabase = Supabase.instance.client;
+                      final userId = supabase.auth.currentUser?.id;
+
+                      if (userId != null) {
+                        final userResponse = await supabase
+                            .from('users')
+                            .select('gender')
+                            .eq('id', userId)
+                            .maybeSingle();
+
+                        print('[LoginPage] Apple sign-in - user ID: $userId');
+                        print('[LoginPage] User gender from DB: ${userResponse?['gender']}');
+
+                        final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
+
+                        if (hasCompletedOnboarding) {
+                          print('[LoginPage] Existing user - navigating to MainNavigation');
+                          // Existing user - go to main app
+                          ref.read(selectedIndexProvider.notifier).state = 0;
+                          ref.invalidate(inspirationProvider);
+                          navigator.pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
+                            ),
+                            (route) => false,
+                          );
+                        } else {
+                          print('[LoginPage] New user - navigating to GenderSelectionPage');
+                          // New user - start onboarding
+                          navigator.pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const GenderSelectionPage(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      }
                     }
                   } catch (e) {
                     if (context.mounted) {
@@ -336,15 +369,45 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
 
                     if (context.mounted) {
                       Navigator.pop(context);
-                      // Reset tab to home and refresh providers
-                      ref.read(selectedIndexProvider.notifier).state = 0;
-                      ref.invalidate(inspirationProvider);
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (context) => const MainNavigation(),
-                        ),
-                        (route) => false,
-                      );
+
+                      // Check if user has completed onboarding
+                      final supabase = Supabase.instance.client;
+                      final userId = supabase.auth.currentUser?.id;
+
+                      if (userId != null) {
+                        final userResponse = await supabase
+                            .from('users')
+                            .select('gender')
+                            .eq('id', userId)
+                            .maybeSingle();
+
+                        print('[LoginPage] Google sign-in - user ID: $userId');
+                        print('[LoginPage] User gender from DB: ${userResponse?['gender']}');
+
+                        final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
+
+                        if (hasCompletedOnboarding) {
+                          print('[LoginPage] Existing user - navigating to MainNavigation');
+                          // Existing user - go to main app
+                          ref.read(selectedIndexProvider.notifier).state = 0;
+                          ref.invalidate(inspirationProvider);
+                          navigator.pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
+                            ),
+                            (route) => false,
+                          );
+                        } else {
+                          print('[LoginPage] New user - navigating to GenderSelectionPage');
+                          // New user - start onboarding
+                          navigator.pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const GenderSelectionPage(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      }
                     }
                   } catch (e) {
                     if (context.mounted) {

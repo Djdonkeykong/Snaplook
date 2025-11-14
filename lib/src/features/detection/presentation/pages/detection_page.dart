@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,10 +11,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/widgets/results_bottom_sheet.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../providers/detection_provider.dart';
+import '../widgets/detection_progress_overlay.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
   final String? imageUrl;
@@ -91,6 +92,14 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     final imagesState = ref.watch(selectedImagesProvider);
     final selectedImage = imagesState.currentImage;
     final detectionState = ref.watch(detectionProvider);
+    final bool hasImage = selectedImage != null || widget.imageUrl != null;
+    final bool showShareAction = _isResultsSheetVisible && _results.isNotEmpty;
+    final bool isCropActionActive = !showShareAction && _isCropMode;
+    final Color actionBackgroundColor = isCropActionActive
+        ? AppColors.secondary
+        : Colors.white.withOpacity(0.9);
+    final Color actionIconColor =
+        isCropActionActive ? Colors.white : Colors.black;
 
     print("[DETECTION PAGE] build called");
     print("[DETECTION PAGE] selectedImage: ${selectedImage?.path ?? 'null'}");
@@ -110,43 +119,19 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         extendBodyBehindAppBar: true,
         extendBody: true,
         appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        automaticallyImplyLeading: false,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarBrightness: Brightness.dark,
-          statusBarIconBrightness: Brightness.light,
-        ),
-        leading: _isAnalysisOverlayVisible
-            ? null
-            : Container(
-                margin: const EdgeInsets.all(8),
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close, color: Colors.black, size: 20),
-                ),
-              ),
-        actions: _isAnalysisOverlayVisible
-            ? null
-            : [
-                Container(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          automaticallyImplyLeading: false,
+          systemOverlayStyle: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarBrightness: Brightness.dark,
+            statusBarIconBrightness: Brightness.light,
+          ),
+          leading: _isAnalysisOverlayVisible
+              ? null
+              : Container(
                   margin: const EdgeInsets.all(8),
                   width: 40,
                   height: 40,
@@ -163,12 +148,42 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                   ),
                   child: IconButton(
                     padding: EdgeInsets.zero,
-                    onPressed: _shareImage,
-                    icon: const Icon(Icons.ios_share, color: Colors.black, size: 20),
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, color: Colors.black, size: 20),
                   ),
                 ),
-              ],
-      ),
+          actions: _isAnalysisOverlayVisible
+              ? null
+              : [
+                  Container(
+                    margin: const EdgeInsets.all(8),
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: actionBackgroundColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: showShareAction
+                          ? _shareImage
+                          : (hasImage ? _toggleCropMode : null),
+                      icon: Icon(
+                        showShareAction ? Icons.ios_share : Icons.crop_free,
+                        color: actionIconColor,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+        ),
       body: selectedImage == null && widget.imageUrl == null
           ? const Center(
               child: Text(
@@ -336,57 +351,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   }
 
   Widget _buildDetectionOverlay() {
-    final spacing = context.spacing;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final double clampedProgressWidth =
-        ((screenWidth * 0.45).clamp(160.0, 240.0)).toDouble();
-
-    return Positioned.fill(
-      child: Container(
-        color: Colors.black.withOpacity(0.65),
-        padding: EdgeInsets.symmetric(horizontal: spacing.l),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CupertinoActivityIndicator(
-                radius: 18,
-                color: Colors.white,
-              ),
-              SizedBox(height: spacing.l * 1.1),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: Text(
-                  _activeStatusText,
-                  key: ValueKey(_activeStatusText),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'PlusJakartaSans',
-                    color: Colors.white,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ),
-              SizedBox(height: spacing.l),
-              SizedBox(
-                width: clampedProgressWidth,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: _currentProgress.clamp(0.0, 1.0),
-                    minHeight: 5,
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(Colors.white),
-                    backgroundColor: Colors.white24,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return DetectionProgressOverlay(
+      statusText: _activeStatusText,
+      progress: _currentProgress,
     );
   }
 
@@ -418,6 +385,32 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     } catch (e) {
       print('Error sharing image: $e');
     }
+  }
+
+  void _toggleCropMode() {
+    if (!mounted) return;
+
+    setState(() {
+      if (_isCropMode) {
+        _isCropMode = false;
+        _croppedImageBytes = null;
+      } else {
+        _isCropMode = true;
+        _initializeCropRectIfNeeded();
+      }
+    });
+  }
+
+  void _initializeCropRectIfNeeded() {
+    if (_cropRect != null) return;
+
+    final size = MediaQuery.of(context).size;
+    final width = size.width * 0.72;
+    final height = size.height * 0.48;
+    final left = (size.width - width) / 2;
+    final top = (size.height - height) / 2;
+
+    _cropRect = Rect.fromLTWH(left, top, width, height);
   }
 
   Widget _buildScanButton() {

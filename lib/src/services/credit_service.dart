@@ -10,13 +10,12 @@ class CreditService {
   /// Initialize a new user with 1 free analysis
   Future<void> initializeNewUser(String userId) async {
     try {
-      await _supabase.from('profiles').upsert({
-        'id': userId,
+      await _supabase.from('users').update({
         'free_analyses_remaining': 1,
         'paid_credits_remaining': 0,
         'subscription_tier': 'free',
         'updated_at': DateTime.now().toIso8601String(),
-      });
+      }).eq('id', userId);
       print('[CreditService] Initialized user $userId with 1 free analysis');
     } catch (e) {
       print('[CreditService] Error initializing user credits: $e');
@@ -32,7 +31,7 @@ class CreditService {
       if (userId == null) return false;
 
       final response = await _supabase
-          .from('profiles')
+          .from('users')
           .select('free_analyses_remaining, paid_credits_remaining, subscription_tier')
           .eq('id', userId)
           .maybeSingle();
@@ -66,7 +65,7 @@ class CreditService {
       }
 
       final response = await _supabase
-          .from('profiles')
+          .from('users')
           .select('free_analyses_remaining, paid_credits_remaining, subscription_tier')
           .eq('id', userId)
           .maybeSingle();
@@ -110,7 +109,7 @@ class CreditService {
       if (status.isFreeUser) {
         // Free user: Consume 1 free analysis
         if (status.freeAnalysesRemaining > 0) {
-          await _supabase.from('profiles').update({
+          await _supabase.from('users').update({
             'free_analyses_remaining': status.freeAnalysesRemaining - 1,
             'updated_at': DateTime.now().toIso8601String(),
           }).eq('id', userId);
@@ -121,7 +120,7 @@ class CreditService {
       } else {
         // Paid user: Consume credits based on garment count
         if (status.paidCreditsRemaining >= garmentCount) {
-          await _supabase.from('profiles').update({
+          await _supabase.from('users').update({
             'paid_credits_remaining': status.paidCreditsRemaining - garmentCount,
             'updated_at': DateTime.now().toIso8601String(),
           }).eq('id', userId);
@@ -140,7 +139,7 @@ class CreditService {
   Future<void> addPaidCredits(String userId, int credits) async {
     try {
       final status = await getCreditStatus();
-      await _supabase.from('profiles').update({
+      await _supabase.from('users').update({
         'paid_credits_remaining': status.paidCreditsRemaining + credits,
         'subscription_tier': 'monthly', // or 'yearly'
         'credits_reset_date': _getNextMonthDate().toIso8601String(),
@@ -160,7 +159,7 @@ class CreditService {
       if (userId == null) return;
 
       final response = await _supabase
-          .from('profiles')
+          .from('users')
           .select('subscription_tier, credits_reset_date')
           .eq('id', userId)
           .maybeSingle();
@@ -178,7 +177,7 @@ class CreditService {
 
           // If reset date has passed, give them new credits
           if (now.isAfter(resetDate)) {
-            await _supabase.from('profiles').update({
+            await _supabase.from('users').update({
               'paid_credits_remaining': 100,
               'credits_reset_date': _getNextMonthDate().toIso8601String(),
               'updated_at': now.toIso8601String(),
