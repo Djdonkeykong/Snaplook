@@ -27,6 +27,7 @@ import 'src/services/link_scraper_service.dart';
 import 'src/services/share_extension_config_service.dart';
 import 'src/features/auth/domain/services/auth_service.dart';
 import 'src/features/favorites/domain/providers/favorites_provider.dart';
+import 'src/services/revenue_cat_service.dart';
 import 'dart:io';
 
 // Custom LocalStorage implementation using SharedPreferences
@@ -114,6 +115,19 @@ void main() async {
     await authService.syncAuthState();
   } catch (e) {
     debugPrint('[Auth] Failed to sync auth state: $e');
+  }
+
+  // Initialize RevenueCat for subscriptions
+  try {
+    final revenueCatApiKey = dotenv.env['REVENUECAT_API_KEY'];
+    if (revenueCatApiKey != null && revenueCatApiKey.isNotEmpty) {
+      await RevenueCatService().initialize();
+      debugPrint('[RevenueCat] Initialized successfully');
+    } else {
+      debugPrint('[RevenueCat] API key not found in .env file');
+    }
+  } catch (e) {
+    debugPrint('[RevenueCat] Initialization failed: $e');
   }
 
   // Preload video immediately on app startup

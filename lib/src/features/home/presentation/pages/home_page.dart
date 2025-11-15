@@ -1288,6 +1288,7 @@ class _StaggeredInspirationImageCardState
     }
 
     final cardHeight = cardWidth / aspectRatio;
+    final heroTag = 'product_${widget.image['id']}_${widget.index}';
 
     return Material(
       color: Colors.transparent,
@@ -1305,7 +1306,7 @@ class _StaggeredInspirationImageCardState
                 onTap: widget.onTap,
                 child: imageUrl != null
                     ? Hero(
-                        tag: 'product_${widget.image['id']}_${widget.index}',
+                        tag: heroTag,
                         child: _AdaptiveProductImage(
                           imageUrl: imageUrl,
                           isShoeCategory: isShoeCategory,
@@ -1393,7 +1394,10 @@ class _MagazineStyleImageCard extends ConsumerWidget {
     required this.onTap,
   });
 
-  static void _navigateToDetectionPage(BuildContext context, String imageUrl) {
+  static void _navigateToDetectionPage(
+    BuildContext context,
+    String imageUrl,
+  ) {
     // Navigate to detection page with the image URL as parameter - use root navigator
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
@@ -1410,6 +1414,8 @@ class _MagazineStyleImageCard extends ConsumerWidget {
         category.contains('sneaker') ||
         category.contains('boot');
 
+    final heroTag = 'product_${image['id']}_$index';
+
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -1425,7 +1431,7 @@ class _MagazineStyleImageCard extends ConsumerWidget {
                 onTap: onTap,
                 child: imageUrl != null
                     ? Hero(
-                        tag: 'product_${image['id']}_$index',
+                        tag: heroTag,
                         child: _AdaptiveProductImage(
                           imageUrl: imageUrl,
                           isShoeCategory: isShoeCategory,

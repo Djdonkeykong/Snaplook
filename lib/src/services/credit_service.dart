@@ -1,226 +1,264 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../features/paywall/models/credit_balance.dart';
+import '../features/paywall/models/subscription_plan.dart';
+import 'revenue_cat_service.dart';
 
-/// Service to manage user credits and analyses
-///
-/// Free users: Get 1 free analysis (can include multiple garments)
-/// Paid users: Get 100 credits/month (1 credit = 1 garment search result)
+/// Service for managing user credits
 class CreditService {
-  final _supabase = Supabase.instance.client;
+  static final CreditService _instance = CreditService._internal();
+  factory CreditService() => _instance;
+  CreditService._internal();
 
-  /// Initialize a new user with 1 free analysis
-  Future<void> initializeNewUser(String userId) async {
-    try {
-      await _supabase.from('users').update({
-        'free_analyses_remaining': 1,
-        'paid_credits_remaining': 0,
-        'subscription_tier': 'free',
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', userId);
-      print('[CreditService] Initialized user $userId with 1 free analysis');
-    } catch (e) {
-      print('[CreditService] Error initializing user credits: $e');
-      rethrow;
+  final RevenueCatService _revenueCatService = RevenueCatService();
+
+  static const String _creditBalanceKey = 'credit_balance';
+  static const String _lastRefillDateKey = 'last_refill_date';
+  static const String _freeTrialUsedKey = 'free_trial_used';
+
+  CreditBalance? _cachedBalance;
+
+  /// Get current credit balance
+  Future<CreditBalance> getCreditBalance() async {
+    if (_cachedBalance != null) {
+      return _cachedBalance!;
     }
-  }
 
-  /// Check if user can perform an analysis
-  /// Returns true if they have free analyses OR paid credits remaining
-  Future<bool> canPerformAnalysis() async {
     try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) return false;
+      final prefs = await SharedPreferences.getInstance();
 
-      final response = await _supabase
-          .from('users')
-          .select('free_analyses_remaining, paid_credits_remaining, subscription_tier')
-          .eq('id', userId)
-          .maybeSingle();
+      // Check if user has used free trial
+      final hasUsedFreeTrial = prefs.getBool(_freeTrialUsedKey) ?? false;
 
-      if (response == null) {
-        // User profile doesn't exist yet, initialize it
-        await initializeNewUser(userId);
-        return true; // They now have 1 free analysis
+      // Get subscription status from RevenueCat
+      final subscriptionStatus = await _revenueCatService.getSubscriptionStatus();
+
+      // If user has never used free trial and has no subscription, give 1 free credit
+      if (!hasUsedFreeTrial && !subscriptionStatus.isActive) {
+        _cachedBalance = CreditBalance.initial();
+        await _saveCreditBalance(_cachedBalance!);
+        return _cachedBalance!;
       }
 
-      final freeAnalyses = response['free_analyses_remaining'] as int? ?? 0;
-      final paidCredits = response['paid_credits_remaining'] as int? ?? 0;
+      // Load saved credit balance
+      final savedBalance = prefs.getString(_creditBalanceKey);
+      if (savedBalance != null) {
+        final jsonData = jsonDecode(savedBalance) as Map<String, dynamic>;
+        _cachedBalance = CreditBalance.fromJson(jsonData);
 
-      return freeAnalyses > 0 || paidCredits > 0;
-    } catch (e) {
-      print('[CreditService] Error checking if can perform analysis: $e');
-      return false;
-    }
-  }
-
-  /// Get current user's credit status
-  Future<CreditStatus> getCreditStatus() async {
-    try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) {
-        return CreditStatus(
-          subscriptionTier: 'free',
-          freeAnalysesRemaining: 0,
-          paidCreditsRemaining: 0,
+        // Update subscription status
+        _cachedBalance = _cachedBalance!.copyWith(
+          hasActiveSubscription: subscriptionStatus.isActive,
+          subscriptionPlanId: subscriptionStatus.productIdentifier,
         );
-      }
 
-      final response = await _supabase
-          .from('users')
-          .select('free_analyses_remaining, paid_credits_remaining, subscription_tier')
-          .eq('id', userId)
-          .maybeSingle();
-
-      if (response == null) {
-        // New user, return default
-        return CreditStatus(
-          subscriptionTier: 'free',
-          freeAnalysesRemaining: 1,
-          paidCreditsRemaining: 0,
-        );
-      }
-
-      return CreditStatus(
-        subscriptionTier: response['subscription_tier'] as String? ?? 'free',
-        freeAnalysesRemaining: response['free_analyses_remaining'] as int? ?? 0,
-        paidCreditsRemaining: response['paid_credits_remaining'] as int? ?? 0,
-      );
-    } catch (e) {
-      print('[CreditService] Error getting credit status: $e');
-      return CreditStatus(
-        subscriptionTier: 'free',
-        freeAnalysesRemaining: 0,
-        paidCreditsRemaining: 0,
-      );
-    }
-  }
-
-  /// Consume credits for an analysis
-  /// - For free users: Deducts 1 free analysis (regardless of garment count)
-  /// - For paid users: Deducts credits based on number of garments detected
-  Future<void> consumeCreditsForAnalysis(int garmentCount) async {
-    try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      final status = await getCreditStatus();
-
-      if (status.isFreeUser) {
-        // Free user: Consume 1 free analysis
-        if (status.freeAnalysesRemaining > 0) {
-          await _supabase.from('users').update({
-            'free_analyses_remaining': status.freeAnalysesRemaining - 1,
-            'updated_at': DateTime.now().toIso8601String(),
-          }).eq('id', userId);
-          print('[CreditService] Consumed 1 free analysis for user $userId (detected $garmentCount garments)');
-        } else {
-          throw Exception('No free analyses remaining');
+        // Check if credits need to be refilled
+        if (subscriptionStatus.isActive) {
+          _cachedBalance = await _checkAndRefillCredits(_cachedBalance!);
         }
+
+        await _saveCreditBalance(_cachedBalance!);
+        return _cachedBalance!;
+      }
+
+      // No saved balance - create appropriate initial state
+      if (subscriptionStatus.isActive) {
+        // User has subscription - give full credits
+        final plan = SubscriptionPlan.getPlanByProductId(
+          subscriptionStatus.productIdentifier ?? '',
+        );
+        final credits = plan?.creditsPerMonth ?? 100;
+
+        _cachedBalance = CreditBalance(
+          availableCredits: credits,
+          totalCredits: credits,
+          hasActiveSubscription: true,
+          hasUsedFreeTrial: true,
+          nextRefillDate: _calculateNextRefillDate(),
+          subscriptionPlanId: subscriptionStatus.productIdentifier,
+        );
       } else {
-        // Paid user: Consume credits based on garment count
-        if (status.paidCreditsRemaining >= garmentCount) {
-          await _supabase.from('users').update({
-            'paid_credits_remaining': status.paidCreditsRemaining - garmentCount,
-            'updated_at': DateTime.now().toIso8601String(),
-          }).eq('id', userId);
-          print('[CreditService] Consumed $garmentCount credits for user $userId');
-        } else {
-          throw Exception('Insufficient credits');
-        }
+        // No subscription and no saved data
+        _cachedBalance = hasUsedFreeTrial
+            ? CreditBalance.empty()
+            : CreditBalance.initial();
       }
+
+      await _saveCreditBalance(_cachedBalance!);
+      return _cachedBalance!;
     } catch (e) {
-      print('[CreditService] Error consuming credits: $e');
+      debugPrint('Error getting credit balance: $e');
+      return CreditBalance.initial();
+    }
+  }
+
+  /// Consume one credit for an action
+  Future<CreditBalance> consumeCredit() async {
+    try {
+      final balance = await getCreditBalance();
+
+      if (!balance.canPerformAction) {
+        throw Exception('No credits available');
+      }
+
+      // Mark free trial as used if this is the first credit consumption
+      if (balance.isInFreeTrial) {
+        await _markFreeTrialAsUsed();
+      }
+
+      _cachedBalance = balance.consumeCredit();
+      await _saveCreditBalance(_cachedBalance!);
+
+      debugPrint('Credit consumed. Remaining: ${_cachedBalance!.availableCredits}');
+      return _cachedBalance!;
+    } catch (e) {
+      debugPrint('Error consuming credit: $e');
       rethrow;
     }
   }
 
-  /// Add paid credits to user (called when they subscribe)
-  Future<void> addPaidCredits(String userId, int credits) async {
+  /// Refill credits (called when subscription is renewed monthly)
+  Future<CreditBalance> refillCredits() async {
     try {
-      final status = await getCreditStatus();
-      await _supabase.from('users').update({
-        'paid_credits_remaining': status.paidCreditsRemaining + credits,
-        'subscription_tier': 'monthly', // or 'yearly'
-        'credits_reset_date': _getNextMonthDate().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', userId);
-      print('[CreditService] Added $credits credits to user $userId');
+      final subscriptionStatus = await _revenueCatService.getSubscriptionStatus();
+
+      if (!subscriptionStatus.isActive) {
+        throw Exception('No active subscription');
+      }
+
+      final plan = SubscriptionPlan.getPlanByProductId(
+        subscriptionStatus.productIdentifier ?? '',
+      );
+
+      if (plan == null) {
+        throw Exception('Unknown subscription plan');
+      }
+
+      _cachedBalance = (await getCreditBalance()).refillCredits(plan.creditsPerMonth);
+      _cachedBalance = _cachedBalance!.copyWith(
+        nextRefillDate: _calculateNextRefillDate(),
+      );
+
+      await _saveCreditBalance(_cachedBalance!);
+      await _saveLastRefillDate(DateTime.now());
+
+      debugPrint('Credits refilled. New balance: ${_cachedBalance!.availableCredits}');
+      return _cachedBalance!;
     } catch (e) {
-      print('[CreditService] Error adding paid credits: $e');
+      debugPrint('Error refilling credits: $e');
       rethrow;
     }
   }
 
-  /// Reset monthly credits (called by cron job or when user opens app)
-  Future<void> resetMonthlyCreditsIfNeeded() async {
+  /// Check if credits need to be refilled (monthly check)
+  Future<CreditBalance> _checkAndRefillCredits(CreditBalance currentBalance) async {
     try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) return;
+      final prefs = await SharedPreferences.getInstance();
+      final lastRefillDateString = prefs.getString(_lastRefillDateKey);
 
-      final response = await _supabase
-          .from('users')
-          .select('subscription_tier, credits_reset_date')
-          .eq('id', userId)
-          .maybeSingle();
-
-      if (response == null) return;
-
-      final tier = response['subscription_tier'] as String?;
-      final resetDateStr = response['credits_reset_date'] as String?;
-
-      // Only reset for paid users
-      if (tier == 'monthly' || tier == 'yearly') {
-        if (resetDateStr != null) {
-          final resetDate = DateTime.parse(resetDateStr);
-          final now = DateTime.now();
-
-          // If reset date has passed, give them new credits
-          if (now.isAfter(resetDate)) {
-            await _supabase.from('users').update({
-              'paid_credits_remaining': 100,
-              'credits_reset_date': _getNextMonthDate().toIso8601String(),
-              'updated_at': now.toIso8601String(),
-            }).eq('id', userId);
-            print('[CreditService] Reset monthly credits for user $userId');
-          }
-        }
+      if (lastRefillDateString == null) {
+        // First time - refill now
+        return await refillCredits();
       }
+
+      final lastRefillDate = DateTime.parse(lastRefillDateString);
+      final now = DateTime.now();
+
+      // Check if a month has passed since last refill
+      final monthsSinceRefill = _monthsBetween(lastRefillDate, now);
+
+      if (monthsSinceRefill >= 1) {
+        debugPrint('Monthly refill due. Last refill: $lastRefillDate');
+        return await refillCredits();
+      }
+
+      return currentBalance;
     } catch (e) {
-      print('[CreditService] Error resetting monthly credits: $e');
+      debugPrint('Error checking refill: $e');
+      return currentBalance;
     }
   }
 
-  DateTime _getNextMonthDate() {
+  /// Calculate months between two dates
+  int _monthsBetween(DateTime from, DateTime to) {
+    return (to.year - from.year) * 12 + to.month - from.month;
+  }
+
+  /// Calculate next refill date (1 month from now)
+  DateTime _calculateNextRefillDate() {
     final now = DateTime.now();
     return DateTime(now.year, now.month + 1, now.day);
   }
-}
 
-/// Model for user's credit status
-class CreditStatus {
-  final String subscriptionTier; // 'free', 'monthly', 'yearly'
-  final int freeAnalysesRemaining;
-  final int paidCreditsRemaining;
-
-  CreditStatus({
-    required this.subscriptionTier,
-    required this.freeAnalysesRemaining,
-    required this.paidCreditsRemaining,
-  });
-
-  bool get isFreeUser => subscriptionTier == 'free';
-  bool get isPaidUser => subscriptionTier == 'monthly' || subscriptionTier == 'yearly';
-  bool get hasCredits => freeAnalysesRemaining > 0 || paidCreditsRemaining > 0;
-
-  /// Get user-friendly message about remaining credits
-  String get displayMessage {
-    if (isFreeUser) {
-      return freeAnalysesRemaining > 0
-          ? '1 free analysis remaining'
-          : 'No analyses remaining';
-    } else {
-      return '$paidCreditsRemaining credits remaining';
+  /// Save credit balance to local storage
+  Future<void> _saveCreditBalance(CreditBalance balance) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = jsonEncode(balance.toJson());
+      await prefs.setString(_creditBalanceKey, jsonString);
+      debugPrint('Credit balance saved: $balance');
+    } catch (e) {
+      debugPrint('Error saving credit balance: $e');
     }
+  }
+
+  /// Save last refill date
+  Future<void> _saveLastRefillDate(DateTime date) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_lastRefillDateKey, date.toIso8601String());
+    } catch (e) {
+      debugPrint('Error saving refill date: $e');
+    }
+  }
+
+  /// Mark free trial as used
+  Future<void> _markFreeTrialAsUsed() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_freeTrialUsedKey, true);
+      debugPrint('Free trial marked as used');
+    } catch (e) {
+      debugPrint('Error marking free trial as used: $e');
+    }
+  }
+
+  /// Sync credits with subscription status (call after purchase/restore)
+  Future<CreditBalance> syncWithSubscription() async {
+    try {
+      final subscriptionStatus = await _revenueCatService.getSubscriptionStatus();
+
+      if (subscriptionStatus.isActive) {
+        // User has active subscription - refill credits
+        return await refillCredits();
+      } else {
+        // No active subscription - use current balance
+        _cachedBalance = null; // Clear cache to force reload
+        return await getCreditBalance();
+      }
+    } catch (e) {
+      debugPrint('Error syncing with subscription: $e');
+      rethrow;
+    }
+  }
+
+  /// Reset credit balance (for testing/debugging)
+  Future<void> resetCredits() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_creditBalanceKey);
+      await prefs.remove(_lastRefillDateKey);
+      await prefs.remove(_freeTrialUsedKey);
+      _cachedBalance = null;
+      debugPrint('Credits reset');
+    } catch (e) {
+      debugPrint('Error resetting credits: $e');
+    }
+  }
+
+  /// Clear cached balance (force reload on next access)
+  void clearCache() {
+    _cachedBalance = null;
   }
 }

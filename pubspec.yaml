@@ -2,7 +2,7 @@ name: snaplook
 description: "A Flutter app for fashion detection and styling recommendations"
 publish_to: 'none'
 
-version: 1.0.0+75
+version: 1.0.0+76
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -31,6 +31,10 @@ dependencies:
   supabase_flutter: ^2.6.0
   google_sign_in: ^7.1.1
   sign_in_with_apple: ^7.0.1
+
+  # Subscriptions & Payments
+  purchases_flutter: ^8.5.1
+  purchases_ui_flutter: ^8.5.1
 
   # Image Processing
   image_picker: ^1.1.2

@@ -3,6 +3,14 @@
     "supabase": {
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=tlqpkoknwfptfzejpchy"
+    },
+    "revenuecat": {
+      "type": "http",
+      "url": "https://mcp.revenuecat.ai/mcp",
+      "authorization": {
+        "type": "bearer",
+        "token": "${REVENUECAT_MCP_KEY}"
+      }
     }
   }
 }

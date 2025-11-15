@@ -71,15 +71,14 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
   }
 
   void _onActionComplete(PhotosTutorialStep nextStep) {
-    // Set flag to show popup immediately after tap
-    ref.read(photosHasUserTappedProvider.notifier).state = true;
+    // Show instruction overlay first
+    ref.read(photosTutorialStepProvider.notifier).state = nextStep;
+    ref.read(photosTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
 
-    // Wait briefly to show the popup, then show next instruction
-    Future.delayed(const Duration(milliseconds: 600), () {
+    // Then show popup image after a brief delay (150ms) so overlay appears first
+    Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
-        ref.read(photosTutorialStepProvider.notifier).state = nextStep;
-        ref.read(photosTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
-        // Keep hasUserTapped true so popup stays visible during instruction
+        ref.read(photosHasUserTappedProvider.notifier).state = true;
       }
     });
   }
@@ -154,8 +153,14 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               top: screenHeight * _step2TapAreaTopFraction,
               left: screenWidth * _step2TapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () {
+                onTap: () async {
                   HapticFeedback.mediumImpact();
+                  // Precache the image before navigating
+                  await precacheImage(
+                    const AssetImage('assets/images/photos_tutorial.jpg'),
+                    context,
+                  );
+                  if (!mounted) return;
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => TutorialImageAnalysisPage(

@@ -996,6 +996,7 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
     # === Smart Dress vs Separates Conflict Resolution ===
     # If a "dress" contains both a top AND bottom, it might be a misclassification
     dress_detections = [d for d in detections if d["label"] == "dress"]
+    dresses_to_drop = []
     for dress in dress_detections:
         tops = [d for d in detections if d["label"] in UPPER_GARMENTS]
         bottoms = [d for d in detections if d["label"] in BOTTOM_GARMENTS]
@@ -1011,6 +1012,7 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
 
             if best_top and best_bottom:
                 separates_avg = (best_top["score"] + best_bottom["score"]) / 2
+                high_separates = best_top["score"] >= 0.55 and best_bottom["score"] >= 0.55
 
                 # Smart confidence-based decision:
                 # 1. High-confidence dress (>0.75) → trust it, don't demote
@@ -1018,9 +1020,17 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
                 # 3. Low dress (<0.50) → demote if separates are reasonable (>0.35)
 
                 should_demote = False
+                should_drop = False
                 reason = ""
 
-                if dress["score"] > 0.75:
+                if high_separates and dress["score"] < 0.50:
+                    # Drop low-confidence dresses when we have strong separates
+                    should_drop = True
+                    reason = (
+                        f"strong separates ({best_top['score']:.3f}/{best_bottom['score']:.3f}) "
+                        f"vs dress ({dress['score']:.3f})"
+                    )
+                elif dress["score"] > 0.75:
                     # High confidence dress - likely a real dress
                     reason = "dress has high confidence, keeping it"
                 elif dress["score"] >= 0.50:
@@ -1035,11 +1045,22 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
                         should_demote = True
                         reason = f"low dress confidence + reasonable separates ({separates_avg:.3f})"
 
-                if should_demote:
+                if should_drop:
+                    print(
+                        f"[DressFilter] Dropping dress ({dress['score']:.3f}) in favor of "
+                        f"{best_top['label']} ({best_top['score']:.3f}) + "
+                        f"{best_bottom['label']} ({best_bottom['score']:.3f}) - {reason}"
+                    )
+                    dress["_drop"] = True
+                    dresses_to_drop.append(dress)
+                elif should_demote:
                     print(f"👗❌ Dress ({dress['score']:.3f}) contains {best_top['label']} ({best_top['score']:.3f}) + {best_bottom['label']} ({best_bottom['score']:.3f}) - demoting dress ({reason})")
                     dress["score"] = dress["score"] * 0.5
                 else:
                     print(f"👗✅ Dress ({dress['score']:.3f}) contains separates but {reason}")
+
+    if dresses_to_drop:
+        detections = [d for d in detections if not d.get("_drop")]
 
     # Re-sort after potential score adjustments
     detections = sorted(

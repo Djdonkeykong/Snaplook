@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
 import '../../../../../core/constants/app_constants.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../detection/presentation/widgets/detection_progress_overlay.dart';
 import '../../../detection/domain/models/detection_result.dart';
@@ -29,6 +31,9 @@ class TutorialImageAnalysisPage extends ConsumerStatefulWidget {
 }
 
 class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysisPage> {
+  // Instruction state
+  bool _showInstruction = true;
+
   // Analysis state
   bool _isAnalyzing = false;
   double _currentProgress = 0.0;
@@ -41,8 +46,6 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
   static const double _resultsMinExtent = 0.4;
   static const double _resultsInitialExtent = 0.6;
   static const double _resultsMaxExtent = 0.85;
-  final DraggableScrollableController _resultsSheetController =
-      DraggableScrollableController();
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
   List<DetectionResult> _results = [];
@@ -52,7 +55,6 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
   @override
   void dispose() {
     _stopProgressTimer();
-    _resultsSheetController.dispose();
     super.dispose();
   }
 
@@ -109,10 +111,7 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              widget.imagePath ?? 'assets/images/tutorial_analysis_image_2.jpg',
-              fit: BoxFit.cover,
-            ),
+            child: _buildTutorialImage(),
           ),
           if (!_isAnalyzing && !_isResultsSheetVisible)
             Positioned.fill(
@@ -139,19 +138,20 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
               ),
             ),
           if (_isResultsSheetVisible && _results.isNotEmpty) ...[
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: IgnorePointer(
-                ignoring: true,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  color: Colors.black.withOpacity(_resultsOverlayOpacity),
+            if (!_showCongratulations)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    color: Colors.black.withOpacity(_resultsOverlayOpacity),
+                  ),
                 ),
               ),
-            ),
             Positioned(
               left: 0,
               right: 0,
@@ -164,7 +164,7 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
                   return false;
                 },
                 child: DraggableScrollableSheet(
-                  controller: _resultsSheetController,
+                  key: const ValueKey('tutorial_results_sheet'),
                   initialChildSize: _resultsInitialExtent,
                   minChildSize: _resultsMinExtent,
                   maxChildSize: _resultsMaxExtent,
@@ -183,6 +183,17 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
           ],
           if (_showCongratulations)
             _buildCongratulationsOverlay(),
+
+          // Instruction overlay (shows on page load)
+          if (_showInstruction)
+            _InstructionOverlay(
+              text: 'Ready to find matches? Tap the search icon below',
+              onComplete: () {
+                if (mounted) {
+                  setState(() => _showInstruction = false);
+                }
+              },
+            ),
         ],
       ),
     );
@@ -197,10 +208,60 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
     return 0.15 + (0.55 * normalized);
   }
 
+  bool get _isNetworkImage {
+    final path = widget.imagePath;
+    if (path == null) return false;
+    final uri = Uri.tryParse(path);
+    if (uri == null) return false;
+    return uri.hasScheme && (uri.scheme == 'http' || uri.scheme == 'https');
+  }
+
+  String get _resolvedImagePath =>
+      widget.imagePath ?? 'assets/images/tutorial_analysis_image_2.jpg';
+
+  Widget _buildNetworkPlaceholder() {
+    return Container(
+      color: Colors.black,
+    );
+  }
+
+  Widget _buildNetworkError() {
+    return Container(
+      color: Colors.black,
+      child: const Icon(
+        Icons.broken_image_outlined,
+        color: Colors.white54,
+        size: 42,
+      ),
+    );
+  }
+
+  Widget _buildTutorialImage() {
+    if (_isNetworkImage) {
+      return CachedNetworkImage(
+        imageUrl: _resolvedImagePath,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        fadeInDuration: Duration.zero,
+        fadeOutDuration: Duration.zero,
+        placeholderFadeInDuration: Duration.zero,
+        placeholder: (_, __) => _buildNetworkPlaceholder(),
+        errorWidget: (_, __, ___) => _buildNetworkError(),
+      );
+    }
+
+    return Image.asset(
+      _resolvedImagePath,
+      fit: BoxFit.cover,
+      gaplessPlayback: true,
+    );
+  }
+
   Widget _buildCongratulationsOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withOpacity(0.8),
+        color: Colors.black.withOpacity(0.65),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -428,5 +489,170 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
       _currentProgress = _targetProgress;
       _progressStartTime = null;
     });
+  }
+}
+
+// Animated instruction overlay with streaming text effect
+class _InstructionOverlay extends StatefulWidget {
+  final String text;
+  final VoidCallback onComplete;
+
+  const _InstructionOverlay({
+    required this.text,
+    required this.onComplete,
+  });
+
+  @override
+  State<_InstructionOverlay> createState() => _InstructionOverlayState();
+}
+
+class _InstructionOverlayState extends State<_InstructionOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  final _streamController = StreamController<String>();
+  final List<String> _words = [];
+  late final List<String> _tokens;
+  late final Timer _timer;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
+    );
+
+    _fadeController.forward();
+
+    // Split text into words
+    _tokens = widget.text.split(RegExp(r'\s+'));
+
+    // Stream words one by one
+    _timer = Timer.periodic(const Duration(milliseconds: 80), (timer) {
+      if (_currentIndex >= _tokens.length) {
+        timer.cancel();
+        _streamController.close();
+        _onStreamingComplete();
+        return;
+      }
+      _streamController.add(_tokens[_currentIndex++]);
+    });
+
+    // Listen to stream and update words list
+    _streamController.stream.listen((word) {
+      if (mounted) {
+        setState(() => _words.add(word));
+      }
+    });
+  }
+
+  void _onStreamingComplete() {
+    // Wait 2 seconds after streaming completes for reading
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (mounted) {
+        _fadeController.reverse().then((_) {
+          if (mounted) {
+            widget.onComplete();
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    _streamController.close();
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Container(
+        color: Colors.black.withOpacity(0.70),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40.0),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              children: List.generate(_words.length, (index) {
+                return _FadeInWord(
+                  key: ValueKey('word_$index'),
+                  word: _words[index],
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Widget that fades in each word individually
+class _FadeInWord extends StatefulWidget {
+  final String word;
+
+  const _FadeInWord({
+    super.key,
+    required this.word,
+  });
+
+  @override
+  State<_FadeInWord> createState() => _FadeInWordState();
+}
+
+class _FadeInWordState extends State<_FadeInWord>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: Text(
+          widget.word,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            fontFamily: 'PlusJakartaSans',
+            letterSpacing: -0.3,
+          ),
+        ),
+      ),
+    );
   }
 }

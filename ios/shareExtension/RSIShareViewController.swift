@@ -2097,7 +2097,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             shareLog("Table view created successfully")
         }
 
-        // Create bottom bar with Share and Save buttons
+        // Create bottom bar with Share button
         let bottomBarContainer = UIView()
         bottomBarContainer.backgroundColor = .systemBackground
         bottomBarContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -2107,31 +2107,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
         separator.backgroundColor = UIColor.systemGray5
         separator.translatesAutoresizingMaskIntoConstraints = false
 
-        // Share button (secondary style)
+        // Share button (primary style - previously Save button)
         let shareButton = UIButton(type: .system)
         shareButton.setTitle("Share", for: .normal)
         shareButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        shareButton.backgroundColor = .systemBackground
-        shareButton.setTitleColor(UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0), for: .normal)
+        shareButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        shareButton.setTitleColor(.white, for: .normal)
         shareButton.layer.cornerRadius = 28
-        shareButton.layer.borderWidth = 2
-        shareButton.layer.borderColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0).cgColor
         shareButton.addTarget(self, action: #selector(shareResultsTapped), for: .touchUpInside)
         shareButton.translatesAutoresizingMaskIntoConstraints = false
 
-        // Save button (primary style)
-        let saveButton = UIButton(type: .system)
-        saveButton.setTitle("Save", for: .normal)
-        saveButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
-        saveButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-        saveButton.setTitleColor(.white, for: .normal)
-        saveButton.layer.cornerRadius = 28
-        saveButton.addTarget(self, action: #selector(saveAllTapped), for: .touchUpInside)
-        saveButton.translatesAutoresizingMaskIntoConstraints = false
-
         bottomBarContainer.addSubview(separator)
         bottomBarContainer.addSubview(shareButton)
-        bottomBarContainer.addSubview(saveButton)
 
         // Layout constraints - safely unwrap FIRST to prevent crashes
         guard let loadingView = loadingView, let tableView = resultsTableView else {
@@ -2179,17 +2166,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
             separator.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor),
             separator.heightAnchor.constraint(equalToConstant: 1),
 
-            // Share button (left, 50% width)
+            // Share button (full width)
             shareButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 16),
             shareButton.leadingAnchor.constraint(equalTo: bottomBarContainer.leadingAnchor, constant: 16),
-            shareButton.trailingAnchor.constraint(equalTo: bottomBarContainer.centerXAnchor, constant: -6),
-            shareButton.heightAnchor.constraint(equalToConstant: 56),
-
-            // Save button (right, 50% width)
-            saveButton.topAnchor.constraint(equalTo: bottomBarContainer.topAnchor, constant: 16),
-            saveButton.leadingAnchor.constraint(equalTo: bottomBarContainer.centerXAnchor, constant: 6),
-            saveButton.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor, constant: -16),
-            saveButton.heightAnchor.constraint(equalToConstant: 56)
+            shareButton.trailingAnchor.constraint(equalTo: bottomBarContainer.trailingAnchor, constant: -16),
+            shareButton.heightAnchor.constraint(equalToConstant: 56)
         ])
 
         tableView.reloadData()

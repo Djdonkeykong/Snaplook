@@ -80,15 +80,14 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
   }
 
   void _onActionComplete(TikTokTutorialStep nextStep) {
-    // Set flag to show popup immediately after tap
-    ref.read(tiktokHasUserTappedProvider.notifier).state = true;
+    // Show instruction overlay first
+    ref.read(tiktokTutorialStepProvider.notifier).state = nextStep;
+    ref.read(tiktokTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
 
-    // Wait briefly to show the popup, then show next instruction
-    Future.delayed(const Duration(milliseconds: 600), () {
+    // Then show popup image after a brief delay (150ms) so overlay appears first
+    Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
-        ref.read(tiktokTutorialStepProvider.notifier).state = nextStep;
-        ref.read(tiktokTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
-        // Keep hasUserTapped true so popup stays visible during instruction
+        ref.read(tiktokHasUserTappedProvider.notifier).state = true;
       }
     });
   }
@@ -197,8 +196,14 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
               top: screenHeight * _step3TapAreaTopFraction,
               left: screenWidth * _step3TapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () {
+                onTap: () async {
                   HapticFeedback.mediumImpact();
+                  // Precache the image before navigating
+                  await precacheImage(
+                    const AssetImage('assets/images/tiktok_tutorial.jpg'),
+                    context,
+                  );
+                  if (!mounted) return;
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => TutorialImageAnalysisPage(

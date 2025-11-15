@@ -7,7 +7,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
-import '../../../credits/providers/credit_provider.dart';
+import '../../../paywall/providers/credit_provider.dart';
 import 'gender_selection_page.dart';
 import 'notification_permission_page.dart';
 
@@ -97,14 +97,14 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
         rethrow;
       }
 
-      // Initialize credits
+      // Initialize credits (auto-initialized when first accessed)
       print('[WelcomePage] Initializing credits...');
       final creditService = ref.read(creditServiceProvider);
-      await creditService.initializeNewUser(userId);
+      await creditService.getCreditBalance();
       print('[WelcomePage] Credits initialized');
 
       // Invalidate credit status to refresh UI
-      ref.invalidate(creditStatusProvider);
+      ref.invalidate(creditBalanceProvider);
 
       if (mounted) {
         setState(() {

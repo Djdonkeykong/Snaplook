@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,8 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../providers/detection_provider.dart';
 import '../widgets/detection_progress_overlay.dart';
+import '../../../paywall/providers/credit_provider.dart';
+import '../../../paywall/presentation/pages/paywall_page.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
   final String? imageUrl;
@@ -198,24 +201,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                       ? SizedBox.expand(
                           child: Stack(
                             children: [
-                              Positioned.fill(
-                                child: Image.network(
-                                  widget.imageUrl!,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  gaplessPlayback: true,
-                                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                    if (wasSynchronouslyLoaded) return child;
-                                    return AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 200),
-                                      child: frame != null
-                                          ? child
-                                          : Container(color: Colors.black),
-                                    );
-                                  },
-                                ),
-                              ),
+                              Positioned.fill(child: _buildNetworkImage()),
                               if (_isAnalysisOverlayVisible)
                                 Positioned.fill(
                                   child: IgnorePointer(
@@ -401,6 +387,26 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     });
   }
 
+  Future<void> _showPaywall() async {
+    if (!mounted) return;
+
+    HapticFeedback.mediumImpact();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      builder: (context) => const PaywallPage(),
+    );
+
+    // Refresh credit status after paywall is dismissed
+    if (mounted) {
+      ref.invalidate(creditBalanceProvider);
+    }
+  }
+
   void _initializeCropRectIfNeeded() {
     if (_cropRect != null) return;
 
@@ -411,6 +417,41 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     final top = (size.height - height) / 2;
 
     _cropRect = Rect.fromLTWH(left, top, width, height);
+  }
+
+  Widget _buildNetworkPlaceholder() {
+    return Container(
+      color: AppColors.surface,
+    );
+  }
+
+  Widget _buildNetworkError() {
+    return Container(
+      color: Colors.black,
+      child: const Icon(
+        Icons.broken_image_outlined,
+        color: Colors.white54,
+        size: 42,
+      ),
+    );
+  }
+
+  Widget _buildNetworkImage() {
+    if (widget.imageUrl == null) {
+      return const SizedBox.shrink();
+    }
+
+    return CachedNetworkImage(
+      imageUrl: widget.imageUrl!,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      fadeInDuration: Duration.zero,
+      fadeOutDuration: Duration.zero,
+      placeholderFadeInDuration: Duration.zero,
+      placeholder: (_, __) => _buildNetworkPlaceholder(),
+      errorWidget: (_, __, ___) => _buildNetworkError(),
+    );
   }
 
   Widget _buildScanButton() {
@@ -970,6 +1011,14 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         return;
       }
 
+      // Check if user has credits/subscription before starting analysis
+      final canPerformAction = ref.read(canPerformActionProvider);
+      if (!canPerformAction) {
+        print('User has no credits - showing paywall');
+        await _showPaywall();
+        return;
+      }
+
       if (_isResultsSheetVisible || _results.isNotEmpty) {
         setState(() {
           _isResultsSheetVisible = false;
@@ -1063,6 +1112,14 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
         // Trigger haptic feedback when results appear
         HapticFeedback.mediumImpact();
+
+        // Consume credit for successful analysis
+        try {
+          await ref.read(creditBalanceProvider.notifier).consumeCredit();
+          print('Credit consumed successfully');
+        } catch (e) {
+          print('Error consuming credit: $e');
+        }
 
         setState(() {
           _results = results;

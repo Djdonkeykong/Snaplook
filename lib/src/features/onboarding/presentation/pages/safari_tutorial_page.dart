@@ -80,15 +80,14 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
   }
 
   void _onActionComplete(SafariTutorialStep nextStep) {
-    // Set flag to show popup immediately after tap
-    ref.read(safariHasUserTappedProvider.notifier).state = true;
+    // Show instruction overlay first
+    ref.read(safariTutorialStepProvider.notifier).state = nextStep;
+    ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
 
-    // Wait briefly to show the popup, then show next instruction
-    Future.delayed(const Duration(milliseconds: 600), () {
+    // Then show popup image after a brief delay (150ms) so overlay appears first
+    Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
-        ref.read(safariTutorialStepProvider.notifier).state = nextStep;
-        ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
-        // Keep hasUserTapped true so popup stays visible during instruction
+        ref.read(safariHasUserTappedProvider.notifier).state = true;
       }
     });
   }
@@ -183,8 +182,14 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               top: screenHeight * _step3TapAreaTopFraction,
               left: screenWidth * _step3TapAreaLeftFraction,
               child: GestureDetector(
-                onTap: () {
+                onTap: () async {
                   HapticFeedback.mediumImpact();
+                  // Precache the image before navigating
+                  await precacheImage(
+                    const AssetImage('assets/images/safari_tutorial.webp'),
+                    context,
+                  );
+                  if (!mounted) return;
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => TutorialImageAnalysisPage(

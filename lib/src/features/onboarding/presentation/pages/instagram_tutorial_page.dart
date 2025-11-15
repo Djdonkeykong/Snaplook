@@ -196,8 +196,14 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               bottom: screenHeight * _confirmTapAreaBottomFraction,
               right: screenWidth * _confirmTapAreaRightFraction,
               child: GestureDetector(
-                onTap: () {
+                onTap: () async {
                   HapticFeedback.mediumImpact();
+                  // Precache the image before navigating
+                  await precacheImage(
+                    const AssetImage('assets/images/tutorial_analysis_image_2.jpg'),
+                    context,
+                  );
+                  if (!mounted) return;
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => TutorialImageAnalysisPage(

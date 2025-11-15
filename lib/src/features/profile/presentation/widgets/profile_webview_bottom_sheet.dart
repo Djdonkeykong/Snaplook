@@ -28,8 +28,10 @@ class _ProfileWebViewBottomSheetState
   bool _isContentAtTop = true;
   bool _scrollListenerInjected = false;
   int? _activeContentPointer;
+  Offset? _initialContentPointerPosition;
   Offset? _lastContentPointerPosition;
   bool _isTrackingContentDrag = false;
+  static const double _dragThreshold = 8.0;
 
   @override
   void initState() {
@@ -41,7 +43,7 @@ class _ProfileWebViewBottomSheetState
         'SnaplookScrollState',
         onMessageReceived: (message) {
           final scrollOffset = double.tryParse(message.message) ?? 0;
-          final atTop = scrollOffset <= 0.5;
+          final atTop = scrollOffset <= 1.0;
           if (!mounted) {
             _isContentAtTop = atTop;
             return;
@@ -66,6 +68,9 @@ class _ProfileWebViewBottomSheetState
               setState(() => _isLoading = false);
             }
             _injectScrollListener();
+            // Re-inject periodically to ensure it's working
+            Future.delayed(const Duration(milliseconds: 500), _injectScrollListener);
+            Future.delayed(const Duration(milliseconds: 1000), _injectScrollListener);
           },
           onWebResourceError: (_) {
             _scrollListenerInjected = false;
@@ -118,33 +123,47 @@ class _ProfileWebViewBottomSheetState
       return;
     }
     _activeContentPointer = event.pointer;
+    _initialContentPointerPosition = event.position;
     _lastContentPointerPosition = event.position;
     _isTrackingContentDrag = false;
   }
 
   void _handleContentPointerMove(PointerMoveEvent event) {
-    if (_activeContentPointer != event.pointer || _lastContentPointerPosition == null) {
+    if (_activeContentPointer != event.pointer ||
+        _lastContentPointerPosition == null ||
+        _initialContentPointerPosition == null) {
       return;
     }
+
     if (!_isTrackingContentDrag && !_canDragFromContent) {
       _cancelContentPointerTracking();
       return;
     }
+
+    final totalDy = event.position.dy - _initialContentPointerPosition!.dy;
     final dy = event.position.dy - _lastContentPointerPosition!.dy;
     _lastContentPointerPosition = event.position;
 
     if (!_isTrackingContentDrag) {
-      if (dy > 0.5) {
+      // Check if we've exceeded the threshold
+      if (totalDy.abs() < _dragThreshold) {
+        // Haven't moved enough yet, keep waiting
+        return;
+      }
+
+      // We've moved enough - decide direction
+      if (totalDy > 0) {
+        // Dragging down - start tracking for dismiss
         _isTrackingContentDrag = true;
         _onHandleDragStart(DragStartDetails(globalPosition: event.position));
-      } else if (dy < -0.5) {
-        _cancelContentPointerTracking();
-        return;
       } else {
+        // Dragging up - let web view handle scrolling
+        _cancelContentPointerTracking();
         return;
       }
     }
 
+    // We're tracking the drag, update it
     _onHandleDragUpdate(
       DragUpdateDetails(globalPosition: event.position, delta: Offset(0, dy)),
     );
@@ -166,6 +185,7 @@ class _ProfileWebViewBottomSheetState
 
   void _cancelContentPointerTracking() {
     _activeContentPointer = null;
+    _initialContentPointerPosition = null;
     _lastContentPointerPosition = null;
     _isTrackingContentDrag = false;
   }
@@ -260,7 +280,7 @@ class _ProfileWebViewBottomSheetState
                           IconButton(
                             onPressed: () => Navigator.of(context).maybePop(),
                             icon: const Icon(Icons.close),
-                            color: colorScheme.onSurfaceVariant,
+                            color: colorScheme.onSurface,
                             tooltip: 'Close',
                           ),
                           Expanded(

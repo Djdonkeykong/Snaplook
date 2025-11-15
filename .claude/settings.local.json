@@ -18,7 +18,19 @@
       "mcp__ide__getDiagnostics",
       "mcp__supabase__list_tables",
       "mcp__supabase__execute_sql",
-      "mcp__supabase__apply_migration"
+      "mcp__supabase__apply_migration",
+      "mcp__revenuecat__mcp_RC_get_project",
+      "mcp__revenuecat__mcp_RC_list_apps",
+      "mcp__revenuecat__mcp_RC_list_offerings",
+      "mcp__revenuecat__mcp_RC_create_app",
+      "mcp__revenuecat__mcp_RC_create_product",
+      "mcp__revenuecat__mcp_RC_create_entitlement",
+      "mcp__revenuecat__mcp_RC_attach_products_to_entitlement",
+      "mcp__revenuecat__mcp_RC_create_offering",
+      "mcp__revenuecat__mcp_RC_create_package",
+      "mcp__revenuecat__mcp_RC_attach_products_to_package",
+      "mcp__revenuecat__mcp_RC_create_paywall",
+      "mcp__revenuecat__mcp_RC_list_public_api_keys"
     ]
   },
   "enableAllProjectMcpServers": true,

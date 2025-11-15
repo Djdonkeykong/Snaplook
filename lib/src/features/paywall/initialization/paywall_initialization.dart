@@ -1,0 +1,59 @@
+import 'package:flutter/foundation.dart';
+import '../../../services/revenue_cat_service.dart';
+import '../../../services/credit_service.dart';
+
+/// Initialize RevenueCat and credit system
+/// Call this in main.dart before runApp()
+Future<void> initializePaywallSystem({String? userId}) async {
+  try {
+    debugPrint('Initializing paywall system...');
+
+    // Initialize RevenueCat
+    await RevenueCatService().initialize(userId: userId);
+
+    // Initialize credit service (will load initial balance)
+    await CreditService().getCreditBalance();
+
+    debugPrint('Paywall system initialized successfully');
+  } catch (e) {
+    debugPrint('Error initializing paywall system: $e');
+    // Don't throw - allow app to continue even if initialization fails
+    // Users can still use the app, purchases just won't work until they restart
+  }
+}
+
+/// Initialize paywall system with user authentication
+/// Call this after user logs in/signs up
+Future<void> initializePaywallWithUser(String userId) async {
+  try {
+    debugPrint('Initializing paywall for user: $userId');
+
+    // Set user ID in RevenueCat
+    await RevenueCatService().setUserId(userId);
+
+    // Refresh credit balance for this user
+    CreditService().clearCache();
+    await CreditService().getCreditBalance();
+
+    debugPrint('Paywall initialized for user successfully');
+  } catch (e) {
+    debugPrint('Error initializing paywall for user: $e');
+  }
+}
+
+/// Clean up paywall system on logout
+Future<void> cleanupPaywallOnLogout() async {
+  try {
+    debugPrint('Cleaning up paywall on logout...');
+
+    // Logout from RevenueCat
+    await RevenueCatService().logout();
+
+    // Clear credit cache
+    CreditService().clearCache();
+
+    debugPrint('Paywall cleanup completed');
+  } catch (e) {
+    debugPrint('Error cleaning up paywall: $e');
+  }
+}
