@@ -33,7 +33,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         .trim();
     final loweredMembership = normalizedMembership.toLowerCase();
 
-    _nameController = TextEditingController(text: fullName);
+    _nameController = TextEditingController(text: fullName)
+      ..addListener(_handleProfileFieldsChanged);
     _usernameController = TextEditingController(text: username);
     _membershipType = _formatMembershipLabel(normalizedMembership);
     _isPremiumMember = loweredMembership.contains('premium') ||
@@ -42,6 +43,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   @override
   void dispose() {
+    _nameController.removeListener(_handleProfileFieldsChanged);
     _nameController.dispose();
     _usernameController.dispose();
     super.dispose();
@@ -53,6 +55,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     final spacing = context.spacing;
     final user = ref.watch(currentUserProvider);
     final initials = _initialsFromName(_nameController.text, user?.email);
+    final circleLabel = initials.isNotEmpty ? initials[0] : 'U';
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -95,29 +98,51 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       width: 120,
                       height: 120,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFB4E5D4),
+                        color: Color(0xFFF2003C),
                         shape: BoxShape.circle,
                       ),
-                      child: Center(
-                        child: Text(
-                          initials,
-                          style: TextStyle(
-                            fontSize: 48,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'PlusJakartaSans',
-                            color: colorScheme.onSurface,
-                          ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        circleLabel,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'PlusJakartaSans',
+                          color: Colors.white,
                         ),
                       ),
                     ),
-                    SizedBox(height: spacing.m),
+                    SizedBox(height: spacing.s),
+                    Text(
+                      _nameController.text.isNotEmpty
+                          ? _nameController.text
+                          : (user?.email?.split('@').first ?? 'User'),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'PlusJakartaSans',
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    SizedBox(height: spacing.xs),
+                    Text(
+                      _membershipType,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'PlusJakartaSans',
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    SizedBox(height: spacing.l),
                     TextButton(
                       onPressed: () {
                         // TODO: Implement avatar editing
                       },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.symmetric(
-                          horizontal: spacing.m,
+                          horizontal: spacing.l,
                           vertical: spacing.xs,
                         ),
                         backgroundColor: colorScheme.surfaceVariant,
@@ -126,7 +151,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         ),
                       ),
                       child: Text(
-                        'Edit',
+                        'Edit profile',
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontFamily: 'PlusJakartaSans',
@@ -137,12 +162,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   ],
                 ),
               ),
-              SizedBox(height: spacing.l),
-              _MembershipStatusCard(
-                membershipType: _membershipType,
-                isPremium: _isPremiumMember,
-              ),
-              SizedBox(height: spacing.l),
               _RoundedField(
                   controller: _nameController,
                   title: 'Name',
@@ -189,6 +208,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               segment[0].toUpperCase() + segment.substring(1).toLowerCase(),
         )
         .join(' ');
+  }
+
+  void _handleProfileFieldsChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 }
 
@@ -257,96 +282,3 @@ class _RoundedField extends StatelessWidget {
   }
 }
 
-class _MembershipStatusCard extends StatelessWidget {
-  final String membershipType;
-  final bool isPremium;
-
-  const _MembershipStatusCard({
-    required this.membershipType,
-    required this.isPremium,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final spacing = context.spacing;
-    final radius = context.radius.large;
-    final colorScheme = Theme.of(context).colorScheme;
-    final backgroundColor = isPremium
-        ? AppColors.secondary.withOpacity(0.12)
-        : colorScheme.surfaceVariant;
-    final borderColor = isPremium
-        ? AppColors.secondary
-        : colorScheme.outlineVariant;
-    final iconColor = isPremium
-        ? AppColors.secondary
-        : colorScheme.onSurfaceVariant;
-    final descriptionColor = colorScheme.onSurfaceVariant;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(spacing.m),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: borderColor, width: 1.5),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: isPremium
-                  ? AppColors.secondary.withOpacity(0.1)
-                  : colorScheme.surface,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.workspace_premium_outlined,
-              color: iconColor,
-            ),
-          ),
-          SizedBox(width: spacing.m),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Membership',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontFamily: 'PlusJakartaSans',
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                SizedBox(height: spacing.xs),
-                Text(
-                  membershipType,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontFamily: 'PlusJakartaSans',
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                SizedBox(height: spacing.xs),
-                Text(
-                  isPremium
-                      ? 'You have access to all premium features.'
-                      : 'Enjoy core features on the current plan.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontFamily: 'PlusJakartaSans',
-                    color: descriptionColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
