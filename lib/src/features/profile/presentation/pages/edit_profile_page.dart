@@ -35,7 +35,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
     _nameController = TextEditingController(text: fullName)
       ..addListener(_handleProfileFieldsChanged);
-    _usernameController = TextEditingController(text: username);
+    _usernameController = TextEditingController(text: username)
+      ..addListener(_handleProfileFieldsChanged);
     _membershipType = _formatMembershipLabel(normalizedMembership);
     _isPremiumMember = loweredMembership.contains('premium') ||
         loweredMembership.contains('pro');
@@ -44,6 +45,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   @override
   void dispose() {
     _nameController.removeListener(_handleProfileFieldsChanged);
+    _usernameController.removeListener(_handleProfileFieldsChanged);
     _nameController.dispose();
     _usernameController.dispose();
     super.dispose();
@@ -54,8 +56,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     final colorScheme = Theme.of(context).colorScheme;
     final spacing = context.spacing;
     final user = ref.watch(currentUserProvider);
-    final initials = _initialsFromName(_nameController.text, user?.email);
-    final circleLabel = initials.isNotEmpty ? initials[0] : 'U';
+    final displayUsername = _usernameController.text.isNotEmpty
+        ? _usernameController.text
+        : (user?.email?.split('@').first ?? 'User');
+    final circleLabel =
+        displayUsername.isNotEmpty ? displayUsername[0].toUpperCase() : 'U';
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -106,7 +111,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         circleLabel,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 36,
+                          fontSize: 56,
                           fontWeight: FontWeight.w700,
                           fontFamily: 'PlusJakartaSans',
                           color: Colors.white,
@@ -115,9 +120,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     ),
                     SizedBox(height: spacing.s),
                     Text(
-                      _nameController.text.isNotEmpty
-                          ? _nameController.text
-                          : (user?.email?.split('@').first ?? 'User'),
+                      displayUsername,
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -127,15 +130,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     ),
                     SizedBox(height: spacing.xs),
                     Text(
-                      _membershipType,
+                      'Membership: $_membershipType',
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                         fontFamily: 'PlusJakartaSans',
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    SizedBox(height: spacing.l),
+                    SizedBox(height: spacing.m),
                     TextButton(
                       onPressed: () {
                         // TODO: Implement avatar editing
@@ -159,6 +162,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         ),
                       ),
                     ),
+                    SizedBox(height: spacing.l),
                   ],
                 ),
               ),
@@ -177,18 +181,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         ),
       ),
     );
-  }
-
-  String _initialsFromName(String name, String? email) {
-    if (name.trim().isNotEmpty) {
-      final parts = name.trim().split(' ');
-      if (parts.length == 1) {
-        return parts.first[0].toUpperCase();
-      }
-      return (parts.first[0] + parts.last[0]).toUpperCase();
-    }
-    final source = email ?? 'U';
-    return source[0].toUpperCase();
   }
 
   String _formatMembershipLabel(String raw) {

@@ -8,8 +8,7 @@ import '../../../auth/presentation/pages/login_page.dart';
 import 'edit_profile_page.dart';
 import 'help_faq_page.dart';
 import 'contact_support_page.dart';
-import 'privacy_policy_page.dart';
-import 'terms_page.dart';
+import '../widgets/profile_webview_bottom_sheet.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -101,6 +100,33 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
+  Future<void> _openDocumentSheet({
+    required String title,
+    required String url,
+  }) async {
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return FractionallySizedBox(
+          heightFactor: 0.95,
+          child: ProfileWebViewBottomSheet(
+            title: title,
+            initialUrl: url,
+          ),
+        );
+      },
+    );
+  }
+
+  void _handleManageSubscription() {}
+
   @override
   Widget build(BuildContext context) {
     // Listen to scroll to top trigger for profile tab (index 2)
@@ -120,11 +146,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     // Use read instead of watch to avoid rebuilding when user logs out
     final user = ref.read(currentUserProvider);
     final userEmail = user?.email ?? 'user@example.com';
-    final initials = userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
-
-    // No subscription system - all users are free
-    final membershipLabel = 'Free';
-    final isPremiumMembership = false;
+    final profileInitial =
+        userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -170,19 +193,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           Container(
                             width: 64,
                             height: 64,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFB4E5D4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF2003C),
                               shape: BoxShape.circle,
                             ),
-                            child: Center(
-                            child: Text(
-                              initials,
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'PlusJakartaSans',
-                                color: colorScheme.onSurface,
-                              ),
+                            alignment: Alignment.center,
+                          child: Text(
+                            profileInitial,
+                            style: const TextStyle(
+                              fontSize: 34,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'PlusJakartaSans',
+                              color: Colors.white,
                             ),
                           ),
                           ),
@@ -194,7 +216,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 Text(
                                   userEmail.split('@').first,
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     fontFamily: 'PlusJakartaSans',
                                     color: colorScheme.onSurface,
@@ -202,21 +224,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  userEmail,
+                                  'View profile',
                                   style: TextStyle(
                                     fontSize: 13,
+                                    fontWeight: FontWeight.w600,
                                     fontFamily: 'PlusJakartaSans',
-                                    color: colorScheme.onSurfaceVariant,
+                                    color: AppColors.secondary,
                                   ),
-                                ),
-                                SizedBox(height: spacing.xs),
-                                Row(
-                                  children: [
-                                    _MembershipBadge(
-                                      label: membershipLabel,
-                                      isPremium: isPremiumMembership,
-                                    ),
-                                  ],
                                 ),
                               ],
                             ),
@@ -230,8 +244,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
                 SizedBox(height: spacing.m),
 
-                // Settings Section
-                _SectionHeader(title: 'Settings'),
+                // Account & Settings
+                _SectionHeader(title: 'Account & Settings'),
+                _SimpleSettingItem(
+                  title: 'Manage Subscription',
+                  onTap: _handleManageSubscription,
+                ),
                 _SimpleSettingItem(
                   title: 'Notifications',
                   onTap: () {},
@@ -265,26 +283,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _SectionHeader(title: 'Legal'),
                 _SimpleSettingItem(
                   title: 'Privacy Policy',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const PrivacyPolicyPage()),
-                    );
-                  },
+                  onTap: () => _openDocumentSheet(
+                    title: 'Privacy Policy',
+                    url: 'https://truefindr.com/privacy-policy/',
+                  ),
                 ),
                 _SimpleSettingItem(
-                  title: 'Terms and Conditions',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const TermsPage()),
-                    );
-                  },
+                  title: 'Terms of Service',
+                  onTap: () => _openDocumentSheet(
+                    title: 'Terms of Service',
+                    url: 'https://truefindr.com/terms-of-service/',
+                  ),
                 ),
 
                 SizedBox(height: spacing.l),
 
-                // Account Section
-                _SectionHeader(title: 'Account'),
+                // Safety Section
+                _SectionHeader(title: 'Control Panel'),
                 _SimpleSettingItem(
                   title: 'Logout',
                   textColor: AppColors.secondary,
@@ -418,61 +433,3 @@ class _SimpleSettingItem extends StatelessWidget {
   }
 }
 
-class _MembershipBadge extends StatelessWidget {
-  final String label;
-  final bool isPremium;
-
-  const _MembershipBadge({
-    required this.label,
-    required this.isPremium,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final spacing = context.spacing;
-    final colorScheme = Theme.of(context).colorScheme;
-    final backgroundColor = isPremium
-        ? colorScheme.secondary.withOpacity(0.12)
-        : colorScheme.surfaceVariant;
-    final textColor =
-        isPremium ? colorScheme.secondary : colorScheme.onSurfaceVariant;
-    final borderColor =
-        isPremium ? colorScheme.secondary : colorScheme.outlineVariant;
-    final radius = context.radius.medium;
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: spacing.s,
-        vertical: spacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(
-          color: borderColor,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.workspace_premium_outlined,
-            size: 14,
-            color: textColor,
-          ),
-          SizedBox(width: spacing.xs),
-          Text(
-            '$label member',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'PlusJakartaSans',
-              color: textColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

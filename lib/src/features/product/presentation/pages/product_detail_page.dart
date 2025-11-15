@@ -352,9 +352,12 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                     color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
                   child: widget.product['image_url'] != null
-                      ? _AdaptiveMainProductImage(
-                          imageUrl: widget.product['image_url'],
-                          category: (widget.product['category'] as String?)?.toLowerCase() ?? '',
+                      ? Hero(
+                          tag: widget.heroTag,
+                          child: _AdaptiveMainProductImage(
+                            imageUrl: widget.product['image_url'],
+                            category: (widget.product['category'] as String?)?.toLowerCase() ?? '',
+                          ),
                         )
                       : Container(
                           color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -588,34 +591,37 @@ class _AdaptiveMainProductImageState extends State<_AdaptiveMainProductImage> {
     final defaultFit = isShoeCategory ? BoxFit.contain : BoxFit.cover;
     final currentFit = _boxFit ?? defaultFit;
 
-    return Image.network(
-      widget.imageUrl,
+    return CachedNetworkImage(
+      imageUrl: widget.imageUrl,
       fit: currentFit,
       width: double.infinity,
       height: double.infinity,
       alignment: Alignment.center,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) {
-          // Image loaded, check if we need to adjust fit for shoes
-          if (isShoeCategory && _boxFit == null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _determineOptimalFit();
-            });
-          }
-          return child;
+      fadeInDuration: Duration.zero,
+      fadeOutDuration: Duration.zero,
+      placeholderFadeInDuration: Duration.zero,
+      imageBuilder: (context, imageProvider) {
+        // Image loaded, check if we need to adjust fit for shoes
+        if (isShoeCategory && _boxFit == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _determineOptimalFit();
+          });
         }
-        return Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFFf2003c),
-            strokeWidth: 2,
-            value: loadingProgress.expectedTotalBytes != null
-                ? loadingProgress.cumulativeBytesLoaded /
-                    loadingProgress.expectedTotalBytes!
-                : null,
-          ),
+        return Image(
+          image: imageProvider,
+          fit: currentFit,
+          width: double.infinity,
+          height: double.infinity,
+          alignment: Alignment.center,
         );
       },
-      errorBuilder: (context, error, stackTrace) => Container(
+      placeholder: (context, url) => Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFFf2003c),
+          strokeWidth: 2,
+        ),
+      ),
+      errorWidget: (context, url, error) => Container(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: Icon(
           Icons.image_not_supported,

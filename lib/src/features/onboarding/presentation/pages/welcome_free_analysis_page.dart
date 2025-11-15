@@ -18,15 +18,41 @@ class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
   ConsumerState<WelcomeFreeAnalysisPage> createState() => _WelcomeFreeAnalysisPageState();
 }
 
-class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPage> {
+class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPage>
+    with SingleTickerProviderStateMixin {
   Future<void>? _initializationFuture;
   bool _isInitialized = false;
+  late AnimationController _textAnimationController;
+  late Animation<double> _textFadeAnimation;
 
   @override
   void initState() {
     super.initState();
     // Initialize user's free analysis
     _initializationFuture = _initializeFreeAnalysis();
+
+    // Setup text fade animation
+    _textAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _textAnimationController, curve: Curves.easeIn),
+    );
+
+    // Start text fade-in after 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        _textAnimationController.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _textAnimationController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeFreeAnalysis() async {
@@ -118,83 +144,86 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
             children: [
-              const Spacer(flex: 2),
+              const Spacer(),
 
               _CompletionBadge(),
 
-              SizedBox(height: spacing.l),
+              FadeTransition(
+                opacity: _textFadeAnimation,
+                child: Transform.translate(
+                  offset: const Offset(0, -170),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.check_circle, color: Color(0xFF50d05c), size: 16),
+                      SizedBox(width: 6),
+                      Text(
+                        'All done!',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.check_circle, color: Color(0xFF2CDA94), size: 22),
-                  SizedBox(width: 8),
-                  Text(
-                    'All done!',
+              FadeTransition(
+                opacity: _textFadeAnimation,
+                child: Transform.translate(
+                  offset: const Offset(0, -154),
+                  child: const Text(
+                    'Your fashion search\nstarts now!',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 18,
-                      color: Color(0xFF2CDA94),
-                      fontWeight: FontWeight.w600,
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.tertiary,
                       fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -0.5,
+                      height: 1.3,
                     ),
                   ),
-                ],
-              ),
-
-              SizedBox(height: spacing.m),
-
-              const Text(
-                'Your fashion search\nstarts now!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.tertiary,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -0.5,
-                  height: 1.3,
                 ),
               ),
 
-              const Spacer(flex: 3),
-
-              RichText(
-                textAlign: TextAlign.center,
-                text: const TextSpan(
-                  text: 'You get ',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
-                    fontFamily: 'PlusJakartaSans',
-                    height: 1.5,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: '1 free analysis',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFf2003c),
-                        fontFamily: 'PlusJakartaSans',
-                        fontWeight: FontWeight.bold,
-                        height: 1.5,
-                      ),
-                    ),
-                    TextSpan(
-                      text: ' to try the app!',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF6B7280),
-                        fontFamily: 'PlusJakartaSans',
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
+              const Spacer(),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 18,
+              offset: const Offset(0, -6),
+              spreadRadius: 1,
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 6,
+              offset: const Offset(0, -1),
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          minimum: EdgeInsets.only(
+            left: spacing.l,
+            right: spacing.l,
+            bottom: spacing.m,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               SizedBox(height: spacing.m),
-
-              // Continue button
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -229,28 +258,55 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: _isInitialized
-                      ? const Text(
-                          'Start Exploring',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'PlusJakartaSans',
-                            letterSpacing: -0.2,
-                          ),
-                        )
-                      : const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
+                  child: const Text(
+                    'Start Exploring',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -0.2,
+                    ),
+                  ),
                 ),
               ),
-
-              SizedBox(height: spacing.xl),
+              SizedBox(height: spacing.m),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: const TextSpan(
+                    text: 'You get ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF6B7280),
+                      fontFamily: 'PlusJakartaSans',
+                      height: 1.5,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '1 free analysis',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFf2003c),
+                          fontFamily: 'PlusJakartaSans',
+                          fontWeight: FontWeight.bold,
+                          height: 1.5,
+                        ),
+                      ),
+                      TextSpan(
+                        text: ' to try the app!',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF6B7280),
+                          fontFamily: 'PlusJakartaSans',
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: spacing.m),
             ],
           ),
         ),
@@ -265,10 +321,10 @@ class _CompletionBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 180,
-      height: 180,
+      width: 600,
+      height: 600,
       child: Lottie.asset(
-        'assets/animations/success.json',
+        'assets/animations/success_animation.json',
         repeat: false,
         fit: BoxFit.contain,
       ),

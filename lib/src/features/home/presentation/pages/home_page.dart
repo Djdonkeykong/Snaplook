@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:easy_refresh/easy_refresh.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/providers/image_provider.dart';
 import '../../domain/providers/inspiration_provider.dart';
 import '../../domain/providers/pending_share_provider.dart';
@@ -879,6 +880,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   void _startTutorialFlow(_TutorialSource source) {
     if (!mounted) return;
 
+    // Don't navigate for "Other apps" option
+    if (source == _TutorialSource.otherApps) {
+      return;
+    }
+
     Widget destination;
     switch (source) {
       case _TutorialSource.instagram:
@@ -911,8 +917,8 @@ class _HomePageState extends ConsumerState<HomePage> {
             const PhotosTutorialPage(returnToOnboarding: false);
         break;
       case _TutorialSource.otherApps:
-        destination = const NotificationPermissionPage();
-        break;
+        // This case should never be reached due to early return above
+        return;
     }
 
     Navigator.of(context, rootNavigator: true).push(
@@ -1298,9 +1304,12 @@ class _StaggeredInspirationImageCardState
               child: GestureDetector(
                 onTap: widget.onTap,
                 child: imageUrl != null
-                    ? _AdaptiveProductImage(
-                        imageUrl: imageUrl,
-                        isShoeCategory: isShoeCategory,
+                    ? Hero(
+                        tag: 'product_${widget.image['id']}_${widget.index}',
+                        child: _AdaptiveProductImage(
+                          imageUrl: imageUrl,
+                          isShoeCategory: isShoeCategory,
+                        ),
                       )
                     : Container(
                         color: AppColors.surface,
@@ -1415,9 +1424,12 @@ class _MagazineStyleImageCard extends ConsumerWidget {
               child: GestureDetector(
                 onTap: onTap,
                 child: imageUrl != null
-                    ? _AdaptiveProductImage(
-                        imageUrl: imageUrl,
-                        isShoeCategory: isShoeCategory,
+                    ? Hero(
+                        tag: 'product_${image['id']}_$index',
+                        child: _AdaptiveProductImage(
+                          imageUrl: imageUrl,
+                          isShoeCategory: isShoeCategory,
+                        ),
                       )
                     : Container(
                         color: AppColors.surface,
@@ -1580,73 +1592,59 @@ class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
     final currentFit = _boxFit ?? defaultFit;
 
     return SizedBox.expand(
-      child: FutureBuilder<void>(
-        future: Future.delayed(const Duration(milliseconds: 100)),
-        builder: (context, snapshot) {
-          return Image.network(
-            widget.imageUrl,
+      child: CachedNetworkImage(
+        imageUrl: widget.imageUrl,
+        fit: currentFit,
+        alignment: Alignment.center,
+        fadeInDuration: const Duration(milliseconds: 200),
+        fadeOutDuration: Duration.zero,
+        placeholderFadeInDuration: Duration.zero,
+        httpHeaders: const {
+          'User-Agent': 'Mozilla/5.0 (compatible; Flutter app)',
+        },
+        imageBuilder: (context, imageProvider) {
+          // Image loaded, check if we need to adjust fit for shoes
+          if (widget.isShoeCategory && _boxFit == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _determineOptimalFit();
+            });
+          }
+          return Image(
+            image: imageProvider,
             fit: currentFit,
             alignment: Alignment.center,
-            // Removed cache size limits to preserve original image quality
-            headers: const {
-              'User-Agent': 'Mozilla/5.0 (compatible; Flutter app)',
-            },
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) {
-                // Image loaded, check if we need to adjust fit for shoes
-                if (widget.isShoeCategory && _boxFit == null) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _determineOptimalFit();
-                  });
-                }
-                return AnimatedOpacity(
-                  opacity: 1.0,
-                  duration: const Duration(milliseconds: 200),
-                  child: child,
-                );
-              }
-
-              // Simple loading indicator without timeout complexity
-
-              return Container(
-                color: AppColors.surface,
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.secondary,
-                    strokeWidth: 2,
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                        : null,
-                  ),
-                ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color: AppColors.surface,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.broken_image_outlined,
-                      size: 32,
-                      color: AppColors.tertiary.withOpacity(0.5),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Image unavailable',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.tertiary.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
           );
         },
+        placeholder: (context, url) => Container(
+          color: AppColors.surface,
+          child: Center(
+            child: CircularProgressIndicator(
+              color: AppColors.secondary,
+              strokeWidth: 2,
+            ),
+          ),
+        ),
+        errorWidget: (context, url, error) => Container(
+          color: AppColors.surface,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.broken_image_outlined,
+                size: 32,
+                color: AppColors.tertiary.withOpacity(0.5),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Image unavailable',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.tertiary.withOpacity(0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

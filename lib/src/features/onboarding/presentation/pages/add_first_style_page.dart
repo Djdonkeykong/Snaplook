@@ -438,13 +438,9 @@ class _AppCard extends ConsumerWidget {
               ),
             );
           }
-        } else {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const NotificationPermissionPage(),
-            ),
-          );
         }
+        // Removed navigation to NotificationPermissionPage for "Other Apps"
+        // Now tapping "Other Apps" does nothing
       },
       child: Container(
         width: double.infinity,
