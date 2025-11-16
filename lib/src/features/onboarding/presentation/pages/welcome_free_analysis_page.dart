@@ -270,43 +270,6 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
                 ),
               ),
               SizedBox(height: spacing.m),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.m),
-                child: RichText(
-                  textAlign: TextAlign.center,
-                  text: const TextSpan(
-                    text: 'You get ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7280),
-                      fontFamily: 'PlusJakartaSans',
-                      height: 1.5,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: '1 free analysis',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFFf2003c),
-                          fontFamily: 'PlusJakartaSans',
-                          fontWeight: FontWeight.bold,
-                          height: 1.5,
-                        ),
-                      ),
-                      TextSpan(
-                        text: ' to try the app!',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF6B7280),
-                          fontFamily: 'PlusJakartaSans',
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: spacing.m),
             ],
           ),
         ),
