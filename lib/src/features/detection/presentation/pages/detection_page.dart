@@ -381,9 +381,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       await showCupertinoModalBottomSheet(
         context: context,
         backgroundColor: Colors.transparent,
+        expand: false, // Don't expand to full screen - show card style
         builder: (context) => const PaywallPage(
-          maxHeightFactor: 1.0,
-          isFullScreen: true,
+          maxHeightFactor: 0.92,
+          isFullScreen: false,
         ),
       );
     } else {
