@@ -198,6 +198,7 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
           ],
         ),
       ),
+    ),
       bottomNavigationBar: OnboardingBottomBar(
         primaryButton: Column(
           mainAxisSize: MainAxisSize.min,
