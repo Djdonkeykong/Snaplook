@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/widgets/results_bottom_sheet.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -376,31 +377,19 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     HapticFeedback.mediumImpact();
 
     if (Platform.isIOS) {
-      // iOS: Native sheet modal (card-style like Apple Music, Photos, etc.)
-      await showModalBottomSheet(
+      // iOS: Native page sheet modal (real iOS UIPageSheet presentation)
+      await showCupertinoModalBottomSheet(
         context: context,
-        isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        isDismissible: true,
-        enableDrag: true,
-        useSafeArea: true,
-        builder: (context) => Container(
-          height: MediaQuery.of(context).size.height * 0.95,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-          ),
-          child: const PaywallPage(
-            maxHeightFactor: 0.95,
-            isFullScreen: false,
-          ),
+        builder: (context) => const PaywallPage(
+          maxHeightFactor: 1.0,
+          isFullScreen: true,
         ),
       );
     } else {
-      // Android: Bottom sheet
-      await showModalBottomSheet(
+      // Android: Material bottom sheet
+      await showMaterialModalBottomSheet(
         context: context,
-        isScrollControlled: true,
         backgroundColor: Colors.transparent,
         isDismissible: true,
         enableDrag: true,
