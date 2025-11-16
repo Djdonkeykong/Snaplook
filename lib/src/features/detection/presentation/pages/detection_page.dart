@@ -380,7 +380,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         MaterialPageRoute(
           builder: (context) => const Scaffold(
             backgroundColor: Colors.white,
-            body: PaywallPage(maxHeightFactor: 1.0),
+            body: PaywallPage(
+              maxHeightFactor: 1.0,
+              isFullScreen: true,
+            ),
           ),
           fullscreenDialog: true,
         ),

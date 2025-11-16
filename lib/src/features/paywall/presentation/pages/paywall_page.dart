@@ -21,10 +21,12 @@ final isPurchasingProvider = StateProvider<bool>((ref) => false);
 
 class PaywallPage extends ConsumerWidget {
   final double maxHeightFactor;
+  final bool isFullScreen;
 
   const PaywallPage({
     super.key,
     this.maxHeightFactor = 1.0,
+    this.isFullScreen = false,
   });
 
   @override
@@ -41,26 +43,29 @@ class PaywallPage extends ConsumerWidget {
         'You\'ll be charged on $trialEndFormatted unless\nyou cancel anytime before.';
 
     return Container(
-      constraints: BoxConstraints(maxHeight: maxSheetHeight),
-      decoration: const BoxDecoration(
+      constraints: isFullScreen ? null : BoxConstraints(maxHeight: maxSheetHeight),
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: isFullScreen
+            ? BorderRadius.zero
+            : const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SafeArea(
         child: SizedBox(
-          height: maxSheetHeight,
+          height: isFullScreen ? null : maxSheetHeight,
           child: Column(
             mainAxisSize: MainAxisSize.max,
             children: [
-              Container(
-                margin: const EdgeInsets.only(top: 8, bottom: 10),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2),
+              if (!isFullScreen)
+                Container(
+                  margin: const EdgeInsets.only(top: 8, bottom: 10),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE5E7EB),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
