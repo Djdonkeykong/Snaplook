@@ -95,11 +95,12 @@ class PaywallPage extends ConsumerWidget {
                 ),
               ),
               Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: spacing.l),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: spacing.l),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                     SizedBox(height: spacing.m),
                     Text(
                       selectedPlan == PaywallPlanType.monthly
@@ -170,8 +171,9 @@ class PaywallPage extends ConsumerWidget {
                             ),
                           ],
                         ),
-                      const Spacer(),
-                    ],
+                        SizedBox(height: spacing.xl),
+                      ],
+                    ),
                   ),
                 ),
               ),
