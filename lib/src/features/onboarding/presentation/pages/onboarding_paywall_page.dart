@@ -130,6 +130,7 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                     subtitle:
                         'Every subscription unlocks 50 credits (up to 50 searches) so you can keep scanning and saving outfits all month.',
                   ),
+                  const SizedBox(height: 92),
                 ],
               )
             else
