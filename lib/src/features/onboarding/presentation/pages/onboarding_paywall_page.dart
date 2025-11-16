@@ -86,119 +86,133 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: spacing.l),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            SizedBox(height: spacing.m),
-            Text(
-              selectedPlan == OnboardingPaywallPlanType.monthly
-                  ? 'Unlock everything Snaplook offers.'
-                  : 'Start your 3-day FREE\ntrial to continue.',
-              style: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 34,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                letterSpacing: -1.0,
-                height: 1.3,
+        child: Column(
+          children: [
+            // Scrollable content area
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: spacing.l),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: spacing.m),
+                    Text(
+                      selectedPlan == OnboardingPaywallPlanType.monthly
+                          ? 'Unlock everything Snaplook offers.'
+                          : 'Start your 3-day FREE\ntrial to continue.',
+                      style: const TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        letterSpacing: -1.0,
+                        height: 1.3,
+                      ),
+                    ),
+                    SizedBox(height: spacing.xxl),
+                    if (selectedPlan == OnboardingPaywallPlanType.monthly)
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _FeatureItem(
+                            icon: Icons.check,
+                            title: 'AI-powered matches',
+                            subtitle:
+                                'Tap into a massive catalog of brands — every image you upload is analyzed to surface the closest lookalikes across thousands of retailers.',
+                          ),
+                          SizedBox(height: spacing.xl),
+                          const _FeatureItem(
+                            icon: Icons.bookmark_added,
+                            title: 'Save favorite finds',
+                            subtitle:
+                                'Bookmark the products you love so you can jump back in when it\'s time to buy.',
+                          ),
+                          SizedBox(height: spacing.xl),
+                          _FeatureItem(
+                            icon: Icons.bolt,
+                            title: '50 credits included',
+                            subtitle:
+                                'Every subscription unlocks 50 credits (up to 50 searches) so you can keep scanning and saving outfits all month.',
+                          ),
+                        ],
+                      )
+                    else
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const _TimelineItem(
+                            icon: Icons.lock,
+                            circleColor: Color(0xFFF2003C),
+                            title: 'Today',
+                            subtitle:
+                                'Unlock all the app\'s features like AI\nfashion analysis and more.',
+                            isFirst: true,
+                          ),
+                          const _TimelineItem(
+                            icon: Icons.notifications_active,
+                            circleColor: Color(0xFFF2003C),
+                            title: 'In 2 Days - Reminder',
+                            subtitle:
+                                'We\'ll send you a reminder that your trial\nis ending soon.',
+                          ),
+                          _TimelineItem(
+                            icon: Icons.star,
+                            circleColor: const Color(0xFF2ED3B7),
+                            title: 'In 3 Days - Billing Starts',
+                            subtitle: billingSubtitle,
+                            isLast: true,
+                          ),
+                        ],
+                      ),
+                    SizedBox(height: spacing.l),
+                  ],
+                ),
               ),
             ),
-            SizedBox(height: spacing.xxl),
-            if (selectedPlan == OnboardingPaywallPlanType.monthly)
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _FeatureItem(
-                    icon: Icons.check,
-                    title: 'AI-powered matches',
-                    subtitle:
-                        'Tap into a massive catalog of brands — every image you upload is analyzed to surface the closest lookalikes across thousands of retailers.',
-                  ),
-                  SizedBox(height: spacing.xl),
-                  const _FeatureItem(
-                    icon: Icons.bookmark_added,
-                    title: 'Save favorite finds',
-                    subtitle:
-                        'Bookmark the products you love so you can jump back in when it\'s time to buy.',
-                  ),
-                  SizedBox(height: spacing.xl),
-                  _FeatureItem(
-                    icon: Icons.bolt,
-                    title: '50 credits included',
-                    subtitle:
-                        'Every subscription unlocks 50 credits (up to 50 searches) so you can keep scanning and saving outfits all month.',
-                  ),
-                  const SizedBox(height: 92),
-                ],
-              )
-            else
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const _TimelineItem(
-                    icon: Icons.lock,
-                    circleColor: Color(0xFFF2003C),
-                    title: 'Today',
-                    subtitle:
-                        'Unlock all the app\'s features like AI\nfashion analysis and more.',
-                    isFirst: true,
-                  ),
-                  const _TimelineItem(
-                    icon: Icons.notifications_active,
-                    circleColor: Color(0xFFF2003C),
-                    title: 'In 2 Days - Reminder',
-                    subtitle:
-                        'We\'ll send you a reminder that your trial\nis ending soon.',
-                  ),
-                  _TimelineItem(
-                    icon: Icons.star,
-                    circleColor: const Color(0xFF2ED3B7),
-                    title: 'In 3 Days - Billing Starts',
-                    subtitle: billingSubtitle,
-                    isLast: true,
-                  ),
-                ],
-              ),
-            SizedBox(height: spacing.xxl),
 
-            // Plan selection cards (above the bottom bar)
-            Row(
-              children: [
-                Expanded(
-                  child: _PlanOption(
-                    plan: OnboardingPaywallPlanType.monthly,
-                    title: 'Monthly',
-                    price: '\$7.99/mo',
-                    subtitle: '',
-                    isSelected: selectedPlan == OnboardingPaywallPlanType.monthly,
-                    onTap: () => ref
-                        .read(selectedOnboardingPlanProvider.notifier)
-                        .state = OnboardingPaywallPlanType.monthly,
+            // Fixed plan selection cards at bottom
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: spacing.l),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _PlanOption(
+                          plan: OnboardingPaywallPlanType.monthly,
+                          title: 'Monthly',
+                          price: '\$7.99/mo',
+                          subtitle: '',
+                          isSelected: selectedPlan == OnboardingPaywallPlanType.monthly,
+                          onTap: () => ref
+                              .read(selectedOnboardingPlanProvider.notifier)
+                              .state = OnboardingPaywallPlanType.monthly,
+                        ),
+                      ),
+                      SizedBox(width: spacing.m),
+                      Expanded(
+                        child: _PlanOption(
+                          plan: OnboardingPaywallPlanType.yearly,
+                          title: 'Yearly',
+                          price: '\$4.99/mo',
+                          subtitle: null,
+                          isSelected: selectedPlan == OnboardingPaywallPlanType.yearly,
+                          onTap: () => ref
+                              .read(selectedOnboardingPlanProvider.notifier)
+                              .state = OnboardingPaywallPlanType.yearly,
+                          isPopular: true,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                SizedBox(width: spacing.m),
-                Expanded(
-                  child: _PlanOption(
-                    plan: OnboardingPaywallPlanType.yearly,
-                    title: 'Yearly',
-                    price: '\$4.99/mo',
-                    subtitle: null,
-                    isSelected: selectedPlan == OnboardingPaywallPlanType.yearly,
-                    onTap: () => ref
-                        .read(selectedOnboardingPlanProvider.notifier)
-                        .state = OnboardingPaywallPlanType.yearly,
-                    isPopular: true,
-                  ),
-                ),
-              ],
+                  SizedBox(height: spacing.l),
+                ],
+              ),
             ),
-            SizedBox(height: spacing.l),
           ],
         ),
       ),
-    ),
       bottomNavigationBar: OnboardingBottomBar(
         primaryButton: Column(
           mainAxisSize: MainAxisSize.min,
