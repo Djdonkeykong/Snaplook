@@ -7,7 +7,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import 'notification_permission_page.dart';
+import 'trial_intro_page.dart';
 import 'instagram_tutorial_page.dart';
 import 'pinterest_tutorial_page.dart';
 import 'tiktok_tutorial_page.dart';
@@ -196,7 +196,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
               HapticFeedback.mediumImpact();
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const NotificationPermissionPage(),
+                  builder: (context) => const TrialIntroPage(),
                 ),
               );
             },
