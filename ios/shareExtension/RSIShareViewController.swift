@@ -4033,7 +4033,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 currentResponder.perform(selector, with: url)
                 return true
             }
-            responder = currentResponder?.next
+            responder = currentResponder.next
         }
         return false
     }
