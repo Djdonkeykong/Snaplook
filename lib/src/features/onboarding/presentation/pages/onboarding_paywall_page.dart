@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../paywall/providers/credit_provider.dart';
+import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'account_creation_page.dart';
 
@@ -87,6 +88,11 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
               ),
             ),
           ),
+        ),
+        centerTitle: true,
+        title: const OnboardingProgressIndicator(
+          currentStep: 7,
+          totalSteps: 8,
         ),
         actions: [
           TextButton(

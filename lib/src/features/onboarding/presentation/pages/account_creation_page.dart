@@ -52,8 +52,8 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 6,
-          totalSteps: 6,
+          currentStep: 8,
+          totalSteps: 8,
         ),
       ),
       body: SafeArea(

@@ -78,6 +78,11 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage> with WidgetsBin
             ),
           ),
         ),
+        centerTitle: true,
+        title: const OnboardingProgressIndicator(
+          currentStep: 5,
+          totalSteps: 8,
+        ),
       ),
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: spacing.l),

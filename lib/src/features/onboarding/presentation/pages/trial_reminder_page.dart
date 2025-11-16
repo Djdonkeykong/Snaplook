@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../src/features/paywall/providers/credit_provider.dart';
+import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'account_creation_page.dart';
 import 'onboarding_paywall_page.dart';
@@ -81,6 +82,11 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
               size: 20,
             ),
           ),
+        ),
+        centerTitle: true,
+        title: const OnboardingProgressIndicator(
+          currentStep: 6,
+          totalSteps: 8,
         ),
       ),
       body: Padding(

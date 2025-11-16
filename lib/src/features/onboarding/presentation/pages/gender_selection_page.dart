@@ -134,7 +134,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 1,
-          totalSteps: 6,
+          totalSteps: 8,
         ),
       ),
       body: SafeArea(

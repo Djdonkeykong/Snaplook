@@ -134,7 +134,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 2,
-          totalSteps: 6,
+          totalSteps: 8,
         ),
       ),
       body: Padding(
