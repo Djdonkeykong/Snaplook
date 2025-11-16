@@ -30,7 +30,11 @@
       "mcp__revenuecat__mcp_RC_create_package",
       "mcp__revenuecat__mcp_RC_attach_products_to_package",
       "mcp__revenuecat__mcp_RC_create_paywall",
-      "mcp__revenuecat__mcp_RC_list_public_api_keys"
+      "mcp__revenuecat__mcp_RC_list_public_api_keys",
+      "mcp__revenuecat__mcp_RC_list_products",
+      "mcp__revenuecat__mcp_RC_list_entitlements",
+      "mcp__revenuecat__mcp_RC_get_products_from_entitlement",
+      "mcp__revenuecat__mcp_RC_list_packages"
     ]
   },
   "enableAllProjectMcpServers": true,
