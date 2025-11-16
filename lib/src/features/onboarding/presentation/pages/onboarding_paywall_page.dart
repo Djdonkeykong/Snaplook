@@ -29,21 +29,6 @@ class OnboardingPaywallPage extends ConsumerStatefulWidget {
 }
 
 class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
-  bool _showCloseButton = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Fade in close button after 2.5 seconds
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        setState(() {
-          _showCloseButton = true;
-        });
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final selectedPlan = ref.watch(selectedOnboardingPlanProvider);
@@ -61,31 +46,19 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: AnimatedOpacity(
-          opacity: _showCloseButton ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 600),
-          child: IconButton(
-            onPressed: _showCloseButton ? () {
-              // Skip paywall and move forward to account creation
-              // Using pushReplacement to avoid loop with back button
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => const AccountCreationPage(),
-                ),
-              );
-            } : null,
-            icon: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100.withOpacity(0.3),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.close,
-                color: Colors.black.withOpacity(0.4),
-                size: 20,
-              ),
+        leading: IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.arrow_back,
+              color: Colors.black,
+              size: 20,
             ),
           ),
         ),

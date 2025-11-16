@@ -11,7 +11,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/widgets/results_bottom_sheet.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -21,7 +20,6 @@ import '../../../detection/domain/models/detection_result.dart';
 import '../providers/detection_provider.dart';
 import '../widgets/detection_progress_overlay.dart';
 import '../../../paywall/providers/credit_provider.dart';
-import '../../../paywall/presentation/pages/paywall_page.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
   final String? imageUrl;
@@ -371,40 +369,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     });
   }
 
-  Future<void> _showPaywall() async {
-    if (!mounted) return;
-
-    HapticFeedback.mediumImpact();
-
-    if (Platform.isIOS) {
-      // iOS: Native page sheet modal (real iOS UIPageSheet presentation)
-      await showCupertinoModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        expand: false, // Don't expand to full screen - show card style
-        builder: (context) => const PaywallPage(
-          maxHeightFactor: 0.92,
-          isFullScreen: false,
-        ),
-      );
-    } else {
-      // Android: Material bottom sheet
-      await showMaterialModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        isDismissible: true,
-        enableDrag: true,
-        builder: (context) => const PaywallPage(
-          maxHeightFactor: 0.95,
-        ),
-      );
-    }
-
-    // Refresh credit status after paywall is dismissed
-    if (mounted) {
-      ref.invalidate(creditBalanceProvider);
-    }
-  }
 
   void _initializeCropRectIfNeeded() {
     if (_cropRect != null) return;
@@ -1007,14 +971,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
     try {
       if (_isAnalysisOverlayVisible || ref.read(detectionProvider).isAnalyzing) {
-        return;
-      }
-
-      // Check if user has credits/subscription before starting analysis
-      final canPerformAction = ref.read(canPerformActionProvider);
-      if (!canPerformAction) {
-        print('User has no credits - showing paywall');
-        await _showPaywall();
         return;
       }
 
