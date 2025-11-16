@@ -377,15 +377,22 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
     if (Platform.isIOS) {
       // iOS: Native sheet modal (card-style like Apple Music, Photos, etc.)
-      await showCupertinoModalPopup(
+      await showModalBottomSheet(
         context: context,
-        builder: (context) => const CupertinoPageScaffold(
-          backgroundColor: Colors.white,
-          child: SafeArea(
-            child: PaywallPage(
-              maxHeightFactor: 1.0,
-              isFullScreen: true,
-            ),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        isDismissible: true,
+        enableDrag: true,
+        useSafeArea: true,
+        builder: (context) => Container(
+          height: MediaQuery.of(context).size.height * 0.95,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+          ),
+          child: const PaywallPage(
+            maxHeightFactor: 0.95,
+            isFullScreen: false,
           ),
         ),
       );
