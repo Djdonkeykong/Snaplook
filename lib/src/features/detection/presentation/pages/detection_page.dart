@@ -374,16 +374,30 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
     HapticFeedback.mediumImpact();
 
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      isDismissible: true,
-      enableDrag: true,
-      builder: (context) => const PaywallPage(
-        maxHeightFactor: 0.95,
-      ),
-    );
+    if (Platform.isIOS) {
+      // iOS: Native modal presentation (card-style)
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const Scaffold(
+            backgroundColor: Colors.white,
+            body: PaywallPage(maxHeightFactor: 1.0),
+          ),
+          fullscreenDialog: true,
+        ),
+      );
+    } else {
+      // Android: Bottom sheet
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        isDismissible: true,
+        enableDrag: true,
+        builder: (context) => const PaywallPage(
+          maxHeightFactor: 0.95,
+        ),
+      );
+    }
 
     // Refresh credit status after paywall is dismissed
     if (mounted) {
