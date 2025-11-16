@@ -85,11 +85,12 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: spacing.l),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: spacing.l),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             SizedBox(height: spacing.m),
             Text(
               selectedPlan == OnboardingPaywallPlanType.monthly
@@ -160,7 +161,7 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                   ),
                 ],
               ),
-            const Spacer(),
+            SizedBox(height: spacing.xxl),
 
             // Plan selection cards (above the bottom bar)
             Row(
