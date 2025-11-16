@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -375,17 +376,17 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     HapticFeedback.mediumImpact();
 
     if (Platform.isIOS) {
-      // iOS: Native modal presentation (card-style)
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const Scaffold(
-            backgroundColor: Colors.white,
-            body: PaywallPage(
+      // iOS: Native sheet modal (card-style like Apple Music, Photos, etc.)
+      await showCupertinoModalPopup(
+        context: context,
+        builder: (context) => const CupertinoPageScaffold(
+          backgroundColor: Colors.white,
+          child: SafeArea(
+            child: PaywallPage(
               maxHeightFactor: 1.0,
               isFullScreen: true,
             ),
           ),
-          fullscreenDialog: true,
         ),
       );
     } else {
