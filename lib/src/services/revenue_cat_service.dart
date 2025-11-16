@@ -22,14 +22,16 @@ class RevenueCatService {
   static const String premiumEntitlementId = 'premium';
 
   /// Initialize RevenueCat SDK
-  Future<void> initialize({String? userId}) async {
+  Future<void> initialize({String? userId, String? apiKeyOverride}) async {
     if (_isConfigured) {
       debugPrint('RevenueCat already configured');
       return;
     }
 
     try {
-      final apiKey = Platform.isIOS ? _appleApiKey : _googleApiKey;
+      final fallbackKey = Platform.isIOS ? _appleApiKey : _googleApiKey;
+      final apiKey =
+          (apiKeyOverride != null && apiKeyOverride.isNotEmpty) ? apiKeyOverride : fallbackKey;
 
       if (apiKey.startsWith('YOUR_')) {
         throw Exception(

@@ -177,7 +177,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             ),
             SizedBox(height: spacing.l),
             Text(
-              'No search history yet',
+              'Upload an image to analyze and discover similar fashion items.',
               style: textTheme.bodyMedium?.copyWith(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
@@ -186,15 +186,39 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: spacing.sm),
-            Text(
-              'Your analyzed images will appear here',
-              style: textTheme.bodySmall?.copyWith(
-                fontSize: 13,
-                color: colorScheme.onSurface.withOpacity(0.7),
-                height: 1.35,
+            SizedBox(height: spacing.xl),
+            GestureDetector(
+              onTap: () {
+                // Close history page and return to main navigation
+                Navigator.of(context).pop();
+              },
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 16,
+                  bottom: 18,
+                ),
+                constraints: const BoxConstraints(
+                  minHeight: 52,
+                  minWidth: 180,
+                  maxWidth: 220,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFf2003c),
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: Text(
+                  'Upload Image',
+                  style: textTheme.labelLarge?.copyWith(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    height: 1.5,
+                  ),
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),

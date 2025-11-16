@@ -194,6 +194,19 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
     );
   }
 
+  void _navigateToDetection() {
+    final imageUrl = widget.product['image_url'];
+    if (imageUrl != null) {
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (context) => DetectionPage(
+            imageUrl: imageUrl,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -336,17 +349,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () {
-                  if (widget.product['image_url'] != null) {
-                    Navigator.of(context, rootNavigator: true).push(
-                      MaterialPageRoute(
-                        builder: (context) => DetectionPage(
-                          imageUrl: widget.product['image_url'],
-                        ),
-                      ),
-                    );
-                  }
-                },
+                onTap: _navigateToDetection,
                 child: Container(
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -422,15 +425,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           GestureDetector(
-                            onTap: () {
-                              Navigator.of(context, rootNavigator: true).push(
-                                MaterialPageRoute(
-                                  builder: (context) => DetectionPage(
-                                    imageUrl: widget.product['image_url'] ?? '',
-                                  ),
-                                ),
-                              );
-                            },
+                            onTap: _navigateToDetection,
                             child: SizedBox(
                               width: 44,
                               height: 48,

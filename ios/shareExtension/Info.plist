@@ -4,6 +4,10 @@
   <dict>
     <key>AppGroupId</key>
     <string>group.com.snaplook.snaplook</string>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+      <string>snaplook</string>
+    </array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>NSExtension</key>

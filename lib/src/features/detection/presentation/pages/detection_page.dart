@@ -229,15 +229,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                                   width: double.infinity,
                                   height: double.infinity,
                                   gaplessPlayback: true,
-                                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                    if (wasSynchronouslyLoaded) return child;
-                                    return AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 200),
-                                      child: frame != null
-                                          ? child
-                                          : Container(color: Colors.black),
-                                    );
-                                  },
                                 );
                               },
                             )
@@ -247,15 +238,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                               width: double.infinity,
                               height: double.infinity,
                               gaplessPlayback: true,
-                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                if (wasSynchronouslyLoaded) return child;
-                                return AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  child: frame != null
-                                      ? child
-                                      : Container(color: Colors.black),
-                                );
-                              },
                             ),
                 ),
                 if (imagesState.hasMultipleImages)
@@ -398,7 +380,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       backgroundColor: Colors.transparent,
       isDismissible: true,
       enableDrag: true,
-      builder: (context) => const PaywallPage(),
+      builder: (context) => const PaywallPage(
+        maxHeightFactor: 0.95,
+      ),
     );
 
     // Refresh credit status after paywall is dismissed

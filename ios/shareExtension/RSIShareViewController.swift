@@ -3980,21 +3980,33 @@ open class RSIShareViewController: SLComposeServiceViewController {
             defaults.synchronize()
         }
 
-        // Try to open the main app using extensionContext
-        if let url = URL(string: "snaplook://auth") {
-            extensionContext?.open(url, completionHandler: { [weak self] success in
-                shareLog(success ? "✅ Successfully opened app" : "⚠️ Failed to open app (may be simulator limitation)")
+        guard let url = URL(string: "snaplook://auth") else {
+            shareLog("?? Failed to create app URL")
+            cancelLoginRequiredTapped()
+            return
+        }
 
-                // Always cancel the extension
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                    self?.cancelLoginRequiredTapped()
+        let completion: () -> Void = { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self?.cancelLoginRequiredTapped()
+            }
+        }
+
+        if let context = extensionContext {
+            context.open(url, completionHandler: { [weak self] success in
+                shareLog(success ? "? Successfully opened app via extension context" : "?? extensionContext open failed")
+                if !success {
+                    let fallbackSuccess = self?.openURLViaResponderChain(url) ?? false
+                    shareLog(fallbackSuccess ? "? Fallback responder chain open succeeded" : "? Fallback responder chain open failed")
                 }
+                completion()
             })
         } else {
-            // If URL creation fails, just dismiss
-            shareLog("❌ Failed to create app URL")
-            cancelLoginRequiredTapped()
+            let fallbackSuccess = openURLViaResponderChain(url)
+            shareLog(fallbackSuccess ? "? Fallback responder chain open succeeded (no extensionContext)" : "? Unable to open app - no context and fallback failed")
+            completion()
         }
+
     }
 
     @objc private func cancelLoginRequiredTapped() {
@@ -4011,6 +4023,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
             userInfo: [NSLocalizedDescriptionKey: "User not authenticated"]
         )
         extensionContext?.cancelRequest(withError: error)
+    }
+
+    private func openURLViaResponderChain(_ url: URL) -> Bool {
+        var responder: UIResponder? = self
+        let selector = NSSelectorFromString("openURL:")
+        while let currentResponder = responder {
+            if currentResponder.responds(to: selector) {
+                currentResponder.perform(selector, with: url)
+                return true
+            }
+            responder = currentResponder?.next
+        }
+        return false
     }
 
     @objc private func cancelImportTapped() {

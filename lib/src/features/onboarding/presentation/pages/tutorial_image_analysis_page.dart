@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_confetti/flutter_confetti.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
@@ -291,8 +292,13 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
     );
   }
 
-  void _openProduct(DetectionResult result) async {
-    // Tutorial products don't need to open links
+  Future<void> _openProduct(DetectionResult result) async {
+    final url = result.purchaseUrl;
+    if (url == null) return;
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
   }
 
   Widget _buildScanButton() {

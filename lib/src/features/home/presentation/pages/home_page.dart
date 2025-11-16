@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -660,6 +662,14 @@ class _HomePageState extends ConsumerState<HomePage> {
         print("[IMAGE PICKER] Setting image in provider...");
         ref.read(selectedImagesProvider.notifier).setImage(image);
         print("[IMAGE PICKER] Image set in provider");
+
+        if (mounted) {
+          final fileImage = FileImage(File(image.path));
+          print("[IMAGE PICKER] Precaching selected image for instant render");
+          precacheImage(fileImage, context).catchError((e) {
+            print("[IMAGE PICKER] Precaching error: $e");
+          });
+        }
 
         if (mounted) {
           print(

@@ -222,9 +222,9 @@ class _ProfileWebViewBottomSheetState
     setState(() => _handleDragOffset = 0);
   }
 
-  bool get _canDragFromContent => _hasError || _isContentAtTop || _isLoading;
+  bool get _canDragFromContent => false;
   bool get _shouldHandleContentPointerEvents =>
-      _isTrackingContentDrag || _canDragFromContent;
+      _isTrackingContentDrag && _canDragFromContent;
 
   @override
   Widget build(BuildContext context) {

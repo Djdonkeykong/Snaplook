@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -260,9 +262,14 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         ref.read(selectedImagesProvider.notifier).setImage(image);
 
         if (mounted) {
-          Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(builder: (context) => const DetectionPage()),
-          );
+          final fileImage = FileImage(File(image.path));
+          await precacheImage(fileImage, context).catchError((_) {});
+
+          if (mounted) {
+            Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(builder: (context) => const DetectionPage()),
+            );
+          }
         }
       }
     } catch (e) {

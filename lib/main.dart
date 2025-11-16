@@ -117,15 +117,11 @@ void main() async {
     debugPrint('[Auth] Failed to sync auth state: $e');
   }
 
-  // Initialize RevenueCat for subscriptions
+  // Initialize RevenueCat for subscriptions (allows .env override but falls back to bundled keys)
   try {
     final revenueCatApiKey = dotenv.env['REVENUECAT_API_KEY'];
-    if (revenueCatApiKey != null && revenueCatApiKey.isNotEmpty) {
-      await RevenueCatService().initialize();
-      debugPrint('[RevenueCat] Initialized successfully');
-    } else {
-      debugPrint('[RevenueCat] API key not found in .env file');
-    }
+    await RevenueCatService().initialize(apiKeyOverride: revenueCatApiKey);
+    debugPrint('[RevenueCat] Initialized successfully');
   } catch (e) {
     debugPrint('[RevenueCat] Initialization failed: $e');
   }
