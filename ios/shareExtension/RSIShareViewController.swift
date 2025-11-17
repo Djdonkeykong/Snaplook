@@ -4506,6 +4506,17 @@ class ResultCell: UITableViewCell {
         button.imageEdgeInsets = .zero
         return button
     }()
+
+    private let chevronImageView: UIImageView = {
+        let iv = UIImageView()
+        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
+        iv.image = UIImage(systemName: "chevron.right", withConfiguration: config)
+        iv.tintColor = UIColor.tertiaryLabel
+        iv.contentMode = .scaleAspectFit
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+
     private var isFavorite = false
     private var product: DetectionResultItem?
     var onFavoriteToggle: ((DetectionResultItem, Bool) -> Void)?
@@ -4529,6 +4540,7 @@ class ResultCell: UITableViewCell {
         contentView.addSubview(productImageView)
         contentView.addSubview(favoriteButton)
         contentView.addSubview(textStackView)
+        contentView.addSubview(chevronImageView)
         favoriteButton.addTarget(self, action: #selector(favoriteTapped), for: .touchUpInside)
 
         NSLayoutConstraint.activate([
@@ -4542,8 +4554,13 @@ class ResultCell: UITableViewCell {
             favoriteButton.widthAnchor.constraint(equalToConstant: 32),
             favoriteButton.heightAnchor.constraint(equalToConstant: 32),
 
+            chevronImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            chevronImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            chevronImageView.widthAnchor.constraint(equalToConstant: 16),
+            chevronImageView.heightAnchor.constraint(equalToConstant: 16),
+
             textStackView.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
-            textStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            textStackView.trailingAnchor.constraint(equalTo: chevronImageView.leadingAnchor, constant: -12),
             textStackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
             contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 104)
