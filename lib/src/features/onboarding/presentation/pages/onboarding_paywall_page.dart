@@ -15,10 +15,6 @@ enum OnboardingPaywallPlanType { monthly, yearly }
 final selectedOnboardingPlanProvider = StateProvider<OnboardingPaywallPlanType>(
   (ref) => OnboardingPaywallPlanType.yearly,
 );
-final onboardingOfferingsProvider = FutureProvider<Offerings?>((ref) async {
-  final purchaseController = ref.read(purchaseControllerProvider);
-  return await purchaseController.getOfferings();
-});
 final isOnboardingPurchasingProvider = StateProvider<bool>((ref) => false);
 
 class OnboardingPaywallPage extends ConsumerStatefulWidget {
@@ -33,7 +29,6 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
   Widget build(BuildContext context) {
     final selectedPlan = ref.watch(selectedOnboardingPlanProvider);
     final spacing = context.spacing;
-    final offerings = ref.watch(onboardingOfferingsProvider);
     final isPurchasing = ref.watch(isOnboardingPurchasingProvider);
     final trialEndDate = DateTime.now().add(const Duration(days: 3));
     final trialEndFormatted = DateFormat('d MMM y').format(trialEndDate);
@@ -243,13 +238,7 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: isPurchasing
-                    ? null
-                    : () => _handlePurchase(
-                          context,
-                          ref,
-                          offerings.value,
-                        ),
+                onPressed: () => _handleContinue(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFf2003c),
                   foregroundColor: Colors.white,
@@ -259,28 +248,17 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                child: isPurchasing
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : Text(
-                        selectedPlan == OnboardingPaywallPlanType.yearly
-                            ? 'Start My 3-Day Free Trial'
-                            : 'Subscribe Now',
-                        style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
+                child: Text(
+                  selectedPlan == OnboardingPaywallPlanType.yearly
+                      ? 'Start My 3-Day Free Trial'
+                      : 'Subscribe Now',
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.2,
+                  ),
+                ),
               ),
             ),
           ],
@@ -303,98 +281,14 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
     );
   }
 
-  Future<void> _handlePurchase(
-    BuildContext context,
-    WidgetRef ref,
-    Offerings? offerings,
-  ) async {
-    try {
-      HapticFeedback.mediumImpact();
+  void _handleContinue(BuildContext context) {
+    HapticFeedback.mediumImpact();
 
-      if (offerings == null || offerings.current == null) {
-        _showErrorDialog(
-          context,
-          'No subscription plans available. Please try again later.',
-        );
-        return;
-      }
-
-      final selectedPlan = ref.read(selectedOnboardingPlanProvider);
-      final purchaseController = ref.read(purchaseControllerProvider);
-
-      Package? targetPackage;
-      final currentOffering = offerings.current!;
-
-      if (selectedPlan == OnboardingPaywallPlanType.yearly) {
-        targetPackage =
-            currentOffering.annual ??
-            currentOffering.availablePackages.firstWhere(
-              (p) => p.packageType == PackageType.annual,
-              orElse: () => currentOffering.availablePackages.first,
-            );
-      } else {
-        targetPackage =
-            currentOffering.monthly ??
-            currentOffering.availablePackages.firstWhere(
-              (p) => p.packageType == PackageType.monthly,
-              orElse: () => currentOffering.availablePackages.first,
-            );
-      }
-
-      ref.read(isOnboardingPurchasingProvider.notifier).state = true;
-
-      final success = await purchaseController.purchasePackage(targetPackage);
-
-      ref.read(isOnboardingPurchasingProvider.notifier).state = false;
-
-      if (success) {
-        HapticFeedback.mediumImpact();
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Subscription activated! Enjoy unlimited access.',
-                style: TextStyle(fontFamily: 'PlusJakartaSans'),
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const AccountCreationPage(),
-            ),
-          );
-        }
-      } else {
-        if (context.mounted) {
-          _showErrorDialog(
-            context,
-            'Purchase was not completed. Please try again.',
-          );
-        }
-      }
-    } on PlatformException catch (e) {
-      ref.read(isOnboardingPurchasingProvider.notifier).state = false;
-
-      final errorCode = PurchasesErrorHelper.getErrorCode(e);
-      if (errorCode != PurchasesErrorCode.purchaseCancelledError) {
-        if (context.mounted) {
-          _showErrorDialog(
-            context,
-            e.message ?? 'Purchase failed. Please try again.',
-          );
-        }
-      }
-    } catch (e) {
-      ref.read(isOnboardingPurchasingProvider.notifier).state = false;
-
-      if (context.mounted) {
-        _showErrorDialog(context, 'An error occurred. Please try again.');
-      }
-    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AccountCreationPage(),
+      ),
+    );
   }
 
   Future<void> _handleRestore(BuildContext context, WidgetRef ref) async {

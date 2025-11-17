@@ -8,6 +8,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../shared/services/supabase_service.dart';
+import '../../../../../shared/navigation/main_navigation.dart'
+    show selectedIndexProvider;
 import 'package:timeago/timeago.dart' as timeago;
 
 final historyProvider =
@@ -189,8 +191,11 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
             SizedBox(height: spacing.xl),
             GestureDetector(
               onTap: () {
-                // Close history page and return to main navigation
-                Navigator.of(context).pop();
+                // Switch to home tab like empty favorites CTA
+                ref.read(selectedIndexProvider.notifier).state = 0;
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
               },
               child: Container(
                 alignment: Alignment.center,
