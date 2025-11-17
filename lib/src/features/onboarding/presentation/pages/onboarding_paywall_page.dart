@@ -104,7 +104,7 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                         height: 1.3,
                       ),
                     ),
-                    SizedBox(height: spacing.xxl),
+                    const SizedBox(height: 34),
                     if (selectedPlan == OnboardingPaywallPlanType.monthly)
                       Column(
                         mainAxisSize: MainAxisSize.min,
@@ -115,14 +115,14 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                             subtitle:
                                 'Tap into a massive catalog of brands — every image you upload is analyzed to surface the closest lookalikes across thousands of retailers.',
                           ),
-                          SizedBox(height: spacing.xl),
+                          const SizedBox(height: 22),
                           const _FeatureItem(
                             icon: Icons.bookmark_added,
                             title: 'Save favorite finds',
                             subtitle:
                                 'Bookmark the products you love so you can jump back in when it\'s time to buy.',
                           ),
-                          SizedBox(height: spacing.xl),
+                          const SizedBox(height: 22),
                           _FeatureItem(
                             icon: Icons.bolt,
                             title: '50 credits included',
@@ -159,7 +159,7 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                           ),
                         ],
                       ),
-                    SizedBox(height: spacing.l),
+                    const SizedBox(height: 17),
                   ],
                 ),
               ),
@@ -389,8 +389,8 @@ class _FeatureItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.check, color: Color(0xFF23B6A8), size: 28),
-        const SizedBox(width: 20),
+        const Icon(Icons.check, color: Color(0xFF23B6A8), size: 20),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,22 +399,22 @@ class _FeatureItem extends StatelessWidget {
                 title,
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
-                  fontSize: 19,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
-                  letterSpacing: -0.5,
+                  letterSpacing: -0.4,
                 ),
               ),
               if (subtitle.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   subtitle,
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 14,
+                    fontSize: 10,
                     color: Color(0xFF6C7280),
                     fontWeight: FontWeight.w500,
-                    letterSpacing: -0.2,
+                    letterSpacing: -0.15,
                     height: 1.4,
                   ),
                 ),
@@ -448,8 +448,8 @@ class _TimelineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double circleDiameter = 46;
-    const double lineWidth = 6;
+    const double circleDiameter = 32;
+    const double lineWidth = 4;
 
     final circle = Container(
       width: circleDiameter,
@@ -460,12 +460,12 @@ class _TimelineItem extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: circleColor.withOpacity(0.15),
-            blurRadius: 12,
-            spreadRadius: 1,
+            blurRadius: 8,
+            spreadRadius: 0.7,
           ),
         ],
       ),
-      child: Icon(icon, size: 24, color: Colors.white),
+      child: Icon(icon, size: 17, color: Colors.white),
     );
 
     final fadeDecoration = BoxDecoration(
@@ -479,12 +479,12 @@ class _TimelineItem extends StatelessWidget {
       ),
     );
 
-    const double connectorGap = 36;
+    const double connectorGap = 25;
     final double topSegmentHeight = isFirst ? 0 : connectorGap;
-    final double bottomSegmentHeight = isLast ? 92 : connectorGap;
+    final double bottomSegmentHeight = isLast ? 64 : connectorGap;
 
     final lineSegments = SizedBox(
-      width: 60,
+      width: 42,
       height: topSegmentHeight + circleDiameter + bottomSegmentHeight,
       child: Stack(
         alignment: Alignment.topCenter,
@@ -508,7 +508,7 @@ class _TimelineItem extends StatelessWidget {
           ),
           Positioned(
             top: topSegmentHeight,
-            left: (60 - circleDiameter) / 2,
+            left: (42 - circleDiameter) / 2,
             child: circle,
           ),
         ],
@@ -520,7 +520,7 @@ class _TimelineItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           lineSegments,
-          const SizedBox(width: 16),
+          const SizedBox(width: 11),
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(top: topSegmentHeight, bottom: 0),
@@ -531,21 +531,21 @@ class _TimelineItem extends StatelessWidget {
                     title,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 18,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
-                      letterSpacing: -0.3,
+                      letterSpacing: -0.2,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     subtitle,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 14,
+                      fontSize: 10,
                       color: Color(0xFF6C7280),
                       fontWeight: FontWeight.w500,
-                      letterSpacing: -0.2,
+                      letterSpacing: -0.15,
                       height: 1.4,
                     ),
                   ),
