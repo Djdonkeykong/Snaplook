@@ -104,15 +104,15 @@ class WebViewController: UIViewController, WKNavigationDelegate {
             toolbarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             toolbarContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
 
-            // Done button - left side, aligned with URL bar
-            doneButton.leadingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.leadingAnchor, constant: 8),
-            doneButton.centerYAnchor.constraint(equalTo: urlBar.centerYAnchor),
-
-            // URL bar - takes most of the width, centered, below safe area
-            urlBar.centerXAnchor.constraint(equalTo: toolbarContainer.centerXAnchor),
+            // URL bar - left-aligned, takes 75% width, below safe area
+            urlBar.leadingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.leadingAnchor, constant: 16),
             urlBar.topAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.topAnchor, constant: 4),
             urlBar.heightAnchor.constraint(equalToConstant: 36),
-            urlBar.widthAnchor.constraint(equalTo: toolbarContainer.widthAnchor, multiplier: 0.70),
+            urlBar.widthAnchor.constraint(equalTo: toolbarContainer.widthAnchor, multiplier: 0.75),
+
+            // Done button - right side, aligned with URL bar
+            doneButton.trailingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.trailingAnchor, constant: -8),
+            doneButton.centerYAnchor.constraint(equalTo: urlBar.centerYAnchor),
 
             // Lock icon
             lockIcon.leadingAnchor.constraint(equalTo: urlBar.leadingAnchor, constant: 10),
