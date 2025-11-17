@@ -48,7 +48,7 @@ class WebViewController: UIViewController, WKNavigationDelegate {
     }
 
     private func setupToolbar() {
-        // Container for toolbar
+        // Container for toolbar - extends behind status bar
         toolbarContainer = UIView()
         toolbarContainer.backgroundColor = .systemBackground
         toolbarContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -73,20 +73,21 @@ class WebViewController: UIViewController, WKNavigationDelegate {
         urlLabel.translatesAutoresizingMaskIntoConstraints = false
         urlLabel.text = url.host ?? url.absoluteString
 
-        // Done button
+        // Done button - blue like Safari
         doneButton = UIButton(type: .system)
         doneButton.setTitle("Done", for: .normal)
-        doneButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-        doneButton.tintColor = .label
+        doneButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        doneButton.tintColor = .systemBlue
         doneButton.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
         doneButton.translatesAutoresizingMaskIntoConstraints = false
+        doneButton.contentEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
 
         // Add to toolbar
         urlBar.addSubview(lockIcon)
         urlBar.addSubview(urlLabel)
 
-        toolbarContainer.addSubview(urlBar)
         toolbarContainer.addSubview(doneButton)
+        toolbarContainer.addSubview(urlBar)
 
         view.addSubview(toolbarContainer)
 
@@ -97,17 +98,21 @@ class WebViewController: UIViewController, WKNavigationDelegate {
         toolbarContainer.addSubview(separator)
 
         NSLayoutConstraint.activate([
-            // Toolbar container - extends to top of screen
+            // Toolbar container - extends all the way to top edge (behind status bar)
             toolbarContainer.topAnchor.constraint(equalTo: view.topAnchor),
             toolbarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             toolbarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            toolbarContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 52),
+            toolbarContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
 
-            // URL bar - extends further right now that arrows are removed
-            urlBar.leadingAnchor.constraint(equalTo: toolbarContainer.leadingAnchor, constant: 16),
-            urlBar.trailingAnchor.constraint(equalTo: doneButton.leadingAnchor, constant: -12),
-            urlBar.bottomAnchor.constraint(equalTo: toolbarContainer.bottomAnchor, constant: -8),
+            // Done button - left side, aligned with URL bar
+            doneButton.leadingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.leadingAnchor, constant: 8),
+            doneButton.centerYAnchor.constraint(equalTo: urlBar.centerYAnchor),
+
+            // URL bar - takes most of the width, centered, below safe area
+            urlBar.centerXAnchor.constraint(equalTo: toolbarContainer.centerXAnchor),
+            urlBar.topAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.topAnchor, constant: 4),
             urlBar.heightAnchor.constraint(equalToConstant: 36),
+            urlBar.widthAnchor.constraint(equalTo: toolbarContainer.widthAnchor, multiplier: 0.70),
 
             // Lock icon
             lockIcon.leadingAnchor.constraint(equalTo: urlBar.leadingAnchor, constant: 10),
@@ -120,16 +125,11 @@ class WebViewController: UIViewController, WKNavigationDelegate {
             urlLabel.trailingAnchor.constraint(equalTo: urlBar.trailingAnchor, constant: -10),
             urlLabel.centerYAnchor.constraint(equalTo: urlBar.centerYAnchor),
 
-            // Done button (positioned where share/refresh were)
-            doneButton.trailingAnchor.constraint(equalTo: toolbarContainer.trailingAnchor, constant: -16),
-            doneButton.centerYAnchor.constraint(equalTo: urlBar.centerYAnchor),
-            doneButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 50),
-
             // Separator
             separator.leadingAnchor.constraint(equalTo: toolbarContainer.leadingAnchor),
             separator.trailingAnchor.constraint(equalTo: toolbarContainer.trailingAnchor),
             separator.bottomAnchor.constraint(equalTo: toolbarContainer.bottomAnchor),
-            separator.heightAnchor.constraint(equalToConstant: 1)
+            separator.heightAnchor.constraint(equalToConstant: 0.5)
         ])
     }
 
