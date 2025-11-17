@@ -3378,11 +3378,36 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Use extensionContext to open the URL - this is the reliable way for share extensions
         if #available(iOS 10.0, *) {
-            self.extensionContext?.open(url, completionHandler: { success in
+            guard let context = self.extensionContext else {
+                shareLog("❌ ERROR: extensionContext is nil!")
+                DispatchQueue.main.async {
+                    let alert = UIAlertController(
+                        title: "Error",
+                        message: "Cannot open app: extension context is nil",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self.present(alert, animated: true)
+                }
+                return
+            }
+
+            context.open(url, completionHandler: { [weak self] success in
+                guard let self = self else { return }
                 shareLog("Extension context open URL result: \(success)")
                 if !success {
-                    shareLog("⚠️ Failed to open URL via extensionContext, trying responder chain fallback")
-                    self.performRedirectFallback(to: url)
+                    shareLog("⚠️ Failed to open URL via extensionContext")
+                    DispatchQueue.main.async {
+                        let alert = UIAlertController(
+                            title: "Cannot Open App",
+                            message: "Failed to open Snaplook. URL: \(url.absoluteString)",
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                            self.closeExtension()
+                        })
+                        self.present(alert, animated: true)
+                    }
                 }
             })
         } else {
