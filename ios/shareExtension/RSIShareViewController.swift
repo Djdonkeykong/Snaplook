@@ -4160,8 +4160,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         }
                     }
 
-                    // Call the pending completion
-                    self.pendingInstagramCompletion?()
+                    // DON'T call pendingInstagramCompletion - we're handling redirect ourselves
+                    // Calling it would trigger maybeFinalizeShare() and cause a double redirect
                     self.pendingInstagramCompletion = nil
                     self.pendingInstagramUrl = nil
 
