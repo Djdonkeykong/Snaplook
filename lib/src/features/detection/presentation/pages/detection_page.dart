@@ -275,10 +275,14 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                 ],
         ),
       body: _isLoadingExistingResults
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
-                strokeWidth: 3,
+          ? Center(
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                  strokeWidth: 2,
+                ),
               ),
             )
           : selectedImage == null && widget.imageUrl == null && _loadedImageUrl == null

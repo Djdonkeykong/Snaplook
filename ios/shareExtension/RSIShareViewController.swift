@@ -3374,32 +3374,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
 
     private func performRedirect(to url: URL) {
-        shareLog("dYs? Redirecting to host app with URL: \(url.absoluteString)")
+        shareLog("🚀 Redirecting to host app with URL: \(url.absoluteString)")
 
         // Use extensionContext to open the URL - this is the reliable way for share extensions
         if #available(iOS 10.0, *) {
             guard let context = self.extensionContext else {
-                shareLog("?? ERROR: extensionContext is nil! Falling back to responder chain")
-                let fallbackSuccess = self.performRedirectFallback(to: url)
-                shareLog(fallbackSuccess ? "? Fallback responder chain open succeeded (no extensionContext)" : "? Unable to open host app - responder chain fallback failed")
+                shareLog("❌ ERROR: extensionContext is nil!")
                 return
             }
 
-            // Just fire and forget - don't wait for completion
-            // The extension needs to close quickly for the app to open
-            context.open(url, completionHandler: { [weak self] success in
-                NSLog("[ShareExtension] ? Extension context open URL result: \(success)")
-                guard let self = self, !success else { return }
-                shareLog("?? Failed to open URL via extensionContext")
-                let fallbackSuccess = self.performRedirectFallback(to: url)
-                shareLog(fallbackSuccess ? "? Fallback responder chain open succeeded" : "? Fallback responder chain open failed")
+            // Fire and forget - just log the result, don't retry
+            // The extension needs to close immediately for the app to open
+            context.open(url, completionHandler: { success in
+                NSLog("[ShareExtension] ✅ Extension context open URL result: \(success)")
             })
-            shareLog("?? Called extensionContext.open() for URL: \(url.absoluteString)")
+            shareLog("✅ Called extensionContext.open() for URL: \(url.absoluteString)")
         } else {
-            // Fallback for older iOS versions
-            shareLog("?? iOS < 10.0 detected, using responder chain fallback")
-            let fallbackSuccess = self.performRedirectFallback(to: url)
-            shareLog(fallbackSuccess ? "? Responder chain open succeeded (iOS < 10)" : "? Responder chain open failed (iOS < 10)")
+            // Fallback for older iOS versions - shouldn't happen on modern devices
+            shareLog("⚠️ iOS < 10.0 detected, cannot open URL")
         }
     }
 
