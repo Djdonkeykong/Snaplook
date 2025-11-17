@@ -9,6 +9,6 @@ payload = {
     "image_base64": image_b64,
     "search_type": "photos"
 }
-resp = requests.post("https://f7aca0c6a984.ngrok-free.app/api/v1/analyze", json=payload, timeout=120)
+resp = requests.post("https://8bf6b27df958.ngrok-free.app/api/v1/analyze", json=payload, timeout=120)
 print("status:", resp.status_code)
 print("body:", resp.text[:500])
