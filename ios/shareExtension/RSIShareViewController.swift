@@ -3375,24 +3375,33 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func performRedirect(to url: URL) {
         shareLog("Redirecting to host app with URL: \(url.absoluteString)")
-        var responder: UIResponder? = self
-        if #available(iOS 18.0, *) {
-            while let current = responder {
-                if let application = current as? UIApplication {
-                    application.open(url, options: [:], completionHandler: nil)
-                    break
+
+        // Use extensionContext to open the URL - this is the reliable way for share extensions
+        if #available(iOS 10.0, *) {
+            self.extensionContext?.open(url, completionHandler: { success in
+                shareLog("Extension context open URL result: \(success)")
+                if !success {
+                    shareLog("⚠️ Failed to open URL via extensionContext, trying responder chain fallback")
+                    self.performRedirectFallback(to: url)
                 }
-                responder = current.next
-            }
+            })
         } else {
-            let selectorOpenURL = sel_registerName("openURL:")
-            while let current = responder {
-                if current.responds(to: selectorOpenURL) {
-                    _ = current.perform(selectorOpenURL, with: url)
-                    break
-                }
-                responder = current.next
+            // Fallback for older iOS versions
+            self.performRedirectFallback(to: url)
+        }
+    }
+
+    private func performRedirectFallback(to url: URL) {
+        shareLog("Using responder chain fallback to open URL")
+        var responder: UIResponder? = self
+        let selectorOpenURL = sel_registerName("openURL:")
+        while let current = responder {
+            if current.responds(to: selectorOpenURL) {
+                _ = current.perform(selectorOpenURL, with: url)
+                shareLog("Opened URL via responder chain")
+                break
             }
+            responder = current.next
         }
     }
 
