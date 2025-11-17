@@ -376,6 +376,18 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       return;
     }
     try {
+      // Check if there's a pending search_id from "Analyze now" + "Analyze in app" flow
+      final searchId = await ShareImportStatus.getPendingSearchId();
+      if (searchId != null && searchId.isNotEmpty) {
+        print("[SHARE EXTENSION] Found pending search_id: $searchId");
+        print("[SHARE EXTENSION] Navigating to detection page with existing results");
+
+        // Navigate to detection page with this search_id to load existing results
+        // TODO: Implement navigation to detection page with search_id parameter
+        _navigateToDetectionWithSearchId(searchId);
+        return;
+      }
+
       final pendingMedia = await ReceiveSharingIntent.instance
           .getInitialMedia();
       if (pendingMedia.isNotEmpty) {
@@ -390,6 +402,42 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         "[SHARE EXTENSION ERROR] Error checking pending media on resume: $e",
       );
     }
+  }
+
+  void _navigateToDetectionWithSearchId(String searchId) {
+    if (_isNavigatingToDetection) {
+      print("[SHARE EXTENSION] Navigation already in progress");
+      return;
+    }
+    _isNavigatingToDetection = true;
+
+    // Ensure the main navigation is showing the home tab
+    ref.read(selectedIndexProvider.notifier).state = 0;
+
+    void pushRoute() {
+      final navigator = navigatorKey.currentState;
+      if (navigator == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
+        return;
+      }
+
+      print("[SHARE EXTENSION] Navigating to detection page with searchId: $searchId");
+
+      // Navigate to detection page with searchId to load existing results
+      // Use root navigator to hide bottom navigation bar
+      Navigator.of(navigator.context, rootNavigator: true)
+          .push(
+            MaterialPageRoute(
+              builder: (context) => DetectionPage(searchId: searchId),
+            ),
+          )
+          .then((_) {
+        _isNavigatingToDetection = false;
+        print("[SHARE EXTENSION] Detection page dismissed");
+      });
+    }
+
+    pushRoute();
   }
 
   SharedMediaFile _selectSharedFile(List<SharedMediaFile> sharedFiles) {

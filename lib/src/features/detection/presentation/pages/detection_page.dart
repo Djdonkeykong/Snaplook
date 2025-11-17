@@ -20,11 +20,13 @@ import '../../../detection/domain/models/detection_result.dart';
 import '../providers/detection_provider.dart';
 import '../widgets/detection_progress_overlay.dart';
 import '../../../paywall/providers/credit_provider.dart';
+import '../../../../shared/services/supabase_service.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
   final String? imageUrl;
+  final String? searchId;
 
-  const DetectionPage({super.key, this.imageUrl});
+  const DetectionPage({super.key, this.imageUrl, this.searchId});
 
   @override
   ConsumerState<DetectionPage> createState() => _DetectionPageState();
@@ -58,6 +60,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
   List<DetectionResult> _results = [];
+  bool _isLoadingExistingResults = false;
 
   static const List<String> _detectionPhaseMessages = [
     'Detecting garments...',
@@ -80,6 +83,90 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     super.initState();
     print("[DETECTION PAGE] initState called");
     print("[DETECTION PAGE] imageUrl: ${widget.imageUrl}");
+    print("[DETECTION PAGE] searchId: ${widget.searchId}");
+
+    // If searchId is provided, load existing results from Supabase
+    if (widget.searchId != null) {
+      setState(() {
+        _isLoadingExistingResults = true;
+      });
+      _loadExistingResults(widget.searchId!);
+    }
+  }
+
+  String? _loadedImageUrl;
+
+  Future<void> _loadExistingResults(String searchId) async {
+    try {
+      print("[DETECTION PAGE] Loading existing results for searchId: $searchId");
+
+      final supabaseService = SupabaseService();
+      final searchData = await supabaseService.getSearchById(searchId);
+
+      if (searchData == null) {
+        print("[DETECTION PAGE] No search data found for searchId: $searchId");
+        setState(() {
+          _isLoadingExistingResults = false;
+        });
+        return;
+      }
+
+      final searchResults = searchData['search_results'] as List<dynamic>?;
+      if (searchResults == null || searchResults.isEmpty) {
+        print("[DETECTION PAGE] No results found in search data");
+        setState(() {
+          _isLoadingExistingResults = false;
+        });
+        return;
+      }
+
+      // Parse results into DetectionResult objects
+      print("[DETECTION PAGE] Raw search results: $searchResults");
+
+      final results = <DetectionResult>[];
+      for (var i = 0; i < searchResults.length; i++) {
+        try {
+          final jsonData = Map<String, dynamic>.from(searchResults[i]);
+          print("[DETECTION PAGE] Parsing result $i: $jsonData");
+          final result = DetectionResult.fromJson(jsonData);
+          results.add(result);
+        } catch (e, stack) {
+          print("[DETECTION PAGE] Error parsing result $i: $e");
+          print("[DETECTION PAGE] Stack trace: $stack");
+          print("[DETECTION PAGE] Problematic data: ${searchResults[i]}");
+        }
+      }
+
+      if (results.isEmpty) {
+        print("[DETECTION PAGE] Failed to parse any results");
+        setState(() {
+          _isLoadingExistingResults = false;
+        });
+        return;
+      }
+
+      print("[DETECTION PAGE] Successfully loaded ${results.length} existing results");
+
+      // Get the Cloudinary URL for the analyzed image
+      final cloudinaryUrl = searchData['cloudinary_url'] as String?;
+      print("[DETECTION PAGE] Cloudinary URL: $cloudinaryUrl");
+
+      // Show results directly
+      setState(() {
+        _results = results;
+        _isResultsSheetVisible = true;
+        _loadedImageUrl = cloudinaryUrl;
+        _isLoadingExistingResults = false;
+      });
+
+      // Haptic feedback
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      print("[DETECTION PAGE] Error loading existing results: $e");
+      setState(() {
+        _isLoadingExistingResults = false;
+      });
+    }
   }
 
   @override
@@ -95,7 +182,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     final imagesState = ref.watch(selectedImagesProvider);
     final selectedImage = imagesState.currentImage;
     final detectionState = ref.watch(detectionProvider);
-    final bool hasImage = selectedImage != null || widget.imageUrl != null;
+    final bool hasImage = selectedImage != null || widget.imageUrl != null || _loadedImageUrl != null;
     final bool showShareAction = _isResultsSheetVisible && _results.isNotEmpty;
     final bool isCropActionActive = !showShareAction && _isCropMode;
     final Color actionBackgroundColor = isCropActionActive
@@ -112,13 +199,13 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     print("[DETECTION PAGE] totalImages: ${imagesState.totalImages}");
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarBrightness: Brightness.dark,
-        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: _isLoadingExistingResults ? Brightness.light : Brightness.dark,
+        statusBarIconBrightness: _isLoadingExistingResults ? Brightness.dark : Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: _isLoadingExistingResults ? Colors.white : Colors.black,
         extendBodyBehindAppBar: true,
         extendBody: true,
         appBar: AppBar(
@@ -187,17 +274,24 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                   ),
                 ],
         ),
-      body: selectedImage == null && widget.imageUrl == null
+      body: _isLoadingExistingResults
           ? const Center(
-              child: Text(
-                'No image selected',
-                style: TextStyle(color: Colors.white),
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                strokeWidth: 3,
               ),
             )
-          : Stack(
+          : selectedImage == null && widget.imageUrl == null && _loadedImageUrl == null
+              ? const Center(
+                  child: Text(
+                    'No image selected',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                )
+              : Stack(
               children: [
                 Positioned.fill(
-                  child: widget.imageUrl != null
+                  child: widget.imageUrl != null || _loadedImageUrl != null
                       ? SizedBox.expand(
                           child: Stack(
                             children: [
@@ -400,12 +494,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   }
 
   Widget _buildNetworkImage() {
-    if (widget.imageUrl == null) {
+    // Use loaded image URL from Supabase if available, otherwise fallback to widget.imageUrl
+    final imageUrl = _loadedImageUrl ?? widget.imageUrl;
+
+    if (imageUrl == null) {
       return const SizedBox.shrink();
     }
 
     return CachedNetworkImage(
-      imageUrl: widget.imageUrl!,
+      imageUrl: imageUrl,
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,

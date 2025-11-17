@@ -86,4 +86,21 @@ class ShareImportStatus {
       return null;
     }
   }
+
+  static Future<String?> getPendingSearchId() async {
+    try {
+      final result = await _channel.invokeMethod<String>('getPendingSearchId');
+      if (result != null) {
+        debugPrint('[ShareExtension] Got pending search_id: $result');
+      }
+      return result;
+    } on MissingPluginException {
+      return null;
+    } catch (error, stackTrace) {
+      debugPrint(
+        'ShareImportStatus getPendingSearchId failed: $error\n$stackTrace',
+      );
+      return null;
+    }
+  }
 }

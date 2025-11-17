@@ -166,4 +166,58 @@ class SupabaseService {
       return false;
     }
   }
+
+  Future<Map<String, dynamic>?> getSearchById(String searchId) async {
+    try {
+      print('[SupabaseService] getSearchById searchId=$searchId');
+
+      final searchResponse = await client
+          .from('user_searches')
+          .select('id, user_id, search_type, source_url, source_username, created_at, image_cache_id')
+          .eq('id', searchId)
+          .maybeSingle();
+
+      if (searchResponse == null) {
+        print('[SupabaseService] Search not found: $searchId');
+        return null;
+      }
+
+      final cacheId = searchResponse['image_cache_id'] as String?;
+      if (cacheId == null) {
+        print('[SupabaseService] No cache ID for search $searchId');
+        return null;
+      }
+
+      final cacheResponse = await client
+          .from('image_cache')
+          .select('cloudinary_url, total_results, detected_garments, search_results')
+          .eq('id', cacheId)
+          .maybeSingle();
+
+      if (cacheResponse == null) {
+        print('[SupabaseService] Cache not found for cache_id: $cacheId');
+        return null;
+      }
+
+      final result = {
+        'id': searchResponse['id'],
+        'user_id': searchResponse['user_id'],
+        'search_type': searchResponse['search_type'],
+        'source_url': searchResponse['source_url'],
+        'source_username': searchResponse['source_username'],
+        'created_at': searchResponse['created_at'],
+        'image_cache_id': cacheId,
+        'cloudinary_url': cacheResponse['cloudinary_url'],
+        'total_results': (cacheResponse['total_results'] as num?)?.toInt() ?? 0,
+        'detected_garments': cacheResponse['detected_garments'] as List<dynamic>?,
+        'search_results': cacheResponse['search_results'] as List<dynamic>?,
+      };
+
+      print('[SupabaseService] getSearchById found search with ${result['total_results']} results');
+      return result;
+    } catch (e) {
+      print('Error fetching search by ID: $e');
+      return null;
+    }
+  }
 }

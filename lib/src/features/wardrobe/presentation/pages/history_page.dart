@@ -11,6 +11,7 @@ import '../../../../shared/services/supabase_service.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show selectedIndexProvider;
 import 'package:timeago/timeago.dart' as timeago;
+import '../../../detection/presentation/pages/detection_page.dart';
 
 final historyProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
@@ -337,16 +338,27 @@ class _HistoryCard extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        // TODO: Navigate to results page with search data
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'View search details - Coming soon!',
-              style: context.snackTextStyle(
-                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+        final searchId = search['id'] as String?;
+        if (searchId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Unable to load search results',
+                style: context.snackTextStyle(
+                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                ),
               ),
+              duration: const Duration(seconds: 2),
             ),
-            duration: const Duration(seconds: 2),
+          );
+          return;
+        }
+
+        // Navigate to detection page with search results
+        HapticFeedback.mediumImpact();
+        Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute(
+            builder: (context) => DetectionPage(searchId: searchId),
           ),
         );
       },

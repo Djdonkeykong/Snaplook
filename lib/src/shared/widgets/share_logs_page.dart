@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../services/share_extension_logs_service.dart';
 
@@ -33,12 +34,32 @@ class _ShareLogsPageState extends State<ShareLogsPage> {
     await _loadLogs();
   }
 
+  Future<void> _shareLogs() async {
+    if (_logs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No logs to share')),
+      );
+      return;
+    }
+
+    final logsText = _logs.join('\n\n');
+    await Share.share(
+      logsText,
+      subject: 'Share Extension Logs',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Share Extension Logs'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: _shareLogs,
+            tooltip: 'Share logs',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadLogs,

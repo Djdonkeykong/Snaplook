@@ -191,6 +191,18 @@ import receive_sharing_intent
           response["sessionId"] = session ?? NSNull()
           response["status"] = status ?? NSNull()
           result(response)
+        case "getPendingSearchId":
+          guard let defaults = self.sharedUserDefaults() else {
+            result(nil)
+            return
+          }
+          let searchId = defaults.string(forKey: "search_id")
+          if let searchId = searchId {
+            NSLog("[ShareExtension] Found pending search_id: \(searchId)")
+            defaults.removeObject(forKey: "search_id")
+            defaults.synchronize()
+          }
+          result(searchId)
         default:
           result(FlutterMethodNotImplemented)
         }

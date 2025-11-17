@@ -3374,29 +3374,36 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
 
     private func performRedirect(to url: URL) {
-        shareLog("🚀 Redirecting to host app with URL: \(url.absoluteString)")
+        shareLog("dYs? Redirecting to host app with URL: \(url.absoluteString)")
 
         // Use extensionContext to open the URL - this is the reliable way for share extensions
         if #available(iOS 10.0, *) {
             guard let context = self.extensionContext else {
-                shareLog("❌ ERROR: extensionContext is nil!")
+                shareLog("?? ERROR: extensionContext is nil! Falling back to responder chain")
+                let fallbackSuccess = self.performRedirectFallback(to: url)
+                shareLog(fallbackSuccess ? "? Fallback responder chain open succeeded (no extensionContext)" : "? Unable to open host app - responder chain fallback failed")
                 return
             }
 
             // Just fire and forget - don't wait for completion
             // The extension needs to close quickly for the app to open
-            context.open(url, completionHandler: { success in
-                NSLog("[ShareExtension] ✅ Extension context open URL result: \(success)")
+            context.open(url, completionHandler: { [weak self] success in
+                NSLog("[ShareExtension] ? Extension context open URL result: \(success)")
+                guard let self = self, !success else { return }
+                shareLog("?? Failed to open URL via extensionContext")
+                let fallbackSuccess = self.performRedirectFallback(to: url)
+                shareLog(fallbackSuccess ? "? Fallback responder chain open succeeded" : "? Fallback responder chain open failed")
             })
-            shareLog("✅ Called extensionContext.open() for URL: \(url.absoluteString)")
+            shareLog("?? Called extensionContext.open() for URL: \(url.absoluteString)")
         } else {
             // Fallback for older iOS versions
-            shareLog("⚠️ iOS < 10.0 detected, using responder chain fallback")
-            self.performRedirectFallback(to: url)
+            shareLog("?? iOS < 10.0 detected, using responder chain fallback")
+            let fallbackSuccess = self.performRedirectFallback(to: url)
+            shareLog(fallbackSuccess ? "? Responder chain open succeeded (iOS < 10)" : "? Responder chain open failed (iOS < 10)")
         }
     }
 
-    private func performRedirectFallback(to url: URL) {
+    private func performRedirectFallback(to url: URL) -> Bool {
         shareLog("Using responder chain fallback to open URL")
         var responder: UIResponder? = self
         let selectorOpenURL = sel_registerName("openURL:")
@@ -3404,10 +3411,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
             if current.responds(to: selectorOpenURL) {
                 _ = current.perform(selectorOpenURL, with: url)
                 shareLog("Opened URL via responder chain")
-                break
+                return true
             }
             responder = current.next
         }
+        shareLog("Responder chain fallback could not find a responder to open URL")
+        return false
     }
 
     private func finishExtensionRequest() {
@@ -4084,6 +4093,33 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Remove choice UI
         hideLoadingUI()
 
+        // Check if user already analyzed via "Analyze now" - if so, just pass the search_id
+        if let searchId = currentSearchId {
+            shareLog("User already analyzed - opening app with search_id: \(searchId)")
+
+            // Save search_id to UserDefaults so Flutter can read it
+            let userDefaults = UserDefaults(suiteName: appGroupId)
+            userDefaults?.set(searchId, forKey: "search_id")
+            userDefaults?.set("pending", forKey: kProcessingStatusKey)
+            let sessionId = UUID().uuidString
+            userDefaults?.set(sessionId, forKey: kProcessingSessionKey)
+            userDefaults?.synchronize()
+            shareLog("Saved search_id to UserDefaults: \(searchId)")
+
+            // Redirect to host app without file paths
+            loadIds()
+            guard let redirectURL = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share") else {
+                shareLog("ERROR: Failed to build redirect URL")
+                dismissWithError()
+                return
+            }
+
+            enqueueRedirect(to: redirectURL, minimumDuration: 0.5) { [weak self] in
+                self?.finishExtensionRequest()
+            }
+            return
+        }
+
         // Check if this is an Instagram URL (before download) or direct image (after download)
         if let instagramUrl = pendingInstagramUrl {
             shareLog("Downloading Instagram media and saving to app")
@@ -4670,5 +4706,6 @@ extension URL {
         return "application/octet-stream"
     }
 }
+
 
 
