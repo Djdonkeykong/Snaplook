@@ -3374,44 +3374,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
 
     private func performRedirect(to url: URL) {
-        shareLog("Redirecting to host app with URL: \(url.absoluteString)")
+        shareLog("🚀 Redirecting to host app with URL: \(url.absoluteString)")
 
         // Use extensionContext to open the URL - this is the reliable way for share extensions
         if #available(iOS 10.0, *) {
             guard let context = self.extensionContext else {
                 shareLog("❌ ERROR: extensionContext is nil!")
-                DispatchQueue.main.async {
-                    let alert = UIAlertController(
-                        title: "Error",
-                        message: "Cannot open app: extension context is nil",
-                        preferredStyle: .alert
-                    )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
-                    self.present(alert, animated: true)
-                }
                 return
             }
 
-            context.open(url, completionHandler: { [weak self] success in
-                guard let self = self else { return }
-                shareLog("Extension context open URL result: \(success)")
-                if !success {
-                    shareLog("⚠️ Failed to open URL via extensionContext")
-                    DispatchQueue.main.async {
-                        let alert = UIAlertController(
-                            title: "Cannot Open App",
-                            message: "Failed to open Snaplook. URL: \(url.absoluteString)",
-                            preferredStyle: .alert
-                        )
-                        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-                            self.closeExtension()
-                        })
-                        self.present(alert, animated: true)
-                    }
-                }
+            // Just fire and forget - don't wait for completion
+            // The extension needs to close quickly for the app to open
+            context.open(url, completionHandler: { success in
+                NSLog("[ShareExtension] ✅ Extension context open URL result: \(success)")
             })
+            shareLog("✅ Called extensionContext.open() for URL: \(url.absoluteString)")
         } else {
             // Fallback for older iOS versions
+            shareLog("⚠️ iOS < 10.0 detected, using responder chain fallback")
             self.performRedirectFallback(to: url)
         }
     }
