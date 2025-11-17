@@ -4001,27 +4001,30 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        let completion: () -> Void = { [weak self] in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self?.cancelLoginRequiredTapped()
+        // Use the same reliable redirect approach as "Analyze in app"
+        shareLog("🚀 Opening app with URL: \(url.absoluteString)")
+
+        if #available(iOS 10.0, *) {
+            guard let context = extensionContext else {
+                shareLog("❌ ERROR: extensionContext is nil!")
+                cancelLoginRequiredTapped()
+                return
             }
-        }
 
-        if let context = extensionContext {
-            context.open(url, completionHandler: { [weak self] success in
-                shareLog(success ? "? Successfully opened app via extension context" : "?? extensionContext open failed")
-                if !success {
-                    let fallbackSuccess = self?.openURLViaResponderChain(url) ?? false
-                    shareLog(fallbackSuccess ? "? Fallback responder chain open succeeded" : "? Fallback responder chain open failed")
-                }
-                completion()
+            // Fire and forget - the extension will close after opening
+            context.open(url, completionHandler: { success in
+                NSLog("[ShareExtension] ✅ Open app result: \(success)")
             })
-        } else {
-            let fallbackSuccess = openURLViaResponderChain(url)
-            shareLog(fallbackSuccess ? "? Fallback responder chain open succeeded (no extensionContext)" : "? Unable to open app - no context and fallback failed")
-            completion()
-        }
+            shareLog("✅ Called extensionContext.open() for URL: \(url.absoluteString)")
 
+            // Close the extension immediately
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                self?.finishExtensionRequest()
+            }
+        } else {
+            shareLog("⚠️ iOS < 10.0 detected, cannot open URL")
+            cancelLoginRequiredTapped()
+        }
     }
 
     @objc private func cancelLoginRequiredTapped() {
