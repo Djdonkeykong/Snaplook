@@ -355,7 +355,6 @@ class _HistoryCard extends StatelessWidget {
         }
 
         // Navigate to detection page with search results
-        HapticFeedback.mediumImpact();
         Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (context) => DetectionPage(searchId: searchId),
