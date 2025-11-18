@@ -151,7 +151,23 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       final cloudinaryUrl = searchData['cloudinary_url'] as String?;
       print("[DETECTION PAGE] Cloudinary URL: $cloudinaryUrl");
 
-      // Show results directly
+      // Pre-cache the image so it displays instantly
+      if (cloudinaryUrl != null && mounted) {
+        try {
+          await precacheImage(
+            CachedNetworkImageProvider(cloudinaryUrl),
+            context,
+          );
+          print("[DETECTION PAGE] Image pre-cached successfully");
+        } catch (e) {
+          print("[DETECTION PAGE] Failed to pre-cache image: $e");
+          // Continue anyway - image will load when displayed
+        }
+      }
+
+      if (!mounted) return;
+
+      // Show results directly - image is already in memory
       setState(() {
         _results = results;
         _isResultsSheetVisible = true;
