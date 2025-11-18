@@ -376,6 +376,18 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       return;
     }
     try {
+      // Check if user tapped "Open Snaplook" from login modal in share extension
+      final prefs = await SharedPreferences.getInstance();
+      final needsSignin = prefs.getBool('needs_signin_from_share_extension') ?? false;
+      if (needsSignin) {
+        print("[SHARE EXTENSION] User needs to sign in - navigating to profile");
+        prefs.remove('needs_signin_from_share_extension');
+
+        // Navigate to profile tab (index 3)
+        ref.read(selectedIndexProvider.notifier).state = 3;
+        return;
+      }
+
       // Check if there's a pending search_id from "Analyze now" + "Analyze in app" flow
       final searchId = await ShareImportStatus.getPendingSearchId();
       if (searchId != null && searchId.isNotEmpty) {
@@ -383,7 +395,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         print("[SHARE EXTENSION] Navigating to detection page with existing results");
 
         // Navigate to detection page with this search_id to load existing results
-        // TODO: Implement navigation to detection page with search_id parameter
         _navigateToDetectionWithSearchId(searchId);
         return;
       }

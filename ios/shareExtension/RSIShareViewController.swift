@@ -3995,8 +3995,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             defaults.synchronize()
         }
 
-        guard let url = URL(string: "snaplook://auth") else {
-            shareLog("?? Failed to create app URL")
+        // Use the same URL scheme that works for "Analyze in app"
+        loadIds()
+        guard let url = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share") else {
+            shareLog("ERROR: Failed to create app URL")
             cancelLoginRequiredTapped()
             return
         }
