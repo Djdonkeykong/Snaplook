@@ -3374,24 +3374,25 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
 
     private func performRedirect(to url: URL) {
-        shareLog("🚀 Redirecting to host app with URL: \(url.absoluteString)")
-
-        // Use extensionContext to open the URL - this is the reliable way for share extensions
-        if #available(iOS 10.0, *) {
-            guard let context = self.extensionContext else {
-                shareLog("❌ ERROR: extensionContext is nil!")
-                return
+        shareLog("Redirecting to host app with URL: \(url.absoluteString)")
+        var responder: UIResponder? = self
+        if #available(iOS 18.0, *) {
+            while let current = responder {
+                if let application = current as? UIApplication {
+                    application.open(url, options: [:], completionHandler: nil)
+                    break
+                }
+                responder = current.next
             }
-
-            // Fire and forget - just log the result, don't retry
-            // The extension needs to close immediately for the app to open
-            context.open(url, completionHandler: { success in
-                NSLog("[ShareExtension] ✅ Extension context open URL result: \(success)")
-            })
-            shareLog("✅ Called extensionContext.open() for URL: \(url.absoluteString)")
         } else {
-            // Fallback for older iOS versions - shouldn't happen on modern devices
-            shareLog("⚠️ iOS < 10.0 detected, cannot open URL")
+            let selectorOpenURL = sel_registerName("openURL:")
+            while let current = responder {
+                if current.responds(to: selectorOpenURL) {
+                    _ = current.perform(selectorOpenURL, with: url)
+                    break
+                }
+                responder = current.next
+            }
         }
     }
 
@@ -4003,29 +4004,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        // Use the same reliable redirect approach as "Analyze in app"
-        shareLog("🚀 Opening app with URL: \(url.absoluteString)")
+        // Use responder chain to open the app (same as working Analyze in app flow)
+        shareLog("Opening app with URL: \(url.absoluteString)")
 
-        if #available(iOS 10.0, *) {
-            guard let context = extensionContext else {
-                shareLog("❌ ERROR: extensionContext is nil!")
-                cancelLoginRequiredTapped()
-                return
-            }
-
-            // Fire and forget - the extension will close after opening
-            context.open(url, completionHandler: { success in
-                NSLog("[ShareExtension] ✅ Open app result: \(success)")
-            })
-            shareLog("✅ Called extensionContext.open() for URL: \(url.absoluteString)")
-
-            // Close the extension immediately
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                self?.finishExtensionRequest()
+        var responder: UIResponder? = self
+        if #available(iOS 18.0, *) {
+            while let current = responder {
+                if let application = current as? UIApplication {
+                    application.open(url, options: [:], completionHandler: nil)
+                    break
+                }
+                responder = current.next
             }
         } else {
-            shareLog("⚠️ iOS < 10.0 detected, cannot open URL")
-            cancelLoginRequiredTapped()
+            let selectorOpenURL = sel_registerName("openURL:")
+            while let current = responder {
+                if current.responds(to: selectorOpenURL) {
+                    _ = current.perform(selectorOpenURL, with: url)
+                    break
+                }
+                responder = current.next
+            }
+        }
+
+        // Close the extension after opening app
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.finishExtensionRequest()
         }
     }
 
