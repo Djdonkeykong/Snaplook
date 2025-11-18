@@ -158,9 +158,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         _loadedImageUrl = cloudinaryUrl;
         _isLoadingExistingResults = false;
       });
-
-      // Haptic feedback
-      HapticFeedback.mediumImpact();
     } catch (e) {
       print("[DETECTION PAGE] Error loading existing results: $e");
       setState(() {
