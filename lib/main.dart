@@ -26,6 +26,7 @@ import 'src/shared/services/share_import_status.dart';
 import 'src/services/link_scraper_service.dart';
 import 'src/services/share_extension_config_service.dart';
 import 'src/features/auth/domain/services/auth_service.dart';
+import 'src/features/auth/presentation/pages/login_page.dart';
 import 'src/features/favorites/domain/providers/favorites_provider.dart';
 import 'src/services/revenue_cat_service.dart';
 import 'dart:io';
@@ -380,11 +381,11 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       final prefs = await SharedPreferences.getInstance();
       final needsSignin = prefs.getBool('needs_signin_from_share_extension') ?? false;
       if (needsSignin) {
-        print("[SHARE EXTENSION] User needs to sign in - navigating to profile");
+        print("[SHARE EXTENSION] User needs to sign in - navigating to login page");
         prefs.remove('needs_signin_from_share_extension');
 
-        // Navigate to profile tab (index 3)
-        ref.read(selectedIndexProvider.notifier).state = 3;
+        // Navigate to login page
+        _navigateToLoginPage();
         return;
       }
 
@@ -445,6 +446,38 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           .then((_) {
         _isNavigatingToDetection = false;
         print("[SHARE EXTENSION] Detection page dismissed");
+      });
+    }
+
+    pushRoute();
+  }
+
+  void _navigateToLoginPage() {
+    if (_isNavigatingToDetection) {
+      print("[SHARE EXTENSION] Navigation already in progress");
+      return;
+    }
+    _isNavigatingToDetection = true;
+
+    void pushRoute() {
+      final navigator = navigatorKey.currentState;
+      if (navigator == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => pushRoute());
+        return;
+      }
+
+      print("[SHARE EXTENSION] Navigating to login page");
+
+      // Navigate to login page with root navigator
+      Navigator.of(navigator.context, rootNavigator: true)
+          .push(
+            MaterialPageRoute(
+              builder: (context) => const LoginPage(),
+            ),
+          )
+          .then((_) {
+        _isNavigatingToDetection = false;
+        print("[SHARE EXTENSION] Login page dismissed");
       });
     }
 
