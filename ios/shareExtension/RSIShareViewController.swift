@@ -2475,6 +2475,39 @@ open class RSIShareViewController: SLComposeServiceViewController {
         openSnaplookApp()
     }
 
+    private func openSnaplookApp() {
+        // Provide light feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+
+        loadIds()
+        guard let url = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share") else {
+            shareLog("ERROR: Failed to create app URL for openSnaplookApp")
+            return
+        }
+
+        shareLog("Attempting to open Snaplook app with URL: \(url.absoluteString)")
+
+        var responder: UIResponder? = self
+        if #available(iOS 18.0, *) {
+            while let current = responder {
+                if let application = current as? UIApplication {
+                    application.open(url, options: [:], completionHandler: nil)
+                    break
+                }
+                responder = current.next
+            }
+        } else {
+            while responder != nil {
+                if responder!.responds(to: #selector(UIApplication.openURL(_:))) {
+                    responder!.perform(#selector(UIApplication.openURL(_:)), with: url)
+                    break
+                }
+                responder = responder!.next
+            }
+        }
+    }
+
     // Show detection results in table view
     private func showDetectionResults() {
         shareLog("=== showDetectionResults START ===")
