@@ -134,7 +134,7 @@ class PaywallPage extends ConsumerWidget {
                               icon: Icons.bookmark_added,
                               title: 'Save favorite finds',
                               subtitle:
-                                  'Bookmark the products you love so you can jump back in when it's time to buy.',
+                                  'Bookmark the products you love so you can jump back in when it\'s time to buy.',
                             ),
                             SizedBox(height: spacing.xxl),
                             _FeatureItem(
