@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../../src/shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -16,8 +17,10 @@ class TrialIntroPage extends ConsumerStatefulWidget {
   ConsumerState<TrialIntroPage> createState() => _TrialIntroPageState();
 }
 
-class _TrialIntroPageState extends ConsumerState<TrialIntroPage> with WidgetsBindingObserver {
-  VideoPlayerController? get _controller => VideoPreloader.instance.trialVideoController;
+class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
+    with WidgetsBindingObserver {
+  VideoPlayerController? get _controller =>
+      VideoPreloader.instance.trialVideoController;
 
   @override
   void initState() {
@@ -62,26 +65,11 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage> with WidgetsBin
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ),
+        leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 5,
-          totalSteps: 8,
+          currentStep: 7,
+          totalSteps: 10,
         ),
       ),
       body: Padding(
@@ -113,7 +101,8 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage> with WidgetsBin
                 alignment: Alignment.bottomCenter,
                 child: FractionallySizedBox(
                   widthFactor: 0.92,
-                  child: _controller != null && VideoPreloader.instance.isTrialVideoInitialized
+                  child: _controller != null &&
+                          VideoPreloader.instance.isTrialVideoInitialized
                       ? Container(
                           decoration: BoxDecoration(
                             color: Colors.white,

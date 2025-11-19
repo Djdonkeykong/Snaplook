@@ -4,10 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
-import 'notification_permission_page.dart';
+import 'rating_social_proof_page.dart';
 import '../../../../../src/shared/services/video_preloader.dart';
 
 class ShareExtensionPage extends ConsumerWidget {
@@ -23,22 +24,7 @@ class ShareExtensionPage extends ConsumerWidget {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ),
+        leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 3,
@@ -79,7 +65,8 @@ class ShareExtensionPage extends ConsumerWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    color: Colors.white, // White background to replace video's black background
+                    color: Colors
+                        .white, // White background to replace video's black background
                     child: const _PreloadedVideoPlayer(),
                   ),
                 ),
@@ -127,7 +114,7 @@ class ShareExtensionPage extends ConsumerWidget {
             HapticFeedback.mediumImpact();
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => const NotificationPermissionPage(),
+                builder: (context) => const RatingSocialProofPage(),
               ),
             );
           },
@@ -172,7 +159,9 @@ class _ShareOption extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isHighlighted ? const Color(0xFFFF521B).withOpacity(0.1) : Colors.transparent,
+        color: isHighlighted
+            ? const Color(0xFFFF521B).withOpacity(0.1)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -181,14 +170,18 @@ class _ShareOption extends StatelessWidget {
           Icon(
             icon,
             size: 20,
-            color: isHighlighted ? const Color(0xFFFF521B) : AppColors.textSecondary,
+            color: isHighlighted
+                ? const Color(0xFFFF521B)
+                : AppColors.textSecondary,
           ),
           const SizedBox(height: 2),
           Text(
             label,
             style: TextStyle(
               fontSize: 10,
-              color: isHighlighted ? const Color(0xFFFF521B) : AppColors.textSecondary,
+              color: isHighlighted
+                  ? const Color(0xFFFF521B)
+                  : AppColors.textSecondary,
               fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -206,7 +199,8 @@ class _PreloadedVideoPlayer extends StatefulWidget {
 }
 
 class _PreloadedVideoPlayerState extends State<_PreloadedVideoPlayer> {
-  VideoPlayerController? get _controller => VideoPreloader.instance.shareVideoController;
+  VideoPlayerController? get _controller =>
+      VideoPreloader.instance.shareVideoController;
 
   @override
   void initState() {
@@ -238,11 +232,11 @@ class _PreloadedVideoPlayerState extends State<_PreloadedVideoPlayer> {
       return Container(
         color: Colors.white,
         child: const Center(
-        child: Icon(
-          Icons.play_circle_outline,
-          size: 48,
-          color: AppColors.textSecondary,
-        ),
+          child: Icon(
+            Icons.play_circle_outline,
+            size: 48,
+            color: AppColors.textSecondary,
+          ),
         ),
       );
     }

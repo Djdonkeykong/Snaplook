@@ -12,6 +12,12 @@ class LinkScraperService {
   /// Attempts to scrape generic web pages for <img> tags and downloads the images.
   /// Returns a list of locally saved [XFile]s.
   static Future<List<XFile>> downloadImagesFromUrl(String url) async {
+    final decodedUrl = _safeDecode(url);
+    if (isGoogleImageResultUrl(url) ||
+        (decodedUrl != null && isGoogleImageResultUrl(decodedUrl))) {
+      return downloadImageFromGoogleImageResult(decodedUrl ?? url);
+    }
+
     final apiKey = AppConstants.scrapingBeeApiKey;
     if (apiKey.isEmpty) {
       print('[LINK SCRAPER] ScrapingBee API key is missing');
@@ -40,9 +46,8 @@ class LinkScraperService {
       });
 
       print('[LINK SCRAPER] Requesting ScrapingBee for $resolvedUrl');
-      final response = await http
-          .get(requestUri)
-          .timeout(const Duration(seconds: 15));
+      final response =
+          await http.get(requestUri).timeout(const Duration(seconds: 15));
 
       Map<String, dynamic>? data;
       try {
@@ -146,5 +151,58 @@ class LinkScraperService {
       print('[LINK SCRAPER] Failed to resolve redirects: $e');
     }
     return null;
+  }
+
+  static bool isGoogleImageResultUrl(String url) {
+    final lower = url.toLowerCase().trim();
+    final hasGoogleHost = lower.contains('://www.google.') ||
+        lower.contains('://google.') ||
+        lower.startsWith('www.google.') ||
+        lower.startsWith('google.');
+    if (!hasGoogleHost) return false;
+    final hasImgresPath =
+        lower.contains('/imgres') || lower.contains('/search');
+    if (!hasImgresPath) return false;
+    return lower.contains('imgurl=');
+  }
+
+  static Future<List<XFile>> downloadImageFromGoogleImageResult(
+      String url) async {
+    final rawImageUrl = _extractImgUrlFromGoogleUrl(url);
+    if (rawImageUrl == null || rawImageUrl.isEmpty) {
+      print('[LINK SCRAPER] Could not parse imgurl from Google link');
+      return [];
+    }
+
+    final cleanedUrl =
+        rawImageUrl.startsWith('http') ? rawImageUrl : 'https://$rawImageUrl';
+
+    final XFile? file =
+        await InstagramService.downloadExternalImage(cleanedUrl);
+    if (file == null) {
+      return [];
+    }
+    print('[LINK SCRAPER] Downloaded image directly from Google imgurl');
+    return [file];
+  }
+
+  static String? _extractImgUrlFromGoogleUrl(String url) {
+    final lower = url.toLowerCase();
+    final index = lower.indexOf('imgurl=');
+    if (index == -1) return null;
+
+    final raw = url.substring(index + 7);
+    final endIndex = raw.indexOf('&');
+    final candidate = endIndex == -1 ? raw : raw.substring(0, endIndex);
+    final decoded = Uri.decodeFull(candidate);
+    return decoded.trim();
+  }
+
+  static String? _safeDecode(String value) {
+    try {
+      return Uri.decodeFull(value);
+    } catch (_) {
+      return null;
+    }
   }
 }

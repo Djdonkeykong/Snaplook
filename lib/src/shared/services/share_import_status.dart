@@ -103,4 +103,21 @@ class ShareImportStatus {
       return null;
     }
   }
+
+  static Future<String?> getPendingPlatformType() async {
+    try {
+      final result = await _channel.invokeMethod<String>('getPendingPlatformType');
+      if (result != null) {
+        debugPrint('[ShareExtension] Got pending platform_type: $result');
+      }
+      return result;
+    } on MissingPluginException {
+      return null;
+    } catch (error, stackTrace) {
+      debugPrint(
+        'ShareImportStatus getPendingPlatformType failed: $error\n$stackTrace',
+      );
+      return null;
+    }
+  }
 }

@@ -51,6 +51,8 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
     XFile? image, {
     bool skipDetection = false,
     String? cloudinaryUrl,
+    String searchType = 'camera',
+    String? sourceUrl,
   }) async {
     print('DetectionProvider: Starting image analysis');
     state = state.copyWith(isAnalyzing: true, error: null);
@@ -61,6 +63,8 @@ class DetectionNotifier extends StateNotifier<DetectionState> {
         image,
         skipDetection: skipDetection,
         cloudinaryUrl: cloudinaryUrl,
+        searchType: searchType,
+        sourceUrl: sourceUrl,
       );
       print('DetectionProvider: Analysis completed, ${results.length} results');
 

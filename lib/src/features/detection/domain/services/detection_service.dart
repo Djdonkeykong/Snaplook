@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/trusted_domains.dart';
@@ -31,17 +32,21 @@ class DetectionService {
   // serp cache keyed by imageUrl + textQuery
   static final Map<String, List<Map<String, dynamic>>> _serpCache = {};
 
-  /// Main entrypoint ΓÇö prefer the backend SerpAPI pipeline, with optional legacy fallback.
+  /// Main entrypoint - prefer the backend SerpAPI pipeline, with optional legacy fallback.
   Future<List<DetectionResult>> analyzeImage(
     XFile? image, {
     bool skipDetection = false,
     String? cloudinaryUrl,
+    String searchType = 'camera',
+    String? sourceUrl,
   }) async {
     try {
       final serverResults = await _analyzeViaDetectorServer(
         image,
         skipDetection: skipDetection,
         cloudinaryUrl: cloudinaryUrl,
+        searchType: searchType,
+        sourceUrl: sourceUrl,
       );
       if (serverResults.isNotEmpty) {
         debugPrint(
@@ -66,6 +71,8 @@ class DetectionService {
     XFile? image, {
     bool skipDetection = false,
     String? cloudinaryUrl,
+    String searchType = 'camera',
+    String? sourceUrl,
   }) async {
     final endpoint = AppConstants.serpDetectAndSearchEndpoint;
 
@@ -74,10 +81,29 @@ class DetectionService {
       'max_results_per_garment': _maxResultsPerGarment,
     };
 
+    // Add user_id for saving results to Supabase
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId != null) {
+      payload['user_id'] = userId;
+      print('[SAVE] Adding user_id to request: $userId');
+    } else {
+      print('[SAVE] WARNING: No user_id - user not logged in!');
+    }
+
+    // Add search_type to identify the source of analysis
+    payload['search_type'] = searchType;
+    print('[SAVE] Search type: $searchType');
+
+    // Add source_url for cache lookup (original URL before downloading)
+    if (sourceUrl != null) {
+      payload['source_url'] = sourceUrl;
+      print('[SAVE] Source URL for cache: $sourceUrl');
+    }
+
     // Add skip_detection flag for user-cropped images
     if (skipDetection) {
       payload['skip_detection'] = true;
-      debugPrint('βœ‚οΈ User cropped image - skipping YOLO detection, direct search');
+      debugPrint('User cropped image - skipping YOLO detection, direct search');
     }
 
     // Strategy for sending image to backend:

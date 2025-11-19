@@ -17,16 +17,16 @@ class InstagramService {
 
   static const _ScrapingBeeAttempt _defaultScrapingBeeAttempt =
       _ScrapingBeeAttempt(
-        waitMilliseconds: 2000,
-        timeout: Duration(seconds: 8),
-      );
+    waitMilliseconds: 2000,
+    timeout: Duration(seconds: 8),
+  );
 
   static const _ScrapingBeeAttempt _premiumScrapingBeeAttempt =
       _ScrapingBeeAttempt(
-        waitMilliseconds: 3500,
-        timeout: Duration(seconds: 14),
-        usePremiumProxy: true,
-      );
+    waitMilliseconds: 3500,
+    timeout: Duration(seconds: 14),
+    usePremiumProxy: true,
+  );
 
   /// ScrapingBee Instagram scraper with smart image quality detection.
   /// Returns a single high-quality image to match the iOS share extension behaviour.
@@ -36,66 +36,46 @@ class InstagramService {
     print('Attempting ScrapingBee Instagram scraper for URL: $instagramUrl');
 
     final uri = Uri.parse(_scrapingBeeApiUrl);
-    final attemptConfigs = <_ScrapingBeeAttempt>[
-      _defaultScrapingBeeAttempt,
-      _premiumScrapingBeeAttempt,
-    ];
 
-    for (var i = 0; i < attemptConfigs.length; i++) {
-      final attempt = attemptConfigs[i];
-      final queryParams = {
-        'api_key': AppConstants.scrapingBeeApiKey,
-        'url': instagramUrl,
-        'render_js': 'true',
-        'wait': attempt.waitMilliseconds.toString(),
-      };
-      if (attempt.usePremiumProxy) {
-        queryParams['premium_proxy'] = 'true';
-        queryParams['country_code'] = 'us';
-      }
+    // Standard proxy only (5 credits) - no premium retry
+    final queryParams = {
+      'api_key': AppConstants.scrapingBeeApiKey,
+      'url': instagramUrl,
+      'render_js': 'true',
+      'wait': '2000',
+    };
 
-      final requestUri = uri.replace(queryParameters: queryParams);
-      print(
-        'ScrapingBee attempt ${i + 1}/${attemptConfigs.length} (wait=${attempt.waitMilliseconds}ms, premium=${attempt.usePremiumProxy})',
-      );
+    final requestUri = uri.replace(queryParameters: queryParams);
+    print('ScrapingBee Instagram request (wait=2000ms)');
 
-      http.Response response;
-      try {
-        response = await http.get(requestUri).timeout(attempt.timeout);
-      } on TimeoutException {
-        print(
-          'ScrapingBee attempt ${i + 1} timed out after ${attempt.timeout.inSeconds}s',
-        );
-        continue;
-      } catch (error) {
-        print(
-          'ScrapingBee attempt ${i + 1} request error: ${error.toString()}',
-        );
-        continue;
-      }
-
-      if (response.statusCode != 200) {
-        print(
-          'ScrapingBee attempt ${i + 1} failed with status ${response.statusCode}',
-        );
-        print('Response: ${response.body}');
-        continue;
-      }
-
-      final htmlContent = response.body;
-      print(
-        'ScrapingBee response received on attempt ${i + 1}, HTML length: ${htmlContent.length} chars',
-      );
-
-      final images = await _extractImagesFromInstagramHtml(htmlContent);
-      if (images.isNotEmpty) {
-        return images;
-      }
-
-      print('No usable images extracted on attempt ${i + 1}');
+    http.Response response;
+    try {
+      response =
+          await http.get(requestUri).timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      print('ScrapingBee Instagram request timed out');
+      return [];
+    } catch (error) {
+      print('ScrapingBee Instagram request error: ${error.toString()}');
+      return [];
     }
 
-    print('ScrapingBee attempts exhausted - trying Jina AI fallback');
+    if (response.statusCode != 200) {
+      print('ScrapingBee Instagram failed with status ${response.statusCode}');
+      print('Response: ${response.body}');
+      return [];
+    }
+
+    final htmlContent = response.body;
+    print(
+        'ScrapingBee Instagram response received, HTML length: ${htmlContent.length} chars');
+
+    final images = await _extractImagesFromInstagramHtml(htmlContent);
+    if (images.isNotEmpty) {
+      return images;
+    }
+
+    print('No usable images extracted - trying Jina AI fallback');
     final jinaImages = await _scrapeInstagramViaJina(instagramUrl);
     if (jinaImages.isNotEmpty) {
       return jinaImages;
@@ -108,198 +88,115 @@ class InstagramService {
   static Future<List<XFile>> _extractImagesFromInstagramHtml(
     String htmlContent,
   ) async {
-    final document = html_parser.parse(htmlContent);
-    final candidateUrls = <String>[];
-    final seenCandidates = <String>{};
+    final priorityResults = <String>[];
+    final results = <String>[];
+    final seenUrls = <String>{};
 
-    void enqueueCandidate(String? rawUrl, String reason) {
-      if (rawUrl == null || rawUrl.isEmpty) {
-        return;
-      }
-      final sanitized = _sanitizeInstagramUrl(rawUrl);
-      if (sanitized.isEmpty) {
-        return;
-      }
-      if (seenCandidates.add(sanitized)) {
-        candidateUrls.add(sanitized);
-        print(
-          'Queueing Instagram image candidate ($reason): ${_previewUrl(sanitized)}',
-        );
+    // Pattern 1: High-priority ig_cache_key URLs in JSON (matches iOS)
+    // These are Instagram's internal high-quality cached images
+    final cacheKeyPattern = RegExp(
+      r'"src":"(https:\\/\\/scontent[^"]+?ig_cache_key[^"]*)"',
+    );
+    for (final match in cacheKeyPattern.allMatches(htmlContent)) {
+      final url = match.group(1);
+      if (url != null) {
+        final sanitized = _sanitizeInstagramUrl(url);
+        if (sanitized.isNotEmpty && !seenUrls.contains(sanitized)) {
+          seenUrls.add(sanitized);
+          priorityResults.add(sanitized);
+          print('Found ig_cache_key URL (priority): ${_previewUrl(sanitized)}');
+        }
       }
     }
 
-    final allListItems = document.querySelectorAll('li');
-    final carouselItems = allListItems
-        .where((li) => li.attributes['style']?.contains('translateX') == true)
-        .toList();
-
-    print('Found ${carouselItems.length} carousel items with translateX');
-
-    if (carouselItems.length >= 2) {
-      print(
-        'Detected carousel post with ${carouselItems.length} potential images',
-      );
-
-      for (int i = 0; i < carouselItems.length; i++) {
-        final carouselItem = carouselItems[i];
-        final style = carouselItem.attributes['style'] ?? '';
-
-        if (style.contains('width: 1px')) {
-          print('Skipping navigation placeholder item ${i + 1}');
-          continue;
+    // Pattern 2: display_url in JSON (matches iOS)
+    final displayUrlPattern = RegExp(
+      r'"display_url"\s*:\s*"([^"]+)"',
+    );
+    for (final match in displayUrlPattern.allMatches(htmlContent)) {
+      final url = match.group(1);
+      if (url != null) {
+        final sanitized = _sanitizeInstagramUrl(url);
+        if (sanitized.isNotEmpty &&
+            !seenUrls.contains(sanitized) &&
+            !sanitized.contains('150x150') &&
+            !sanitized.contains('profile')) {
+          seenUrls.add(sanitized);
+          results.add(sanitized);
+          print('Found display_url: ${_previewUrl(sanitized)}');
         }
+      }
+    }
 
-        final img = carouselItem.querySelector('img');
-        if (img != null) {
-          final src = img.attributes['src'];
-          if (src != null &&
-              src.contains('.jpg') &&
-              !src.contains('150x150') &&
-              !src.contains('profile')) {
-            enqueueCandidate(src, 'carousel translateX item ${i + 1}');
+    // Pattern 3: img tags - check for ig_cache_key URLs (matches iOS)
+    final imgPattern = RegExp(
+      r'<img[^>]+src="([^"]+)"',
+      caseSensitive: false,
+    );
+    for (final match in imgPattern.allMatches(htmlContent)) {
+      final url = match.group(1);
+      if (url != null) {
+        final sanitized = _sanitizeInstagramUrl(url);
+        if (sanitized.isNotEmpty && !seenUrls.contains(sanitized)) {
+          if (sanitized.contains('ig_cache_key')) {
+            seenUrls.add(sanitized);
+            priorityResults.add(sanitized);
+            print(
+                'Found img ig_cache_key URL (priority): ${_previewUrl(sanitized)}');
+          } else if (!sanitized.contains('150x150') &&
+              !sanitized.contains('profile')) {
+            seenUrls.add(sanitized);
+            results.add(sanitized);
+            print('Found img src URL: ${_previewUrl(sanitized)}');
           }
         }
       }
     }
 
-    if (candidateUrls.isEmpty) {
-      print('No translateX carousel found, trying li._acaz fallback');
-      final acazItems = document.querySelectorAll('li._acaz');
-      print('Found ${acazItems.length} li._acaz items');
+    print(
+        'Instagram extraction: ${priorityResults.length} priority, ${results.length} regular URLs');
 
-      for (int i = 0; i < acazItems.length; i++) {
-        final carouselItem = acazItems[i];
-        final img = carouselItem.querySelector('img');
-
-        if (img != null) {
-          final src = img.attributes['src'];
-          if (src != null &&
-              src.contains('.jpg') &&
-              !src.contains('150x150') &&
-              !src.contains('profile')) {
-            enqueueCandidate(src, 'carousel _acaz item ${i + 1}');
-          }
-        }
-      }
-    }
-
-    if (candidateUrls.isEmpty) {
-      print('No carousel detected, looking for single image');
-
-      final imgElements = document.querySelectorAll('img');
-      print('Found ${imgElements.length} img tags');
-
-      String? bestImageUrl;
-      int bestQualityScore = 0;
-
-      for (final img in imgElements) {
-        final src = img.attributes['src'];
-        if (src != null) {
-          var qualityScore = 0;
-
-          if (src.contains('?')) qualityScore += 5;
-
-          if (src.contains('1440x') || src.contains('1080x'))
-            qualityScore += 100;
-          if (src.contains('800x') || src.contains('640x')) qualityScore += 50;
-          if (src.contains('150x150')) qualityScore -= 100;
-
-          if (src.contains('instagram.') || src.contains('fbcdn.net'))
-            qualityScore += 20;
-
-          if (src.length > 200) qualityScore += 10;
-
-          if (src.contains('profile')) qualityScore -= 50;
-
-          print(
-            'ScrapingBee img quality score: $qualityScore for ${src.substring(0, 80)}...',
-          );
-
-          if (qualityScore > bestQualityScore) {
-            bestQualityScore = qualityScore;
-            bestImageUrl = src;
-          }
-        }
-      }
-
-      if (bestImageUrl != null) {
+    // Try priority URLs first (ig_cache_key)
+    if (priorityResults.isNotEmpty) {
+      for (int i = 0; i < priorityResults.length; i++) {
+        final imageUrl = priorityResults[i];
         print(
-          'ScrapingBee found single high-quality img (score $bestQualityScore)',
-        );
-        enqueueCandidate(
-          bestImageUrl,
-          'single image (score $bestQualityScore)',
-        );
-      }
-    }
-
-    if (candidateUrls.isNotEmpty) {
-      for (int i = 0; i < candidateUrls.length; i++) {
-        final imageUrl = candidateUrls[i];
-        print(
-          'Downloading Instagram candidate ${i + 1}/${candidateUrls.length}: ${_previewUrl(imageUrl)}',
-        );
-
+            'Downloading priority candidate ${i + 1}/${priorityResults.length}: ${_previewUrl(imageUrl)}');
         final downloadedImage = await _downloadImage(imageUrl);
         if (downloadedImage != null) {
-          print(
-            'ScrapingBee selected candidate ${i + 1}/${candidateUrls.length}',
-          );
           return [downloadedImage];
         }
-
-        print(
-          'Candidate ${i + 1}/${candidateUrls.length} failed - trying next',
-        );
       }
     }
 
-    final scriptElements = document.querySelectorAll('script');
-    for (final script in scriptElements) {
-      final scriptContent = script.text;
-
-      if (scriptContent.contains('"display_url"')) {
-        final displayUrlMatch = RegExp(
-          r'"display_url":"([^"]+)"',
-        ).firstMatch(scriptContent);
-        if (displayUrlMatch != null) {
-          var imageUrl = displayUrlMatch.group(1);
-          if (imageUrl != null) {
-            imageUrl = _sanitizeInstagramUrl(imageUrl.replaceAll(r'&', '&'));
-            if (imageUrl.isEmpty) {
-              continue;
-            }
-            if (!seenCandidates.add(imageUrl)) {
-              continue;
-            }
-            print(
-              'ScrapingBee found display_url in script (fallback): ${_previewUrl(imageUrl)}',
-            );
-            final fallbackImage = await _downloadImage(imageUrl);
-            if (fallbackImage != null) {
-              return [fallbackImage];
-            }
-          }
+    // Try regular results
+    if (results.isNotEmpty) {
+      for (int i = 0; i < results.length; i++) {
+        final imageUrl = results[i];
+        print(
+            'Downloading candidate ${i + 1}/${results.length}: ${_previewUrl(imageUrl)}');
+        final downloadedImage = await _downloadImage(imageUrl);
+        if (downloadedImage != null) {
+          return [downloadedImage];
         }
       }
     }
 
-    final ogImageElement = document.querySelector('meta[property="og:image"]');
-    if (ogImageElement != null) {
-      final imageUrl = ogImageElement.attributes['content'];
-      if (imageUrl != null) {
-        final sanitized = _sanitizeInstagramUrl(imageUrl);
-        if (sanitized.isEmpty) {
-          print('ScrapingBee og:image content was empty after sanitizing');
-        } else if (!seenCandidates.add(sanitized)) {
-          print('ScrapingBee og:image matched previously attempted URL');
-        } else {
-          print(
-            'ScrapingBee found og:image (last resort): ${_previewUrl(sanitized)}',
-          );
-          final lastResortImage = await _downloadImage(sanitized);
-          if (lastResortImage != null) {
-            return [lastResortImage];
+    // Pattern 4: og:image meta tag (fallback, matches iOS)
+    final ogImagePattern = RegExp(
+      r'<meta property="og:image" content="([^"]+)"',
+      caseSensitive: false,
+    );
+    final ogMatch = ogImagePattern.firstMatch(htmlContent);
+    if (ogMatch != null) {
+      final url = ogMatch.group(1);
+      if (url != null) {
+        final sanitized = _sanitizeInstagramUrl(url);
+        if (sanitized.isNotEmpty && !seenUrls.contains(sanitized)) {
+          print('Found og:image (fallback): ${_previewUrl(sanitized)}');
+          final fallbackImage = await _downloadImage(sanitized);
+          if (fallbackImage != null) {
+            return [fallbackImage];
           }
         }
       }
@@ -313,9 +210,9 @@ class InstagramService {
   ) async {
     try {
       final proxyUri = Uri.parse('$_jinaProxyBase$instagramUrl');
-      final response = await http
-          .get(proxyUri, headers: {'User-Agent': _userAgent})
-          .timeout(const Duration(seconds: 10));
+      final response = await http.get(proxyUri, headers: {
+        'User-Agent': _userAgent
+      }).timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         print('Jina fallback failed with status ${response.statusCode}');
@@ -358,6 +255,14 @@ class InstagramService {
     return _normalizeInstagramCdnUrl(sanitized);
   }
 
+  static String _sanitizeTikTokUrl(String value) {
+    return value
+        .replaceAll('\\u0026', '&')
+        .replaceAll('\\/', '/')
+        .replaceAll('&amp;', '&')
+        .trim();
+  }
+
   static String _normalizeInstagramCdnUrl(String url) {
     var normalized = url;
     normalized = normalized.replaceAll('c288.0.864.864a_', '');
@@ -374,15 +279,20 @@ class InstagramService {
     try {
       print('Downloading image from: $imageUrl');
 
-      final imageResponse = await http
-          .get(
-            Uri.parse(imageUrl),
-            headers: {
-              'User-Agent': _userAgent,
-              'Referer': 'https://www.instagram.com/',
-            },
-          )
-          .timeout(const Duration(seconds: 10)); // Timeout for image download
+      final uri = Uri.tryParse(imageUrl);
+      final host = uri?.host.toLowerCase() ?? '';
+      String refererHeader = 'https://www.instagram.com/';
+      if (!host.contains('insta')) {
+        refererHeader = uri != null ? '${uri.scheme}://${uri.host}/' : '';
+      }
+
+      final imageResponse = await http.get(
+        Uri.parse(imageUrl),
+        headers: {
+          'User-Agent': _userAgent,
+          if (refererHeader.isNotEmpty) 'Referer': refererHeader,
+        },
+      ).timeout(const Duration(seconds: 10)); // Timeout for image download
 
       if (imageResponse.statusCode != 200) {
         print('Failed to download image: ${imageResponse.statusCode}');
@@ -445,6 +355,581 @@ class InstagramService {
   static bool isInstagramUrl(String url) {
     return url.contains('instagram.com/p/') ||
         url.contains('instagram.com/reel/');
+  }
+
+  /// Checks if a URL is a TikTok video URL
+  static bool isTikTokUrl(String url) {
+    final lowercased = url.toLowerCase();
+    return lowercased.contains('tiktok.com/') &&
+        (lowercased.contains('/video/') ||
+            lowercased.contains('/@') ||
+            lowercased.contains('/t/'));
+  }
+
+  /// Checks if a URL is a Pinterest pin URL
+  static bool isPinterestUrl(String url) {
+    final lowercased = url.toLowerCase();
+    return lowercased.contains('pinterest.com/pin/') ||
+        lowercased.contains('pin.it/');
+  }
+
+  /// Checks if a URL is a YouTube Shorts/Video URL
+  static bool isYouTubeUrl(String url) {
+    final lowercased = url.toLowerCase();
+    if (!lowercased.contains('youtube.com') &&
+        !lowercased.contains('youtu.be')) {
+      return false;
+    }
+
+    return lowercased.contains('/shorts/') ||
+        lowercased.contains('watch?v=') ||
+        lowercased.contains('youtu.be/') ||
+        lowercased.contains('/embed/');
+  }
+
+  /// Downloads image from TikTok video URL using ScrapingBee
+  /// Uses priority-based extraction to get the video thumbnail
+  static Future<List<XFile>> downloadImageFromTikTokUrl(
+    String tiktokUrl,
+  ) async {
+    try {
+      print('Fetching TikTok post using ScrapingBee API: $tiktokUrl');
+
+      final apiKey = AppConstants.scrapingBeeApiKey;
+      if (apiKey.isEmpty ||
+          apiKey.startsWith('your_') ||
+          apiKey.contains('***')) {
+        print('ScrapingBee API key not configured');
+        return [];
+      }
+
+      final result = await _scrapingBeeTikTokScraper(tiktokUrl);
+      if (result.isNotEmpty) {
+        print(
+          'Successfully extracted ${result.length} image(s) from TikTok using ScrapingBee!',
+        );
+        return result;
+      }
+
+      print('ScrapingBee failed to extract TikTok images');
+      return [];
+    } catch (e) {
+      print('Error downloading TikTok images: $e');
+      return [];
+    }
+  }
+
+  /// ScrapingBee TikTok scraper with priority-based image extraction
+  static Future<List<XFile>> _scrapingBeeTikTokScraper(
+    String tiktokUrl,
+  ) async {
+    print('Attempting ScrapingBee TikTok scraper for URL: $tiktokUrl');
+
+    final uri = Uri.parse(_scrapingBeeApiUrl);
+
+    // Standard proxy with optimized wait for TikTok
+    final queryParams = {
+      'api_key': AppConstants.scrapingBeeApiKey,
+      'url': tiktokUrl,
+      'render_js': 'true',
+      'wait': '3000',
+    };
+
+    final requestUri = uri.replace(queryParameters: queryParams);
+    print('ScrapingBee TikTok request (wait=3000ms)');
+
+    http.Response response;
+    try {
+      response =
+          await http.get(requestUri).timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      print('ScrapingBee TikTok request timed out');
+      return [];
+    } catch (error) {
+      print('ScrapingBee TikTok request error: ${error.toString()}');
+      return [];
+    }
+
+    if (response.statusCode != 200) {
+      print('ScrapingBee TikTok failed with status ${response.statusCode}');
+      print('Response: ${response.body}');
+      return [];
+    }
+
+    final htmlContent = response.body;
+    print(
+        'ScrapingBee TikTok response received, HTML length: ${htmlContent.length} chars');
+
+    final images = await _extractImagesFromTikTokHtml(htmlContent);
+    if (images.isNotEmpty) {
+      return images;
+    }
+
+    print('No usable TikTok images extracted');
+    return [];
+  }
+
+  /// Extract images from TikTok HTML with priority-based selection
+  /// Matches iOS share extension patterns that work successfully
+  static Future<List<XFile>> _extractImagesFromTikTokHtml(
+    String htmlContent,
+  ) async {
+    final priorityResults = <String>[];
+    final fallbackResults = <String>[];
+    final seenUrls = <String>{};
+
+    // Pattern 1: High-quality tplv-tiktokx-origin.image with src attribute (highest priority)
+    // Matches iOS pattern: src="(https://[^"]*tiktokcdn[^"]*tplv-tiktokx-origin\.image[^"]*)"
+    final originPattern = RegExp(
+      r'src="(https://[^"]*tiktokcdn[^"]*tplv-tiktokx-origin\.image[^"]*)"',
+    );
+    final originMatches = originPattern.allMatches(htmlContent).toList();
+    print(
+        'Pattern 1 (src + tplv-tiktokx-origin): ${originMatches.length} matches');
+    for (final match in originMatches) {
+      var url = match.group(1);
+      if (url != null) {
+        // Sanitize HTML entities in URL
+        url = _sanitizeTikTokUrl(url);
+        if (!seenUrls.contains(url)) {
+          // Filter out avatars and small images
+          if (!url.contains('avt-') &&
+              !url.contains('100x100') &&
+              !url.contains('cropcenter') &&
+              !url.contains('music')) {
+            seenUrls.add(url);
+            priorityResults.add(url);
+            print('Found priority TikTok image: ${_previewUrl(url)}');
+          }
+        }
+      }
+    }
+
+    // If we found high-quality images, use them
+    if (priorityResults.isNotEmpty) {
+      for (final imageUrl in priorityResults.take(1)) {
+        final downloadedImage = await _downloadImage(imageUrl);
+        if (downloadedImage != null) {
+          return [downloadedImage];
+        }
+      }
+    }
+
+    // Pattern 2: poster attribute with tiktokcdn URL
+    // Matches iOS pattern: poster="(https://[^"]*tiktokcdn[^"]*)"
+    final posterPattern = RegExp(
+      r'poster="(https://[^"]*tiktokcdn[^"]*)"',
+    );
+    final posterMatches = posterPattern.allMatches(htmlContent).toList();
+    print('Pattern 2 (poster + tiktokcdn): ${posterMatches.length} matches');
+    for (final match in posterMatches) {
+      var url = match.group(1);
+      if (url != null) {
+        url = _sanitizeTikTokUrl(url);
+        if (!seenUrls.contains(url)) {
+          if (!url.contains('avt-') &&
+              !url.contains('100x100') &&
+              !url.contains('cropcenter') &&
+              !url.contains('music')) {
+            seenUrls.add(url);
+            // Poster images are high priority (video thumbnails)
+            priorityResults.add(url);
+            print('Found poster TikTok image: ${_previewUrl(url)}');
+          }
+        }
+      }
+    }
+
+    // Try poster images if we have them
+    if (priorityResults.isNotEmpty) {
+      for (final imageUrl in priorityResults) {
+        final downloadedImage = await _downloadImage(imageUrl);
+        if (downloadedImage != null) {
+          return [downloadedImage];
+        }
+      }
+    }
+
+    // Pattern 3: img tag with src containing tiktokcdn
+    // Matches iOS pattern: <img[^>]+src="(https://[^"]*tiktokcdn[^"]+)"
+    final imgPattern = RegExp(
+      r'<img[^>]+src="(https://[^"]*tiktokcdn[^"]+)"',
+    );
+    final imgMatches = imgPattern.allMatches(htmlContent).toList();
+    print('Pattern 3 (img src + tiktokcdn): ${imgMatches.length} matches');
+    for (final match in imgMatches) {
+      var url = match.group(1);
+      if (url != null) {
+        url = _sanitizeTikTokUrl(url);
+        if (!seenUrls.contains(url)) {
+          if (!url.contains('avt-') &&
+              !url.contains('100x100') &&
+              !url.contains('cropcenter') &&
+              !url.contains('music')) {
+            seenUrls.add(url);
+            fallbackResults.add(url);
+            print('Found img src TikTok image: ${_previewUrl(url)}');
+          }
+        }
+      }
+    }
+
+    // Check if tiktokcdn exists at all in the HTML
+    if (htmlContent.contains('tiktokcdn')) {
+      print('HTML contains "tiktokcdn" - checking for patterns');
+      // Debug: show sample of how tiktokcdn appears in the HTML
+      final contextPattern = RegExp(r'.{0,30}tiktokcdn.{0,50}');
+      final contextMatches =
+          contextPattern.allMatches(htmlContent).take(3).toList();
+      for (final match in contextMatches) {
+        print('  Context: ${match.group(0)}');
+      }
+    } else {
+      print('HTML does NOT contain "tiktokcdn"');
+    }
+
+    // Pattern 4: og:image meta tag - try both attribute orders
+    print('Checking for og:image in HTML...');
+    if (htmlContent.contains('og:image')) {
+      print('HTML contains "og:image"');
+    } else {
+      print('HTML does NOT contain "og:image"');
+    }
+    final ogImagePatterns = [
+      RegExp(r'property="og:image"\s*content="([^"]+)"'),
+      RegExp(r'content="([^"]+)"\s*property="og:image"'),
+      RegExp(r"property='og:image'\s*content='([^']+)'"),
+      RegExp(r"content='([^']+)'\s*property='og:image'"),
+    ];
+    for (final pattern in ogImagePatterns) {
+      final ogMatch = pattern.firstMatch(htmlContent);
+      if (ogMatch != null) {
+        final url = ogMatch.group(1);
+        if (url != null && !seenUrls.contains(url)) {
+          seenUrls.add(url);
+          fallbackResults.add(url);
+          print('Found og:image TikTok image: ${_previewUrl(url)}');
+          break;
+        }
+      }
+    }
+
+    // Pattern 5: JSON-LD thumbnailUrl (TikTok often uses this)
+    print('Checking for thumbnailUrl in HTML...');
+    if (htmlContent.contains('thumbnailUrl')) {
+      print('HTML contains "thumbnailUrl"');
+    } else {
+      print('HTML does NOT contain "thumbnailUrl"');
+    }
+    final thumbnailPattern = RegExp(
+      r'"thumbnailUrl"\s*:\s*\[\s*"([^"]+)"',
+    );
+    final thumbMatch = thumbnailPattern.firstMatch(htmlContent);
+    if (thumbMatch != null) {
+      final url = thumbMatch.group(1);
+      if (url != null && !seenUrls.contains(url)) {
+        seenUrls.add(url);
+        fallbackResults.add(url);
+        print('Found JSON-LD thumbnail TikTok image: ${_previewUrl(url)}');
+      }
+    }
+
+    // Pattern 6: contentUrl from JSON-LD
+    final contentUrlPattern = RegExp(
+      r'"contentUrl"\s*:\s*"([^"]+)"',
+    );
+    final contentMatch = contentUrlPattern.firstMatch(htmlContent);
+    if (contentMatch != null) {
+      final url = contentMatch.group(1);
+      if (url != null && !seenUrls.contains(url) && url.contains('tiktokcdn')) {
+        seenUrls.add(url);
+        fallbackResults.add(url);
+        print('Found JSON-LD contentUrl TikTok image: ${_previewUrl(url)}');
+      }
+    }
+
+    print(
+        'TikTok extraction results: ${priorityResults.length} priority, ${fallbackResults.length} fallback');
+
+    // Try fallback images
+    for (final imageUrl in fallbackResults.take(5)) {
+      final downloadedImage = await _downloadImage(imageUrl);
+      if (downloadedImage != null) {
+        return [downloadedImage];
+      }
+    }
+
+    return [];
+  }
+
+  /// Downloads image from Pinterest pin URL using ScrapingBee
+  static Future<List<XFile>> downloadImageFromPinterestUrl(
+    String pinterestUrl,
+  ) async {
+    try {
+      print('Fetching Pinterest pin using ScrapingBee API: $pinterestUrl');
+
+      final apiKey = AppConstants.scrapingBeeApiKey;
+      if (apiKey.isEmpty ||
+          apiKey.startsWith('your_') ||
+          apiKey.contains('***')) {
+        print('ScrapingBee API key not configured');
+        return [];
+      }
+
+      final result = await _scrapingBeePinterestScraper(pinterestUrl);
+      if (result.isNotEmpty) {
+        print(
+          'Successfully extracted ${result.length} image(s) from Pinterest using ScrapingBee!',
+        );
+        return result;
+      }
+
+      print('ScrapingBee failed to extract Pinterest images');
+      return [];
+    } catch (e) {
+      print('Error downloading Pinterest images: $e');
+      return [];
+    }
+  }
+
+  /// ScrapingBee Pinterest scraper
+  static Future<List<XFile>> _scrapingBeePinterestScraper(
+    String pinterestUrl,
+  ) async {
+    print('Attempting ScrapingBee Pinterest scraper for URL: $pinterestUrl');
+
+    final uri = Uri.parse(_scrapingBeeApiUrl);
+
+    // Standard proxy with wait for Pinterest
+    final queryParams = {
+      'api_key': AppConstants.scrapingBeeApiKey,
+      'url': pinterestUrl,
+      'render_js': 'true',
+      'wait': '2000',
+    };
+
+    final requestUri = uri.replace(queryParameters: queryParams);
+    print('ScrapingBee Pinterest request (wait=2000ms)');
+
+    http.Response response;
+    try {
+      response =
+          await http.get(requestUri).timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      print('ScrapingBee Pinterest request timed out');
+      return [];
+    } catch (error) {
+      print('ScrapingBee Pinterest request error: ${error.toString()}');
+      return [];
+    }
+
+    if (response.statusCode != 200) {
+      print('ScrapingBee Pinterest failed with status ${response.statusCode}');
+      print('Response: ${response.body}');
+      return [];
+    }
+
+    final htmlContent = response.body;
+    print(
+        'ScrapingBee Pinterest response received, HTML length: ${htmlContent.length} chars');
+
+    final images = await _extractImagesFromPinterestHtml(htmlContent);
+    if (images.isNotEmpty) {
+      return images;
+    }
+
+    print('No usable Pinterest images extracted');
+    return [];
+  }
+
+  /// Extract images from Pinterest HTML
+  static Future<List<XFile>> _extractImagesFromPinterestHtml(
+    String htmlContent,
+  ) async {
+    final results = <String>[];
+    final seenUrls = <String>{};
+
+    // Pattern 1: High-resolution pinimg URLs (originals folder has highest quality)
+    final originalsPattern = RegExp(
+      r'src="(https://i\.pinimg\.com/originals/[^"]+)"',
+    );
+    for (final match in originalsPattern.allMatches(htmlContent)) {
+      final url = match.group(1);
+      if (url != null && !seenUrls.contains(url)) {
+        seenUrls.add(url);
+        results.add(url);
+        print('Found Pinterest originals image: ${_previewUrl(url)}');
+      }
+    }
+
+    // Pattern 2: 736x resolution (good quality, commonly used)
+    final hdPattern = RegExp(
+      r'src="(https://i\.pinimg\.com/736x/[^"]+)"',
+    );
+    for (final match in hdPattern.allMatches(htmlContent)) {
+      final url = match.group(1);
+      if (url != null && !seenUrls.contains(url)) {
+        seenUrls.add(url);
+        results.add(url);
+        print('Found Pinterest 736x image: ${_previewUrl(url)}');
+      }
+    }
+
+    // Pattern 3: 564x resolution (medium quality fallback)
+    final medPattern = RegExp(
+      r'src="(https://i\.pinimg\.com/564x/[^"]+)"',
+    );
+    for (final match in medPattern.allMatches(htmlContent)) {
+      final url = match.group(1);
+      if (url != null && !seenUrls.contains(url)) {
+        seenUrls.add(url);
+        results.add(url);
+        print('Found Pinterest 564x image: ${_previewUrl(url)}');
+      }
+    }
+
+    // Pattern 4: Any pinimg URL as fallback
+    final anyPinimgPattern = RegExp(
+      r'src="(https://i\.pinimg\.com/[^"]+\.(?:jpg|jpeg|png|webp))"',
+    );
+    for (final match in anyPinimgPattern.allMatches(htmlContent)) {
+      final url = match.group(1);
+      if (url != null && !seenUrls.contains(url)) {
+        seenUrls.add(url);
+        results.add(url);
+        print('Found Pinterest pinimg image: ${_previewUrl(url)}');
+      }
+    }
+
+    // Pattern 5: og:image meta tag
+    final ogImagePattern = RegExp(
+      r'<meta[^>]+property="og:image"[^>]+content="([^"]+)"',
+      caseSensitive: false,
+    );
+    final ogMatch = ogImagePattern.firstMatch(htmlContent);
+    if (ogMatch != null) {
+      final url = ogMatch.group(1);
+      if (url != null && !seenUrls.contains(url)) {
+        seenUrls.add(url);
+        results.add(url);
+        print('Found Pinterest og:image: ${_previewUrl(url)}');
+      }
+    }
+
+    print('Pinterest extraction results: ${results.length} images found');
+
+    // Try to download images in order of quality
+    for (final imageUrl in results.take(5)) {
+      final downloadedImage = await _downloadImage(imageUrl);
+      if (downloadedImage != null) {
+        return [downloadedImage];
+      }
+    }
+
+    return [];
+  }
+
+  /// Downloads image from a YouTube video/short by fetching thumbnails directly
+  static Future<List<XFile>> downloadImageFromYouTubeUrl(
+    String youtubeUrl,
+  ) async {
+    final videoId = _extractYouTubeVideoId(youtubeUrl);
+    if (videoId == null || videoId.isEmpty) {
+      print('Unable to extract YouTube video ID from $youtubeUrl');
+      return [];
+    }
+
+    final thumbnailCandidates = _buildYouTubeThumbnailCandidates(videoId);
+    print(
+      'Attempting to download YouTube thumbnail for $videoId with ${thumbnailCandidates.length} candidates',
+    );
+
+    for (final candidate in thumbnailCandidates) {
+      print('Trying YouTube thumbnail candidate: ${_previewUrl(candidate)}');
+      final downloadedImage = await _downloadImage(candidate);
+      if (downloadedImage != null) {
+        print(
+            'Successfully downloaded YouTube thumbnail: ${_previewUrl(candidate)}');
+        return [downloadedImage];
+      }
+    }
+
+    print('Failed to download any YouTube thumbnail for video $videoId');
+    return [];
+  }
+
+  static List<String> _buildYouTubeThumbnailCandidates(String videoId) {
+    final jpgHosts = [
+      'https://i.ytimg.com/vi',
+      'https://img.youtube.com/vi',
+    ];
+
+    final jpgVariants = [
+      'maxresdefault.jpg',
+      'maxres1.jpg',
+      'maxres2.jpg',
+      'maxres3.jpg',
+      'sddefault.jpg',
+      'hq720.jpg',
+      'hqdefault.jpg',
+      'mqdefault.jpg',
+    ];
+
+    final candidates = <String>[];
+
+    for (final host in jpgHosts) {
+      for (final variant in jpgVariants) {
+        candidates.add('$host/$videoId/$variant');
+      }
+    }
+
+    // Live thumbnails sometimes use a dedicated suffix
+    candidates.add('https://i.ytimg.com/vi/$videoId/maxresdefault_live.jpg');
+
+    // WebP variants are added last as a final fallback
+    candidates.add('https://i.ytimg.com/vi_webp/$videoId/maxresdefault.webp');
+    candidates.add('https://i.ytimg.com/vi_webp/$videoId/hqdefault.webp');
+
+    return candidates;
+  }
+
+  static String? _extractYouTubeVideoId(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final host = uri.host.toLowerCase();
+      final segments =
+          uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
+
+      if (host.contains('youtu.be')) {
+        return segments.isNotEmpty ? segments.first : null;
+      }
+
+      if (uri.queryParameters.containsKey('v')) {
+        return uri.queryParameters['v'];
+      }
+
+      final shortsIndex = segments.indexOf('shorts');
+      if (shortsIndex != -1 && shortsIndex + 1 < segments.length) {
+        return segments[shortsIndex + 1];
+      }
+
+      final embedIndex = segments.indexOf('embed');
+      if (embedIndex != -1 && embedIndex + 1 < segments.length) {
+        return segments[embedIndex + 1];
+      }
+
+      // Direct path /live/<id> etc (ignore /watch with no query)
+      if (segments.isNotEmpty) {
+        final candidate = segments.last;
+        if (candidate.toLowerCase() != 'watch') {
+          return candidate;
+        }
+      }
+    } catch (e) {
+      print('Error parsing YouTube URL $url: $e');
+    }
+    return null;
   }
 }
 

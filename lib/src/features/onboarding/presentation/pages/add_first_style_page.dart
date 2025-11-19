@@ -5,14 +5,15 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/route_observer.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import 'trial_intro_page.dart';
 import 'instagram_tutorial_page.dart';
 import 'pinterest_tutorial_page.dart';
 import 'tiktok_tutorial_page.dart';
 import 'safari_tutorial_page.dart';
 import 'photos_tutorial_page.dart';
+import 'rating_social_proof_page.dart';
 
 class AddFirstStylePage extends ConsumerStatefulWidget {
   const AddFirstStylePage({super.key});
@@ -118,26 +119,11 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ),
+        leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 4,
-          totalSteps: 8,
+          totalSteps: 10,
         ),
       ),
       body: Padding(
@@ -196,7 +182,9 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
               HapticFeedback.mediumImpact();
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const TrialIntroPage(),
+                  builder: (context) => const RatingSocialProofPage(
+                    continueToTrialFlow: true,
+                  ),
                 ),
               );
             },
@@ -256,8 +244,8 @@ class _AppList extends ConsumerWidget {
                     scale: scaleAnimations[0],
                     child: _AppCard(
                       name: 'Instagram',
-                      iconWidget:
-                          Image.asset('assets/icons/insta.png', width: 24, height: 24, gaplessPlayback: true),
+                      iconWidget: Image.asset('assets/icons/insta.png',
+                          width: 24, height: 24, gaplessPlayback: true),
                       hasTutorial: true,
                       accentColor: const Color(0xFFE4405F),
                     ),
@@ -295,7 +283,10 @@ class _AppList extends ConsumerWidget {
                     scale: scaleAnimations[2],
                     child: _AppCard(
                       name: 'TikTok',
-                      iconWidget: SvgPicture.asset('assets/icons/4362958_tiktok_logo_social media_icon.svg', width: 24, height: 24),
+                      iconWidget: SvgPicture.asset(
+                          'assets/icons/4362958_tiktok_logo_social media_icon.svg',
+                          width: 24,
+                          height: 24),
                       hasTutorial: true,
                       accentColor: const Color(0xFF000000),
                       isTikTok: true,
@@ -314,8 +305,8 @@ class _AppList extends ConsumerWidget {
                     scale: scaleAnimations[3],
                     child: _AppCard(
                       name: 'Safari',
-                      iconWidget:
-                          Image.asset('assets/icons/safari.png', width: 24, height: 24, gaplessPlayback: true),
+                      iconWidget: Image.asset('assets/icons/safari.png',
+                          width: 24, height: 24, gaplessPlayback: true),
                       hasTutorial: true,
                       accentColor: const Color(0xFF0A84FF),
                       isSafari: true,
@@ -334,8 +325,8 @@ class _AppList extends ConsumerWidget {
                     scale: scaleAnimations[4],
                     child: _AppCard(
                       name: 'Photos',
-                      iconWidget:
-                          Image.asset('assets/icons/photos.png', width: 24, height: 24, gaplessPlayback: true),
+                      iconWidget: Image.asset('assets/icons/photos.png',
+                          width: 24, height: 24, gaplessPlayback: true),
                       hasTutorial: true,
                       accentColor: const Color(0xFFFF9500),
                       isPhotos: true,
@@ -355,8 +346,8 @@ class _AppList extends ConsumerWidget {
                     scale: scaleAnimations[5],
                     child: _AppCard(
                       name: 'Other Apps',
-                      iconWidget:
-                          Icon(Icons.apps, size: 24, color: Colors.grey.shade700),
+                      iconWidget: Icon(Icons.apps,
+                          size: 24, color: Colors.grey.shade700),
                       hasTutorial: false,
                       accentColor: Colors.grey.shade400,
                     ),

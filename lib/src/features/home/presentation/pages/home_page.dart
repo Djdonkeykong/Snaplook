@@ -28,6 +28,8 @@ import '../../../detection/domain/models/detection_result.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show scrollToTopTriggerProvider, isAtHomeRootProvider;
+import '../../../../shared/widgets/bottom_sheet_handle.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
 String? _extractProductUrl(Map<String, dynamic> product) {
   final candidates = [
@@ -136,7 +138,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       MaterialPageRoute(
         builder: (context) {
           print('[HOME PAGE] DetectionPage builder called for shared image');
-          return const DetectionPage();
+          return const DetectionPage(searchType: 'share');
         },
       ),
     ).whenComplete(() {
@@ -674,11 +676,12 @@ class _HomePageState extends ConsumerState<HomePage> {
         if (mounted) {
           print(
               "[IMAGE PICKER] Widget is mounted - navigating to DetectionPage");
+          final searchType = source == ImageSource.camera ? 'camera' : 'photos';
           Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) {
                 print("[IMAGE PICKER] DetectionPage builder called");
-                return const DetectionPage();
+                return DetectionPage(searchType: searchType);
               },
             ),
           ).then((value) {
@@ -810,12 +813,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: spacing.l,
-                      vertical: spacing.m,
+                      vertical: spacing.l,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(height: spacing.l * 2),
+                        BottomSheetHandle(
+                          margin: EdgeInsets.only(bottom: spacing.m),
+                        ),
                         const Text(
                           'Add your first style',
                           style: TextStyle(
@@ -866,17 +871,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                   Positioned(
-                    top: 12,
-                    left: 12,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                      icon: Icon(
-                        Icons.close,
-                        color: Theme.of(sheetContext).colorScheme.onSurface,
-                        size: 24,
-                      ),
-                    ),
+                    top: spacing.l,
+                    right: spacing.l,
+                child: SnaplookCircularIconButton(
+                  icon: Icons.close,
+                  iconSize: 18,
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  tooltip: 'Close',
+                  semanticLabel: 'Close',
+                ),
                   ),
                 ],
               ),
@@ -899,32 +902,27 @@ class _HomePageState extends ConsumerState<HomePage> {
     switch (source) {
       case _TutorialSource.instagram:
         ref.read(tutorialStepProvider.notifier).state = TutorialStep.tapShare;
-        destination =
-            const InstagramTutorialPage(returnToOnboarding: false);
+        destination = const InstagramTutorialPage(returnToOnboarding: false);
         break;
       case _TutorialSource.pinterest:
         ref.read(pinterestTutorialStepProvider.notifier).state =
             PinterestTutorialStep.step1;
-        destination =
-            const PinterestTutorialPage(returnToOnboarding: false);
+        destination = const PinterestTutorialPage(returnToOnboarding: false);
         break;
       case _TutorialSource.tiktok:
         ref.read(tiktokTutorialStepProvider.notifier).state =
             TikTokTutorialStep.step1;
-        destination =
-            const TikTokTutorialPage(returnToOnboarding: false);
+        destination = const TikTokTutorialPage(returnToOnboarding: false);
         break;
       case _TutorialSource.safari:
         ref.read(safariTutorialStepProvider.notifier).state =
             SafariTutorialStep.step1;
-        destination =
-            const SafariTutorialPage(returnToOnboarding: false);
+        destination = const SafariTutorialPage(returnToOnboarding: false);
         break;
       case _TutorialSource.photos:
         ref.read(photosTutorialStepProvider.notifier).state =
             PhotosTutorialStep.step1;
-        destination =
-            const PhotosTutorialPage(returnToOnboarding: false);
+        destination = const PhotosTutorialPage(returnToOnboarding: false);
         break;
       case _TutorialSource.otherApps:
         // This case should never be reached due to early return above
@@ -965,7 +963,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(height: spacing.m),
+                    BottomSheetHandle(
+                      margin: EdgeInsets.only(bottom: spacing.m),
+                    ),
 
                     // Membership label
                     Text(
@@ -1005,9 +1005,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                           style: TextStyle(
                             fontSize: 48,
                             fontWeight: FontWeight.bold,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : const Color(0xFFf2003c),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : const Color(0xFFf2003c),
                             fontFamily: 'PlusJakartaSans',
                             letterSpacing: -2,
                           ),
@@ -1017,7 +1018,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontFamily: 'PlusJakartaSans',
                           ),
                         ),
@@ -1044,7 +1046,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                       child: LinearProgressIndicator(
                         value: creditsPercentage,
                         minHeight: 6,
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
                         valueColor: AlwaysStoppedAnimation<Color>(
                             Theme.of(context).brightness == Brightness.dark
                                 ? Colors.white
@@ -1069,15 +1073,17 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
 
-              // Close button at top left
+              // Close button at top right
               Positioned(
-                top: 12,
-                left: 12,
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface, size: 24),
-                ),
+                top: spacing.l,
+                right: spacing.l,
+              child: SnaplookCircularIconButton(
+                icon: Icons.close,
+                iconSize: 18,
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Close',
+                semanticLabel: 'Close',
+              ),
               ),
             ],
           ),
@@ -1263,7 +1269,10 @@ class _StaggeredInspirationImageCardState
     // Navigate to detection page with the image URL as parameter - use root navigator
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
-        builder: (context) => DetectionPage(imageUrl: imageUrl),
+        builder: (context) => DetectionPage(
+          imageUrl: imageUrl,
+          searchType: 'home',
+        ),
       ),
     );
   }
@@ -1411,7 +1420,10 @@ class _MagazineStyleImageCard extends ConsumerWidget {
     // Navigate to detection page with the image URL as parameter - use root navigator
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
-        builder: (context) => DetectionPage(imageUrl: imageUrl),
+        builder: (context) => DetectionPage(
+          imageUrl: imageUrl,
+          searchType: 'home',
+        ),
       ),
     );
   }

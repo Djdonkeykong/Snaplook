@@ -10,6 +10,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../home/domain/services/inspiration_service.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
@@ -148,8 +149,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             },
           ),
           Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            left: 8,
+            top: MediaQuery.of(context).padding.top,
+            left: 0,
             child: SnaplookBackButton(
               onPressed: () => Navigator.of(context).pop(),
             ),
@@ -468,19 +469,12 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                             ),
                           ),
                           const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: _showOptionsMenu,
-                            child: SizedBox(
-                              width: 44,
-                              height: 48,
-                              child: Center(
-                                child: Icon(
-                                  Icons.more_horiz,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                  size: 24,
-                                ),
-                              ),
-                            ),
+                          SnaplookCircularIconButton(
+                            icon: Icons.more_horiz,
+                            iconSize: 18,
+                            onPressed: _showOptionsMenu,
+                            tooltip: 'More options',
+                            semanticLabel: 'Product options',
                           ),
                         ],
                       ),

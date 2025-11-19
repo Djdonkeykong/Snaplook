@@ -7,6 +7,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart';
 import '../../providers/credit_provider.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
 enum PaywallPlanType { monthly, yearly }
 
@@ -71,15 +72,12 @@ class PaywallPage extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(minHeight: 36, minWidth: 36),
+                    SnaplookCircularIconButton(
+                      icon: Icons.close,
+                      iconSize: 20,
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.black,
-                        size: 20,
-                      ),
+                      tooltip: 'Close',
+                      semanticLabel: 'Close',
                     ),
                     const Spacer(),
                     TextButton(
@@ -106,18 +104,18 @@ class PaywallPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    SizedBox(height: spacing.m),
+                    SizedBox(height: spacing.l),
                     Text(
                       selectedPlan == PaywallPlanType.monthly
                           ? 'Unlock everything Snaplook offers.'
                           : 'Start your 3-day FREE\ntrial to continue.',
                         style: const TextStyle(
                           fontFamily: 'PlusJakartaSans',
-                          fontSize: 34,
+                          fontSize: 38,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                           letterSpacing: -1.0,
-                          height: 1.3,
+                          height: 1.25,
                         ),
                       ),
                       SizedBox(height: spacing.xxl),
@@ -131,14 +129,14 @@ class PaywallPage extends ConsumerWidget {
                               subtitle:
                                   'Tap into a massive catalog of brands — every image you upload is analyzed to surface the closest lookalikes across thousands of retailers.',
                             ),
-                            SizedBox(height: spacing.xl),
+                            SizedBox(height: spacing.xxl),
                             const _FeatureItem(
                               icon: Icons.bookmark_added,
                               title: 'Save favorite finds',
                               subtitle:
-                                  'Bookmark the products you love so you can jump back in when it’s time to buy.',
+                                  'Bookmark the products you love so you can jump back in when it's time to buy.',
                             ),
-                            SizedBox(height: spacing.xl),
+                            SizedBox(height: spacing.xxl),
                             _FeatureItem(
                               icon: Icons.bolt,
                               title: '50 credits included',
@@ -501,7 +499,7 @@ class _FeatureItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.check, color: Color(0xFF23B6A8), size: 28),
+        const Icon(Icons.check, color: Color(0xFF23B6A8), size: 32),
         const SizedBox(width: 20),
         Expanded(
           child: Column(
@@ -511,23 +509,23 @@ class _FeatureItem extends StatelessWidget {
                 title,
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
-                  fontSize: 19,
+                  fontSize: 22,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
                   letterSpacing: -0.5,
                 ),
               ),
               if (subtitle.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   subtitle,
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 14,
+                    fontSize: 15,
                     color: Color(0xFF6C7280),
                     fontWeight: FontWeight.w500,
                     letterSpacing: -0.2,
-                    height: 1.4,
+                    height: 1.45,
                   ),
                 ),
               ],
@@ -560,7 +558,7 @@ class _TimelineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double circleDiameter = 46;
+    const double circleDiameter = 52;
     const double lineWidth = 6;
 
     final circle = Container(
@@ -577,7 +575,7 @@ class _TimelineItem extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(icon, size: 24, color: Colors.white),
+      child: Icon(icon, size: 26, color: Colors.white),
     );
 
     final fadeDecoration = BoxDecoration(
@@ -643,22 +641,22 @@ class _TimelineItem extends StatelessWidget {
                     title,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 18,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
                       letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     subtitle,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 14,
+                      fontSize: 15,
                       color: Color(0xFF6C7280),
                       fontWeight: FontWeight.w500,
                       letterSpacing: -0.2,
-                      height: 1.4,
+                      height: 1.45,
                     ),
                   ),
                 ],

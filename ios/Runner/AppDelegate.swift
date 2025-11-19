@@ -203,6 +203,18 @@ import receive_sharing_intent
             defaults.synchronize()
           }
           result(searchId)
+        case "getPendingPlatformType":
+          guard let defaults = self.sharedUserDefaults() else {
+            result(nil)
+            return
+          }
+          let platformType = defaults.string(forKey: "pending_platform_type")
+          if let platformType = platformType {
+            NSLog("[ShareExtension] Found pending platform_type: \(platformType)")
+            defaults.removeObject(forKey: "pending_platform_type")
+            defaults.synchronize()
+          }
+          result(platformType)
         default:
           result(FlutterMethodNotImplemented)
         }

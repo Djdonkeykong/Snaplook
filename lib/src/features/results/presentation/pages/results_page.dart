@@ -11,6 +11,8 @@ import '../../../home/domain/providers/image_provider.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../../../detection/presentation/providers/detection_provider.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
 class ResultsPage extends ConsumerStatefulWidget {
   final List<DetectionResult> results;
@@ -65,10 +67,7 @@ class _ResultsPageState extends ConsumerState<ResultsPage>
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
-        leading: _TopIconButton(
-          icon: Icons.arrow_back,
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leading: const SnaplookBackButton(),
         actions: [
           _TopIconButton(
             icon: Icons.share,
@@ -419,28 +418,13 @@ class _TopIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SnaplookCircularIconButton(
+      icon: icon,
+      onPressed: onPressed,
+      iconSize: 18,
+      tooltip: icon == Icons.share ? 'Share' : null,
+      semanticLabel: icon == Icons.share ? 'Share' : null,
       margin: const EdgeInsets.all(8),
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: IconButton(
-        padding: icon == Icons.share
-            ? const EdgeInsets.fromLTRB(2, 8, 4, 8)
-            : const EdgeInsets.all(8),
-        onPressed: onPressed,
-        icon: Icon(icon, color: Colors.black, size: 18),
-      ),
     );
   }
 }

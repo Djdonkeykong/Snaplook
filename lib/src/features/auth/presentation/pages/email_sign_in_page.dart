@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../domain/providers/auth_provider.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import 'email_verification_page.dart';
 
 class EmailSignInPage extends ConsumerStatefulWidget {
@@ -104,25 +105,12 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          backgroundColor: AppColors.background,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          leading: IconButton(
-            onPressed: _handleBackNavigation,
-            icon: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.arrow_back,
-                color: Colors.black,
-                size: 20,
-              ),
-            ),
-          ),
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: SnaplookBackButton(
+          onPressed: _handleBackNavigation,
+        ),
         ),
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: spacing.l),

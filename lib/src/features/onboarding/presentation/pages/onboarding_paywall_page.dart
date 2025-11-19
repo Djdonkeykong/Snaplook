@@ -5,6 +5,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -21,7 +22,8 @@ class OnboardingPaywallPage extends ConsumerStatefulWidget {
   const OnboardingPaywallPage({super.key});
 
   @override
-  ConsumerState<OnboardingPaywallPage> createState() => _OnboardingPaywallPageState();
+  ConsumerState<OnboardingPaywallPage> createState() =>
+      _OnboardingPaywallPageState();
 }
 
 class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
@@ -41,32 +43,15 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ),
+        leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 7,
-          totalSteps: 8,
+          currentStep: 9,
+          totalSteps: 10,
         ),
         actions: [
           TextButton(
-            onPressed: isPurchasing
-                ? null
-                : () => _handleRestore(context, ref),
+            onPressed: isPurchasing ? null : () => _handleRestore(context, ref),
             style: TextButton.styleFrom(
               foregroundColor: Colors.black87,
               textStyle: const TextStyle(
@@ -83,12 +68,14 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Scrollable content area
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: spacing.l),
+            // Fixed title at top
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: spacing.l),
+              child: Align(
+                alignment: Alignment.centerLeft,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(height: spacing.m),
                     Text(
@@ -105,6 +92,17 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                       ),
                     ),
                     const SizedBox(height: 34),
+                  ],
+                ),
+              ),
+            ),
+            // Scrollable content area
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: spacing.l),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     if (selectedPlan == OnboardingPaywallPlanType.monthly)
                       Column(
                         mainAxisSize: MainAxisSize.min,
@@ -115,14 +113,14 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                             subtitle:
                                 'Tap into a massive catalog of brands — every image you upload is analyzed to surface the closest lookalikes across thousands of retailers.',
                           ),
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 26),
                           const _FeatureItem(
                             icon: Icons.bookmark_added,
                             title: 'Save favorite finds',
                             subtitle:
                                 'Bookmark the products you love so you can jump back in when it\'s time to buy.',
                           ),
-                          const SizedBox(height: 22),
+                          const SizedBox(height: 26),
                           _FeatureItem(
                             icon: Icons.bolt,
                             title: '50 credits included',
@@ -179,7 +177,8 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                           title: 'Monthly',
                           price: '\$7.99/mo',
                           subtitle: '',
-                          isSelected: selectedPlan == OnboardingPaywallPlanType.monthly,
+                          isSelected:
+                              selectedPlan == OnboardingPaywallPlanType.monthly,
                           onTap: () => ref
                               .read(selectedOnboardingPlanProvider.notifier)
                               .state = OnboardingPaywallPlanType.monthly,
@@ -192,7 +191,8 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                           title: 'Yearly',
                           price: '\$4.99/mo',
                           subtitle: null,
-                          isSelected: selectedPlan == OnboardingPaywallPlanType.yearly,
+                          isSelected:
+                              selectedPlan == OnboardingPaywallPlanType.yearly,
                           onTap: () => ref
                               .read(selectedOnboardingPlanProvider.notifier)
                               .state = OnboardingPaywallPlanType.yearly,
@@ -389,8 +389,8 @@ class _FeatureItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.check, color: Color(0xFF23B6A8), size: 20),
-        const SizedBox(width: 14),
+        const Icon(Icons.check, color: Color(0xFF23B6A8), size: 26),
+        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,22 +399,22 @@ class _FeatureItem extends StatelessWidget {
                 title,
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
-                  fontSize: 13,
+                  fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
                   letterSpacing: -0.4,
                 ),
               ),
               if (subtitle.isNotEmpty) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   subtitle,
                   style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 10,
+                    fontSize: 13,
                     color: Color(0xFF6C7280),
                     fontWeight: FontWeight.w500,
-                    letterSpacing: -0.15,
+                    letterSpacing: -0.2,
                     height: 1.4,
                   ),
                 ),
@@ -448,8 +448,8 @@ class _TimelineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double circleDiameter = 32;
-    const double lineWidth = 4;
+    const double circleDiameter = 42;
+    const double lineWidth = 5;
 
     final circle = Container(
       width: circleDiameter,
@@ -460,12 +460,12 @@ class _TimelineItem extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: circleColor.withOpacity(0.15),
-            blurRadius: 8,
-            spreadRadius: 0.7,
+            blurRadius: 10,
+            spreadRadius: 0.8,
           ),
         ],
       ),
-      child: Icon(icon, size: 17, color: Colors.white),
+      child: Icon(icon, size: 22, color: Colors.white),
     );
 
     final fadeDecoration = BoxDecoration(
@@ -479,12 +479,12 @@ class _TimelineItem extends StatelessWidget {
       ),
     );
 
-    const double connectorGap = 25;
+    const double connectorGap = 30;
     final double topSegmentHeight = isFirst ? 0 : connectorGap;
-    final double bottomSegmentHeight = isLast ? 64 : connectorGap;
+    final double bottomSegmentHeight = isLast ? 78 : connectorGap;
 
     final lineSegments = SizedBox(
-      width: 42,
+      width: 50,
       height: topSegmentHeight + circleDiameter + bottomSegmentHeight,
       child: Stack(
         alignment: Alignment.topCenter,
@@ -493,10 +493,17 @@ class _TimelineItem extends StatelessWidget {
             child: Column(
               children: [
                 if (!isFirst)
-                  Container(width: lineWidth, height: topSegmentHeight, color: lineColor),
-                Container(width: lineWidth, height: circleDiameter, color: lineColor),
+                  Container(
+                      width: lineWidth,
+                      height: topSegmentHeight,
+                      color: lineColor),
+                Container(
+                    width: lineWidth, height: circleDiameter, color: lineColor),
                 if (!isLast)
-                  Container(width: lineWidth, height: bottomSegmentHeight, color: lineColor)
+                  Container(
+                      width: lineWidth,
+                      height: bottomSegmentHeight,
+                      color: lineColor)
                 else
                   Container(
                     width: lineWidth,
@@ -508,7 +515,7 @@ class _TimelineItem extends StatelessWidget {
           ),
           Positioned(
             top: topSegmentHeight,
-            left: (42 - circleDiameter) / 2,
+            left: (50 - circleDiameter) / 2,
             child: circle,
           ),
         ],
@@ -520,7 +527,7 @@ class _TimelineItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           lineSegments,
-          const SizedBox(width: 11),
+          const SizedBox(width: 14),
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(top: topSegmentHeight, bottom: 0),
@@ -531,21 +538,21 @@ class _TimelineItem extends StatelessWidget {
                     title,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 13,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
                       letterSpacing: -0.2,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Text(
                     subtitle,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 10,
+                      fontSize: 13,
                       color: Color(0xFF6C7280),
                       fontWeight: FontWeight.w500,
-                      letterSpacing: -0.15,
+                      letterSpacing: -0.2,
                       height: 1.4,
                     ),
                   ),

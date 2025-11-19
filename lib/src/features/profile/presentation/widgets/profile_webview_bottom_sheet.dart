@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
 class ProfileWebViewBottomSheet extends StatefulWidget {
   const ProfileWebViewBottomSheet({
@@ -277,11 +278,12 @@ class _ProfileWebViewBottomSheetState
                       ),
                       child: Row(
                         children: [
-                          IconButton(
+                          SnaplookCircularIconButton(
+                            icon: Icons.close,
+                            iconSize: 18,
                             onPressed: () => Navigator.of(context).maybePop(),
-                            icon: const Icon(Icons.close),
-                            color: colorScheme.onSurface,
                             tooltip: 'Close',
+                            semanticLabel: 'Close',
                           ),
                           Expanded(
                             child: Text(

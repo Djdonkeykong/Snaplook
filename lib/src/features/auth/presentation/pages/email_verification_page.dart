@@ -9,6 +9,7 @@ import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../onboarding/presentation/pages/gender_selection_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show MainNavigation, selectedIndexProvider, scrollToTopTriggerProvider, isAtHomeRootProvider;
+import '../../../../shared/widgets/snaplook_back_button.dart';
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
@@ -269,22 +270,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ),
+        leading: const SnaplookBackButton(),
       ),
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: spacing.l),

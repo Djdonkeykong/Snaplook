@@ -8,21 +8,52 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
+import '../../../profile/presentation/widgets/profile_webview_bottom_sheet.dart';
 import '../widgets/progress_indicator.dart';
 import 'welcome_free_analysis_page.dart';
 import 'gender_selection_page.dart';
 import 'notification_permission_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
-    show MainNavigation, selectedIndexProvider, scrollToTopTriggerProvider, isAtHomeRootProvider;
+    show
+        MainNavigation,
+        selectedIndexProvider,
+        scrollToTopTriggerProvider,
+        isAtHomeRootProvider;
+import '../../../../shared/widgets/snaplook_back_button.dart';
 
 class AccountCreationPage extends ConsumerStatefulWidget {
   const AccountCreationPage({super.key});
 
   @override
-  ConsumerState<AccountCreationPage> createState() => _AccountCreationPageState();
+  ConsumerState<AccountCreationPage> createState() =>
+      _AccountCreationPageState();
 }
 
 class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
+  Future<void> _openLegalDocument({
+    required String title,
+    required String url,
+  }) async {
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return FractionallySizedBox(
+          heightFactor: 0.95,
+          child: ProfileWebViewBottomSheet(
+            title: title,
+            initialUrl: url,
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,26 +65,11 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ),
+        leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 8,
-          totalSteps: 8,
+          currentStep: 10,
+          totalSteps: 10,
         ),
       ),
       body: SafeArea(
@@ -62,9 +78,9 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: MediaQuery.of(context).size.height -
-                         MediaQuery.of(context).padding.top -
-                         MediaQuery.of(context).padding.bottom -
-                         kToolbarHeight,
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom -
+                  kToolbarHeight,
             ),
             child: IntrinsicHeight(
               child: Column(
@@ -107,19 +123,24 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                               try {
                                 await authService.signInWithApple();
                               } catch (e) {
-                                print('[AccountCreation] Apple sign in error: $e');
+                                print(
+                                    '[AccountCreation] Apple sign in error: $e');
                                 // Check if auth actually succeeded despite the error
-                                if (authService.currentUser == null && context.mounted) {
-                                  ScaffoldMessenger.of(context).clearSnackBars();
+                                if (authService.currentUser == null &&
+                                    context.mounted) {
+                                  ScaffoldMessenger.of(context)
+                                      .clearSnackBars();
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
                                         'Error signing in with Apple: ${e.toString()}',
                                         style: context.snackTextStyle(
-                                          merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                          merge: const TextStyle(
+                                              fontFamily: 'PlusJakartaSans'),
                                         ),
                                       ),
-                                      duration: const Duration(milliseconds: 2500),
+                                      duration:
+                                          const Duration(milliseconds: 2500),
                                     ),
                                   );
                                   return;
@@ -127,24 +148,30 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                               }
 
                               // Wait briefly for auth state to fully propagate
-                              await Future.delayed(const Duration(milliseconds: 500));
+                              await Future.delayed(
+                                  const Duration(milliseconds: 500));
 
                               // Check if auth succeeded
                               if (context.mounted) {
                                 final userId = authService.currentUser?.id;
-                                print('[AccountCreation] Apple - User ID after sign in: $userId');
+                                print(
+                                    '[AccountCreation] Apple - User ID after sign in: $userId');
                                 if (userId != null) {
                                   // First check if user went through onboarding already (providers have values)
-                                  final selectedGender = ref.read(selectedGenderProvider);
-                                  print('[AccountCreation] Apple - Gender from provider: ${selectedGender?.name}');
+                                  final selectedGender =
+                                      ref.read(selectedGenderProvider);
+                                  print(
+                                      '[AccountCreation] Apple - Gender from provider: ${selectedGender?.name}');
 
                                   if (selectedGender != null) {
                                     // User went through onboarding BEFORE creating account
                                     // Go to welcome page which will save preferences and initialize credits
-                                    print('[AccountCreation] Apple - User completed onboarding, going to welcome page');
+                                    print(
+                                        '[AccountCreation] Apple - User completed onboarding, going to welcome page');
                                     Navigator.of(context).pushAndRemoveUntil(
                                       MaterialPageRoute(
-                                        builder: (context) => const WelcomeFreeAnalysisPage(),
+                                        builder: (context) =>
+                                            const WelcomeFreeAnalysisPage(),
                                       ),
                                       (route) => false,
                                     );
@@ -158,44 +185,63 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                           .eq('id', userId)
                                           .maybeSingle();
 
-                                      print('[AccountCreation] Apple - User record found: ${userResponse != null}');
+                                      print(
+                                          '[AccountCreation] Apple - User record found: ${userResponse != null}');
 
                                       // Check if user has completed onboarding (gender will be set during onboarding)
-                                      final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
-                                      print('[AccountCreation] Apple - Has completed onboarding in DB: $hasCompletedOnboarding');
+                                      final hasCompletedOnboarding =
+                                          userResponse != null &&
+                                              userResponse['gender'] != null;
+                                      print(
+                                          '[AccountCreation] Apple - Has completed onboarding in DB: $hasCompletedOnboarding');
 
                                       if (hasCompletedOnboarding) {
                                         // Existing user who completed onboarding - go to main app
-                                        print('[AccountCreation] Apple - Existing user - navigating to main app');
+                                        print(
+                                            '[AccountCreation] Apple - Existing user - navigating to main app');
                                         // Reset to home tab
-                                        ref.read(selectedIndexProvider.notifier).state = 0;
+                                        ref
+                                            .read(
+                                                selectedIndexProvider.notifier)
+                                            .state = 0;
                                         // Invalidate all providers to refresh state
                                         ref.invalidate(selectedIndexProvider);
-                                        ref.invalidate(scrollToTopTriggerProvider);
+                                        ref.invalidate(
+                                            scrollToTopTriggerProvider);
                                         ref.invalidate(isAtHomeRootProvider);
-                                        Navigator.of(context).pushAndRemoveUntil(
+                                        Navigator.of(context)
+                                            .pushAndRemoveUntil(
                                           MaterialPageRoute(
-                                            builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
+                                            builder: (context) =>
+                                                const MainNavigation(
+                                                    key: ValueKey(
+                                                        'fresh-main-nav')),
                                           ),
                                           (route) => false,
                                         );
                                       } else {
                                         // New user - start onboarding from gender selection
-                                        print('[AccountCreation] Apple - New user - navigating to gender selection');
-                                        Navigator.of(context).pushAndRemoveUntil(
+                                        print(
+                                            '[AccountCreation] Apple - New user - navigating to gender selection');
+                                        Navigator.of(context)
+                                            .pushAndRemoveUntil(
                                           MaterialPageRoute(
-                                            builder: (context) => const GenderSelectionPage(),
+                                            builder: (context) =>
+                                                const GenderSelectionPage(),
                                           ),
                                           (route) => false,
                                         );
                                       }
                                     } catch (e) {
                                       // If check fails, assume new user
-                                      print('[AccountCreation] Apple - Check error, assuming new user: $e');
+                                      print(
+                                          '[AccountCreation] Apple - Check error, assuming new user: $e');
                                       if (context.mounted) {
-                                        Navigator.of(context).pushAndRemoveUntil(
+                                        Navigator.of(context)
+                                            .pushAndRemoveUntil(
                                           MaterialPageRoute(
-                                            builder: (context) => const GenderSelectionPage(),
+                                            builder: (context) =>
+                                                const GenderSelectionPage(),
                                           ),
                                           (route) => false,
                                         );
@@ -225,17 +271,21 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                               } catch (e) {
                                 print('[AccountCreation] Sign in error: $e');
                                 // Check if auth actually succeeded despite the error
-                                if (authService.currentUser == null && context.mounted) {
-                                  ScaffoldMessenger.of(context).clearSnackBars();
+                                if (authService.currentUser == null &&
+                                    context.mounted) {
+                                  ScaffoldMessenger.of(context)
+                                      .clearSnackBars();
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
                                         'Error signing in with Google: ${e.toString()}',
                                         style: context.snackTextStyle(
-                                          merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                          merge: const TextStyle(
+                                              fontFamily: 'PlusJakartaSans'),
                                         ),
                                       ),
-                                      duration: const Duration(milliseconds: 2500),
+                                      duration:
+                                          const Duration(milliseconds: 2500),
                                     ),
                                   );
                                   return;
@@ -243,24 +293,30 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                               }
 
                               // Wait briefly for auth state to fully propagate
-                              await Future.delayed(const Duration(milliseconds: 500));
+                              await Future.delayed(
+                                  const Duration(milliseconds: 500));
 
                               // Check if auth succeeded
                               if (context.mounted) {
                                 final userId = authService.currentUser?.id;
-                                print('[AccountCreation] Google - User ID after sign in: $userId');
+                                print(
+                                    '[AccountCreation] Google - User ID after sign in: $userId');
                                 if (userId != null) {
                                   // First check if user went through onboarding already (providers have values)
-                                  final selectedGender = ref.read(selectedGenderProvider);
-                                  print('[AccountCreation] Google - Gender from provider: ${selectedGender?.name}');
+                                  final selectedGender =
+                                      ref.read(selectedGenderProvider);
+                                  print(
+                                      '[AccountCreation] Google - Gender from provider: ${selectedGender?.name}');
 
                                   if (selectedGender != null) {
                                     // User went through onboarding BEFORE creating account
                                     // Go to welcome page which will save preferences and initialize credits
-                                    print('[AccountCreation] Google - User completed onboarding, going to welcome page');
+                                    print(
+                                        '[AccountCreation] Google - User completed onboarding, going to welcome page');
                                     Navigator.of(context).pushAndRemoveUntil(
                                       MaterialPageRoute(
-                                        builder: (context) => const WelcomeFreeAnalysisPage(),
+                                        builder: (context) =>
+                                            const WelcomeFreeAnalysisPage(),
                                       ),
                                       (route) => false,
                                     );
@@ -274,44 +330,63 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                           .eq('id', userId)
                                           .maybeSingle();
 
-                                      print('[AccountCreation] Google - User record found: ${userResponse != null}');
+                                      print(
+                                          '[AccountCreation] Google - User record found: ${userResponse != null}');
 
                                       // Check if user has completed onboarding (gender will be set during onboarding)
-                                      final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
-                                      print('[AccountCreation] Google - Has completed onboarding in DB: $hasCompletedOnboarding');
+                                      final hasCompletedOnboarding =
+                                          userResponse != null &&
+                                              userResponse['gender'] != null;
+                                      print(
+                                          '[AccountCreation] Google - Has completed onboarding in DB: $hasCompletedOnboarding');
 
                                       if (hasCompletedOnboarding) {
                                         // Existing user who completed onboarding - go to main app
-                                        print('[AccountCreation] Google - Existing user - navigating to main app');
+                                        print(
+                                            '[AccountCreation] Google - Existing user - navigating to main app');
                                         // Reset to home tab
-                                        ref.read(selectedIndexProvider.notifier).state = 0;
+                                        ref
+                                            .read(
+                                                selectedIndexProvider.notifier)
+                                            .state = 0;
                                         // Invalidate all providers to refresh state
                                         ref.invalidate(selectedIndexProvider);
-                                        ref.invalidate(scrollToTopTriggerProvider);
+                                        ref.invalidate(
+                                            scrollToTopTriggerProvider);
                                         ref.invalidate(isAtHomeRootProvider);
-                                        Navigator.of(context).pushAndRemoveUntil(
+                                        Navigator.of(context)
+                                            .pushAndRemoveUntil(
                                           MaterialPageRoute(
-                                            builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
+                                            builder: (context) =>
+                                                const MainNavigation(
+                                                    key: ValueKey(
+                                                        'fresh-main-nav')),
                                           ),
                                           (route) => false,
                                         );
                                       } else {
                                         // New user - start onboarding from gender selection
-                                        print('[AccountCreation] Google - New user - navigating to gender selection');
-                                        Navigator.of(context).pushAndRemoveUntil(
+                                        print(
+                                            '[AccountCreation] Google - New user - navigating to gender selection');
+                                        Navigator.of(context)
+                                            .pushAndRemoveUntil(
                                           MaterialPageRoute(
-                                            builder: (context) => const GenderSelectionPage(),
+                                            builder: (context) =>
+                                                const GenderSelectionPage(),
                                           ),
                                           (route) => false,
                                         );
                                       }
                                     } catch (e) {
                                       // If check fails, assume new user
-                                      print('[AccountCreation] Google - Check error, assuming new user: $e');
+                                      print(
+                                          '[AccountCreation] Google - Check error, assuming new user: $e');
                                       if (context.mounted) {
-                                        Navigator.of(context).pushAndRemoveUntil(
+                                        Navigator.of(context)
+                                            .pushAndRemoveUntil(
                                           MaterialPageRoute(
-                                            builder: (context) => const GenderSelectionPage(),
+                                            builder: (context) =>
+                                                const GenderSelectionPage(),
                                           ),
                                           (route) => false,
                                         );
@@ -376,7 +451,12 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
-                                // TODO: Open Terms of Conditions
+                                HapticFeedback.selectionClick();
+                                _openLegalDocument(
+                                  title: 'Terms of Service',
+                                  url:
+                                      'https://truefindr.com/terms-of-service/',
+                                );
                               },
                           ),
                           const TextSpan(
@@ -402,7 +482,11 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
-                                // TODO: Open Privacy Policy
+                                HapticFeedback.selectionClick();
+                                _openLegalDocument(
+                                  title: 'Privacy Policy',
+                                  url: 'https://truefindr.com/privacy-policy/',
+                                );
                               },
                           ),
                         ],
@@ -501,7 +585,9 @@ class _AuthButtonState extends State<_AuthButton> {
               )
             else
               Transform.translate(
-                offset: widget.icon == Icons.apple ? const Offset(0, -2) : Offset.zero,
+                offset: widget.icon == Icons.apple
+                    ? const Offset(0, -2)
+                    : Offset.zero,
                 child: Icon(widget.icon, size: widget.iconSize),
               ),
             const SizedBox(width: 12),

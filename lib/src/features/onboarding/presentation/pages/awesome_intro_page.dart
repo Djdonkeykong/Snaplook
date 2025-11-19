@@ -7,6 +7,7 @@ import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
 import 'trial_intro_page.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 
 class AwesomeIntroPage extends ConsumerStatefulWidget {
   const AwesomeIntroPage({super.key});
@@ -20,7 +21,9 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Precache image for instant loading
-    precacheImage(const AssetImage('assets/images/social_media_share_mobile_screen.png'), context);
+    precacheImage(
+        const AssetImage('assets/images/social_media_share_mobile_screen.png'),
+        context);
   }
 
   @override
@@ -33,26 +36,11 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ),
+        leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 3,
-          totalSteps: 8,
+          totalSteps: 10,
         ),
       ),
       body: Padding(
@@ -110,7 +98,19 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
                               Color(0xD0FFFFFF),
                               Colors.white,
                             ],
-                            stops: [0.0, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 0.85, 0.92, 1.0],
+                            stops: [
+                              0.0,
+                              0.4,
+                              0.5,
+                              0.55,
+                              0.6,
+                              0.65,
+                              0.7,
+                              0.8,
+                              0.85,
+                              0.92,
+                              1.0
+                            ],
                           ),
                         ),
                       ),

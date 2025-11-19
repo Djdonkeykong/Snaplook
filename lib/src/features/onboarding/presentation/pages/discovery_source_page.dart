@@ -7,19 +7,31 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/constants/snaplook-more-and-family_icons.dart';
 import '../../../../../core/constants/snaplook-people_icons.dart';
 import '../../../../../shared/navigation/route_observer.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'awesome_intro_page.dart';
 
-enum DiscoverySource { instagram, facebook, tiktok, youtube, google, tv, friendOrFamily, other }
+enum DiscoverySource {
+  instagram,
+  facebook,
+  tiktok,
+  youtube,
+  google,
+  tv,
+  friendOrFamily,
+  other
+}
 
-final selectedDiscoverySourceProvider = StateProvider<DiscoverySource?>((ref) => null);
+final selectedDiscoverySourceProvider =
+    StateProvider<DiscoverySource?>((ref) => null);
 
 class DiscoverySourcePage extends ConsumerStatefulWidget {
   const DiscoverySourcePage({super.key});
 
   @override
-  ConsumerState<DiscoverySourcePage> createState() => _DiscoverySourcePageState();
+  ConsumerState<DiscoverySourcePage> createState() =>
+      _DiscoverySourcePageState();
 }
 
 class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
@@ -115,26 +127,11 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ),
+        leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 2,
-          totalSteps: 8,
+          totalSteps: 10,
         ),
       ),
       body: Padding(
@@ -179,9 +176,14 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.instagram,
                                 label: 'Instagram',
-                                icon: Image.asset('assets/icons/insta.png', width: 24, height: 24),
-                                isSelected: selectedSource == DiscoverySource.instagram,
-                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.instagram,
+                                icon: Image.asset('assets/icons/insta.png',
+                                    width: 24, height: 24),
+                                isSelected:
+                                    selectedSource == DiscoverySource.instagram,
+                                onTap: () => ref
+                                    .read(selectedDiscoverySourceProvider
+                                        .notifier)
+                                    .state = DiscoverySource.instagram,
                               ),
                             ),
                           );
@@ -198,9 +200,16 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.facebook,
                                 label: 'Facebook',
-                                icon: SvgPicture.asset('assets/icons/5296499_fb_facebook_facebook logo_icon.svg', width: 24, height: 24),
-                                isSelected: selectedSource == DiscoverySource.facebook,
-                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.facebook,
+                                icon: SvgPicture.asset(
+                                    'assets/icons/5296499_fb_facebook_facebook logo_icon.svg',
+                                    width: 24,
+                                    height: 24),
+                                isSelected:
+                                    selectedSource == DiscoverySource.facebook,
+                                onTap: () => ref
+                                    .read(selectedDiscoverySourceProvider
+                                        .notifier)
+                                    .state = DiscoverySource.facebook,
                               ),
                             ),
                           );
@@ -217,9 +226,16 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.tiktok,
                                 label: 'TikTok',
-                                icon: SvgPicture.asset('assets/icons/4362958_tiktok_logo_social media_icon.svg', width: 24, height: 24),
-                                isSelected: selectedSource == DiscoverySource.tiktok,
-                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.tiktok,
+                                icon: SvgPicture.asset(
+                                    'assets/icons/4362958_tiktok_logo_social media_icon.svg',
+                                    width: 24,
+                                    height: 24),
+                                isSelected:
+                                    selectedSource == DiscoverySource.tiktok,
+                                onTap: () => ref
+                                    .read(selectedDiscoverySourceProvider
+                                        .notifier)
+                                    .state = DiscoverySource.tiktok,
                               ),
                             ),
                           );
@@ -236,9 +252,16 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.youtube,
                                 label: 'YouTube',
-                                icon: SvgPicture.asset('assets/icons/5296521_play_video_vlog_youtube_youtube logo_icon.svg', width: 24, height: 24),
-                                isSelected: selectedSource == DiscoverySource.youtube,
-                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.youtube,
+                                icon: SvgPicture.asset(
+                                    'assets/icons/5296521_play_video_vlog_youtube_youtube logo_icon.svg',
+                                    width: 24,
+                                    height: 24),
+                                isSelected:
+                                    selectedSource == DiscoverySource.youtube,
+                                onTap: () => ref
+                                    .read(selectedDiscoverySourceProvider
+                                        .notifier)
+                                    .state = DiscoverySource.youtube,
                               ),
                             ),
                           );
@@ -255,9 +278,16 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.google,
                                 label: 'Google',
-                                icon: SvgPicture.asset('assets/icons/4975303_search_web_internet_google search_search engine_icon.svg', width: 24, height: 24),
-                                isSelected: selectedSource == DiscoverySource.google,
-                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.google,
+                                icon: SvgPicture.asset(
+                                    'assets/icons/4975303_search_web_internet_google search_search engine_icon.svg',
+                                    width: 24,
+                                    height: 24),
+                                isSelected:
+                                    selectedSource == DiscoverySource.google,
+                                onTap: () => ref
+                                    .read(selectedDiscoverySourceProvider
+                                        .notifier)
+                                    .state = DiscoverySource.google,
                               ),
                             ),
                           );
@@ -274,9 +304,16 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.tv,
                                 label: 'TV',
-                                icon: SvgPicture.asset('assets/icons/9035017_tv_icon.svg', width: 24, height: 24),
-                                isSelected: selectedSource == DiscoverySource.tv,
-                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.tv,
+                                icon: SvgPicture.asset(
+                                    'assets/icons/9035017_tv_icon.svg',
+                                    width: 24,
+                                    height: 24),
+                                isSelected:
+                                    selectedSource == DiscoverySource.tv,
+                                onTap: () => ref
+                                    .read(selectedDiscoverySourceProvider
+                                        .notifier)
+                                    .state = DiscoverySource.tv,
                               ),
                             ),
                           );
@@ -293,9 +330,14 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.friendOrFamily,
                                 label: 'Friend or family',
-                                icon: Icon(Snaplook_people.biPeopleFill, size: 24, color: Colors.black),
-                                isSelected: selectedSource == DiscoverySource.friendOrFamily,
-                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.friendOrFamily,
+                                icon: Icon(Snaplook_people.biPeopleFill,
+                                    size: 24, color: Colors.black),
+                                isSelected: selectedSource ==
+                                    DiscoverySource.friendOrFamily,
+                                onTap: () => ref
+                                    .read(selectedDiscoverySourceProvider
+                                        .notifier)
+                                    .state = DiscoverySource.friendOrFamily,
                               ),
                             ),
                           );
@@ -315,10 +357,17 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                                 label: 'Other',
                                 icon: Transform.translate(
                                   offset: const Offset(-2, -1),
-                                  child: Icon(Snaplook_more_and_family.icRoundLayers, size: 28, color: Colors.black),
+                                  child: Icon(
+                                      Snaplook_more_and_family.icRoundLayers,
+                                      size: 28,
+                                      color: Colors.black),
                                 ),
-                                isSelected: selectedSource == DiscoverySource.other,
-                                onTap: () => ref.read(selectedDiscoverySourceProvider.notifier).state = DiscoverySource.other,
+                                isSelected:
+                                    selectedSource == DiscoverySource.other,
+                                onTap: () => ref
+                                    .read(selectedDiscoverySourceProvider
+                                        .notifier)
+                                    .state = DiscoverySource.other,
                               ),
                             ),
                           );
@@ -347,7 +396,9 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                   }
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: selectedSource != null ? const Color(0xFFf2003c) : Colors.grey.shade300,
+              backgroundColor: selectedSource != null
+                  ? const Color(0xFFf2003c)
+                  : Colors.grey.shade300,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -361,7 +412,9 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                 fontWeight: FontWeight.bold,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
-                color: selectedSource != null ? Colors.white : Colors.grey.shade600,
+                color: selectedSource != null
+                    ? Colors.white
+                    : Colors.grey.shade600,
               ),
             ),
           ),

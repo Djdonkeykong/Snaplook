@@ -622,6 +622,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingImageUrl: String?
     private var pendingInstagramUrl: String?
     private var pendingInstagramCompletion: (() -> Void)?
+    private var pendingPlatformType: String?
+    private var sourceApplicationBundleId: String?
+    private var inferredPlatformType: String?
     private var currentSearchId: String?
     private var currentImageCacheId: String?
     private var analyzedImageData: Data? // Store the analyzed image for sharing
@@ -692,6 +695,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open override func isContentValid() -> Bool { true }
 
+    private static let browserBundlePlatformMap: [String: String] = [
+        "com.apple.mobilesafari": "safari",
+        "com.apple.safariviewservice": "safari",
+        "com.google.chrome.ios": "chrome",
+        "com.google.chrome": "chrome",
+        "org.mozilla.ios.firefox": "firefox",
+        "org.mozilla.firefox": "firefox",
+    ]
+
+    private func detectPlatformType(from bundleId: String) -> String? {
+        let normalized = bundleId.lowercased()
+        if let mapped = RSIShareViewController.browserBundlePlatformMap[normalized] {
+            return mapped
+        }
+        if normalized.contains("safari") {
+            return "safari"
+        }
+        if normalized.contains("chrome") {
+            return "chrome"
+        }
+        if normalized.contains("firefox") {
+            return "firefox"
+        }
+        return nil
+    }
+
     private func hideDefaultUI() {
         // Hide and disable the default text view
         textView?.isHidden = true
@@ -731,6 +760,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("View did load - cleared sharedMedia array")
         if let sourceBundle = readSourceApplicationBundleIdentifier() {
             shareLog("Source application bundle: \(sourceBundle)")
+            sourceApplicationBundleId = sourceBundle
             let photosBundles: Set<String> = [
                 "com.apple.mobileslideshow",
                 "com.apple.Photos"
@@ -738,6 +768,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             if photosBundles.contains(sourceBundle) {
                 isPhotosSourceApp = true
                 shareLog("Detected Photos source app - enforcing minimum 2s redirect delay")
+            }
+            if let platform = detectPlatformType(from: sourceBundle) {
+                inferredPlatformType = platform
+                if pendingPlatformType == nil {
+                    pendingPlatformType = platform
+                }
+                shareLog("Detected browser platform type: \(platform)")
             }
         } else {
             shareLog("Source application bundle: nil")
@@ -1261,26 +1298,30 @@ open class RSIShareViewController: SLComposeServiceViewController {
         content: NSExtensionItem,
         completion: @escaping () -> Void
     ) {
-        if type == .url, isInstagramShareCandidate(item) {
-            shareLog("Detected Instagram URL share - showing choice UI before download")
+        if type == .url, isSocialMediaShareCandidate(item) {
+            let isInstagram = isInstagramShareCandidate(item)
+            let platformName = isInstagram ? "Instagram" : "TikTok"
+            shareLog("Detected \(platformName) URL share - showing choice UI before download")
 
             // Check if detection is configured
             let hasDetectionConfig = detectorEndpoint() != nil && serpApiKey() != nil
 
             if hasDetectionConfig {
-                // Store the Instagram URL and completion for later processing
+                // Store the URL and completion for later processing
                 pendingInstagramUrl = item
                 pendingInstagramCompletion = completion
+                pendingPlatformType = isInstagram ? "instagram" : "tiktok"
 
                 // Choice UI is already visible - just wait for user decision
-                shareLog("Instagram URL detected - awaiting user decision (buttons already visible)")
+                shareLog("\(platformName) URL detected - awaiting user decision (buttons already visible)")
                 return
             } else {
                 // No detection configured - proceed with normal download flow
-                shareLog("No detection configured - starting normal Instagram download")
+                shareLog("No detection configured - starting normal \(platformName) download")
                 updateProcessingStatus("processing")
 
-                downloadInstagramMedia(from: item) { [weak self] result in
+                let downloadFunction = isInstagramShareCandidate(item) ? downloadInstagramMedia : downloadTikTokMedia
+                downloadFunction(item) { [weak self] result in
                     guard let self = self else {
                         completion()
                         return
@@ -1289,15 +1330,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     switch result {
                     case .success(let downloaded):
                         if downloaded.isEmpty {
-                            shareLog("Instagram download succeeded but returned no files - falling back to literal URL")
+                            shareLog("\(platformName) download succeeded but returned no files - falling back to literal URL")
                             self.appendLiteralShare(item: item, type: type)
                         } else {
                             self.sharedMedia.append(contentsOf: downloaded)
-                            shareLog("Appended \(downloaded.count) downloaded Instagram file(s) - count now \(self.sharedMedia.count)")
+                            shareLog("Appended \(downloaded.count) downloaded \(platformName) file(s) - count now \(self.sharedMedia.count)")
                         }
                         completion()
                     case .failure(let error):
-                        shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
+                        shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
                         self.appendLiteralShare(item: item, type: type)
                         completion()
                     }
@@ -1400,11 +1441,28 @@ open class RSIShareViewController: SLComposeServiceViewController {
             )
         )
         shareLog("Appended literal item (type \(type)) - count now \(sharedMedia.count)")
+
+        if pendingPlatformType == nil {
+            if let inferred = inferredPlatformType {
+                pendingPlatformType = inferred
+            } else if type == .url {
+                pendingPlatformType = "web"
+            }
+        }
     }
 
     private func isInstagramShareCandidate(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return trimmed.contains("instagram.com/p/") || trimmed.contains("instagram.com/reel/")
+    }
+
+    private func isTikTokShareCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return trimmed.contains("tiktok.com/") && (trimmed.contains("/video/") || trimmed.contains("/@") || trimmed.contains("/t/"))
+    }
+
+    private func isSocialMediaShareCandidate(_ value: String) -> Bool {
+        return isInstagramShareCandidate(value) || isTikTokShareCandidate(value)
     }
 
     private func scrapingBeeApiKey() -> String? {
@@ -1458,6 +1516,257 @@ open class RSIShareViewController: SLComposeServiceViewController {
             apiKey: apiKey,
             attempt: 0,
             completion: completion
+        )
+    }
+
+    // MARK: - TikTok Scraping
+
+    private func downloadTikTokMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
+            shareLog("ScrapingBee API key missing - cannot download TikTok image")
+            shareLog("TikTok URL detected but ScrapingBee not configured. Please run the main app first to set up API keys.")
+            completion(.failure(makeTikTokError("ScrapingBee API key not configured. Please open the Snaplook app first.")))
+            return
+        }
+
+        performTikTokScrape(
+            tiktokUrl: urlString,
+            apiKey: apiKey,
+            attempt: 0,
+            completion: completion
+        )
+    }
+
+    private let maxTikTokScrapeAttempts = 2
+
+    private func performTikTokScrape(
+        tiktokUrl: String,
+        apiKey: String,
+        attempt: Int,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard attempt <= maxTikTokScrapeAttempts else {
+            completion(.failure(makeTikTokError("Exceeded TikTok scrape attempts")))
+            return
+        }
+
+        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
+            completion(.failure(makeTikTokError("Invalid ScrapingBee URL")))
+            return
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "api_key", value: apiKey),
+            URLQueryItem(name: "url", value: tiktokUrl),
+            URLQueryItem(name: "render_js", value: "true"),
+            URLQueryItem(name: "wait", value: "3000")
+        ]
+
+        guard let requestURL = components.url else {
+            completion(.failure(makeTikTokError("Failed to build ScrapingBee request URL")))
+            return
+        }
+
+        shareLog("Fetching TikTok HTML via ScrapingBee (attempt \(attempt + 1)) for \(tiktokUrl)")
+
+        var request = URLRequest(url: requestURL)
+        request.timeoutInterval = 25.0
+
+        let session = URLSession(configuration: .ephemeral)
+        let task = session.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            let deliver: (Result<[SharedMediaFile], Error>) -> Void = { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        completion(result)
+                    case .failure(let error):
+                        if attempt < self.maxTikTokScrapeAttempts {
+                            shareLog("WARNING: ScrapingBee TikTok attempt \(attempt + 1) failed (\(error.localizedDescription)) - retrying")
+                            self.performTikTokScrape(
+                                tiktokUrl: tiktokUrl,
+                                apiKey: apiKey,
+                                attempt: attempt + 1,
+                                completion: completion
+                            )
+                        } else {
+                            shareLog("ERROR: ScrapingBee TikTok failed after \(attempt + 1) attempts - \(error.localizedDescription)")
+                            completion(.failure(error))
+                        }
+                    }
+                }
+            }
+
+            if let error = error {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeTikTokError("Network error: \(error.localizedDescription)")))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeTikTokError("Invalid HTTP response")))
+                return
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeTikTokError("ScrapingBee returned status \(httpResponse.statusCode)", code: httpResponse.statusCode)))
+                return
+            }
+
+            guard let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeTikTokError("Unable to decode ScrapingBee response body")))
+                return
+            }
+
+            let imageUrls = self.extractTikTokImageUrls(from: html)
+            if imageUrls.isEmpty {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeTikTokError("No image URLs found in TikTok page")))
+                return
+            }
+
+            shareLog("Found \(imageUrls.count) TikTok image URL(s)")
+
+            // Download the first (best) image
+            guard let firstUrl = imageUrls.first, let url = URL(string: firstUrl) else {
+                session.invalidateAndCancel()
+                deliver(.failure(self.makeTikTokError("Invalid TikTok image URL")))
+                return
+            }
+
+            shareLog("Downloading TikTok thumbnail: \(firstUrl.prefix(80))...")
+
+            let downloadTask = URLSession.shared.dataTask(with: url) { [weak self] imgData, imgResponse, imgError in
+                session.invalidateAndCancel()
+                guard let self = self else { return }
+
+                if let imgError = imgError {
+                    deliver(.failure(self.makeTikTokError("Failed to download image: \(imgError.localizedDescription)")))
+                    return
+                }
+
+                guard let imgData = imgData, !imgData.isEmpty else {
+                    deliver(.failure(self.makeTikTokError("Downloaded image data was empty")))
+                    return
+                }
+
+                // Save to shared container
+                guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: self.appGroupId) else {
+                    deliver(.failure(self.makeTikTokError("Cannot access shared container")))
+                    return
+                }
+
+                let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+                let fileName = "tiktok_image_\(timestamp).jpg"
+                let fileURL = containerURL.appendingPathComponent(fileName)
+
+                do {
+                    if FileManager.default.fileExists(atPath: fileURL.path) {
+                        try FileManager.default.removeItem(at: fileURL)
+                    }
+                    try imgData.write(to: fileURL, options: .atomic)
+                    shareLog("Saved TikTok image to: \(fileURL.path)")
+
+                    let sharedFile = SharedMediaFile(
+                        path: fileURL.absoluteString,
+                        mimeType: "image/jpeg",
+                        type: .image
+                    )
+                    deliver(.success([sharedFile]))
+                } catch {
+                    deliver(.failure(self.makeTikTokError("Failed to save image: \(error.localizedDescription)")))
+                }
+            }
+            downloadTask.resume()
+        }
+        task.resume()
+    }
+
+    private func extractTikTokImageUrls(from html: String) -> [String] {
+        var priorityResults: [String] = []
+        var fallbackResults: [String] = []
+
+        // Pattern 1: Look for high-quality video thumbnails from tiktokcdn.com
+        // These are in img src with tplv-tiktokx-origin.image (highest priority)
+        let originPattern = "src=\"(https://[^\"]*tiktokcdn[^\"]*tplv-tiktokx-origin\\.image[^\"]*)\""
+        if let regex = try? NSRegularExpression(pattern: originPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                var candidate = String(html[range])
+                candidate = candidate.replacingOccurrences(of: "&amp;", with: "&")
+                // Skip avatars and small images
+                if candidate.contains("avt-") || candidate.contains("100x100") || candidate.contains("cropcenter") {
+                    return
+                }
+                if !priorityResults.contains(candidate) {
+                    priorityResults.append(candidate)
+                }
+            }
+        }
+
+        // If we found high-quality thumbnails, return only those
+        if !priorityResults.isEmpty {
+            shareLog("Extracted \(priorityResults.count) high-quality TikTok image URL(s)")
+            return priorityResults
+        }
+
+        // Pattern 2: Look for poster images in video tags (fallback)
+        let posterPattern = "poster=\"(https://[^\"]*tiktokcdn[^\"]*)\""
+        if let regex = try? NSRegularExpression(pattern: posterPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                var candidate = String(html[range])
+                candidate = candidate.replacingOccurrences(of: "&amp;", with: "&")
+                if !fallbackResults.contains(candidate) {
+                    fallbackResults.append(candidate)
+                }
+            }
+        }
+
+        // Pattern 3: Any img src from tiktokcdn that looks like a thumbnail
+        let imgPattern = "<img[^>]+src=\"(https://[^\"]*tiktokcdn[^\"]+)\""
+        if let regex = try? NSRegularExpression(pattern: imgPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                var candidate = String(html[range])
+                candidate = candidate.replacingOccurrences(of: "&amp;", with: "&")
+                // Skip avatars, small images, and music covers
+                if candidate.contains("100x100") || candidate.contains("avt-") ||
+                   candidate.contains("cropcenter") || candidate.contains("music") {
+                    return
+                }
+                if !fallbackResults.contains(candidate) {
+                    fallbackResults.append(candidate)
+                }
+            }
+        }
+
+        shareLog("Extracted \(fallbackResults.count) TikTok image URL(s)")
+        return fallbackResults
+    }
+
+    private func makeTikTokError(_ message: String, code: Int = -1) -> NSError {
+        return NSError(
+            domain: "TikTokScraper",
+            code: code,
+            userInfo: [NSLocalizedDescriptionKey: message]
         )
     }
 
@@ -1570,7 +1879,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                         // Update UI with cached results
                         DispatchQueue.main.async {
-                            self.updateProgress(1.0, status: "Loaded from cache")
+                            self.updateProgress(1.0, status: "Found results")
                             self.stopSmoothProgress()
 
                             let sanitized = self.sanitize(results: results)
@@ -1632,10 +1941,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
         var sourceUrl: String? = nil
         var sourceUsername: String? = nil
 
-        if let pendingInstaUrl = pendingInstagramUrl {
-            searchType = "instagram"
-            sourceUrl = pendingInstaUrl
-            sourceUsername = extractInstagramUsername(from: pendingInstaUrl)
+        if let pendingUrl = pendingInstagramUrl {
+            sourceUrl = pendingUrl
+            let lowercased = pendingUrl.lowercased()
+
+            // Detect platform from URL
+            if lowercased.contains("instagram.com") {
+                searchType = "instagram"
+                sourceUsername = extractInstagramUsername(from: pendingUrl)
+            } else if lowercased.contains("tiktok.com") {
+                searchType = "tiktok"
+            } else if lowercased.contains("pinterest.com") || lowercased.contains("pin.it") {
+                searchType = "pinterest"
+            } else if lowercased.contains("twitter.com") || lowercased.contains("x.com") {
+                searchType = "twitter"
+            } else if lowercased.contains("facebook.com") || lowercased.contains("fb.com") {
+                searchType = "facebook"
+            } else {
+                // Generic web source
+                searchType = "web"
+            }
         } else if imageUrl != nil {
             searchType = "photos"
         } else {
@@ -3073,10 +3398,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 let userDefaults = UserDefaults(suiteName: appGroupId)
                 userDefaults?.set(toData(data: [updatedFile]), forKey: kUserDefaultsKey)
                 userDefaults?.synchronize()
-                shareLog("💾 NORMAL FLOW: Saved file to UserDefaults")
+                shareLog("NORMAL FLOW: Saved file to UserDefaults")
             } catch {
-                shareLog("❌ ERROR writing file in normal flow: \(error.localizedDescription)")
+                shareLog("ERROR writing file in normal flow: \(error.localizedDescription)")
             }
+        }
+
+        // Save platform type for Flutter to read
+        if pendingPlatformType == nil {
+            pendingPlatformType = inferredPlatformType
+        }
+
+        if let platformType = pendingPlatformType {
+            let userDefaults = UserDefaults(suiteName: appGroupId)
+            userDefaults?.set(platformType, forKey: "pending_platform_type")
+            userDefaults?.synchronize()
+            shareLog("Saved pending platform type: \(platformType)")
         }
 
         saveAndRedirect()
@@ -4121,9 +4458,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        // Check if this is an Instagram URL (before download) or direct image (after download)
-        if let instagramUrl = pendingInstagramUrl {
-            shareLog("Downloading Instagram media and saving to app")
+        // Check if this is a social media URL (before download) or direct image (after download)
+        if let socialUrl = pendingInstagramUrl {
+            let isTikTok = isTikTokShareCandidate(socialUrl)
+            let platformName = isTikTok ? "TikTok" : "Instagram"
+            shareLog("Downloading \(platformName) media and saving to app")
 
             // Start download process
             updateProcessingStatus("processing")
@@ -4144,17 +4483,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self?.targetProgress = 0.7
             }
 
-            downloadInstagramMedia(from: instagramUrl) { [weak self] result in
+            let downloadFunction = isTikTok ? downloadTikTokMedia : downloadInstagramMedia
+            downloadFunction(socialUrl) { [weak self] result in
                 guard let self = self else { return }
 
                 switch result {
                 case .success(let downloaded):
                     if downloaded.isEmpty {
-                        shareLog("Instagram download succeeded but returned no files")
+                        shareLog("\(platformName) download succeeded but returned no files")
                         self.dismissWithError()
                     } else {
                         self.sharedMedia.append(contentsOf: downloaded)
-                        shareLog("Downloaded and saved \(downloaded.count) Instagram file(s)")
+                        shareLog("Downloaded and saved \(downloaded.count) \(platformName) file(s)")
 
                         // Update progress to near completion
                         self.targetProgress = 0.95
@@ -4172,7 +4512,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     self.pendingInstagramUrl = nil
 
                 case .failure(let error):
-                    shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
+                    shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
                     self.dismissWithError()
                 }
             }
@@ -4213,9 +4553,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Remove choice UI
         hideLoadingUI()
 
-        // Check if this is an Instagram URL (before download) or direct image (after download)
-        if let instagramUrl = pendingInstagramUrl {
-            shareLog("Instagram URL detected - checking cache first")
+        // Check if this is a social media URL (before download) or direct image (after download)
+        if let socialUrl = pendingInstagramUrl {
+            let isTikTok = isTikTokShareCandidate(socialUrl)
+            let platformName = isTikTok ? "TikTok" : "Instagram"
+            shareLog("\(platformName) URL detected - checking cache first")
 
             // Start UI setup early
             updateProcessingStatus("processing")
@@ -4228,21 +4570,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.startSmoothProgress()
                 self.targetProgress = 0.05
 
-                let checkingMessages = ["Checking cache..."]
+                let checkingMessages = ["Loading..."]
                 self.startStatusRotation(messages: checkingMessages, interval: 2.5)
             }
 
             // Check cache before downloading
-            checkCacheForInstagram(url: instagramUrl) { [weak self] isCached in
+            checkCacheForInstagram(url: socialUrl) { [weak self] isCached in
                 guard let self = self else { return }
 
                 if isCached {
-                    shareLog("Cache HIT - skipping Instagram download")
+                    shareLog("Cache HIT - skipping \(platformName) download")
                     // Results already displayed by checkCacheForInstagram
                     self.pendingInstagramCompletion = nil
                     self.pendingInstagramUrl = nil
                 } else {
-                    shareLog("Cache MISS - proceeding with Instagram download")
+                    shareLog("Cache MISS - proceeding with \(platformName) download")
 
                     DispatchQueue.main.async {
                         // Start rotating status messages for the fetch phase
@@ -4253,23 +4595,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         self.startStatusRotation(messages: fetchMessages, interval: 2.5)
                     }
 
-                    self.downloadInstagramMedia(from: instagramUrl) { [weak self] result in
+                    let downloadFunction = isTikTok ? self.downloadTikTokMedia : self.downloadInstagramMedia
+                    downloadFunction(socialUrl) { [weak self] result in
                         guard let self = self else { return }
 
                         switch result {
                         case .success(let downloaded):
                             if downloaded.isEmpty {
-                                shareLog("Instagram download succeeded but returned no files")
+                                shareLog("\(platformName) download succeeded but returned no files")
                                 self.dismissWithError()
                             } else {
                                 // Get the first downloaded file and start detection
                                 if let firstFile = downloaded.first,
                                    let fileURL = URL(string: firstFile.path),
                                    let imageData = try? Data(contentsOf: fileURL) {
-                                    shareLog("Downloaded Instagram image, starting detection with \(imageData.count) bytes")
+                                    shareLog("Downloaded \(platformName) image, starting detection with \(imageData.count) bytes")
                                     self.uploadAndDetect(imageData: imageData)
                                 } else {
-                                    shareLog("ERROR: Could not read downloaded Instagram file")
+                                    shareLog("ERROR: Could not read downloaded \(platformName) file")
                                     self.dismissWithError()
                                 }
                             }
@@ -4280,7 +4623,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                             self.pendingInstagramUrl = nil
 
                         case .failure(let error):
-                            shareLog("ERROR: Instagram download failed - \(error.localizedDescription)")
+                            shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
                             self.dismissWithError()
                         }
                     }

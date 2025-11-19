@@ -8,6 +8,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../shared/services/supabase_service.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show selectedIndexProvider;
 import 'package:timeago/timeago.dart' as timeago;
@@ -57,6 +59,8 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         backgroundColor: colorScheme.background,
         elevation: 0,
         scrolledUnderElevation: 0,
+        leadingWidth: 56,
+        leading: const SnaplookBackButton(),
         centerTitle: true,
         title: Text(
           'Search History',
@@ -237,6 +241,11 @@ class _HistoryCard extends StatelessWidget {
   final Map<String, dynamic> search;
   final dynamic spacing;
   final dynamic radius;
+  static const Set<String> _snaplookOriginTypes = {
+    'camera',
+    'photos',
+    'home',
+  };
 
   const _HistoryCard({
     required this.search,
@@ -297,19 +306,53 @@ class _HistoryCard extends StatelessWidget {
   }
 
   String _getSourceLabel() {
-    final searchType = search['search_type'] as String?;
-    switch (searchType) {
+    final rawType = (search['search_type'] as String?)?.trim();
+    final type = rawType?.toLowerCase();
+    final sourceUrl = (search['source_url'] as String?)?.toLowerCase() ?? '';
+
+    switch (type) {
       case 'instagram':
         return 'Instagram';
-      case 'photos':
-        return 'Photos';
-      case 'camera':
-        return 'Camera';
+      case 'tiktok':
+        return 'TikTok';
+      case 'pinterest':
+        return 'Pinterest';
+      case 'twitter':
+        return 'Twitter';
+      case 'facebook':
+        return 'Facebook';
+      case 'youtube':
+        final isShorts = sourceUrl.contains('youtube.com/shorts') ||
+            sourceUrl.contains('youtu.be/shorts');
+        return isShorts ? 'YouTube Shorts' : 'YouTube';
+      case 'chrome':
+        return 'Chrome';
+      case 'firefox':
+        return 'Firefox';
+      case 'safari':
+        return 'Safari';
       case 'web':
-        return 'Web';
-      default:
-        return 'Unknown';
+      case 'browser':
+        return 'Web Share';
+      case 'share':
+      case 'share_extension':
+      case 'shareextension':
+        return 'Share Extension';
     }
+
+    if (type == null || _snaplookOriginTypes.contains(type)) {
+      return 'Snaplook';
+    }
+
+    if (rawType != null && rawType.isNotEmpty) {
+      return rawType
+          .split(RegExp(r'[_-]+'))
+          .map((word) =>
+              word.isEmpty ? '' : '${word[0].toUpperCase()}${word.substring(1)}')
+          .join(' ');
+    }
+
+    return 'Snaplook';
   }
 
   @override
@@ -470,43 +513,20 @@ class _HistoryCard extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  GestureDetector(
-                    onTap: () => _shareSearch(context),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: colorScheme.secondary,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.share_outlined,
-                        color: colorScheme.onSecondary,
-                        size: 18,
-                      ),
-                    ),
+                  SnaplookCircularIconButton(
+                    icon: Icons.share_outlined,
+                    iconSize: 18,
+                    onPressed: () => _shareSearch(context),
+                    tooltip: 'Share search',
+                    semanticLabel: 'Share search',
                   ),
                   const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () => _copyLink(context),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: colorScheme.onSurface,
-                          width: 1.0,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.link,
-                          color: colorScheme.onSurface,
-                          size: 16,
-                        ),
-                      ),
-                    ),
+                  SnaplookCircularIconButton(
+                    icon: Icons.link,
+                    iconSize: 16,
+                    onPressed: () => _copyLink(context),
+                    tooltip: 'Copy link',
+                    semanticLabel: 'Copy search link',
                   ),
                 ],
               ),

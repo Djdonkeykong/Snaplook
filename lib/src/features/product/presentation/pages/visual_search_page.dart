@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:snaplook/core/theme/app_colors.dart';
+import 'package:snaplook/src/shared/widgets/snaplook_circular_icon_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -626,30 +627,13 @@ class _VisualSearchPageState extends State<VisualSearchPage> {
               ),
               child: Row(
                 children: [
-                  Container(
+                  SnaplookCircularIconButton(
+                    icon: Icons.close,
+                    iconSize: 20,
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: 'Close',
+                    semanticLabel: 'Close',
                     margin: const EdgeInsets.all(8),
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.black,
-                        size: 20,
-                      ),
-                    ),
                   ),
                   const Spacer(),
                   if (detectedItems.isNotEmpty)

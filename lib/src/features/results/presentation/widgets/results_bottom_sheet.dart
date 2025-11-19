@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 
@@ -51,17 +52,9 @@ class ResultsBottomSheetContent extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[400],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+                  BottomSheetHandle(
+                    margin: EdgeInsets.only(bottom: spacing.m),
                   ),
-                  SizedBox(height: spacing.m),
                   Row(
                     children: [
                       const Expanded(
@@ -279,4 +272,3 @@ class _AllResultsChip extends StatelessWidget {
     );
   }
 }
-

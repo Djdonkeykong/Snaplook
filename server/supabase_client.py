@@ -9,7 +9,7 @@ The iOS app handles authentication and sends the auth user ID.
 import os
 from typing import Optional, Dict, Any, List
 from supabase import create_client, Client
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Get Supabase credentials from environment
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -99,12 +99,12 @@ class SupabaseManager:
                     .select('*')\
                     .eq('image_url', image_url)\
                     .gt('expires_at', datetime.now().isoformat())\
-                    .single()\
+                    .limit(1)\
                     .execute()
 
-                if response.data:
+                if response.data and len(response.data) > 0:
                     print(f"Cache HIT for URL: {image_url[:50]}...")
-                    return response.data
+                    return response.data[0]
 
             # Try by hash if URL miss
             if image_hash:
@@ -112,12 +112,12 @@ class SupabaseManager:
                     .select('*')\
                     .eq('image_hash', image_hash)\
                     .gt('expires_at', datetime.now().isoformat())\
-                    .single()\
+                    .limit(1)\
                     .execute()
 
-                if response.data:
+                if response.data and len(response.data) > 0:
                     print(f"Cache HIT for hash: {image_hash[:16]}...")
-                    return response.data
+                    return response.data[0]
 
             print(f"Cache MISS for image")
             return None
@@ -223,6 +223,57 @@ class SupabaseManager:
 
         except Exception as e:
             print(f"User search creation error: {e}")
+            return None
+
+    def create_or_update_user_search(
+        self,
+        user_id: str,
+        image_cache_id: str,
+        search_type: str,
+        source_url: Optional[str] = None,
+        source_username: Optional[str] = None
+    ) -> Optional[str]:
+        """
+        Create or update a user search history entry.
+        If the user already has a search for this image_cache_id, update its timestamp.
+        Otherwise create a new entry.
+        Returns search_id if successful.
+        """
+        if not self.enabled:
+            return None
+
+        try:
+            # Check if user already has a search for this cache
+            existing = self.client.table('user_searches')\
+                .select('id')\
+                .eq('user_id', user_id)\
+                .eq('image_cache_id', image_cache_id)\
+                .limit(1)\
+                .execute()
+
+            if existing.data and len(existing.data) > 0:
+                # Update existing entry's timestamp to move it to top of history
+                search_id = existing.data[0]['id']
+                # Use UTC timestamp with timezone info for proper ordering
+                utc_now = datetime.now(timezone.utc).isoformat()
+                self.client.table('user_searches')\
+                    .update({'created_at': utc_now})\
+                    .eq('id', search_id)\
+                    .execute()
+                print(f"Updated existing user search: {search_id} with timestamp {utc_now}")
+                return search_id
+            else:
+                # Create new entry
+                return self.create_user_search(
+                    user_id=user_id,
+                    image_cache_id=image_cache_id,
+                    search_type=search_type,
+                    source_url=source_url,
+                    source_username=source_username
+                )
+
+        except Exception as e:
+            print(f"User search create/update error: {e}")
             return None
 
     def get_user_searches(

@@ -1,6 +1,8 @@
 package com.snaplook.snaplook
 
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -14,7 +16,12 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
     private val shareLogsChannel = "snaplook/share_extension_logs"
+    private val shareStatusChannelName = "com.snaplook.snaplook/share_status"
+    private val authChannelName = "snaplook/auth"
     private var splashOverlay: View? = null
+    private val shareStatusPrefs by lazy {
+        getSharedPreferences("snaplook_share_status", MODE_PRIVATE)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -24,6 +31,69 @@ class MainActivity: FlutterActivity() {
                 when (call.method) {
                     "getLogs" -> result.success(emptyList<String>())
                     "clearLogs" -> result.success(null)
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, shareStatusChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "configureShareExtension" -> result.success(null)
+                    "updateShareProcessingStatus" -> {
+                        val status = (call.arguments as? Map<*, *>)?.get("status") as? String
+                        if (status != null) {
+                            shareStatusPrefs.edit().putString("processing_status", status).apply()
+                        }
+                        result.success(null)
+                    }
+                    "markShareProcessingComplete" -> {
+                        shareStatusPrefs.edit().putString("processing_status", "completed").apply()
+                        result.success(null)
+                    }
+                    "getShareProcessingSession" -> {
+                        val status = shareStatusPrefs.getString("processing_status", null)
+                        result.success(mapOf("sessionId" to null, "status" to status))
+                    }
+                    "getPendingSearchId" -> {
+                        result.success(null)
+                    }
+                    "getPendingPlatformType" -> {
+                        val platform = shareStatusPrefs.getString("pending_platform_type", null)
+                        if (platform != null) {
+                            shareStatusPrefs.edit().remove("pending_platform_type").apply()
+                        }
+                        result.success(platform)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, authChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setAuthFlag" -> {
+                        val args = call.arguments as? Map<*, *>
+                        val isAuthenticated = args?.get("isAuthenticated") as? Boolean
+                        if (isAuthenticated == null) {
+                            result.error("INVALID_ARGS", "isAuthenticated missing", null)
+                            return@setMethodCallHandler
+                        }
+                        val userId = args["userId"] as? String
+                        shareStatusPrefs.edit()
+                            .putBoolean("user_authenticated", isAuthenticated)
+                            .apply()
+                        if (userId != null) {
+                            shareStatusPrefs.edit()
+                                .putString("supabase_user_id", userId)
+                                .apply()
+                        } else {
+                            shareStatusPrefs.edit()
+                                .remove("supabase_user_id")
+                                .apply()
+                        }
+                        Log.d("SnaplookAuth", "setAuthFlag -> authenticated=$isAuthenticated userId=${userId ?: "null"}")
+                        result.success(null)
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -65,7 +135,50 @@ class MainActivity: FlutterActivity() {
                     Log.d("SnaplookShare", "ClipData item $i: uri=${item.uri}, text=${item.text}")
                 }
             }
+
+            storeBrowserPlatform(it)
         }
+    }
+
+    private fun storeBrowserPlatform(intent: Intent) {
+        val packageName = detectReferrerPackage(intent) ?: return
+        val platformType = when (packageName.lowercase()) {
+            "com.android.chrome", "com.chrome.beta", "com.chrome.dev", "com.chrome.canary" -> "chrome"
+            "org.mozilla.firefox", "org.mozilla.firefox_beta", "org.mozilla.focus", "org.mozilla.klar" -> "firefox"
+            "com.brave.browser", "com.brave.browser_beta" -> "brave"
+            else -> null
+        } ?: return
+
+        shareStatusPrefs.edit().putString("pending_platform_type", platformType).apply()
+        Log.d("SnaplookShare", "Detected browser source: $platformType (package=$packageName)")
+    }
+
+    private fun detectReferrerPackage(intent: Intent): String? {
+        var packageName: String? = null
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+            val parcelableReferrer: Uri? = intent.getParcelableExtra(Intent.EXTRA_REFERRER)
+                ?: intent.getStringExtra(Intent.EXTRA_REFERRER_NAME)?.let { Uri.parse(it) }
+                ?: referrer
+
+            parcelableReferrer?.let { uri ->
+                when {
+                    uri.scheme == "android-app" -> packageName = uri.host
+                    uri.scheme == "https" && uri.host == "android-app" && uri.pathSegments.isNotEmpty() -> {
+                        packageName = uri.pathSegments.last()
+                    }
+                }
+            }
+        }
+
+        if (packageName.isNullOrEmpty()) {
+            val referrerName = intent.getStringExtra(Intent.EXTRA_REFERRER_NAME)
+            if (!referrerName.isNullOrEmpty()) {
+                packageName = referrerName.removePrefix("android-app://")
+            }
+        }
+
+        return packageName
     }
 
     private fun addSplashOverlay() {

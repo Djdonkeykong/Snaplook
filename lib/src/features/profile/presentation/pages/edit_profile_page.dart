@@ -70,13 +70,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
         centerTitle: true,
-        leadingWidth: 64,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: SnaplookBackButton(
-            onPressed: () => Navigator.of(context).pop(),
-            showBackground: false,
-          ),
+        leadingWidth: 56,
+        leading: SnaplookBackButton(
+          onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           'Profile',

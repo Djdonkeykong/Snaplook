@@ -78,14 +78,23 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2003C),
-      body: Center(
-        child: SizedBox(
-          width: 180,
-          child: Image.asset(
-            'assets/images/splash_logo.png',
-            fit: BoxFit.contain,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        // iOS: dark background = light (white) icons
+        statusBarBrightness: Brightness.dark,
+        // Android: light icons directly
+        statusBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF2003C),
+        body: Center(
+          child: SizedBox(
+            width: 180,
+            child: Image.asset(
+              'assets/images/splash_logo.png',
+              fit: BoxFit.contain,
+            ),
           ),
         ),
       ),

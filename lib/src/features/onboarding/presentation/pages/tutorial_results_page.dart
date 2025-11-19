@@ -9,12 +9,13 @@ import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../domain/services/tutorial_service.dart';
-import 'notification_permission_page.dart';
+import 'rating_social_proof_page.dart';
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
 class TutorialResultsPage extends ConsumerStatefulWidget {
   final String? imagePath;
@@ -29,7 +30,8 @@ class TutorialResultsPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TutorialResultsPage> createState() => _TutorialResultsPageState();
+  ConsumerState<TutorialResultsPage> createState() =>
+      _TutorialResultsPageState();
 }
 
 class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
@@ -70,7 +72,8 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
 
   Future<void> _loadTutorialProducts() async {
     try {
-      final results = await _tutorialService.getTutorialProducts(scenario: widget.scenario);
+      final results =
+          await _tutorialService.getTutorialProducts(scenario: widget.scenario);
       if (mounted) {
         setState(() {
           tutorialResults = results;
@@ -95,7 +98,15 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
 
   @override
   Widget build(BuildContext context) {
-    final categories = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Headwear', 'Accessories'];
+    final categories = [
+      'All',
+      'Tops',
+      'Bottoms',
+      'Outerwear',
+      'Shoes',
+      'Headwear',
+      'Accessories'
+    ];
     final spacing = context.spacing;
     final radius = context.radius;
     final mediaQuery = MediaQuery.of(context);
@@ -122,7 +133,9 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
               if (widget.returnToOnboarding) {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (context) => const NotificationPermissionPage(),
+                    builder: (context) => const RatingSocialProofPage(
+                      continueToTrialFlow: true,
+                    ),
                   ),
                 );
               } else {
@@ -173,8 +186,7 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
             ],
             body: const SizedBox.shrink(),
             onPanelSlide: (position) {
-              final nextOpacity =
-                  (0.15 + (0.55 * position)).clamp(0.0, 0.7);
+              final nextOpacity = (0.15 + (0.55 * position)).clamp(0.0, 0.7);
               if ((nextOpacity - _panelOverlayOpacity).abs() > 0.01) {
                 setState(() {
                   _panelOverlayOpacity = nextOpacity;
@@ -221,12 +233,12 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
                               ),
                               Text(
                                 '${_getFilteredResults().length} results',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'PlusJakartaSans',
-                                  ),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'PlusJakartaSans',
+                                ),
                               ),
                             ],
                           ),
@@ -257,7 +269,8 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
                                   fontFamily: 'PlusJakartaSans',
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14,
-                                  color: isSelected ? Colors.white : Colors.black,
+                                  color:
+                                      isSelected ? Colors.white : Colors.black,
                                 ),
                               ),
                               selected: isSelected,
@@ -277,8 +290,10 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
                                 ),
                               ),
                               side: BorderSide.none,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 14),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
                               visualDensity: VisualDensity.compact,
                             ),
                           );
@@ -329,8 +344,7 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
           ),
 
           // Congratulations Overlay
-          if (_showCongratulations)
-            _buildCongratulationsOverlay(),
+          if (_showCongratulations) _buildCongratulationsOverlay(),
         ],
       ),
     );
@@ -342,7 +356,9 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
       filtered = List.from(tutorialResults);
     } else {
       filtered = tutorialResults
-          .where((result) => result.category.toLowerCase().contains(selectedCategory.toLowerCase()))
+          .where((result) => result.category
+              .toLowerCase()
+              .contains(selectedCategory.toLowerCase()))
           .toList();
     }
 
@@ -356,8 +372,11 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
   }
 
   String _getSearchInsightText() {
-    final highQualityCount = tutorialResults.where((r) => r.confidence >= 0.85).length;
-    final mediumQualityCount = tutorialResults.where((r) => r.confidence >= 0.75 && r.confidence < 0.85).length;
+    final highQualityCount =
+        tutorialResults.where((r) => r.confidence >= 0.85).length;
+    final mediumQualityCount = tutorialResults
+        .where((r) => r.confidence >= 0.75 && r.confidence < 0.85)
+        .length;
 
     if (highQualityCount > 0) {
       return 'Found ${highQualityCount} precise color matches using smart matching';
@@ -463,7 +482,6 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
       ),
     );
   }
-
 
   void _openProduct(DetectionResult result) async {
     if (result.purchaseUrl != null) {
@@ -587,26 +605,11 @@ class _TopIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SnaplookCircularIconButton(
+      icon: icon,
+      iconSize: 18,
+      onPressed: onPressed,
       margin: const EdgeInsets.all(8),
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        onPressed: onPressed,
-        icon: Icon(icon, color: Colors.black, size: 18),
-      ),
     );
   }
 }

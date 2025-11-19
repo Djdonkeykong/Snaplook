@@ -3,6 +3,7 @@ import 'package:path_provider_foundation/path_provider_foundation.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -13,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/app_colors.dart';
 import 'shared/navigation/main_navigation.dart';
 import 'shared/navigation/route_observer.dart';
 import 'src/features/home/domain/providers/image_provider.dart';
@@ -26,6 +28,7 @@ import 'src/shared/services/share_import_status.dart';
 import 'src/services/link_scraper_service.dart';
 import 'src/services/share_extension_config_service.dart';
 import 'src/features/auth/domain/services/auth_service.dart';
+import 'src/features/auth/domain/providers/auth_provider.dart';
 import 'src/features/auth/presentation/pages/login_page.dart';
 import 'src/features/favorites/domain/providers/favorites_provider.dart';
 import 'src/services/revenue_cat_service.dart';
@@ -92,8 +95,10 @@ void main() async {
   }
 
   // 🧠 Log which endpoint is active
-  debugPrint('[Config] SERP_DETECT_ENDPOINT = ${AppConstants.serpDetectEndpoint}');
-  debugPrint('[Config] SERP_DETECT_AND_SEARCH_ENDPOINT = ${AppConstants.serpDetectAndSearchEndpoint}');
+  debugPrint(
+      '[Config] SERP_DETECT_ENDPOINT = ${AppConstants.serpDetectEndpoint}');
+  debugPrint(
+      '[Config] SERP_DETECT_AND_SEARCH_ENDPOINT = ${AppConstants.serpDetectAndSearchEndpoint}');
 
   // Warm up path_provider so method channels are registered before cache usage.
   try {
@@ -169,23 +174,19 @@ class _FetchingOverlay extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: 48,
-                height: 48,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 4,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
+              const CupertinoActivityIndicator(
+                radius: 18,
+                color: Colors.white,
               ),
               const SizedBox(height: 20),
               Text(
-              message,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+                message,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
             ],
           ),
         ),
@@ -213,7 +214,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   List<String>? _lastInitialSharePaths;
 
   bool _isFetchingOverlayVisible = false;
-  String _fetchingOverlayMessage = 'Fetching your photo...';
+  String _fetchingOverlayMessage = 'Downloading image...';
 
   @override
   void initState() {
@@ -272,43 +273,40 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     );
 
     // Get the media sharing coming from outside the app while the app is closed.
-    ReceiveSharingIntent.instance
-        .getInitialMedia()
-        .then((value) {
-          if (_hasHandledInitialShare) {
-            print("[SHARE EXTENSION] Initial media already handled; skipping");
-            return;
-          }
-          print("===== INITIAL MEDIA (App was Closed) =====");
-          print(
-            "[SHARE EXTENSION] Initial shared media: ${value.length} files",
-          );
-          for (var file in value) {
-            print("[SHARE EXTENSION] Initial shared file: ${file.path}");
-            print("[SHARE EXTENSION]   - type: ${file.type}");
-            print("[SHARE EXTENSION]   - mimeType: ${file.mimeType}");
-            print("[SHARE EXTENSION]   - thumbnail: ${file.thumbnail}");
-            print("[SHARE EXTENSION]   - duration: ${file.duration}");
-          }
-          if (value.isNotEmpty) {
-            print(
-              "[SHARE EXTENSION] Handling initial shared media immediately",
-            );
-            _hasHandledInitialShare = true;
-            _skipNextResumePendingCheck = true;
-            _shouldIgnoreNextStreamEmission = true;
-            _lastInitialSharePaths =
-                value.map((f) => f.path).toList(growable: false);
-            ReceiveSharingIntent.instance.reset();
-            print("[SHARE EXTENSION] Reset sharing intent");
-            unawaited(_handleSharedMedia(value, isInitial: true));
-          } else {
-            print("[SHARE EXTENSION] No initial media files received");
-          }
-        })
-        .catchError((error) {
-          print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
-        });
+    ReceiveSharingIntent.instance.getInitialMedia().then((value) {
+      if (_hasHandledInitialShare) {
+        print("[SHARE EXTENSION] Initial media already handled; skipping");
+        return;
+      }
+      print("===== INITIAL MEDIA (App was Closed) =====");
+      print(
+        "[SHARE EXTENSION] Initial shared media: ${value.length} files",
+      );
+      for (var file in value) {
+        print("[SHARE EXTENSION] Initial shared file: ${file.path}");
+        print("[SHARE EXTENSION]   - type: ${file.type}");
+        print("[SHARE EXTENSION]   - mimeType: ${file.mimeType}");
+        print("[SHARE EXTENSION]   - thumbnail: ${file.thumbnail}");
+        print("[SHARE EXTENSION]   - duration: ${file.duration}");
+      }
+      if (value.isNotEmpty) {
+        print(
+          "[SHARE EXTENSION] Handling initial shared media immediately",
+        );
+        _hasHandledInitialShare = true;
+        _skipNextResumePendingCheck = true;
+        _shouldIgnoreNextStreamEmission = true;
+        _lastInitialSharePaths =
+            value.map((f) => f.path).toList(growable: false);
+        ReceiveSharingIntent.instance.reset();
+        print("[SHARE EXTENSION] Reset sharing intent");
+        unawaited(_handleSharedMedia(value, isInitial: true));
+      } else {
+        print("[SHARE EXTENSION] No initial media files received");
+      }
+    }).catchError((error) {
+      print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
+    });
 
     // Ensure we catch any pending share when the app is already running.
   }
@@ -332,7 +330,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       final session = Supabase.instance.client.auth.currentSession;
       final user = Supabase.instance.client.auth.currentUser;
 
-      debugPrint('[Auth] Current session: ${session != null ? "exists" : "null"}');
+      debugPrint(
+          '[Auth] Current session: ${session != null ? "exists" : "null"}');
       debugPrint('[Auth] Current user: ${user?.id ?? "null"}');
 
       if (session == null) {
@@ -379,9 +378,11 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     try {
       // Check if user tapped "Open Snaplook" from login modal in share extension
       final prefs = await SharedPreferences.getInstance();
-      final needsSignin = prefs.getBool('needs_signin_from_share_extension') ?? false;
+      final needsSignin =
+          prefs.getBool('needs_signin_from_share_extension') ?? false;
       if (needsSignin) {
-        print("[SHARE EXTENSION] User needs to sign in - navigating to login page");
+        print(
+            "[SHARE EXTENSION] User needs to sign in - navigating to login page");
         prefs.remove('needs_signin_from_share_extension');
 
         // Navigate to login page
@@ -393,15 +394,16 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       final searchId = await ShareImportStatus.getPendingSearchId();
       if (searchId != null && searchId.isNotEmpty) {
         print("[SHARE EXTENSION] Found pending search_id: $searchId");
-        print("[SHARE EXTENSION] Navigating to detection page with existing results");
+        print(
+            "[SHARE EXTENSION] Navigating to detection page with existing results");
 
         // Navigate to detection page with this search_id to load existing results
         _navigateToDetectionWithSearchId(searchId);
         return;
       }
 
-      final pendingMedia = await ReceiveSharingIntent.instance
-          .getInitialMedia();
+      final pendingMedia =
+          await ReceiveSharingIntent.instance.getInitialMedia();
       if (pendingMedia.isNotEmpty) {
         print(
           "[SHARE EXTENSION] Found pending media after resume: ${pendingMedia.length} files",
@@ -433,16 +435,17 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         return;
       }
 
-      print("[SHARE EXTENSION] Navigating to detection page with searchId: $searchId");
+      print(
+          "[SHARE EXTENSION] Navigating to detection page with searchId: $searchId");
 
       // Navigate to detection page with searchId to load existing results
       // Use root navigator to hide bottom navigation bar
       Navigator.of(navigator.context, rootNavigator: true)
           .push(
-            MaterialPageRoute(
-              builder: (context) => DetectionPage(searchId: searchId),
-            ),
-          )
+        MaterialPageRoute(
+          builder: (context) => DetectionPage(searchId: searchId),
+        ),
+      )
           .then((_) {
         _isNavigatingToDetection = false;
         print("[SHARE EXTENSION] Detection page dismissed");
@@ -471,10 +474,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       // Navigate to login page with root navigator
       Navigator.of(navigator.context, rootNavigator: true)
           .push(
-            MaterialPageRoute(
-              builder: (context) => const LoginPage(),
-            ),
-          )
+        MaterialPageRoute(
+          builder: (context) => const LoginPage(),
+        ),
+      )
           .then((_) {
         _isNavigatingToDetection = false;
         print("[SHARE EXTENSION] Login page dismissed");
@@ -508,8 +511,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         final normalizedPath = file.path.startsWith('file://')
             ? Uri.parse(file.path).toFilePath()
             : file.path;
-        if (normalizedPath.isNotEmpty &&
-            File(normalizedPath).existsSync()) {
+        if (normalizedPath.isNotEmpty && File(normalizedPath).existsSync()) {
           firstExistingImage ??= file;
         }
       } else if (type == SharedMediaType.video) {
@@ -609,12 +611,22 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
   }
 
-  void _navigateToDetection() {
+  Future<void> _navigateToDetection({String? overrideSearchType}) async {
     if (_isNavigatingToDetection) {
       print("[SHARE EXTENSION] Navigation already in progress");
       return;
     }
     _isNavigatingToDetection = true;
+
+    // Use override if provided, otherwise get from share extension
+    String searchType;
+    if (overrideSearchType != null) {
+      searchType = overrideSearchType;
+    } else {
+      final platformType = await ShareImportStatus.getPendingPlatformType();
+      searchType = platformType ?? 'share';
+    }
+    print("[SHARE EXTENSION] Using searchType: $searchType");
 
     // Ensure the main navigation is showing the home tab before pushing detection.
     ref.read(selectedIndexProvider.notifier).state = 0;
@@ -630,15 +642,15 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
       navigator
           .push(
-            MaterialPageRoute(
-              builder: (_) => const DetectionPage(),
-              settings: const RouteSettings(name: 'detection-from-share'),
-            ),
-          )
+        MaterialPageRoute(
+          builder: (_) => DetectionPage(searchType: searchType),
+          settings: const RouteSettings(name: 'detection-from-share'),
+        ),
+      )
           .whenComplete(() {
-            _isNavigatingToDetection = false;
-            ref.read(shareNavigationInProgressProvider.notifier).state = false;
-          });
+        _isNavigatingToDetection = false;
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
+      });
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -663,8 +675,32 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       print("Extracted URL from text: $extractedUrl");
     }
 
+    // Check if user is authenticated before downloading
+    final isAuthenticated = ref.read(isAuthenticatedProvider);
+    if (!isAuthenticated) {
+      print(
+          "[SHARE EXTENSION] User not authenticated - showing login required");
+      await ShareImportStatus.markComplete();
+      _showLoginRequiredMessage();
+      return;
+    }
+
+    final decodedText = _decodeUrlOrNull(effectiveText);
+    final hasGoogleImageLink =
+        LinkScraperService.isGoogleImageResultUrl(effectiveText) ||
+            (decodedText != null &&
+                LinkScraperService.isGoogleImageResultUrl(decodedText));
+
     if (InstagramService.isInstagramUrl(effectiveText)) {
       await _downloadInstagramImage(effectiveText);
+    } else if (InstagramService.isTikTokUrl(effectiveText)) {
+      await _downloadTikTokImage(effectiveText);
+    } else if (InstagramService.isPinterestUrl(effectiveText)) {
+      await _downloadPinterestImage(effectiveText);
+    } else if (hasGoogleImageLink) {
+      await _downloadGoogleImageResult(decodedText ?? effectiveText);
+    } else if (InstagramService.isYouTubeUrl(effectiveText)) {
+      await _downloadYouTubeImage(effectiveText);
     } else {
       final parsed = Uri.tryParse(effectiveText.trim());
       if (parsed != null &&
@@ -674,6 +710,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         _showUnsupportedMessage(text);
         await ShareImportStatus.markComplete();
       }
+    }
+  }
+
+  String? _decodeUrlOrNull(String value) {
+    try {
+      return Uri.decodeFull(value);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -729,7 +773,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   }
 
   Future<void> _downloadInstagramImage(String instagramUrl) async {
-    _showFetchingOverlay(title: 'Fetching your photo...');
+    _showFetchingOverlay(title: 'Downloading image...');
     try {
       ref.read(shareNavigationInProgressProvider.notifier).state = true;
       final imageFiles = await InstagramService.downloadImageFromInstagramUrl(
@@ -737,9 +781,9 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       );
 
       if (imageFiles.isNotEmpty) {
-        print('dY", Downloaded ${imageFiles.length} image(s) from Instagram');
+        print('Downloaded ${imageFiles.length} image(s) from Instagram');
         if (imageFiles.length > 1) {
-          print('dYZï¿½ Carousel post detected - setting up image slider');
+          print('Carousel post detected - setting up image slider');
         }
 
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
@@ -747,7 +791,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         await ShareImportStatus.markComplete();
 
-        _navigateToDetection();
+        _navigateToDetection(overrideSearchType: 'instagram');
       } else {
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
@@ -766,8 +810,144 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
   }
 
+  Future<void> _downloadTikTokImage(String tiktokUrl) async {
+    _showFetchingOverlay(title: 'Downloading image...');
+    try {
+      ref.read(shareNavigationInProgressProvider.notifier).state = true;
+      final imageFiles = await InstagramService.downloadImageFromTikTokUrl(
+        tiktokUrl,
+      );
+
+      if (imageFiles.isNotEmpty) {
+        print('Downloaded ${imageFiles.length} image(s) from TikTok');
+
+        ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
+        ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
+        await ShareImportStatus.markComplete();
+
+        _navigateToDetection(overrideSearchType: 'tiktok');
+      } else {
+        ref.read(pendingSharedImageProvider.notifier).state = null;
+        await ShareImportStatus.markComplete();
+        _showTikTokErrorMessage();
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
+      }
+    } catch (e) {
+      print('Error downloading TikTok image: $e');
+
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+      await ShareImportStatus.markComplete();
+      _showTikTokErrorMessage();
+      ref.read(shareNavigationInProgressProvider.notifier).state = false;
+    } finally {
+      _hideFetchingOverlay();
+    }
+  }
+
+  Future<void> _downloadPinterestImage(String pinterestUrl) async {
+    _showFetchingOverlay(title: 'Downloading image...');
+    try {
+      ref.read(shareNavigationInProgressProvider.notifier).state = true;
+      final imageFiles = await InstagramService.downloadImageFromPinterestUrl(
+        pinterestUrl,
+      );
+
+      if (imageFiles.isNotEmpty) {
+        print('Downloaded ${imageFiles.length} image(s) from Pinterest');
+
+        ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
+        ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
+        await ShareImportStatus.markComplete();
+
+        _navigateToDetection(overrideSearchType: 'pinterest');
+      } else {
+        ref.read(pendingSharedImageProvider.notifier).state = null;
+        await ShareImportStatus.markComplete();
+        _showPinterestErrorMessage();
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
+      }
+    } catch (e) {
+      print('Error downloading Pinterest image: $e');
+
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+      await ShareImportStatus.markComplete();
+      _showPinterestErrorMessage();
+      ref.read(shareNavigationInProgressProvider.notifier).state = false;
+    } finally {
+      _hideFetchingOverlay();
+    }
+  }
+
+  Future<void> _downloadYouTubeImage(String youtubeUrl) async {
+    _showFetchingOverlay(title: 'Downloading image...');
+    try {
+      ref.read(shareNavigationInProgressProvider.notifier).state = true;
+      final imageFiles = await InstagramService.downloadImageFromYouTubeUrl(
+        youtubeUrl,
+      );
+
+      if (imageFiles.isNotEmpty) {
+        print('Downloaded ${imageFiles.length} image(s) from YouTube');
+
+        ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
+        ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
+        await ShareImportStatus.markComplete();
+
+        _navigateToDetection(overrideSearchType: 'youtube');
+      } else {
+        ref.read(pendingSharedImageProvider.notifier).state = null;
+        await ShareImportStatus.markComplete();
+        _showYouTubeErrorMessage();
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
+      }
+    } catch (e) {
+      print('Error downloading YouTube thumbnail: $e');
+
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+      await ShareImportStatus.markComplete();
+      _showYouTubeErrorMessage();
+      ref.read(shareNavigationInProgressProvider.notifier).state = false;
+    } finally {
+      _hideFetchingOverlay();
+    }
+  }
+
+  Future<void> _downloadGoogleImageResult(String url) async {
+    _showFetchingOverlay(title: 'Downloading image...');
+    try {
+      ref.read(shareNavigationInProgressProvider.notifier).state = true;
+      final imageFiles =
+          await LinkScraperService.downloadImageFromGoogleImageResult(url);
+      if (imageFiles.isNotEmpty) {
+        ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
+        ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
+        await ShareImportStatus.markComplete();
+
+        _navigateToDetection(overrideSearchType: 'web');
+      } else {
+        ref.read(pendingSharedImageProvider.notifier).state = null;
+        await ShareImportStatus.markComplete();
+        _showGenericLinkErrorMessage(url);
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
+      }
+    } catch (e) {
+      print('Error downloading Google image result: $e');
+
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+      await ShareImportStatus.markComplete();
+      _showGenericLinkErrorMessage(url);
+      ref.read(shareNavigationInProgressProvider.notifier).state = false;
+    } finally {
+      _hideFetchingOverlay();
+    }
+  }
+
   Future<void> _downloadGenericLink(String url) async {
-    _showFetchingOverlay(title: 'Fetching shared link...');
+    _showFetchingOverlay(title: 'Downloading image...');
     try {
       ref.read(shareNavigationInProgressProvider.notifier).state = true;
       final imageFiles = await LinkScraperService.downloadImagesFromUrl(url);
@@ -778,7 +958,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         await ShareImportStatus.markComplete();
 
-        _navigateToDetection();
+        _navigateToDetection(overrideSearchType: 'web');
       } else {
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
@@ -796,6 +976,69 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
   }
 
+  void _showLoginRequiredMessage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigatorKey.currentContext != null) {
+        final context = navigatorKey.currentContext!;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text(
+              'Login Required',
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: const Text(
+              'You need to be logged in to analyze images from shared links.\n\n'
+              'Please log in to continue.',
+              style: TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor:
+                      Theme.of(dialogContext).colorScheme.onSurface,
+                  textStyle: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const LoginPage(),
+                    ),
+                  );
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.secondary,
+                  textStyle: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                child: const Text('Log In'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
   void _showInstagramErrorMessage() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (navigatorKey.currentContext != null) {
@@ -809,6 +1052,84 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
               '- Network connectivity issues\n'
               '- Instagram\'s anti-scraping measures\n\n'
               'Try taking a screenshot instead and use the "Upload" button to analyze it.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
+  void _showTikTokErrorMessage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigatorKey.currentContext != null) {
+        showDialog(
+          context: navigatorKey.currentContext!,
+          builder: (context) => AlertDialog(
+            title: const Text('TikTok Image Download Failed'),
+            content: const Text(
+              'Unable to download the image from TikTok. This can happen due to:\n\n'
+              '- Privacy settings on the video\n'
+              '- Network connectivity issues\n'
+              '- TikTok\'s anti-scraping measures\n\n'
+              'Try taking a screenshot instead and use the "Upload" button to analyze it.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
+  void _showPinterestErrorMessage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigatorKey.currentContext != null) {
+        showDialog(
+          context: navigatorKey.currentContext!,
+          builder: (context) => AlertDialog(
+            title: const Text('Pinterest Image Download Failed'),
+            content: const Text(
+              'Unable to download the image from Pinterest. This can happen due to:\n\n'
+              '- Privacy settings on the pin\n'
+              '- Network connectivity issues\n'
+              '- Pinterest\'s anti-scraping measures\n\n'
+              'Try taking a screenshot instead and use the "Upload" button to analyze it.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
+  void _showYouTubeErrorMessage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigatorKey.currentContext != null) {
+        showDialog(
+          context: navigatorKey.currentContext!,
+          builder: (context) => AlertDialog(
+            title: const Text('YouTube Thumbnail Download Failed'),
+            content: const Text(
+              'Unable to download the thumbnail from this YouTube link. This can happen due to:\n\n'
+              '- The Shorts video is private or restricted\n'
+              '- YouTube temporarily blocked thumbnail access\n'
+              '- Network connectivity issues\n\n'
+              'Try copying a different Shorts link or take a screenshot and upload it manually.',
             ),
             actions: [
               TextButton(

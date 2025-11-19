@@ -21,12 +21,19 @@ import '../providers/detection_provider.dart';
 import '../widgets/detection_progress_overlay.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import '../../../../shared/services/supabase_service.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
   final String? imageUrl;
   final String? searchId;
+  final String searchType;
 
-  const DetectionPage({super.key, this.imageUrl, this.searchId});
+  const DetectionPage({
+    super.key,
+    this.imageUrl,
+    this.searchId,
+    this.searchType = 'camera',
+  });
 
   @override
   ConsumerState<DetectionPage> createState() => _DetectionPageState();
@@ -200,7 +207,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     final bool isCropActionActive = !showShareAction && _isCropMode;
     final Color actionBackgroundColor = isCropActionActive
         ? AppColors.secondary
-        : Colors.white.withOpacity(0.9);
+        : const Color(0xFFF3F4F6);
     final Color actionIconColor =
         isCropActionActive ? Colors.white : Colors.black;
 
@@ -212,10 +219,11 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     print("[DETECTION PAGE] totalImages: ${imagesState.totalImages}");
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
+      value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarBrightness: _isLoadingExistingResults ? Brightness.light : Brightness.dark,
-        statusBarIconBrightness: _isLoadingExistingResults ? Brightness.dark : Brightness.light,
+        // Dark (black) status bar icons
+        statusBarBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
         backgroundColor: _isLoadingExistingResults ? Colors.white : Colors.black,
@@ -229,61 +237,35 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           automaticallyImplyLeading: false,
           systemOverlayStyle: const SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
-            statusBarBrightness: Brightness.dark,
-            statusBarIconBrightness: Brightness.light,
+            // Dark (black) status bar icons
+            statusBarBrightness: Brightness.light,
+            statusBarIconBrightness: Brightness.dark,
           ),
-          leading: _isAnalysisOverlayVisible
+          leading: _isAnalysisOverlayVisible || _isLoadingExistingResults
               ? null
-              : Container(
+              : SnaplookCircularIconButton(
+                  icon: Icons.close,
+                  iconSize: 20,
+                  onPressed: () => Navigator.of(context).pop(),
+                  tooltip: 'Close',
+                  semanticLabel: 'Close',
                   margin: const EdgeInsets.all(8),
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, color: Colors.black, size: 20),
-                  ),
                 ),
-          actions: _isAnalysisOverlayVisible
+          actions: _isAnalysisOverlayVisible || _isLoadingExistingResults
               ? null
               : [
-                  Container(
+                  SnaplookCircularIconButton(
+                    icon: showShareAction ? Icons.ios_share : Icons.crop_free,
+                    iconSize: 20,
+                    onPressed: showShareAction
+                        ? _shareImage
+                        : (hasImage ? _toggleCropMode : null),
+                    backgroundColor: actionBackgroundColor,
+                    iconColor: actionIconColor,
+                    tooltip: showShareAction ? 'Share' : 'Crop',
+                    semanticLabel: showShareAction ? 'Share image' : 'Crop image',
                     margin: const EdgeInsets.all(8),
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: actionBackgroundColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: showShareAction
-                          ? _shareImage
-                          : (hasImage ? _toggleCropMode : null),
-                      icon: Icon(
-                        showShareAction ? Icons.ios_share : Icons.crop_free,
-                        color: actionIconColor,
-                        size: 20,
-                      ),
-                    ),
+                    elevation: 10,
                   ),
                 ],
         ),
@@ -1081,10 +1063,11 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   }
 
   void _startDetection() async {
-    print('Starting detection process...');
+    print('[SAVE] _startDetection() called');
 
     try {
       if (_isAnalysisOverlayVisible || ref.read(detectionProvider).isAnalyzing) {
+        print('[SAVE] Early return - overlay visible or already analyzing');
         return;
       }
 
@@ -1166,12 +1149,16 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       _enterSearchPhase();
       _setTargetProgress(0.8);
 
+      print('[SAVE] Calling analyzeImage with searchType: ${widget.searchType}');
+      print('[CACHE] Source URL for cache lookup: ${widget.imageUrl}');
       final results = await ref
           .read(detectionProvider.notifier)
           .analyzeImage(
             imageToAnalyze,
             skipDetection: skipDetection,
             cloudinaryUrl: imageUrl,
+            searchType: widget.searchType,
+            sourceUrl: widget.imageUrl,
           );
 
       if (mounted && results.isNotEmpty) {

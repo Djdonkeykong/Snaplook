@@ -25,7 +25,10 @@ import cloudinary
 import cloudinary.uploader
 
 # Load environment variables from .env file in parent directory
+# IMPORTANT: Must be before importing supabase_client
 load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env')
+
+from supabase_client import supabase_manager
 
 # === CONFIG ===
 MODEL_ID = "valentinafeve/yolos-fashionpedia"
@@ -408,6 +411,9 @@ class DetectAndSearchRequest(BaseModel):
     country: Optional[str] = Field(default='NO')  # PREFERRED: ISO 3166-1 alpha-2 country code (e.g., 'US', 'NO', 'GB') - TESTING: Defaulting to Norway
     language: Optional[str] = Field(default='nb')  # Language code for interface (e.g., 'en', 'nb', 'fr') - TESTING: Defaulting to Norwegian
     skip_detection: Optional[bool] = Field(default=False)  # Skip YOLO detection for user-cropped images
+    user_id: Optional[str] = Field(default=None)  # User ID for saving to Supabase
+    search_type: Optional[str] = Field(default='unknown')  # Source of analysis: camera, photos, home, share
+    source_url: Optional[str] = Field(default=None)  # Original source URL for cache lookup
 
     @model_validator(mode="after")
     def validate_image_source(self) -> "DetectAndSearchRequest":
@@ -1508,11 +1514,28 @@ def run_full_detection_pipeline(
         filtered, initial_count = run_detection(image, threshold, expand_ratio, max_crops)
         print(f"Detection completed in {time.time()-t_detect:.2f}s with {len(filtered)} garments")
 
+    # Handle no garments detected - use full image for search
     if not filtered:
-        return {'success': False, 'message': 'No garments detected'}
-
+        print("[Detection] No garments detected - will use full image for search")
+        if image is not None:
+            # Upload full image and use it for search
+            uploaded_url = upload_to_cloudinary(image, "clothing")
+            if uploaded_url:
+                # Create a synthetic garment entry for the full image
+                filtered = [{
+                    'label': 'clothing',
+                    'score': 0.5,
+                    'bbox': [0, 0, image.width, image.height]
+                }]
+                crops_with_urls = [{"garment": filtered[0], "crop_url": uploaded_url}]
+                uploaded_cloudinary_url = uploaded_url
+                print(f"[Cloudinary] Full image uploaded for fallback search: {uploaded_url}")
+            else:
+                return {'success': False, 'message': 'No garments detected and failed to upload image'}
+        else:
+            return {'success': False, 'message': 'No garments detected'}
     # Step 3: Crop & upload garments to Cloudinary
-    if skip_detection and uploaded_cloudinary_url:
+    elif skip_detection and uploaded_cloudinary_url:
         print(f"Using pre-uploaded image URL (skip_detection=true)")
         crops_with_urls = [{"garment": filtered[0], "crop_url": uploaded_cloudinary_url}]
     elif initial_count == 1 and image is not None:
@@ -1661,6 +1684,38 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         source_desc = req.image_url[:80] if req.image_url else f"<base64:{len(req.image_base64 or '')} chars>"
         print(f"\U0001f680 Starting detect-and-search pipeline for: {source_desc}...")
 
+        # Step 0: Check cache first (by source_url or image_url)
+        cache_lookup_url = req.source_url or req.image_url
+        if cache_lookup_url and supabase_manager.enabled:
+            cache_entry = supabase_manager.check_cache(image_url=cache_lookup_url)
+            if cache_entry:
+                print(f"[Cache] HIT - returning cached results for {cache_lookup_url[:50]}...")
+
+                # Create or update user_search entry for this cache hit (avoid duplicates)
+                search_id = None
+                if req.user_id:
+                    search_id = supabase_manager.create_or_update_user_search(
+                        user_id=req.user_id,
+                        image_cache_id=cache_entry['id'],
+                        search_type=req.search_type or 'unknown',
+                        source_url=req.image_url,
+                        source_username=None
+                    )
+                    print(f"[Supabase] Search entry for cache hit: {search_id}")
+
+                    # Increment cache hit counter
+                    supabase_manager.increment_cache_hit(cache_entry['id'])
+
+                return {
+                    'success': True,
+                    'cached': True,
+                    'detected_garment': cache_entry.get('detected_garments', [{}])[0] if cache_entry.get('detected_garments') else {},
+                    'total_results': cache_entry.get('total_results', 0),
+                    'results': cache_entry.get('search_results', []),
+                    'search_id': search_id,
+                    'cloudinary_url': cache_entry.get('cloudinary_url')
+                }
+
         # Step 1: Acquire image (skip if user provided pre-cropped URL)
         image = None
         initial_count = 0
@@ -1695,20 +1750,42 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
             filtered, initial_count = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
             print(f"🧠 Detection completed in {time.time()-t_detect:.2f}s with {len(filtered)} garments")
 
-        if not filtered:
-            return {'success': False, 'message': 'No garments detected', 'results': []}
+        # Track full image URL for cache (separate from crop URLs for search)
+        full_image_url = None
 
+        # Handle no garments detected - use full image for search
+        if not filtered:
+            print("[Detection] No garments detected - will use full image for search")
+            if image is not None:
+                # Upload full image and use it for search
+                uploaded_url = upload_to_cloudinary(image, "clothing")
+                if uploaded_url:
+                    full_image_url = uploaded_url
+                    # Create a synthetic garment entry for the full image
+                    filtered = [{
+                        'label': 'clothing',
+                        'score': 0.5,
+                        'bbox': [0, 0, image.width, image.height]
+                    }]
+                    crops_with_urls = [{"garment": filtered[0], "crop_url": uploaded_url}]
+                    print(f"[Cloudinary] Full image uploaded for fallback search: {uploaded_url}")
+                else:
+                    return {'success': False, 'message': 'No garments detected and failed to upload image', 'results': []}
+            else:
+                return {'success': False, 'message': 'No garments detected', 'results': []}
         # Step 3: Crop & upload garments to Cloudinary (parallel)
         # Skip upload if user provided a pre-cropped image URL
-        if req.skip_detection and req.image_url:
+        elif req.skip_detection and req.image_url:
+            full_image_url = req.image_url
             print(f"[Cloudinary] Using pre-uploaded image URL (skip_detection=true)")
             crops_with_urls = [{"garment": filtered[0], "crop_url": req.image_url}]
         elif initial_count == 1 and image is not None:
             print(f"[Cloudinary] Only 1 garment initially detected - uploading full image instead of cropping")
             # Upload the full image once
-            full_image_url = upload_to_cloudinary(image, filtered[0].get('label'))
-            if full_image_url:
-                crops_with_urls = [{"garment": filtered[0], "crop_url": full_image_url}]
+            uploaded_url = upload_to_cloudinary(image, filtered[0].get('label'))
+            if uploaded_url:
+                full_image_url = uploaded_url
+                crops_with_urls = [{"garment": filtered[0], "crop_url": uploaded_url}]
             else:
                 print("[Cloudinary] Full image upload failed")
                 crops_with_urls = []
@@ -1731,10 +1808,29 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                     print(f"[Cloudinary] Upload failed for {det['label']}: {e}")
                 return det, None
 
-            print(f"[Cloudinary] Uploading {len(crop_data)} crops in parallel...")
+            def upload_full_image():
+                """Upload full image in parallel with crops"""
+                try:
+                    url = upload_to_cloudinary(image, "full")
+                    if url:
+                        print(f"[Cloudinary] Full image uploaded: {url}")
+                    return url
+                except Exception as e:
+                    print(f"[Cloudinary] Full image upload failed: {e}")
+                    return None
+
+            print(f"[Cloudinary] Uploading {len(crop_data)} crops + full image in parallel...")
             t_upload = time.time()
-            with ThreadPoolExecutor(max_workers=min(6, len(crop_data))) as ex:
-                results = list(ex.map(upload_crop_safe, crop_data))
+            with ThreadPoolExecutor(max_workers=min(7, len(crop_data) + 1)) as ex:
+                # Submit all crop uploads
+                crop_futures = [ex.submit(upload_crop_safe, crop) for crop in crop_data]
+                # Submit full image upload in parallel
+                full_image_future = ex.submit(upload_full_image)
+
+                # Collect crop results
+                results = [f.result() for f in crop_futures]
+                # Get full image URL
+                full_image_url = full_image_future.result()
             print(f"[Cloudinary] Uploads complete in {time.time()-t_upload:.2f}s")
 
             crops_with_urls = [
@@ -1821,6 +1917,49 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         print(f"✅ Pipeline complete ({time.time()-t0:.2f}s total). "
               f"Returned {len(deduped_results)} results from {len(crops_with_urls)} garments.")
 
+        # Save to Supabase if user_id is provided
+        search_id = None
+        if req.user_id and supabase_manager.enabled:
+            try:
+                # Use full image URL for display (not crop URL)
+                display_url = full_image_url or (crops_with_urls[0]['crop_url'] if crops_with_urls else None)
+
+                # Store in image_cache
+                # Use source_url or image_url as cache key (for cache hits on re-analysis)
+                # Generate unique hash from original URL or timestamp
+                import hashlib
+                cache_key_url = req.source_url or req.image_url or display_url
+                unique_hash = hashlib.md5(f"{cache_key_url}_{time.time()}".encode()).hexdigest()
+
+                cache_id = supabase_manager.store_cache(
+                    image_url=cache_key_url,  # Original URL for cache lookup
+                    image_hash=unique_hash,
+                    cloudinary_url=display_url,  # New cloudinary URL for display
+                    detected_garments=[{
+                        'label': filtered[0]['label'],
+                        'score': round(filtered[0]['score'], 3),
+                        'bbox': filtered[0].get('expanded_bbox', filtered[0]['bbox'])
+                    }],
+                    search_results=deduped_results
+                )
+
+                # Create or update user_search entry (avoid duplicates)
+                if cache_id:
+                    search_id = supabase_manager.create_or_update_user_search(
+                        user_id=req.user_id,
+                        image_cache_id=cache_id,
+                        search_type=req.search_type or 'unknown',
+                        source_url=req.image_url,
+                        source_username=None
+                    )
+                    print(f"[Supabase] Saved search: cache_id={cache_id}, search_id={search_id}")
+                else:
+                    print(f"[Supabase] Failed to store cache")
+            except Exception as e:
+                print(f"[Supabase] Error saving results: {e}")
+                import traceback
+                traceback.print_exc()
+
         return {
             'success': True,
             'detected_garment': {
@@ -1829,7 +1968,8 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 'bbox': filtered[0].get('expanded_bbox', filtered[0]['bbox'])
             },
             'total_results': len(deduped_results),
-            'results': deduped_results
+            'results': deduped_results,
+            'search_id': search_id
         }
 
     except Exception as e:

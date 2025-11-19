@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -16,7 +17,8 @@ class GenderSelectionPage extends ConsumerStatefulWidget {
   const GenderSelectionPage({super.key});
 
   @override
-  ConsumerState<GenderSelectionPage> createState() => _GenderSelectionPageState();
+  ConsumerState<GenderSelectionPage> createState() =>
+      _GenderSelectionPageState();
 }
 
 class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
@@ -115,26 +117,11 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: canPop ? IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ) : null,
+        leading: canPop ? const SnaplookBackButton() : null,
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 1,
-          totalSteps: 8,
+          totalSteps: 10,
         ),
       ),
       body: SafeArea(
@@ -179,85 +166,95 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                        // Men's Clothing
-                        AnimatedBuilder(
-                          animation: _animationControllers[0],
-                          builder: (context, child) {
-                            return FadeTransition(
-                              opacity: _fadeAnimations[0],
-                              child: ScaleTransition(
-                                scale: _scaleAnimations[0],
-                                child: _GenderOption(
-                                  gender: Gender.male,
-                                  label: "Men's Clothing",
-                                  isSelected: selectedGender == Gender.male,
-                                  onTap: () {
-                                    print('[GenderSelection] User selected: male');
-                                    ref.read(selectedGenderProvider.notifier).state = Gender.male;
-                                    print('[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-
-                        SizedBox(height: spacing.l),
-
-                        // Women's Clothing
-                        AnimatedBuilder(
-                          animation: _animationControllers[1],
-                          builder: (context, child) {
-                            return FadeTransition(
-                              opacity: _fadeAnimations[1],
-                              child: ScaleTransition(
-                                scale: _scaleAnimations[1],
-                                child: _GenderOption(
-                                  gender: Gender.female,
-                                  label: "Women's Clothing",
-                                  isSelected: selectedGender == Gender.female,
-                                  onTap: () {
-                                    print('[GenderSelection] User selected: female');
-                                    ref.read(selectedGenderProvider.notifier).state = Gender.female;
-                                    print('[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-
-                        SizedBox(height: spacing.l),
-
-                        // Both
-                        AnimatedBuilder(
-                          animation: _animationControllers[2],
-                          builder: (context, child) {
-                            return FadeTransition(
-                              opacity: _fadeAnimations[2],
-                              child: ScaleTransition(
-                                scale: _scaleAnimations[2],
-                                child: _GenderOption(
-                                  gender: Gender.other,
-                                  label: 'Both',
-                                  isSelected: selectedGender == Gender.other,
-                                  onTap: () {
-                                    print('[GenderSelection] User selected: other');
-                                    ref.read(selectedGenderProvider.notifier).state = Gender.other;
-                                    print('[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
+                    // Men's Clothing
+                    AnimatedBuilder(
+                      animation: _animationControllers[0],
+                      builder: (context, child) {
+                        return FadeTransition(
+                          opacity: _fadeAnimations[0],
+                          child: ScaleTransition(
+                            scale: _scaleAnimations[0],
+                            child: _GenderOption(
+                              gender: Gender.male,
+                              label: "Men's Clothing",
+                              isSelected: selectedGender == Gender.male,
+                              onTap: () {
+                                print('[GenderSelection] User selected: male');
+                                ref
+                                    .read(selectedGenderProvider.notifier)
+                                    .state = Gender.male;
+                                print(
+                                    '[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
+                              },
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                ],
+
+                    SizedBox(height: spacing.l),
+
+                    // Women's Clothing
+                    AnimatedBuilder(
+                      animation: _animationControllers[1],
+                      builder: (context, child) {
+                        return FadeTransition(
+                          opacity: _fadeAnimations[1],
+                          child: ScaleTransition(
+                            scale: _scaleAnimations[1],
+                            child: _GenderOption(
+                              gender: Gender.female,
+                              label: "Women's Clothing",
+                              isSelected: selectedGender == Gender.female,
+                              onTap: () {
+                                print(
+                                    '[GenderSelection] User selected: female');
+                                ref
+                                    .read(selectedGenderProvider.notifier)
+                                    .state = Gender.female;
+                                print(
+                                    '[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    SizedBox(height: spacing.l),
+
+                    // Both
+                    AnimatedBuilder(
+                      animation: _animationControllers[2],
+                      builder: (context, child) {
+                        return FadeTransition(
+                          opacity: _fadeAnimations[2],
+                          child: ScaleTransition(
+                            scale: _scaleAnimations[2],
+                            child: _GenderOption(
+                              gender: Gender.other,
+                              label: 'Both',
+                              isSelected: selectedGender == Gender.other,
+                              onTap: () {
+                                print('[GenderSelection] User selected: other');
+                                ref
+                                    .read(selectedGenderProvider.notifier)
+                                    .state = Gender.other;
+                                print(
+                                    '[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
+        ),
+      ),
       bottomNavigationBar: OnboardingBottomBar(
         primaryButton: SizedBox(
           width: double.infinity,
@@ -274,7 +271,9 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                   }
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: selectedGender != null ? const Color(0xFFf2003c) : Colors.grey.shade300,
+              backgroundColor: selectedGender != null
+                  ? const Color(0xFFf2003c)
+                  : Colors.grey.shade300,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -288,7 +287,9 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                 fontWeight: FontWeight.bold,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
-                color: selectedGender != null ? Colors.white : Colors.grey.shade600,
+                color: selectedGender != null
+                    ? Colors.white
+                    : Colors.grey.shade600,
               ),
             ),
           ),

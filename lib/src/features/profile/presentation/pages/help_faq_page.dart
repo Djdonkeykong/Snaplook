@@ -15,13 +15,9 @@ class HelpFaqPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: colorScheme.surface,
         elevation: 0,
-        leadingWidth: 64,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: SnaplookBackButton(
-            onPressed: () => Navigator.of(context).pop(),
-            showBackground: false,
-          ),
+        leadingWidth: 56,
+        leading: SnaplookBackButton(
+          onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           'Help & FAQ',

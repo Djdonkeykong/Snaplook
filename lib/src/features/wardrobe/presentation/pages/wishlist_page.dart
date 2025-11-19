@@ -12,6 +12,7 @@ import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../../core/constants/history_icon.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import 'history_page.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
 class WishlistPage extends ConsumerStatefulWidget {
   const WishlistPage({super.key});
@@ -77,24 +78,20 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
           ),
         ),
         actions: [
-          Padding(
-            padding: EdgeInsets.only(right: spacing.s),
-            child: IconButton(
-              icon: Icon(
-                Solar__history_bold_new.solarHistoryBoldNew,
-                color: colorScheme.onSurface,
-                size: 24,
-              ),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const HistoryPage(),
-                    settings: const RouteSettings(name: '/history'),
-                  ),
-                );
-              },
-              tooltip: 'Search History',
-            ),
+          SnaplookCircularIconButton(
+            icon: Solar__history_bold_new.solarHistoryBoldNew,
+            iconSize: 20,
+            margin: EdgeInsets.only(right: spacing.s),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const HistoryPage(),
+                  settings: const RouteSettings(name: '/history'),
+                ),
+              );
+            },
+            tooltip: 'Search History',
+            semanticLabel: 'Open search history',
           ),
         ],
       ),
@@ -583,26 +580,12 @@ class _FavoriteCard extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () => _showShareMenu(context),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: colorScheme.onSurface,
-                          width: 1.0,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.more_horiz,
-                          color: colorScheme.onSurface,
-                          size: 16,
-                        ),
-                      ),
-                    ),
+                  SnaplookCircularIconButton(
+                    icon: Icons.more_horiz,
+                    iconSize: 18,
+                    onPressed: () => _showShareMenu(context),
+                    tooltip: 'More options',
+                    semanticLabel: 'More share options',
                   ),
                 ],
               ),

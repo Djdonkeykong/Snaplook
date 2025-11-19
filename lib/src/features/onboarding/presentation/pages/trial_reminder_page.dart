@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../../src/features/paywall/providers/credit_provider.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -67,26 +68,11 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ),
+        leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 6,
-          totalSteps: 8,
+          currentStep: 8,
+          totalSteps: 10,
         ),
       ),
       body: Padding(
@@ -169,7 +155,8 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                   HapticFeedback.mediumImpact();
 
                   // Check if user already has active subscription
-                  final hasActiveSubscription = ref.read(hasActiveSubscriptionProvider);
+                  final hasActiveSubscription =
+                      ref.read(hasActiveSubscriptionProvider);
 
                   if (hasActiveSubscription) {
                     // User already paid -> skip paywall, go to account creation

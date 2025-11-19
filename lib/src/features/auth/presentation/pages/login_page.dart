@@ -9,6 +9,8 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../../src/shared/services/video_preloader.dart';
+import '../../../../shared/widgets/bottom_sheet_handle.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../onboarding/presentation/pages/gender_selection_page.dart';
 import '../../domain/providers/auth_provider.dart';
 import 'email_sign_in_page.dart';
@@ -207,7 +209,6 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
 
   void _showSignInBottomSheet(BuildContext context) {
     final spacing = context.spacing;
-    // Capture the navigator before showing the bottom sheet
     final navigator = Navigator.of(context);
 
     showModalBottomSheet(
@@ -221,295 +222,263 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
             top: Radius.circular(20),
           ),
         ),
-        child: Padding(
-          padding: EdgeInsets.all(spacing.l),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        child: SafeArea(
+          top: false,
+          child: Stack(
             children: [
-              // Handle
-              Container(
-                margin: EdgeInsets.only(bottom: spacing.m),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Title with close button
-              Stack(
-                children: [
-                  const Center(
-                    child: Text(
-                      'Sign In',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
-                          Icons.close,
-                          color: Colors.black,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              SizedBox(height: spacing.xxl),
-
-              // Apple button
-              _AuthButton(
-                icon: Icons.apple,
-                iconSize: 32,
-                label: 'Continue with Apple',
-                backgroundColor: Colors.black,
-                textColor: Colors.white,
-                onPressed: () async {
-                  try {
-                    final authService = ref.read(authServiceProvider);
-                    await authService.signInWithApple();
-
-                    if (context.mounted) {
-                      Navigator.pop(context);
-
-                      // Check if user has completed onboarding
-                      final supabase = Supabase.instance.client;
-                      final userId = supabase.auth.currentUser?.id;
-
-                      if (userId != null) {
-                        final userResponse = await supabase
-                            .from('users')
-                            .select('gender')
-                            .eq('id', userId)
-                            .maybeSingle();
-
-                        print('[LoginPage] Apple sign-in - user ID: $userId');
-                        print('[LoginPage] User gender from DB: ${userResponse?['gender']}');
-
-                        final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
-
-                        if (hasCompletedOnboarding) {
-                          print('[LoginPage] Existing user - navigating to MainNavigation');
-                          // Existing user - go to main app
-                          ref.read(selectedIndexProvider.notifier).state = 0;
-                          ref.invalidate(inspirationProvider);
-                          navigator.pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
-                            ),
-                            (route) => false,
-                          );
-                        } else {
-                          print('[LoginPage] New user - navigating to GenderSelectionPage');
-                          // New user - start onboarding
-                          navigator.pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (context) => const GenderSelectionPage(),
-                            ),
-                            (route) => false,
-                          );
-                        }
-                      }
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Error signing in with Apple: ${e.toString()}',
-                            style: context.snackTextStyle(
-                              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-                            ),
-                          ),
-                          duration: const Duration(milliseconds: 2500),
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-
-              SizedBox(height: spacing.m),
-
-              // Google button
-              _AuthButtonWithSvg(
-                svgAsset: 'assets/icons/google_logo.svg',
-                iconSize: 22,
-                label: 'Continue with Google',
-                backgroundColor: Colors.white,
-                textColor: Colors.black,
-                borderColor: const Color(0xFFE5E7EB),
-                onPressed: () async {
-                  try {
-                    final authService = ref.read(authServiceProvider);
-                    await authService.signInWithGoogle();
-
-                    if (context.mounted) {
-                      Navigator.pop(context);
-
-                      // Check if user has completed onboarding
-                      final supabase = Supabase.instance.client;
-                      final userId = supabase.auth.currentUser?.id;
-
-                      if (userId != null) {
-                        final userResponse = await supabase
-                            .from('users')
-                            .select('gender')
-                            .eq('id', userId)
-                            .maybeSingle();
-
-                        print('[LoginPage] Google sign-in - user ID: $userId');
-                        print('[LoginPage] User gender from DB: ${userResponse?['gender']}');
-
-                        final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
-
-                        if (hasCompletedOnboarding) {
-                          print('[LoginPage] Existing user - navigating to MainNavigation');
-                          // Existing user - go to main app
-                          ref.read(selectedIndexProvider.notifier).state = 0;
-                          ref.invalidate(inspirationProvider);
-                          navigator.pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
-                            ),
-                            (route) => false,
-                          );
-                        } else {
-                          print('[LoginPage] New user - navigating to GenderSelectionPage');
-                          // New user - start onboarding
-                          navigator.pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (context) => const GenderSelectionPage(),
-                            ),
-                            (route) => false,
-                          );
-                        }
-                      }
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Error signing in with Google: ${e.toString()}',
-                            style: context.snackTextStyle(
-                              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-                            ),
-                          ),
-                          duration: const Duration(milliseconds: 2500),
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-
-              SizedBox(height: spacing.m),
-
-              // Email button
-              _AuthButton(
-                icon: Icons.email_outlined,
-                iconSize: 26,
-                label: 'Continue with Email',
-                backgroundColor: Colors.white,
-                textColor: Colors.black,
-                borderColor: const Color(0xFFE5E7EB),
-                onPressed: () async {
-                  Navigator.pop(context);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const EmailSignInPage(),
-                    ),
-                  );
-                },
-              ),
-
-              SizedBox(height: spacing.l),
-
-              // Terms and Privacy Policy
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.m),
-                child: RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    text: 'By continuing you agree to Snaplook\'s ',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7280),
-                      fontFamily: 'PlusJakartaSans',
-                      height: 1.5,
+                padding: EdgeInsets.all(spacing.l),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    BottomSheetHandle(
+                      margin: EdgeInsets.only(bottom: spacing.m),
                     ),
-                    children: [
-                      TextSpan(
-                        text: 'Terms of Conditions',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.black,
-                          fontFamily: 'PlusJakartaSans',
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline,
-                          height: 1.5,
-                        ),
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            // TODO: Open Terms of Conditions
-                          },
-                      ),
-                      const TextSpan(
-                        text: ' and ',
+                    const Center(
+                      child: Text(
+                        'Sign In',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF6B7280),
-                          fontFamily: 'PlusJakartaSans',
-                          height: 1.5,
-                        ),
-                      ),
-                      TextSpan(
-                        text: 'Privacy Policy',
-                        style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                           color: Colors.black,
                           fontFamily: 'PlusJakartaSans',
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline,
-                          height: 1.5,
+                          letterSpacing: -0.5,
                         ),
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () {
-                            // TODO: Open Privacy Policy
-                          },
                       ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(height: spacing.xxl),
+                    _AuthButton(
+                      icon: Icons.apple,
+                      iconSize: 32,
+                      label: 'Continue with Apple',
+                      backgroundColor: Colors.black,
+                      textColor: Colors.white,
+                      onPressed: () async {
+                        try {
+                          final authService = ref.read(authServiceProvider);
+                          await authService.signInWithApple();
+
+                          if (context.mounted) {
+                            Navigator.pop(context);
+
+                            final supabase = Supabase.instance.client;
+                            final userId = supabase.auth.currentUser?.id;
+
+                            if (userId != null) {
+                              final userResponse = await supabase
+                                  .from('users')
+                                  .select('gender')
+                                  .eq('id', userId)
+                                  .maybeSingle();
+
+                              print('[LoginPage] Apple sign-in - user ID: $userId');
+                              print('[LoginPage] User gender from DB: ${userResponse?['gender']}');
+
+                              final hasCompletedOnboarding =
+                                  userResponse != null && userResponse['gender'] != null;
+
+                              if (hasCompletedOnboarding) {
+                                ref.read(selectedIndexProvider.notifier).state = 0;
+                                ref.invalidate(inspirationProvider);
+                                navigator.pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (context) => const MainNavigation(
+                                      key: ValueKey('fresh-main-nav'),
+                                    ),
+                                  ),
+                                  (route) => false,
+                                );
+                              } else {
+                                navigator.pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (context) => const GenderSelectionPage(),
+                                  ),
+                                  (route) => false,
+                                );
+                              }
+                            }
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Error signing in with Apple: ${e.toString()}',
+                                  style: context.snackTextStyle(
+                                    merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                  ),
+                                ),
+                                duration: const Duration(milliseconds: 2500),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    SizedBox(height: spacing.m),
+                    _AuthButtonWithSvg(
+                      svgAsset: 'assets/icons/google_logo.svg',
+                      iconSize: 22,
+                      label: 'Continue with Google',
+                      backgroundColor: Colors.white,
+                      textColor: Colors.black,
+                      borderColor: const Color(0xFFE5E7EB),
+                      onPressed: () async {
+                        try {
+                          final authService = ref.read(authServiceProvider);
+                          await authService.signInWithGoogle();
+
+                          if (context.mounted) {
+                            Navigator.pop(context);
+
+                            final supabase = Supabase.instance.client;
+                            final userId = supabase.auth.currentUser?.id;
+
+                            if (userId != null) {
+                              final userResponse = await supabase
+                                  .from('users')
+                                  .select('gender')
+                                  .eq('id', userId)
+                                  .maybeSingle();
+
+                              print('[LoginPage] Google sign-in - user ID: $userId');
+                              print('[LoginPage] User gender from DB: ${userResponse?['gender']}');
+
+                              final hasCompletedOnboarding =
+                                  userResponse != null && userResponse['gender'] != null;
+
+                              if (hasCompletedOnboarding) {
+                                ref.read(selectedIndexProvider.notifier).state = 0;
+                                ref.invalidate(inspirationProvider);
+                                navigator.pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (context) => const MainNavigation(
+                                      key: ValueKey('fresh-main-nav'),
+                                    ),
+                                  ),
+                                  (route) => false,
+                                );
+                              } else {
+                                navigator.pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (context) => const GenderSelectionPage(),
+                                  ),
+                                  (route) => false,
+                                );
+                              }
+                            }
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Error signing in with Google: ${e.toString()}',
+                                  style: context.snackTextStyle(
+                                    merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                  ),
+                                ),
+                                duration: const Duration(milliseconds: 2500),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    SizedBox(height: spacing.m),
+                    _AuthButton(
+                      icon: Icons.email_outlined,
+                      iconSize: 26,
+                      label: 'Continue with Email',
+                      backgroundColor: Colors.white,
+                      textColor: Colors.black,
+                      borderColor: const Color(0xFFE5E7EB),
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const EmailSignInPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    SizedBox(height: spacing.l),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                      child: RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          text: "By continuing you agree to Snaplook's ",
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF6B7280),
+                            fontFamily: 'PlusJakartaSans',
+                            height: 1.5,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'Terms of Conditions',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black,
+                                fontFamily: 'PlusJakartaSans',
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                                height: 1.5,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  // TODO: Open Terms of Conditions
+                                },
+                            ),
+                            const TextSpan(
+                              text: ' and ',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6B7280),
+                                fontFamily: 'PlusJakartaSans',
+                                height: 1.5,
+                              ),
+                            ),
+                            TextSpan(
+                              text: 'Privacy Policy',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black,
+                                fontFamily: 'PlusJakartaSans',
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                                height: 1.5,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  // TODO: Open Privacy Policy
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: spacing.l),
+                  ],
                 ),
               ),
-
-              SizedBox(height: MediaQuery.of(context).padding.bottom + spacing.m),
+              Positioned(
+                top: spacing.l,
+                right: spacing.l,
+                child: SnaplookCircularIconButton(
+                  icon: Icons.close,
+                  iconSize: 18,
+                  size: 32,
+                  onPressed: () => Navigator.pop(context),
+                  tooltip: 'Close',
+                  semanticLabel: 'Close',
+                ),
+              ),
             ],
           ),
         ),

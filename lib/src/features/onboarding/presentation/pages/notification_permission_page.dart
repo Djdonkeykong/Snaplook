@@ -4,16 +4,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import 'account_creation_page.dart';
 import 'welcome_free_analysis_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
+import 'trial_intro_page.dart';
 
 // Provider to store notification permission choice
-final notificationPermissionGrantedProvider = StateProvider<bool?>((ref) => null);
+final notificationPermissionGrantedProvider =
+    StateProvider<bool?>((ref) => null);
 
 class NotificationPermissionPage extends ConsumerStatefulWidget {
-  const NotificationPermissionPage({super.key});
+  const NotificationPermissionPage({
+    super.key,
+    this.continueToTrialFlow = false,
+  });
+
+  final bool continueToTrialFlow;
 
   @override
   ConsumerState<NotificationPermissionPage> createState() =>
@@ -43,51 +51,13 @@ class _NotificationPermissionPageState
       // Store permission result in provider
       ref.read(notificationPermissionGrantedProvider.notifier).state = granted;
 
-      if (mounted) {
-        // Check if user is already authenticated
-        final authService = ref.read(authServiceProvider);
-        final isAuthenticated = authService.currentUser != null;
-
-        if (isAuthenticated) {
-          // User already authenticated (came from email sign-in flow) - go to welcome
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const WelcomeFreeAnalysisPage(),
-            ),
-          );
-        } else {
-          // User not authenticated yet - go to account creation
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const AccountCreationPage(),
-            ),
-          );
-        }
-      }
+      _navigateToNextStep();
     } catch (e) {
       print('[NotificationPermission] Error requesting permission: $e');
       // Default to false on error
       ref.read(notificationPermissionGrantedProvider.notifier).state = false;
 
-      if (mounted) {
-        // Even if there's an error, still navigate forward
-        final authService = ref.read(authServiceProvider);
-        final isAuthenticated = authService.currentUser != null;
-
-        if (isAuthenticated) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const WelcomeFreeAnalysisPage(),
-            ),
-          );
-        } else {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const AccountCreationPage(),
-            ),
-          );
-        }
-      }
+      _navigateToNextStep();
     } finally {
       if (mounted) {
         setState(() {
@@ -104,6 +74,20 @@ class _NotificationPermissionPageState
 
     // Store that permission was denied
     ref.read(notificationPermissionGrantedProvider.notifier).state = false;
+
+    _navigateToNextStep();
+  }
+
+  void _navigateToNextStep() {
+    if (!mounted) return;
+    if (widget.continueToTrialFlow) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const TrialIntroPage(),
+        ),
+      );
+      return;
+    }
 
     // Check if user is already authenticated
     final authService = ref.read(authServiceProvider);
@@ -136,26 +120,11 @@ class _NotificationPermissionPageState
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.arrow_back,
-              color: Colors.black,
-              size: 20,
-            ),
-          ),
-        ),
+        leading: const SnaplookBackButton(),
         centerTitle: true,
-        title: const OnboardingProgressIndicator(
-          currentStep: 5,
-          totalSteps: 6,
+        title: OnboardingProgressIndicator(
+          currentStep: widget.continueToTrialFlow ? 6 : 5,
+          totalSteps: widget.continueToTrialFlow ? 10 : 6,
         ),
       ),
       body: SafeArea(
@@ -193,7 +162,8 @@ class _NotificationPermissionPageState
                   child: Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 32, horizontal: 24),
                         child: Text(
                           'Snaplook Would Like To\nSend You Notifications',
                           textAlign: TextAlign.center,
