@@ -126,17 +126,6 @@ class _EncouragementCard extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(maxWidth: 420),
       padding: EdgeInsets.all(spacing.l),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,

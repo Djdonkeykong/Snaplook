@@ -100,10 +100,19 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
     // If searchId is provided, load existing results from Supabase
     if (widget.searchId != null) {
+      // Clear any previously selected images so the loaded image takes precedence
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(selectedImagesProvider.notifier).clearImages();
+      });
       setState(() {
         _isLoadingExistingResults = true;
       });
       _loadExistingResults(widget.searchId!);
+    } else if (widget.imageUrl != null) {
+      // Clear any previously selected images when loading a network image (e.g., from inspiration)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(selectedImagesProvider.notifier).clearImages();
+      });
     }
   }
 
@@ -527,6 +536,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     }
 
     return CachedNetworkImage(
+      key: ValueKey(imageUrl),
       imageUrl: imageUrl,
       fit: BoxFit.cover,
       width: double.infinity,

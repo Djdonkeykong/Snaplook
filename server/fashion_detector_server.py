@@ -1131,6 +1131,7 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
             filtered.append(det)
 
     # === Smart Pants Suppression under Long Outerwear ===
+    # Only suppress pants if they're truly hidden (e.g., under a closed long coat/dress)
     long_outerwear = [
         d for d in filtered
         if d["label"] in {"coat", "jacket", "dress"} and (d["bbox"][3] / image.height) > 0.7
@@ -1141,11 +1142,41 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
             if det["label"] == "pants":
                 covered = False
                 for outer in long_outerwear:
+                    p_x1, p_y1, p_x2, p_y2 = det["bbox"]
+                    o_x1, o_y1, o_x2, o_y2 = outer["bbox"]
+
                     overlap = overlap_ratio(det["bbox"], outer["bbox"])
-                    if overlap > 0.6 and outer["score"] > 0.5:
-                        print(f"👖 Suppressing pants under long '{outer['label']}' (overlap={overlap:.2f})")
+
+                    # Check if pants extend significantly below outerwear (visible at bottom)
+                    pants_below = p_y2 - o_y2
+                    pants_height = p_y2 - p_y1
+                    visible_below_ratio = pants_below / pants_height if pants_height > 0 else 0
+
+                    # Check horizontal coverage - if jacket doesn't fully cover pants width
+                    pants_width = p_x2 - p_x1
+                    horizontal_coverage = min(p_x2, o_x2) - max(p_x1, o_x1)
+                    h_coverage_ratio = horizontal_coverage / pants_width if pants_width > 0 else 0
+
+                    # Only suppress if:
+                    # 1. Very high overlap (85%+)
+                    # 2. Pants don't extend much below outerwear (<10% visible)
+                    # 3. Outerwear covers most of pants width (>90%)
+                    # 4. It's a dress (not jacket) - jackets are usually open
+                    should_suppress = (
+                        overlap > 0.85 and
+                        visible_below_ratio < 0.1 and
+                        h_coverage_ratio > 0.9 and
+                        outer["label"] == "dress" and  # Only dresses truly hide pants
+                        outer["score"] > 0.6
+                    )
+
+                    if should_suppress:
+                        print(f"👖 Suppressing pants under '{outer['label']}' (overlap={overlap:.2f}, visible_below={visible_below_ratio:.2f})")
                         covered = True
                         break
+                    elif overlap > 0.5:
+                        print(f"👖 Keeping pants despite overlap with '{outer['label']}' (overlap={overlap:.2f}, visible_below={visible_below_ratio:.2f}, h_coverage={h_coverage_ratio:.2f})")
+
                 if not covered:
                     new_filtered.append(det)
             else:

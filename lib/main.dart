@@ -796,6 +796,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
+        // Pre-cache the image for instant display
+        if (navigatorKey.currentContext != null) {
+          final fileImage = FileImage(File(imageFiles.first.path));
+          await precacheImage(fileImage, navigatorKey.currentContext!).catchError((e) {
+            print('[Instagram] Precaching error: $e');
+          });
+        }
+
         await ShareImportStatus.markComplete();
 
         _navigateToDetection(overrideSearchType: 'instagram', sourceUrl: instagramUrl);
@@ -830,6 +838,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
+        // Pre-cache the image for instant display
+        if (navigatorKey.currentContext != null) {
+          final fileImage = FileImage(File(imageFiles.first.path));
+          await precacheImage(fileImage, navigatorKey.currentContext!).catchError((e) {
+            print('[TikTok] Precaching error: $e');
+          });
+        }
 
         await ShareImportStatus.markComplete();
 
@@ -866,6 +882,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
+        // Pre-cache the image for instant display
+        if (navigatorKey.currentContext != null) {
+          final fileImage = FileImage(File(imageFiles.first.path));
+          await precacheImage(fileImage, navigatorKey.currentContext!).catchError((e) {
+            print('[Pinterest] Precaching error: $e');
+          });
+        }
+
         await ShareImportStatus.markComplete();
 
         _navigateToDetection(overrideSearchType: 'pinterest', sourceUrl: pinterestUrl);
@@ -901,6 +925,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
+        // Pre-cache the image for instant display
+        if (navigatorKey.currentContext != null) {
+          final fileImage = FileImage(File(imageFiles.first.path));
+          await precacheImage(fileImage, navigatorKey.currentContext!).catchError((e) {
+            print('[YouTube] Precaching error: $e');
+          });
+        }
+
         await ShareImportStatus.markComplete();
 
         _navigateToDetection(overrideSearchType: 'youtube', sourceUrl: youtubeUrl);
@@ -932,6 +964,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
+        // Pre-cache the image for instant display
+        if (navigatorKey.currentContext != null) {
+          final fileImage = FileImage(File(imageFiles.first.path));
+          await precacheImage(fileImage, navigatorKey.currentContext!).catchError((e) {
+            print('[Google Image] Precaching error: $e');
+          });
+        }
+
         await ShareImportStatus.markComplete();
 
         _navigateToDetection(overrideSearchType: 'web', sourceUrl: url);
@@ -962,6 +1002,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       if (imageFiles.isNotEmpty) {
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
+        // Pre-cache the image for instant display
+        if (navigatorKey.currentContext != null) {
+          final fileImage = FileImage(File(imageFiles.first.path));
+          await precacheImage(fileImage, navigatorKey.currentContext!).catchError((e) {
+            print('[Generic Link] Precaching error: $e');
+          });
+        }
 
         await ShareImportStatus.markComplete();
 

@@ -858,9 +858,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func showChoiceButtons() {
+        // Block auto-redirect while choice UI is visible
+        shouldAttemptDetection = true
+        shareLog("Choice buttons shown - blocking auto-redirect")
+
         // Add choice buttons to the existing blank overlay
         guard let overlay = view.subviews.first(where: { $0.tag == 9999 }) else {
-            shareLog("❌ Cannot find overlay to add choice buttons")
+            shareLog("Cannot find overlay to add choice buttons")
             return
         }
 
@@ -1298,57 +1302,93 @@ open class RSIShareViewController: SLComposeServiceViewController {
         content: NSExtensionItem,
         completion: @escaping () -> Void
     ) {
-        if type == .url, isSocialMediaShareCandidate(item) {
-            let isInstagram = isInstagramShareCandidate(item)
-            let platformName = isInstagram ? "Instagram" : "TikTok"
-            shareLog("Detected \(platformName) URL share - showing choice UI before download")
-
-            // Check if detection is configured
-            let hasDetectionConfig = detectorEndpoint() != nil && serpApiKey() != nil
-
-            if hasDetectionConfig {
-                // Store the URL and completion for later processing
-                pendingInstagramUrl = item
-                pendingInstagramCompletion = completion
-                pendingPlatformType = isInstagram ? "instagram" : "tiktok"
-
-                // Choice UI is already visible - just wait for user decision
-                shareLog("\(platformName) URL detected - awaiting user decision (buttons already visible)")
-                return
-            } else {
-                // No detection configured - proceed with normal download flow
-                shareLog("No detection configured - starting normal \(platformName) download")
-                updateProcessingStatus("processing")
-
-                let downloadFunction = isInstagramShareCandidate(item) ? downloadInstagramMedia : downloadTikTokMedia
-                downloadFunction(item) { [weak self] result in
-                    guard let self = self else {
-                        completion()
-                        return
-                    }
-
-                    switch result {
-                    case .success(let downloaded):
-                        if downloaded.isEmpty {
-                            shareLog("\(platformName) download succeeded but returned no files - falling back to literal URL")
-                            self.appendLiteralShare(item: item, type: type)
-                        } else {
-                            self.sharedMedia.append(contentsOf: downloaded)
-                            shareLog("Appended \(downloaded.count) downloaded \(platformName) file(s) - count now \(self.sharedMedia.count)")
-                        }
-                        completion()
-                    case .failure(let error):
-                        shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
-                        self.appendLiteralShare(item: item, type: type)
-                        completion()
-                    }
-                }
-                return
-            }
+        // Only process URLs
+        guard type == .url else {
+            appendLiteralShare(item: item, type: type)
+            completion()
+            return
         }
 
-        appendLiteralShare(item: item, type: type)
-        completion()
+        // Determine the platform type
+        let platformName: String
+        let platformType: String
+        let downloadFunction: (String, @escaping (Result<[SharedMediaFile], Error>) -> Void) -> Void
+
+        if isInstagramShareCandidate(item) {
+            platformName = "Instagram"
+            platformType = "instagram"
+            downloadFunction = downloadInstagramMedia
+        } else if isTikTokShareCandidate(item) {
+            platformName = "TikTok"
+            platformType = "tiktok"
+            downloadFunction = downloadTikTokMedia
+        } else if isPinterestShareCandidate(item) {
+            platformName = "Pinterest"
+            platformType = "pinterest"
+            downloadFunction = downloadPinterestMedia
+        } else if isYouTubeShareCandidate(item) {
+            platformName = "YouTube"
+            platformType = "youtube"
+            downloadFunction = downloadYouTubeMedia
+        } else if isGoogleImageShareCandidate(item) {
+            platformName = "Google Image"
+            platformType = "google_image"
+            downloadFunction = downloadGoogleImageMedia
+        } else if item.lowercased().hasPrefix("http://") || item.lowercased().hasPrefix("https://") {
+            // Generic link - try to download images from it
+            platformName = "Generic Link"
+            platformType = "generic"
+            downloadFunction = downloadGenericLinkMedia
+        } else {
+            // Not a URL we can download from
+            appendLiteralShare(item: item, type: type)
+            completion()
+            return
+        }
+
+        shareLog("Detected \(platformName) URL share - showing choice UI before download")
+
+        // Check if detection is configured
+        let hasDetectionConfig = detectorEndpoint() != nil && serpApiKey() != nil
+
+        if hasDetectionConfig {
+            // Store the URL and completion for later processing
+            pendingInstagramUrl = item
+            pendingInstagramCompletion = completion
+            pendingPlatformType = platformType
+
+            // Choice UI is already visible - just wait for user decision
+            shareLog("\(platformName) URL detected - awaiting user decision (buttons already visible)")
+            return
+        } else {
+            // No detection configured - proceed with normal download flow
+            shareLog("No detection configured - starting normal \(platformName) download")
+            updateProcessingStatus("processing")
+
+            downloadFunction(item) { [weak self] result in
+                guard let self = self else {
+                    completion()
+                    return
+                }
+
+                switch result {
+                case .success(let downloaded):
+                    if downloaded.isEmpty {
+                        shareLog("\(platformName) download succeeded but returned no files - falling back to literal URL")
+                        self.appendLiteralShare(item: item, type: type)
+                    } else {
+                        self.sharedMedia.append(contentsOf: downloaded)
+                        shareLog("Appended \(downloaded.count) downloaded \(platformName) file(s) - count now \(self.sharedMedia.count)")
+                    }
+                    completion()
+                case .failure(let error):
+                    shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
+                    self.appendLiteralShare(item: item, type: type)
+                    completion()
+                }
+            }
+            return
+        }
     }
 
     private func handleMedia(
@@ -1458,9 +1498,54 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func isTikTokShareCandidate(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        // Match various TikTok URL formats:
+        // - tiktok.com/@ (profile or video)
+        // - tiktok.com/video/ (direct video)
+        // - tiktok.com/t/ (short links)
+        // - vm.tiktok.com/ (short redirect URLs)
+        // - vt.tiktok.com/ (another short format)
+        if trimmed.contains("vm.tiktok.com/") || trimmed.contains("vt.tiktok.com/") {
+            return true
+        }
         return trimmed.contains("tiktok.com/") && (trimmed.contains("/video/") || trimmed.contains("/@") || trimmed.contains("/t/"))
     }
 
+    private func isPinterestShareCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return trimmed.contains("pinterest.com/pin/") || trimmed.contains("pin.it/")
+    }
+
+    private func isYouTubeShareCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !trimmed.contains("youtube.com") && !trimmed.contains("youtu.be") {
+            return false
+        }
+        // Must have video ID indicator
+        return trimmed.contains("/watch") || trimmed.contains("/shorts/") ||
+               trimmed.contains("youtu.be/") || trimmed.contains("/v/")
+    }
+
+    private func isGoogleImageShareCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let hasGoogleHost = trimmed.contains("://www.google.") ||
+                           trimmed.contains("://google.") ||
+                           trimmed.contains("www.google.") ||
+                           trimmed.contains("google.")
+        if !hasGoogleHost { return false }
+        let hasImgresPath = trimmed.contains("/imgres") || trimmed.contains("/search")
+        if !hasImgresPath { return false }
+        return trimmed.contains("imgurl=")
+    }
+
+    private func isDownloadableUrlCandidate(_ value: String) -> Bool {
+        return isInstagramShareCandidate(value) ||
+               isTikTokShareCandidate(value) ||
+               isPinterestShareCandidate(value) ||
+               isYouTubeShareCandidate(value) ||
+               isGoogleImageShareCandidate(value)
+    }
+
+    // Legacy function for backward compatibility
     private func isSocialMediaShareCandidate(_ value: String) -> Bool {
         return isInstagramShareCandidate(value) || isTikTokShareCandidate(value)
     }
@@ -1768,6 +1853,497 @@ open class RSIShareViewController: SLComposeServiceViewController {
             code: code,
             userInfo: [NSLocalizedDescriptionKey: message]
         )
+    }
+
+    // MARK: - Pinterest Scraping
+
+    private func downloadPinterestMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
+            shareLog("ScrapingBee API key missing - cannot download Pinterest image")
+            completion(.failure(makeDownloadError("Pinterest", "ScrapingBee API key not configured")))
+            return
+        }
+
+        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
+            completion(.failure(makeDownloadError("Pinterest", "Invalid ScrapingBee URL")))
+            return
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "api_key", value: apiKey),
+            URLQueryItem(name: "url", value: urlString),
+            URLQueryItem(name: "render_js", value: "true"),
+            URLQueryItem(name: "wait", value: "2000")
+        ]
+
+        guard let requestURL = components.url else {
+            completion(.failure(makeDownloadError("Pinterest", "Failed to build request URL")))
+            return
+        }
+
+        shareLog("Fetching Pinterest HTML via ScrapingBee for \(urlString)")
+
+        var request = URLRequest(url: requestURL)
+        request.timeoutInterval = 25.0
+
+        let session = URLSession(configuration: .ephemeral)
+        let task = session.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                session.invalidateAndCancel()
+                DispatchQueue.main.async {
+                    completion(.failure(self.makeDownloadError("Pinterest", "Network error: \(error.localizedDescription)")))
+                }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,
+                  let data = data, let html = String(data: data, encoding: .utf8) else {
+                session.invalidateAndCancel()
+                DispatchQueue.main.async {
+                    completion(.failure(self.makeDownloadError("Pinterest", "Failed to fetch page")))
+                }
+                return
+            }
+
+            let imageUrls = self.extractPinterestImageUrls(from: html)
+            if imageUrls.isEmpty {
+                session.invalidateAndCancel()
+                DispatchQueue.main.async {
+                    completion(.failure(self.makeDownloadError("Pinterest", "No images found")))
+                }
+                return
+            }
+
+            self.downloadFirstValidImage(from: imageUrls, platform: "pinterest", session: session, completion: completion)
+        }
+        task.resume()
+    }
+
+    private func extractPinterestImageUrls(from html: String) -> [String] {
+        var results: [String] = []
+        var seenUrls = Set<String>()
+
+        // Pattern 1: og:image meta tag (usually highest quality)
+        let ogImagePattern = "<meta[^>]+property=\"og:image\"[^>]+content=\"([^\"]+)\""
+        if let regex = try? NSRegularExpression(pattern: ogImagePattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            if let match = regex.firstMatch(in: html, options: [], range: nsrange),
+               match.numberOfRanges > 1,
+               let range = Range(match.range(at: 1), in: html) {
+                let url = String(html[range]).replacingOccurrences(of: "&amp;", with: "&")
+                if !seenUrls.contains(url) {
+                    seenUrls.insert(url)
+                    results.append(url)
+                }
+            }
+        }
+
+        // Pattern 2: originals pinimg (highest resolution)
+        let originalsPattern = "src=\"(https://i\\.pinimg\\.com/originals/[^\"]+\\.(?:jpg|jpeg|png|webp))\""
+        if let regex = try? NSRegularExpression(pattern: originalsPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match, match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                let url = String(html[range]).replacingOccurrences(of: "&amp;", with: "&")
+                if !seenUrls.contains(url) {
+                    seenUrls.insert(url)
+                    results.append(url)
+                }
+            }
+        }
+
+        // Pattern 3: 564x pinimg (medium-high resolution)
+        let mediumPattern = "src=\"(https://i\\.pinimg\\.com/564x/[^\"]+\\.(?:jpg|jpeg|png|webp))\""
+        if let regex = try? NSRegularExpression(pattern: mediumPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match, match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                let url = String(html[range]).replacingOccurrences(of: "&amp;", with: "&")
+                if !seenUrls.contains(url) {
+                    seenUrls.insert(url)
+                    results.append(url)
+                }
+            }
+        }
+
+        // Pattern 4: Any pinimg URL as fallback
+        let anyPinimgPattern = "src=\"(https://i\\.pinimg\\.com/[^\"]+\\.(?:jpg|jpeg|png|webp))\""
+        if let regex = try? NSRegularExpression(pattern: anyPinimgPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match, match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                let url = String(html[range]).replacingOccurrences(of: "&amp;", with: "&")
+                if !seenUrls.contains(url) {
+                    seenUrls.insert(url)
+                    results.append(url)
+                }
+            }
+        }
+
+        shareLog("Extracted \(results.count) Pinterest image URL(s)")
+        return results
+    }
+
+    // MARK: - YouTube Thumbnail Download
+
+    private func downloadYouTubeMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard let videoId = extractYouTubeVideoId(from: urlString) else {
+            shareLog("Unable to extract YouTube video ID from \(urlString)")
+            completion(.failure(makeDownloadError("YouTube", "Could not extract video ID")))
+            return
+        }
+
+        let thumbnailUrls = buildYouTubeThumbnailCandidates(videoId: videoId)
+        shareLog("Trying \(thumbnailUrls.count) YouTube thumbnail candidates for video \(videoId)")
+
+        downloadFirstValidImage(from: thumbnailUrls, platform: "youtube", session: URLSession.shared, completion: completion)
+    }
+
+    private func extractYouTubeVideoId(from urlString: String) -> String? {
+        // Pattern 1: youtu.be/VIDEO_ID
+        if urlString.contains("youtu.be/") {
+            if let range = urlString.range(of: "youtu.be/") {
+                var videoId = String(urlString[range.upperBound...])
+                // Remove query parameters
+                if let queryIndex = videoId.firstIndex(of: "?") {
+                    videoId = String(videoId[..<queryIndex])
+                }
+                return videoId.isEmpty ? nil : videoId
+            }
+        }
+
+        // Pattern 2: youtube.com/watch?v=VIDEO_ID
+        if let url = URL(string: urlString),
+           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let queryItems = components.queryItems {
+            for item in queryItems {
+                if item.name == "v", let value = item.value, !value.isEmpty {
+                    return value
+                }
+            }
+        }
+
+        // Pattern 3: youtube.com/shorts/VIDEO_ID or youtube.com/v/VIDEO_ID
+        let patterns = ["/shorts/", "/v/", "/embed/"]
+        for pattern in patterns {
+            if let range = urlString.range(of: pattern) {
+                var videoId = String(urlString[range.upperBound...])
+                // Remove trailing path or query
+                if let slashIndex = videoId.firstIndex(of: "/") {
+                    videoId = String(videoId[..<slashIndex])
+                }
+                if let queryIndex = videoId.firstIndex(of: "?") {
+                    videoId = String(videoId[..<queryIndex])
+                }
+                if !videoId.isEmpty {
+                    return videoId
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func buildYouTubeThumbnailCandidates(videoId: String) -> [String] {
+        let hosts = [
+            "https://i.ytimg.com/vi",
+            "https://img.youtube.com/vi"
+        ]
+
+        let variants = [
+            "maxresdefault.jpg",
+            "maxres1.jpg",
+            "sddefault.jpg",
+            "hq720.jpg",
+            "hqdefault.jpg",
+            "mqdefault.jpg"
+        ]
+
+        var candidates: [String] = []
+        for host in hosts {
+            for variant in variants {
+                candidates.append("\(host)/\(videoId)/\(variant)")
+            }
+        }
+
+        return candidates
+    }
+
+    // MARK: - Google Image Download
+
+    private func downloadGoogleImageMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard let imageUrl = extractGoogleImageUrl(from: urlString) else {
+            shareLog("Could not extract imgurl from Google link")
+            completion(.failure(makeDownloadError("GoogleImage", "Could not parse image URL")))
+            return
+        }
+
+        let cleanedUrl = imageUrl.hasPrefix("http") ? imageUrl : "https://\(imageUrl)"
+        shareLog("Downloading Google Image directly: \(cleanedUrl.prefix(80))...")
+
+        downloadFirstValidImage(from: [cleanedUrl], platform: "google_image", session: URLSession.shared, completion: completion)
+    }
+
+    private func extractGoogleImageUrl(from urlString: String) -> String? {
+        let lowercased = urlString.lowercased()
+        guard let index = lowercased.range(of: "imgurl=") else { return nil }
+
+        let startIndex = urlString.index(index.upperBound, offsetBy: 0, limitedBy: urlString.endIndex) ?? urlString.endIndex
+        let raw = String(urlString[startIndex...])
+
+        let endIndex = raw.firstIndex(of: "&") ?? raw.endIndex
+        let candidate = String(raw[..<endIndex])
+
+        // URL decode
+        return candidate.removingPercentEncoding ?? candidate
+    }
+
+    // MARK: - Generic Link Scraping
+
+    private func downloadGenericLinkMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
+            shareLog("ScrapingBee API key missing - cannot download from generic link")
+            completion(.failure(makeDownloadError("GenericLink", "ScrapingBee API key not configured")))
+            return
+        }
+
+        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
+            completion(.failure(makeDownloadError("GenericLink", "Invalid ScrapingBee URL")))
+            return
+        }
+
+        // Use extract_rules to get all img src attributes
+        let extractRules = "{\"images\":{\"selector\":\"img\",\"type\":\"list\",\"output\":{\"src\":\"img@src\"}}}"
+
+        components.queryItems = [
+            URLQueryItem(name: "api_key", value: apiKey),
+            URLQueryItem(name: "url", value: urlString),
+            URLQueryItem(name: "extract_rules", value: extractRules),
+            URLQueryItem(name: "json_response", value: "true"),
+            URLQueryItem(name: "render_js", value: "true"),
+            URLQueryItem(name: "wait", value: "1500")
+        ]
+
+        guard let requestURL = components.url else {
+            completion(.failure(makeDownloadError("GenericLink", "Failed to build request URL")))
+            return
+        }
+
+        shareLog("Fetching generic link via ScrapingBee for \(urlString)")
+
+        var request = URLRequest(url: requestURL)
+        request.timeoutInterval = 20.0
+
+        let session = URLSession(configuration: .ephemeral)
+        let task = session.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                session.invalidateAndCancel()
+                DispatchQueue.main.async {
+                    completion(.failure(self.makeDownloadError("GenericLink", "Network error: \(error.localizedDescription)")))
+                }
+                return
+            }
+
+            guard let data = data else {
+                session.invalidateAndCancel()
+                DispatchQueue.main.async {
+                    completion(.failure(self.makeDownloadError("GenericLink", "No data received")))
+                }
+                return
+            }
+
+            // Parse JSON response
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let body = (json["body"] as? [String: Any]) ?? json
+                    let images = (body["images"] as? [[String: Any]]) ?? []
+
+                    var imageUrls: [String] = []
+                    let baseUrl = URL(string: urlString)
+
+                    for item in images {
+                        if let src = item["src"] as? String, !src.isEmpty, !src.hasPrefix("data:") {
+                            // Resolve relative URLs
+                            if let resolved = baseUrl?.resolve(src) {
+                                imageUrls.append(resolved)
+                            } else if src.hasPrefix("http") {
+                                imageUrls.append(src)
+                            }
+                        }
+                    }
+
+                    if imageUrls.isEmpty {
+                        session.invalidateAndCancel()
+                        DispatchQueue.main.async {
+                            completion(.failure(self.makeDownloadError("GenericLink", "No images found on page")))
+                        }
+                        return
+                    }
+
+                    shareLog("Found \(imageUrls.count) images on generic link")
+                    self.downloadFirstValidImage(from: Array(imageUrls.prefix(5)), platform: "generic", session: session, completion: completion)
+                } else {
+                    session.invalidateAndCancel()
+                    DispatchQueue.main.async {
+                        completion(.failure(self.makeDownloadError("GenericLink", "Invalid JSON response")))
+                    }
+                }
+            } catch {
+                session.invalidateAndCancel()
+                DispatchQueue.main.async {
+                    completion(.failure(self.makeDownloadError("GenericLink", "JSON parse error: \(error.localizedDescription)")))
+                }
+            }
+        }
+        task.resume()
+    }
+
+    // MARK: - Common Download Helper
+
+    private func downloadFirstValidImage(
+        from urls: [String],
+        platform: String,
+        session: URLSession,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard !urls.isEmpty else {
+            DispatchQueue.main.async {
+                completion(.failure(self.makeDownloadError(platform, "No image URLs to try")))
+            }
+            return
+        }
+
+        var urlsToTry = urls
+        let firstUrl = urlsToTry.removeFirst()
+
+        guard let url = URL(string: firstUrl) else {
+            // Try next URL
+            downloadFirstValidImage(from: urlsToTry, platform: platform, session: session, completion: completion)
+            return
+        }
+
+        shareLog("Trying to download \(platform) image: \(firstUrl.prefix(80))...")
+
+        let task = session.dataTask(with: url) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            // Check if download succeeded
+            if let error = error {
+                shareLog("Failed to download from \(firstUrl.prefix(50))...: \(error.localizedDescription)")
+                // Try next URL
+                self.downloadFirstValidImage(from: urlsToTry, platform: platform, session: session, completion: completion)
+                return
+            }
+
+            guard let data = data, !data.isEmpty,
+                  let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                // Try next URL
+                self.downloadFirstValidImage(from: urlsToTry, platform: platform, session: session, completion: completion)
+                return
+            }
+
+            // Save to shared container
+            guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: self.appGroupId) else {
+                DispatchQueue.main.async {
+                    completion(.failure(self.makeDownloadError(platform, "Cannot access shared container")))
+                }
+                return
+            }
+
+            let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+            let fileName = "\(platform)_image_\(timestamp).jpg"
+            let fileURL = containerURL.appendingPathComponent(fileName)
+
+            do {
+                try data.write(to: fileURL, options: .atomic)
+                shareLog("Saved \(platform) image to \(fileName) (\(data.count) bytes)")
+
+                let sharedFile = SharedMediaFile(
+                    path: fileURL.absoluteString,
+                    thumbnail: nil,
+                    duration: nil,
+                    type: .image
+                )
+
+                DispatchQueue.main.async {
+                    completion(.success([sharedFile]))
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(self.makeDownloadError(platform, "Failed to save image: \(error.localizedDescription)")))
+                }
+            }
+        }
+        task.resume()
+    }
+
+    private func makeDownloadError(_ platform: String, _ message: String, code: Int = -1) -> NSError {
+        return NSError(
+            domain: "\(platform)Scraper",
+            code: code,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
+    }
+
+    // MARK: - Platform Helper Functions
+
+    private func getDownloadFunction(for platformType: String?) -> (String, @escaping (Result<[SharedMediaFile], Error>) -> Void) -> Void {
+        switch platformType {
+        case "instagram":
+            return downloadInstagramMedia
+        case "tiktok":
+            return downloadTikTokMedia
+        case "pinterest":
+            return downloadPinterestMedia
+        case "youtube":
+            return downloadYouTubeMedia
+        case "google_image":
+            return downloadGoogleImageMedia
+        case "generic":
+            return downloadGenericLinkMedia
+        default:
+            // Fallback to generic
+            return downloadGenericLinkMedia
+        }
+    }
+
+    private func getPlatformDisplayName(_ platformType: String?) -> String {
+        switch platformType {
+        case "instagram":
+            return "Instagram"
+        case "tiktok":
+            return "TikTok"
+        case "pinterest":
+            return "Pinterest"
+        case "youtube":
+            return "YouTube"
+        case "google_image":
+            return "Google Image"
+        case "generic":
+            return "Generic Link"
+        default:
+            return "Unknown"
+        }
     }
 
     // Get detector endpoint from UserDefaults or fallback
@@ -2183,16 +2759,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
             logo.contentMode = .scaleAspectFit
             logo.translatesAutoresizingMaskIntoConstraints = false
 
-            // Results count label
-            let resultsCountLabel = UILabel()
-            resultsCountLabel.translatesAutoresizingMaskIntoConstraints = false
-            resultsCountLabel.font = .systemFont(ofSize: 14, weight: .medium)
-            resultsCountLabel.textColor = .secondaryLabel
-            resultsCountLabel.textAlignment = .center
-            let count = detectionResults.count
-            resultsCountLabel.text = count == 1 ? "1 result" : "\(count) results"
-            resultsCountLabel.tag = 1001 // Tag for updating later
-
             let cancelButton: UIButton
             if let existingButton = cancelButtonView {
                 cancelButton = existingButton
@@ -2207,7 +2773,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
             cancelButtonView = cancelButton
 
             container.addSubview(logo)
-            container.addSubview(resultsCountLabel)
             container.addSubview(cancelButton)
 
             overlay.addSubview(container)
@@ -2223,9 +2788,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 logo.heightAnchor.constraint(equalToConstant: 28),
                 logo.widthAnchor.constraint(equalToConstant: 132),
 
-                resultsCountLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-                resultsCountLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-
                 cancelButton.trailingAnchor.constraint(equalTo: container.trailingAnchor),
                 cancelButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
                 cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16)
@@ -2233,12 +2795,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             headerContainerView = container
             headerLogoImageView = logo
-        } else {
-            // Update results count if header already exists
-            if let label = headerContainerView?.viewWithTag(1001) as? UILabel {
-                let count = detectionResults.count
-                label.text = count == 1 ? "1 result" : "\(count) results"
-            }
         }
 
         headerContainerView?.isHidden = false
@@ -2685,20 +3241,34 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         stackView.addArrangedSubview(button)
 
+        // Results count label on far right
+        let resultsCountLabel = UILabel()
+        resultsCountLabel.translatesAutoresizingMaskIntoConstraints = false
+        resultsCountLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        resultsCountLabel.textColor = .secondaryLabel
+        resultsCountLabel.textAlignment = .right
+        let count = detectionResults.count
+        resultsCountLabel.text = count == 1 ? "1 result" : "\(count) results"
+        resultsCountLabel.tag = 1001 // Tag for updating later
+
         scrollView.addSubview(stackView)
         containerView.addSubview(scrollView)
+        containerView.addSubview(resultsCountLabel)
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
             scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: resultsCountLabel.leadingAnchor, constant: -8),
             scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12),
 
             stackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             stackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            stackView.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
+            stackView.heightAnchor.constraint(equalTo: scrollView.heightAnchor),
+
+            resultsCountLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            resultsCountLabel.centerYAnchor.constraint(equalTo: containerView.centerYAnchor)
         ])
 
         return containerView
@@ -4609,10 +5179,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        // Check if this is a social media URL (before download) or direct image (after download)
+        // Check if this is a URL (before download) or direct image (after download)
         if let socialUrl = pendingInstagramUrl {
-            let isTikTok = isTikTokShareCandidate(socialUrl)
-            let platformName = isTikTok ? "TikTok" : "Instagram"
+            let platformName = getPlatformDisplayName(pendingPlatformType)
             shareLog("Downloading \(platformName) media and saving to app")
 
             // Start download process
@@ -4634,7 +5203,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self?.targetProgress = 0.7
             }
 
-            let downloadFunction = isTikTok ? downloadTikTokMedia : downloadInstagramMedia
+            let downloadFunction = getDownloadFunction(for: pendingPlatformType)
             downloadFunction(socialUrl) { [weak self] result in
                 guard let self = self else { return }
 
@@ -4689,8 +5258,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             } catch {
                 shareLog("ERROR: Failed to save image - \(error.localizedDescription)")
             }
+        } else if !sharedMedia.isEmpty {
+            // Fallback: We have media in sharedMedia (e.g., from a non-social-media URL)
+            // Just proceed with the redirect
+            shareLog("Using already-processed media from sharedMedia array")
+            saveAndRedirect(message: nil)
         } else {
-            shareLog("ERROR: No pending Instagram URL or image data")
+            shareLog("ERROR: No pending URL, image data, or shared media")
         }
     }
 
@@ -4704,10 +5278,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Remove choice UI
         hideLoadingUI()
 
-        // Check if this is a social media URL (before download) or direct image (after download)
+        // Check if this is a URL (before download) or direct image (after download)
         if let socialUrl = pendingInstagramUrl {
-            let isTikTok = isTikTokShareCandidate(socialUrl)
-            let platformName = isTikTok ? "TikTok" : "Instagram"
+            let platformName = getPlatformDisplayName(pendingPlatformType)
             shareLog("\(platformName) URL detected - checking cache first")
 
             // Start UI setup early
@@ -4746,7 +5319,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         self.startStatusRotation(messages: fetchMessages, interval: 2.5)
                     }
 
-                    let downloadFunction = isTikTok ? self.downloadTikTokMedia : self.downloadInstagramMedia
+                    let downloadFunction = self.getDownloadFunction(for: self.pendingPlatformType)
                     downloadFunction(socialUrl) { [weak self] result in
                         guard let self = self else { return }
 
@@ -4785,8 +5358,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Start the upload and detection process
             uploadAndDetect(imageData: imageData)
+        } else if !sharedMedia.isEmpty {
+            // Fallback: For non-social-media URLs, we can't analyze directly
+            // Just redirect to the app with the URL
+            shareLog("Non-social-media URL - redirecting to app for analysis")
+            saveAndRedirect(message: nil)
         } else {
-            shareLog("ERROR: No pending Instagram URL or image data")
+            shareLog("ERROR: No pending URL, image data, or shared media")
         }
     }
 
@@ -4904,9 +5482,11 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
         // Create WebViewController
         let webVC = WebViewController(url: url, shareViewController: self)
 
-        // Embed in a navigation controller for the back button
+        // Embed in a navigation controller
         let navController = UINavigationController(rootViewController: webVC)
         navController.modalPresentationStyle = .fullScreen
+        navController.isNavigationBarHidden = true // WebViewController has its own toolbar
+        navController.modalPresentationCapturesStatusBarAppearance = true // Let WebVC control status bar
 
         // Present modally so it appears on top of the loadingView overlay
         present(navController, animated: true) {
@@ -5199,6 +5779,23 @@ extension URL {
             }
         }
         return "application/octet-stream"
+    }
+
+    /// Resolve a relative URL string against this base URL
+    func resolve(_ relativeString: String) -> String? {
+        if relativeString.hasPrefix("http://") || relativeString.hasPrefix("https://") {
+            return relativeString
+        }
+
+        if relativeString.hasPrefix("//") {
+            return "\(self.scheme ?? "https"):\(relativeString)"
+        }
+
+        if let resolved = URL(string: relativeString, relativeTo: self) {
+            return resolved.absoluteString
+        }
+
+        return nil
     }
 }
 

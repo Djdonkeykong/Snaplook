@@ -32,16 +32,24 @@ class WebViewController: UIViewController, WKNavigationDelegate {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .darkContent
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
         view.backgroundColor = .systemBackground
 
+        // Ensure status bar uses dark content (black icons on white bg)
+        setNeedsStatusBarAppearanceUpdate()
+
         setupToolbar()
         setupWebView()
 
-        // Load the URL
-        let request = URLRequest(url: url)
+        // Load the URL with caching enabled
+        var request = URLRequest(url: url)
+        request.cachePolicy = .returnCacheDataElseLoad
         webView.load(request)
 
         NSLog("[ShareExtension] WebViewController loading URL: \(url.absoluteString)")
@@ -70,17 +78,17 @@ class WebViewController: UIViewController, WKNavigationDelegate {
         urlLabel = UILabel()
         urlLabel.font = .systemFont(ofSize: 14)
         urlLabel.textColor = .secondaryLabel
+        urlLabel.textAlignment = .center
         urlLabel.translatesAutoresizingMaskIntoConstraints = false
         urlLabel.text = url.host ?? url.absoluteString
 
-        // Done button - blue like Safari
+        // Done button
         doneButton = UIButton(type: .system)
         doneButton.setTitle("Done", for: .normal)
-        doneButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        doneButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         doneButton.tintColor = .systemBlue
         doneButton.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
         doneButton.translatesAutoresizingMaskIntoConstraints = false
-        doneButton.contentEdgeInsets = UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
 
         // Add to toolbar
         urlBar.addSubview(lockIcon)
@@ -111,7 +119,7 @@ class WebViewController: UIViewController, WKNavigationDelegate {
             urlBar.widthAnchor.constraint(equalTo: toolbarContainer.widthAnchor, multiplier: 0.75),
 
             // Done button - right side, aligned with URL bar
-            doneButton.trailingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.trailingAnchor, constant: -8),
+            doneButton.trailingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.trailingAnchor, constant: -12),
             doneButton.centerYAnchor.constraint(equalTo: urlBar.centerYAnchor),
 
             // Lock icon
@@ -120,7 +128,7 @@ class WebViewController: UIViewController, WKNavigationDelegate {
             lockIcon.widthAnchor.constraint(equalToConstant: 14),
             lockIcon.heightAnchor.constraint(equalToConstant: 14),
 
-            // URL label
+            // URL label - centered in URL bar
             urlLabel.leadingAnchor.constraint(equalTo: lockIcon.trailingAnchor, constant: 6),
             urlLabel.trailingAnchor.constraint(equalTo: urlBar.trailingAnchor, constant: -10),
             urlLabel.centerYAnchor.constraint(equalTo: urlBar.centerYAnchor),
@@ -141,15 +149,29 @@ class WebViewController: UIViewController, WKNavigationDelegate {
         progressView.trackTintColor = .systemGray6
         progressView.isHidden = true
 
-        // Configure web view
+        // Configure web view for optimal performance
         let webConfiguration = WKWebViewConfiguration()
         webConfiguration.allowsInlineMediaPlayback = true
         webConfiguration.mediaTypesRequiringUserActionForPlayback = []
+
+        // Performance optimizations
+        let preferences = WKWebpagePreferences()
+        preferences.allowsContentJavaScript = true
+        webConfiguration.defaultWebpagePreferences = preferences
+
+        // Enable data detector types for better UX
+        webConfiguration.dataDetectorTypes = [.link, .phoneNumber]
+
+        // Use shared process pool for faster subsequent loads
+        webConfiguration.processPool = WKProcessPool()
 
         webView = WKWebView(frame: .zero, configuration: webConfiguration)
         webView.navigationDelegate = self
         webView.translatesAutoresizingMaskIntoConstraints = false
         webView.allowsBackForwardNavigationGestures = true
+
+        // Additional performance settings
+        webView.allowsLinkPreview = true
 
         view.addSubview(progressView)
         view.addSubview(webView)
