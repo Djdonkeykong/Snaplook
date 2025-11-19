@@ -2183,6 +2183,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
             logo.contentMode = .scaleAspectFit
             logo.translatesAutoresizingMaskIntoConstraints = false
 
+            // Results count label
+            let resultsCountLabel = UILabel()
+            resultsCountLabel.translatesAutoresizingMaskIntoConstraints = false
+            resultsCountLabel.font = .systemFont(ofSize: 14, weight: .medium)
+            resultsCountLabel.textColor = .secondaryLabel
+            resultsCountLabel.textAlignment = .center
+            let count = detectionResults.count
+            resultsCountLabel.text = count == 1 ? "1 result" : "\(count) results"
+            resultsCountLabel.tag = 1001 // Tag for updating later
+
             let cancelButton: UIButton
             if let existingButton = cancelButtonView {
                 cancelButton = existingButton
@@ -2197,6 +2207,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             cancelButtonView = cancelButton
 
             container.addSubview(logo)
+            container.addSubview(resultsCountLabel)
             container.addSubview(cancelButton)
 
             overlay.addSubview(container)
@@ -2212,6 +2223,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 logo.heightAnchor.constraint(equalToConstant: 28),
                 logo.widthAnchor.constraint(equalToConstant: 132),
 
+                resultsCountLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+                resultsCountLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+
                 cancelButton.trailingAnchor.constraint(equalTo: container.trailingAnchor),
                 cancelButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
                 cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16)
@@ -2219,6 +2233,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             headerContainerView = container
             headerLogoImageView = logo
+        } else {
+            // Update results count if header already exists
+            if let label = headerContainerView?.viewWithTag(1001) as? UILabel {
+                let count = detectionResults.count
+                label.text = count == 1 ? "1 result" : "\(count) results"
+            }
         }
 
         headerContainerView?.isHidden = false

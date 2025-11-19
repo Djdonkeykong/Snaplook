@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 /// Reusable circular icon button that matches the onboarding back button style.
@@ -15,6 +14,7 @@ class SnaplookCircularIconButton extends StatelessWidget {
     this.margin,
     this.semanticLabel,
     this.elevation = 0,
+    this.iconOffset = Offset.zero,
   });
 
   final IconData icon;
@@ -27,6 +27,7 @@ class SnaplookCircularIconButton extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
   final String? semanticLabel;
   final double elevation;
+  final Offset iconOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -57,18 +58,20 @@ class SnaplookCircularIconButton extends StatelessWidget {
                 : null,
           ),
           alignment: Alignment.center,
-          child: Icon(
-            icon,
-            color: effectiveIconColor,
-            size: iconSize,
+          child: Transform.translate(
+            offset: iconOffset,
+            child: Icon(
+              icon,
+              color: effectiveIconColor,
+              size: iconSize,
+            ),
           ),
         ),
       ),
     );
 
-    Widget wrapped = tooltip != null
-        ? Tooltip(message: tooltip!, child: button)
-        : button;
+    Widget wrapped =
+        tooltip != null ? Tooltip(message: tooltip!, child: button) : button;
 
     wrapped = Semantics(
       button: true,

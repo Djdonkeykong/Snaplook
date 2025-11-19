@@ -145,7 +145,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           print('[HOME PAGE] DetectionPage builder called for shared image');
           return DetectionPage(
             searchType: 'share',
-            imageUrl: sourceUrl,
+            sourceUrl: sourceUrl,
           );
         },
       ),

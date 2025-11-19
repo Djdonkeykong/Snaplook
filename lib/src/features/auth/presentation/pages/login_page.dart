@@ -23,8 +23,10 @@ class LoginPage extends ConsumerStatefulWidget {
   ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserver {
-  VideoPlayerController? get _controller => VideoPreloader.instance.loginVideoController;
+class _LoginPageState extends ConsumerState<LoginPage>
+    with WidgetsBindingObserver {
+  VideoPlayerController? get _controller =>
+      VideoPreloader.instance.loginVideoController;
 
   @override
   void initState() {
@@ -70,7 +72,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
     final reservedBottomSpace = 360.0; // Space needed for bottom content
     final topSpacing = 24.0; // spacing.l
     final spacingBelowVideo = 16.0; // spacing.m
-    final availableVideoSpace = screenHeight - reservedBottomSpace - topSpacing - spacingBelowVideo;
+    final availableVideoSpace =
+        screenHeight - reservedBottomSpace - topSpacing - spacingBelowVideo;
     final videoHeight = availableVideoSpace.clamp(280.0, availableVideoSpace);
 
     return Scaffold(
@@ -82,8 +85,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: spacing.l),
-
-              if (_controller != null && VideoPreloader.instance.isLoginVideoInitialized)
+              if (_controller != null &&
+                  VideoPreloader.instance.isLoginVideoInitialized)
                 Container(
                   height: videoHeight,
                   width: double.infinity,
@@ -110,9 +113,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-
               SizedBox(height: spacing.xl),
-
               const Text(
                 'Snap the look\nin seconds.',
                 textAlign: TextAlign.center,
@@ -125,11 +126,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                   height: 1.3,
                 ),
               ),
-
               const Spacer(),
-
               SizedBox(height: spacing.m),
-
               Container(
                 width: double.infinity,
                 height: 56,
@@ -165,9 +163,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                   ),
                 ),
               ),
-
               SizedBox(height: spacing.m),
-
               TextButton(
                 onPressed: () {
                   HapticFeedback.mediumImpact();
@@ -198,7 +194,6 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                   ),
                 ),
               ),
-
               SizedBox(height: spacing.l),
             ],
           ),
@@ -210,6 +205,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
   void _showSignInBottomSheet(BuildContext context) {
     final spacing = context.spacing;
     final navigator = Navigator.of(context);
+    final platform = Theme.of(context).platform;
+    final isAppleSignInAvailable =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
 
     showModalBottomSheet(
       context: context,
@@ -247,77 +245,87 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                       ),
                     ),
                     SizedBox(height: spacing.xxl),
-                    _AuthButton(
-                      icon: Icons.apple,
-                      iconSize: 32,
-                      label: 'Continue with Apple',
-                      backgroundColor: Colors.black,
-                      textColor: Colors.white,
-                      onPressed: () async {
-                        try {
-                          final authService = ref.read(authServiceProvider);
-                          await authService.signInWithApple();
+                    if (isAppleSignInAvailable) ...[
+                      _AuthButton(
+                        icon: Icons.apple,
+                        iconSize: 32,
+                        label: 'Continue with Apple',
+                        backgroundColor: Colors.black,
+                        textColor: Colors.white,
+                        onPressed: () async {
+                          try {
+                            final authService = ref.read(authServiceProvider);
+                            await authService.signInWithApple();
 
-                          if (context.mounted) {
-                            Navigator.pop(context);
+                            if (context.mounted) {
+                              Navigator.pop(context);
 
-                            final supabase = Supabase.instance.client;
-                            final userId = supabase.auth.currentUser?.id;
+                              final supabase = Supabase.instance.client;
+                              final userId = supabase.auth.currentUser?.id;
 
-                            if (userId != null) {
-                              final userResponse = await supabase
-                                  .from('users')
-                                  .select('gender')
-                                  .eq('id', userId)
-                                  .maybeSingle();
+                              if (userId != null) {
+                                final userResponse = await supabase
+                                    .from('users')
+                                    .select('gender')
+                                    .eq('id', userId)
+                                    .maybeSingle();
 
-                              print('[LoginPage] Apple sign-in - user ID: $userId');
-                              print('[LoginPage] User gender from DB: ${userResponse?['gender']}');
+                                print(
+                                    '[LoginPage] Apple sign-in - user ID: $userId');
+                                print(
+                                    '[LoginPage] User gender from DB: ${userResponse?['gender']}');
 
-                              final hasCompletedOnboarding =
-                                  userResponse != null && userResponse['gender'] != null;
+                                final hasCompletedOnboarding =
+                                    userResponse != null &&
+                                        userResponse['gender'] != null;
 
-                              if (hasCompletedOnboarding) {
-                                ref.read(selectedIndexProvider.notifier).state = 0;
-                                ref.invalidate(inspirationProvider);
-                                navigator.pushAndRemoveUntil(
-                                  MaterialPageRoute(
-                                    builder: (context) => const MainNavigation(
-                                      key: ValueKey('fresh-main-nav'),
+                                if (hasCompletedOnboarding) {
+                                  ref
+                                      .read(selectedIndexProvider.notifier)
+                                      .state = 0;
+                                  ref.invalidate(inspirationProvider);
+                                  navigator.pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const MainNavigation(
+                                        key: ValueKey('fresh-main-nav'),
+                                      ),
                                     ),
-                                  ),
-                                  (route) => false,
-                                );
-                              } else {
-                                navigator.pushAndRemoveUntil(
-                                  MaterialPageRoute(
-                                    builder: (context) => const GenderSelectionPage(),
-                                  ),
-                                  (route) => false,
-                                );
+                                    (route) => false,
+                                  );
+                                } else {
+                                  navigator.pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const GenderSelectionPage(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                }
                               }
                             }
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).clearSnackBars();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Error signing in with Apple: ${e.toString()}',
-                                  style: context.snackTextStyle(
-                                    merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                          } catch (e) {
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Error signing in with Apple: ${e.toString()}',
+                                    style: context.snackTextStyle(
+                                      merge: const TextStyle(
+                                          fontFamily: 'PlusJakartaSans'),
+                                    ),
                                   ),
+                                  duration: const Duration(milliseconds: 2500),
                                 ),
-                                duration: const Duration(milliseconds: 2500),
-                              ),
-                            );
+                              );
+                            }
                           }
-                        }
-                      },
-                    ),
-                    SizedBox(height: spacing.m),
+                        },
+                      ),
+                      SizedBox(height: spacing.m),
+                    ],
                     _AuthButtonWithSvg(
                       svgAsset: 'assets/icons/google_logo.svg',
                       iconSize: 22,
@@ -343,14 +351,18 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                                   .eq('id', userId)
                                   .maybeSingle();
 
-                              print('[LoginPage] Google sign-in - user ID: $userId');
-                              print('[LoginPage] User gender from DB: ${userResponse?['gender']}');
+                              print(
+                                  '[LoginPage] Google sign-in - user ID: $userId');
+                              print(
+                                  '[LoginPage] User gender from DB: ${userResponse?['gender']}');
 
                               final hasCompletedOnboarding =
-                                  userResponse != null && userResponse['gender'] != null;
+                                  userResponse != null &&
+                                      userResponse['gender'] != null;
 
                               if (hasCompletedOnboarding) {
-                                ref.read(selectedIndexProvider.notifier).state = 0;
+                                ref.read(selectedIndexProvider.notifier).state =
+                                    0;
                                 ref.invalidate(inspirationProvider);
                                 navigator.pushAndRemoveUntil(
                                   MaterialPageRoute(
@@ -363,7 +375,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                               } else {
                                 navigator.pushAndRemoveUntil(
                                   MaterialPageRoute(
-                                    builder: (context) => const GenderSelectionPage(),
+                                    builder: (context) =>
+                                        const GenderSelectionPage(),
                                   ),
                                   (route) => false,
                                 );
@@ -379,7 +392,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with WidgetsBindingObserv
                                 content: Text(
                                   'Error signing in with Google: ${e.toString()}',
                                   style: context.snackTextStyle(
-                                    merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                    merge: const TextStyle(
+                                        fontFamily: 'PlusJakartaSans'),
                                   ),
                                 ),
                                 duration: const Duration(milliseconds: 2500),
@@ -567,7 +581,9 @@ class _AuthButtonState extends State<_AuthButton> {
               )
             else
               Transform.translate(
-                offset: widget.icon == Icons.apple ? const Offset(0, -2) : Offset.zero,
+                offset: widget.icon == Icons.apple
+                    ? const Offset(0, -2)
+                    : Offset.zero,
                 child: Icon(widget.icon, size: widget.iconSize),
               ),
             const SizedBox(width: 12),

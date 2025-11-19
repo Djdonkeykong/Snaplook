@@ -649,7 +649,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         MaterialPageRoute(
           builder: (_) => DetectionPage(
             searchType: searchType,
-            imageUrl: sourceUrl,
+            sourceUrl: sourceUrl,
           ),
           settings: const RouteSettings(name: 'detection-from-share'),
         ),

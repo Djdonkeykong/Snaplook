@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -23,6 +23,9 @@ class DetectionService {
   final http.Client _client;
   final bool strictMode;
   final UserProfileRepository _userProfileRepo;
+  bool _lastResponseFromCache = false;
+
+  bool get lastResponseFromCache => _lastResponseFromCache;
 
   static const int _maxGarments = 5;
   static const int _maxResultsPerGarment =
@@ -40,6 +43,7 @@ class DetectionService {
     String searchType = 'camera',
     String? sourceUrl,
   }) async {
+    _lastResponseFromCache = false;
     try {
       final serverResults = await _analyzeViaDetectorServer(
         image,
@@ -125,7 +129,8 @@ class DetectionService {
     final userProfile = await _userProfileRepo.getCurrentUserProfile();
     if (userProfile != null) {
       // Use country code if available (PREFERRED by SearchAPI)
-      if (userProfile.countryCode != null && userProfile.countryCode!.isNotEmpty) {
+      if (userProfile.countryCode != null &&
+          userProfile.countryCode!.isNotEmpty) {
         payload['country'] = userProfile.countryCode; // e.g., 'US', 'NO', 'GB'
         debugPrint('≡ƒîÄ Using country code: ${userProfile.countryCode}');
       } else if (userProfile.location != null) {
@@ -160,6 +165,7 @@ class DetectionService {
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
+    _lastResponseFromCache = data['cached'] == true;
     if (data['success'] != true) {
       final message = (data['message'] as String?) ?? 'Unknown detector error';
       throw Exception('Detector pipeline failed: $message');
@@ -180,6 +186,7 @@ class DetectionService {
   }
 
   Future<List<DetectionResult>> _analyzeImageLegacy(XFile image) async {
+    _lastResponseFromCache = false;
     debugPrint(
       '≡ƒºá Starting legacy garment detection pipeline (strict=$strictMode)...',
     );
@@ -277,11 +284,9 @@ class DetectionService {
   }
 
   Map<String, dynamic> _normalizeServerResult(Map<String, dynamic> raw) {
-    final id =
-        (raw['id'] as String?) ??
+    final id = (raw['id'] as String?) ??
         'search_${DateTime.now().millisecondsSinceEpoch}';
-    final productName =
-        (raw['product_name'] as String?) ??
+    final productName = (raw['product_name'] as String?) ??
         (raw['title'] as String?) ??
         'Unknown Product';
     final brand = (raw['brand'] as String?) ?? 'Unknown';
@@ -328,8 +333,8 @@ class DetectionService {
       'purchase_url': raw['purchase_url'] ?? raw['link'],
       'color_match_type': raw['color_match_type'],
       'color_match_score': raw['color_match_score'],
-      'matched_colors': (raw['matched_colors'] as List<dynamic>?)
-          ?.cast<String>(),
+      'matched_colors':
+          (raw['matched_colors'] as List<dynamic>?)?.cast<String>(),
     };
   }
 
@@ -352,15 +357,14 @@ class DetectionService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-                final cropsRaw = (data['results'] as List<dynamic>? ?? const [])
+        final cropsRaw = (data['results'] as List<dynamic>? ?? const [])
             .map((e) => e as Map<String, dynamic>)
             .toList();
 
         final crops = cropsRaw
             .map(
               (crop) => _SerpCrop(
-                url:
-                    (crop['image_url'] as String?) ??
+                url: (crop['image_url'] as String?) ??
                     (crop['url'] as String?) ??
                     '',
                 score: (crop['score'] as num?)?.toDouble() ?? 0.0,
@@ -370,7 +374,8 @@ class DetectionService {
             .where((crop) => crop.url.isNotEmpty)
             .toList();
 
-        final originalUrl = (data['original_url'] as String?) ?? (crops.isNotEmpty ? crops.first.url : '');
+        final originalUrl = (data['original_url'] as String?) ??
+            (crops.isNotEmpty ? crops.first.url : '');
 
         crops.sort((a, b) => b.score.compareTo(a.score));
         debugPrint('≡ƒæò ${crops.length} garment crops detected.');
@@ -392,9 +397,8 @@ class DetectionService {
     String? textQuery,
     Duration? maxDuration,
   }) async {
-    final deadline = maxDuration != null
-        ? DateTime.now().add(maxDuration)
-        : null;
+    final deadline =
+        maxDuration != null ? DateTime.now().add(maxDuration) : null;
 
     Duration? _timeRemaining() {
       if (deadline == null) return null;
@@ -459,9 +463,8 @@ class DetectionService {
     }
 
     final filteredAll = <Map<String, dynamic>>[];
-    final deadline = maxDuration != null
-        ? DateTime.now().add(maxDuration)
-        : null;
+    final deadline =
+        maxDuration != null ? DateTime.now().add(maxDuration) : null;
     if (deadline != null && DateTime.now().isAfter(deadline)) {
       return const <Map<String, dynamic>>[];
     }
@@ -687,8 +690,7 @@ class DetectionService {
 
       // Price extraction
       final priceObj = match['price'];
-      final price =
-          (priceObj?['extracted_value'] as num?)?.toDouble() ??
+      final price = (priceObj?['extracted_value'] as num?)?.toDouble() ??
           _extractPrice(snippet) ??
           0.0;
 
@@ -759,12 +761,10 @@ class DetectionService {
     if (RegExp(
           r'\b(women|men|kids|midi|maxi|skirts?|dresses|clothing)\b',
         ).hasMatch(l) &&
-        l.contains(' | '))
-      return true;
+        l.contains(' | ')) return true;
     if (RegExp(
       r'/c/|/category/|/collections?/|/shop/[^/]+/?$|/women/[^/]+/?$|/women/?$|/new-arrivals/?$|/sale/?$',
-    ).hasMatch(u))
-      return true;
+    ).hasMatch(u)) return true;
     if (u.endsWith('/index.html') || u.endsWith('/index')) return true;
     return false;
   }
@@ -1005,11 +1005,11 @@ class DetectionService {
 
     String? explicitCat;
     String finalizeCategory(String candidate) => _applyCategoryGuards(
-      title: title,
-      lower: lower,
-      candidate: candidate,
-      labelCategory: labelCategory,
-    );
+          title: title,
+          lower: lower,
+          candidate: candidate,
+          labelCategory: labelCategory,
+        );
 
     // 1∩╕ÅΓâú Accessories (explicit)
     if (lower.contains('sunglass') ||
@@ -1149,54 +1149,47 @@ class DetectionService {
 
     final votes = <String, int>{
       'dresses': score('dress') + score('gown') + score('slip dress'),
-      'bottoms':
-          score('skirt') +
+      'bottoms': score('skirt') +
           score('pants') +
           score('trouser') +
           score('jeans') +
           score('shorts') +
           score('slip skirt'),
-      'tops':
-          score('top') +
+      'tops': score('top') +
           score('shirt') +
           score('blouse') +
           score('t-shirt') +
           score('tee') +
           score('sweater') +
           score('cardigan'),
-      'outerwear':
-          score('jacket') +
+      'outerwear': score('jacket') +
           score('coat') +
           score('blazer') +
           score('trench') +
           score('parka') +
           score('windbreaker'),
-      'shoes':
-          score('shoe') +
+      'shoes': score('shoe') +
           score('sneaker') +
           score('boot') +
           score('heel') +
           score('loafer') +
           score('sandal') +
           score('pump'),
-      'bags':
-          score('bag') +
+      'bags': score('bag') +
           score('handbag') +
           score('tote') +
           score('backpack') +
           score('clutch') +
           score('wallet') +
           score('crossbody'),
-      'accessories':
-          score('belt') +
+      'accessories': score('belt') +
           score('scarf') +
           score('sunglass') +
           score('glasses') +
           score('hat') +
           score('cap') +
           score('beanie'),
-      'headwear':
-          score('cap') +
+      'headwear': score('cap') +
           score('hat') +
           score('beanie') +
           score('headband') +
@@ -1315,10 +1308,8 @@ class DetectionService {
 
   List<String> _generateTags(String title, String source) {
     final tags = <String>[];
-    final words = title
-        .split(RegExp(r'[^\w]+'))
-        .where((w) => w.length > 3)
-        .take(5);
+    final words =
+        title.split(RegExp(r'[^\w]+')).where((w) => w.length > 3).take(5);
     tags.addAll(words.map((w) => w.toLowerCase()));
     if (source.isNotEmpty) tags.add(source.toLowerCase());
     return tags.toSet().toList();

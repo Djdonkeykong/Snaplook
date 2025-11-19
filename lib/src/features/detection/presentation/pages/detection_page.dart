@@ -28,11 +28,16 @@ class DetectionPage extends ConsumerStatefulWidget {
   final String? searchId;
   final String searchType;
 
+  /// Source URL for cache lookup (e.g., Instagram post URL)
+  /// This is separate from imageUrl which is used for loading images
+  final String? sourceUrl;
+
   const DetectionPage({
     super.key,
     this.imageUrl,
     this.searchId,
     this.searchType = 'camera',
+    this.sourceUrl,
   });
 
   @override
@@ -52,6 +57,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   bool _hasEnteredSearchPhase = false;
   double _currentProgress = 0.0;
   double _targetProgress = 0.0;
+  bool _isBoostingProgress = false;
   String _activeStatusText = 'Preparing photo...';
   Timer? _progressTimer;
   Timer? _statusRotationTimer;
@@ -105,7 +111,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
   Future<void> _loadExistingResults(String searchId) async {
     try {
-      print("[DETECTION PAGE] Loading existing results for searchId: $searchId");
+      print(
+          "[DETECTION PAGE] Loading existing results for searchId: $searchId");
 
       final supabaseService = SupabaseService();
       final searchData = await supabaseService.getSearchById(searchId);
@@ -152,7 +159,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         return;
       }
 
-      print("[DETECTION PAGE] Successfully loaded ${results.length} existing results");
+      print(
+          "[DETECTION PAGE] Successfully loaded ${results.length} existing results");
 
       // Get the Cloudinary URL for the analyzed image
       final cloudinaryUrl = searchData['cloudinary_url'] as String?;
@@ -202,12 +210,13 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     final imagesState = ref.watch(selectedImagesProvider);
     final selectedImage = imagesState.currentImage;
     final detectionState = ref.watch(detectionProvider);
-    final bool hasImage = selectedImage != null || widget.imageUrl != null || _loadedImageUrl != null;
+    final bool hasImage = selectedImage != null ||
+        widget.imageUrl != null ||
+        _loadedImageUrl != null;
     final bool showShareAction = _isResultsSheetVisible && _results.isNotEmpty;
     final bool isCropActionActive = !showShareAction && _isCropMode;
-    final Color actionBackgroundColor = isCropActionActive
-        ? AppColors.secondary
-        : const Color(0xFFF3F4F6);
+    final Color actionBackgroundColor =
+        isCropActionActive ? AppColors.secondary : const Color(0xFFF3F4F6);
     final Color actionIconColor =
         isCropActionActive ? Colors.white : Colors.black;
 
@@ -226,7 +235,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         statusBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: _isLoadingExistingResults ? Colors.white : Colors.black,
+        backgroundColor:
+            _isLoadingExistingResults ? Colors.white : Colors.black,
         extendBodyBehindAppBar: true,
         extendBody: true,
         appBar: AppBar(
@@ -255,160 +265,172 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               ? null
               : [
                   SnaplookCircularIconButton(
-                    icon: showShareAction ? Icons.ios_share : Icons.crop_free,
-                    iconSize: 20,
+                    icon: showShareAction
+                        ? Icons.share_outlined
+                        : Icons.crop_free,
+                    iconSize: showShareAction ? 18 : 20,
+                    iconOffset:
+                        showShareAction ? const Offset(-1, 0) : Offset.zero,
                     onPressed: showShareAction
                         ? _shareImage
                         : (hasImage ? _toggleCropMode : null),
                     backgroundColor: actionBackgroundColor,
                     iconColor: actionIconColor,
                     tooltip: showShareAction ? 'Share' : 'Crop',
-                    semanticLabel: showShareAction ? 'Share image' : 'Crop image',
+                    semanticLabel:
+                        showShareAction ? 'Share image' : 'Crop image',
                     margin: const EdgeInsets.all(8),
                     elevation: 10,
                   ),
                 ],
         ),
-      body: _isLoadingExistingResults
-          ? Center(
-              child: SizedBox(
-                width: 48,
-                height: 48,
-                child: const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
-                  strokeWidth: 2,
-                ),
-              ),
-            )
-          : selectedImage == null && widget.imageUrl == null && _loadedImageUrl == null
-              ? const Center(
-                  child: Text(
-                    'No image selected',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                )
-              : Stack(
-              children: [
-                Positioned.fill(
-                  // Only use network image if we don't have a local selectedImage
-                  // widget.imageUrl may be a source URL (e.g., Instagram post) not a direct image URL
-                  child: selectedImage == null && (widget.imageUrl != null || _loadedImageUrl != null)
-                      ? SizedBox.expand(
-                          child: Stack(
-                            children: [
-                              Positioned.fill(child: _buildNetworkImage()),
-                              if (_isAnalysisOverlayVisible)
-                                Positioned.fill(
-                                  child: IgnorePointer(
-                                    child: Container(
-                                      color: Colors.black.withOpacity(0.6),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        )
-                      : imagesState.hasMultipleImages
-                          ? PageView.builder(
-                              controller: _pageController,
-                              onPageChanged: (index) {
-                                ref
-                                    .read(selectedImagesProvider.notifier)
-                                    .setCurrentIndex(index);
-                              },
-                              itemCount: imagesState.totalImages,
-                              itemBuilder: (context, index) {
-                                return Image.file(
-                                  File(imagesState.images[index].path),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  gaplessPlayback: true,
-                                );
-                              },
-                            )
-                          : Image.file(
-                              File(selectedImage!.path),
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              gaplessPlayback: true,
-                            ),
-                ),
-                if (imagesState.hasMultipleImages)
-                  Positioned(
-                    bottom: 40,
-                    left: 0,
-                    right: 0,
-                    child: _buildDotsIndicator(imagesState),
-                  ),
-                if (_isCropMode) _buildCropOverlay(),
-                Positioned(
-                  bottom: 80,
-                  left: 0,
-                  right: 0,
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      Center(
-                        child: _isAnalysisOverlayVisible
-                            || _isResultsSheetVisible
-                            ? const SizedBox.shrink()
-                            : _buildScanButton(),
-                      ),
-                    ],
+        body: _isLoadingExistingResults
+            ? Center(
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: const CircularProgressIndicator(
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                    strokeWidth: 2,
                   ),
                 ),
-                if (_isResultsSheetVisible && _results.isNotEmpty) ...[
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: IgnorePointer(
-                      ignoring: true,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        color: Colors.black
-                            .withOpacity(_resultsOverlayOpacity),
-                      ),
+              )
+            : selectedImage == null &&
+                    widget.imageUrl == null &&
+                    _loadedImageUrl == null
+                ? const Center(
+                    child: Text(
+                      'No image selected',
+                      style: TextStyle(color: Colors.white),
                     ),
-                  ),
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: SizedBox(
-                      height: MediaQuery.of(context).size.height,
-                      child:
-                          NotificationListener<DraggableScrollableNotification>(
-                        onNotification: (notification) {
-                          final extent = notification.extent
-                              .clamp(_resultsMinExtent, _resultsMaxExtent)
-                              .toDouble();
-                          setState(() => _currentResultsExtent = extent);
-                          return false;
-                        },
-                        child: DraggableScrollableSheet(
-                          controller: _resultsSheetController,
-                          initialChildSize: _resultsInitialExtent,
-                          minChildSize: _resultsMinExtent,
-                          maxChildSize: _resultsMaxExtent,
-                          snap: false,
-                          expand: false,
-                          builder: (context, scrollController) {
-                            return ResultsBottomSheetContent(
-                              results: _results,
-                              scrollController: scrollController,
-                              onProductTap: _openProduct,
-                            );
-                          },
+                  )
+                : Stack(
+                    children: [
+                      Positioned.fill(
+                        // Only use network image if we don't have a local selectedImage
+                        // widget.imageUrl may be a source URL (e.g., Instagram post) not a direct image URL
+                        child: selectedImage == null &&
+                                (widget.imageUrl != null ||
+                                    _loadedImageUrl != null)
+                            ? SizedBox.expand(
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                        child: _buildNetworkImage()),
+                                    if (_isAnalysisOverlayVisible)
+                                      Positioned.fill(
+                                        child: IgnorePointer(
+                                          child: Container(
+                                            color:
+                                                Colors.black.withOpacity(0.6),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              )
+                            : imagesState.hasMultipleImages
+                                ? PageView.builder(
+                                    controller: _pageController,
+                                    onPageChanged: (index) {
+                                      ref
+                                          .read(selectedImagesProvider.notifier)
+                                          .setCurrentIndex(index);
+                                    },
+                                    itemCount: imagesState.totalImages,
+                                    itemBuilder: (context, index) {
+                                      return Image.file(
+                                        File(imagesState.images[index].path),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        gaplessPlayback: true,
+                                      );
+                                    },
+                                  )
+                                : Image.file(
+                                    File(selectedImage!.path),
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    gaplessPlayback: true,
+                                  ),
+                      ),
+                      if (imagesState.hasMultipleImages)
+                        Positioned(
+                          bottom: 40,
+                          left: 0,
+                          right: 0,
+                          child: _buildDotsIndicator(imagesState),
+                        ),
+                      if (_isCropMode) _buildCropOverlay(),
+                      Positioned(
+                        bottom: 80,
+                        left: 0,
+                        right: 0,
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 16),
+                            Center(
+                              child: _isAnalysisOverlayVisible ||
+                                      _isResultsSheetVisible
+                                  ? const SizedBox.shrink()
+                                  : _buildScanButton(),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
+                      if (_isResultsSheetVisible && _results.isNotEmpty) ...[
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: IgnorePointer(
+                            ignoring: true,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              color: Colors.black
+                                  .withOpacity(_resultsOverlayOpacity),
+                            ),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: SizedBox(
+                            height: MediaQuery.of(context).size.height,
+                            child: NotificationListener<
+                                DraggableScrollableNotification>(
+                              onNotification: (notification) {
+                                final extent = notification.extent
+                                    .clamp(_resultsMinExtent, _resultsMaxExtent)
+                                    .toDouble();
+                                setState(() => _currentResultsExtent = extent);
+                                return false;
+                              },
+                              child: DraggableScrollableSheet(
+                                controller: _resultsSheetController,
+                                initialChildSize: _resultsInitialExtent,
+                                minChildSize: _resultsMinExtent,
+                                maxChildSize: _resultsMaxExtent,
+                                snap: false,
+                                expand: false,
+                                builder: (context, scrollController) {
+                                  return ResultsBottomSheetContent(
+                                    results: _results,
+                                    scrollController: scrollController,
+                                    onProductTap: _openProduct,
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (_isAnalysisOverlayVisible) _buildDetectionOverlay(),
+                    ],
                   ),
-                ],
-                if (_isAnalysisOverlayVisible) _buildDetectionOverlay(),
-              ],
-            ),
       ),
     );
   }
@@ -435,14 +457,17 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         final uri = Uri.parse(widget.imageUrl!);
         final response = await http.get(uri);
         final bytes = response.bodyBytes;
-        final temp = await File('${Directory.systemTemp.path}/share_image.jpg').create();
+        final temp =
+            await File('${Directory.systemTemp.path}/share_image.jpg').create();
         await temp.writeAsBytes(bytes);
-        await Share.shareXFiles([XFile(temp.path)], text: 'Check out what I found with Snaplook!');
+        await Share.shareXFiles([XFile(temp.path)],
+            text: 'Check out what I found with Snaplook!');
       } else {
         final imagesState = ref.read(selectedImagesProvider);
         final selectedImage = imagesState.currentImage;
         if (selectedImage != null) {
-          await Share.shareXFiles([XFile(selectedImage.path)], text: 'Check out what I found with Snaplook!');
+          await Share.shareXFiles([XFile(selectedImage.path)],
+              text: 'Check out what I found with Snaplook!');
         }
       }
     } catch (e) {
@@ -463,7 +488,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       }
     });
   }
-
 
   void _initializeCropRectIfNeeded() {
     if (_cropRect != null) return;
@@ -628,7 +652,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
             ),
           ),
         ),
-
       ],
     );
   }
@@ -741,7 +764,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     ];
   }
 
-  Future<String> _generateCloudinaryCropUrl(String originalUrl, Rect cropRect) async {
+  Future<String> _generateCloudinaryCropUrl(
+      String originalUrl, Rect cropRect) async {
     try {
       // Download image to get actual dimensions
       final response = await http.get(Uri.parse(originalUrl));
@@ -772,10 +796,18 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       final scaleX = originalImage.width / displayWidth;
       final scaleY = originalImage.height / displayHeight;
 
-      final cropX = ((cropRect.left + offsetX) * scaleX).round().clamp(0, originalImage.width);
-      final cropY = ((cropRect.top + offsetY) * scaleY).round().clamp(0, originalImage.height);
-      final cropWidth = (cropRect.width * scaleX).round().clamp(1, originalImage.width - cropX);
-      final cropHeight = (cropRect.height * scaleY).round().clamp(1, originalImage.height - cropY);
+      final cropX = ((cropRect.left + offsetX) * scaleX)
+          .round()
+          .clamp(0, originalImage.width);
+      final cropY = ((cropRect.top + offsetY) * scaleY)
+          .round()
+          .clamp(0, originalImage.height);
+      final cropWidth = (cropRect.width * scaleX)
+          .round()
+          .clamp(1, originalImage.width - cropX);
+      final cropHeight = (cropRect.height * scaleY)
+          .round()
+          .clamp(1, originalImage.height - cropY);
 
       // Build Cloudinary transformation URL
       final uri = Uri.parse(originalUrl);
@@ -784,7 +816,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       if (uploadIndex == -1) return originalUrl;
 
       // Insert crop transformation
-      final cropTransform = 'c_crop,w_$cropWidth,h_$cropHeight,x_$cropX,y_$cropY';
+      final cropTransform =
+          'c_crop,w_$cropWidth,h_$cropHeight,x_$cropX,y_$cropY';
       pathSegments.insert(uploadIndex + 1, cropTransform);
 
       return Uri(
@@ -849,10 +882,18 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       final scaleX = originalImage.width / displayWidth;
       final scaleY = originalImage.height / displayHeight;
 
-      final cropX = ((_cropRect!.left + offsetX) * scaleX).round().clamp(0, originalImage.width);
-      final cropY = ((_cropRect!.top + offsetY) * scaleY).round().clamp(0, originalImage.height);
-      final cropWidth = (_cropRect!.width * scaleX).round().clamp(1, originalImage.width - cropX);
-      final cropHeight = (_cropRect!.height * scaleY).round().clamp(1, originalImage.height - cropY);
+      final cropX = ((_cropRect!.left + offsetX) * scaleX)
+          .round()
+          .clamp(0, originalImage.width);
+      final cropY = ((_cropRect!.top + offsetY) * scaleY)
+          .round()
+          .clamp(0, originalImage.height);
+      final cropWidth = (_cropRect!.width * scaleX)
+          .round()
+          .clamp(1, originalImage.width - cropX);
+      final cropHeight = (_cropRect!.height * scaleY)
+          .round()
+          .clamp(1, originalImage.height - cropY);
 
       // Crop the image
       final croppedImage = img.copyCrop(
@@ -864,7 +905,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       );
 
       // Encode to bytes
-      _croppedImageBytes = Uint8List.fromList(img.encodeJpg(croppedImage, quality: 90));
+      _croppedImageBytes =
+          Uint8List.fromList(img.encodeJpg(croppedImage, quality: 90));
 
       print('Crop applied successfully');
     } catch (e) {
@@ -904,14 +946,14 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     _startStatusRotation(_detectionPhaseMessages);
 
     _setTargetProgress(0.24);
-    _scheduleOverlayTimer(const Duration(milliseconds: 900),
-        () => _setTargetProgress(0.32));
-    _scheduleOverlayTimer(const Duration(milliseconds: 2100),
-        () => _setTargetProgress(0.45));
-    _scheduleOverlayTimer(const Duration(milliseconds: 3600),
-        () => _setTargetProgress(0.58));
-    _scheduleOverlayTimer(const Duration(milliseconds: 5200),
-        () => _setTargetProgress(0.68));
+    _scheduleOverlayTimer(
+        const Duration(milliseconds: 900), () => _setTargetProgress(0.32));
+    _scheduleOverlayTimer(
+        const Duration(milliseconds: 2100), () => _setTargetProgress(0.45));
+    _scheduleOverlayTimer(
+        const Duration(milliseconds: 3600), () => _setTargetProgress(0.58));
+    _scheduleOverlayTimer(
+        const Duration(milliseconds: 5200), () => _setTargetProgress(0.68));
   }
 
   void _enterSearchPhase() {
@@ -921,13 +963,19 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     _startStatusRotation(_searchPhaseMessages, stopAtLast: true);
   }
 
-  void _finishOverlayForNavigation() {
+  void _finishOverlayForNavigation({bool immediate = false}) {
     if (!_isAnalysisOverlayVisible) return;
     _enterSearchPhase();
     _stopStatusRotation();
     setState(() {
-      _activeStatusText = 'Opening results...';
+      _activeStatusText =
+          immediate ? 'Loaded saved results...' : 'Opening results...';
     });
+    if (immediate) {
+      _isBoostingProgress = true;
+      _setTargetProgress(1.0);
+      return;
+    }
     _setTargetProgress(0.92);
     _scheduleOverlayTimer(
       const Duration(milliseconds: 180),
@@ -945,6 +993,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       _isAnalysisOverlayVisible = false;
       _currentProgress = 0.0;
       _targetProgress = 0.0;
+      _isBoostingProgress = false;
       _activeStatusText = 'Preparing photo...';
       _hasEnteredSearchPhase = false;
       _statusIndex = 0;
@@ -955,6 +1004,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       _isAnalysisOverlayVisible = false;
       _currentProgress = 0.0;
       _targetProgress = 0.0;
+      _isBoostingProgress = false;
       _activeStatusText = 'Preparing photo...';
       _hasEnteredSearchPhase = false;
       _statusIndex = 0;
@@ -1022,8 +1072,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     if (!_isResultsSheetVisible) return 0;
     final range = _resultsMaxExtent - _resultsMinExtent;
     if (range <= 0) return 0.7;
-    final normalized = ((_currentResultsExtent - _resultsMinExtent) / range)
-        .clamp(0.0, 1.0);
+    final normalized =
+        ((_currentResultsExtent - _resultsMinExtent) / range).clamp(0.0, 1.0);
     return 0.15 + (0.55 * normalized);
   }
 
@@ -1037,9 +1087,14 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
       double nextProgress = _currentProgress;
 
-      if (_currentProgress < _targetProgress) {
+      if (_isBoostingProgress) {
+        const boostIncrement = 0.02;
+        nextProgress =
+            (_currentProgress + boostIncrement).clamp(0.0, _targetProgress);
+      } else if (_currentProgress < _targetProgress) {
         const increment = 0.004;
-        nextProgress = (_currentProgress + increment).clamp(0.0, _targetProgress);
+        nextProgress =
+            (_currentProgress + increment).clamp(0.0, _targetProgress);
       } else if (_currentProgress < 0.95) {
         const slowIncrement = 0.0006;
         nextProgress = (_currentProgress + slowIncrement).clamp(0.0, 0.95);
@@ -1051,6 +1106,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         setState(() {
           _currentProgress = nextProgress;
         });
+        if (_isBoostingProgress && _currentProgress >= 0.999) {
+          _isBoostingProgress = false;
+          _currentProgress = 1.0;
+        }
       }
     });
   }
@@ -1058,6 +1117,18 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   void _stopProgressTimer() {
     _progressTimer?.cancel();
     _progressTimer = null;
+    _isBoostingProgress = false;
+  }
+
+  Future<void> _waitForProgressCompletion({
+    Duration timeout = const Duration(milliseconds: 600),
+  }) async {
+    if (!_isAnalysisOverlayVisible) return;
+    final stopwatch = Stopwatch()..start();
+    while (mounted && _isAnalysisOverlayVisible && _currentProgress < 0.999) {
+      if (stopwatch.elapsed > timeout) break;
+      await Future.delayed(const Duration(milliseconds: 16));
+    }
   }
 
   void _setTargetProgress(double value) {
@@ -1125,7 +1196,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     print('[SAVE] _startDetection() called');
 
     try {
-      if (_isAnalysisOverlayVisible || ref.read(detectionProvider).isAnalyzing) {
+      if (_isAnalysisOverlayVisible ||
+          ref.read(detectionProvider).isAnalyzing) {
         print('[SAVE] Early return - overlay visible or already analyzing');
         return;
       }
@@ -1148,7 +1220,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         // For Cloudinary URLs, use transformation API instead of downloading/re-uploading
         if (widget.imageUrl!.contains('cloudinary.com')) {
           print('Using Cloudinary transformation for crop');
-          imageUrl = await _generateCloudinaryCropUrl(widget.imageUrl!, _cropRect!);
+          imageUrl =
+              await _generateCloudinaryCropUrl(widget.imageUrl!, _cropRect!);
           print('Cloudinary crop URL: $imageUrl');
           // Don't create XFile - we'll pass URL directly
         } else {
@@ -1156,7 +1229,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           await _applyCrop();
           if (_croppedImageBytes != null) {
             final tempDir = Directory.systemTemp;
-            final fileName = 'cropped_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            final fileName =
+                'cropped_${DateTime.now().millisecondsSinceEpoch}.jpg';
             final file = File('${tempDir.path}/$fileName');
             await file.writeAsBytes(_croppedImageBytes!);
             imageToAnalyze = XFile(file.path);
@@ -1183,7 +1257,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           final response = await http.get(Uri.parse(widget.imageUrl!));
           if (response.statusCode == 200) {
             final tempDir = Directory.systemTemp;
-            final fileName = 'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            final fileName =
+                'scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
             final file = File('${tempDir.path}/$fileName');
             await file.writeAsBytes(response.bodyBytes);
             imageToAnalyze = XFile(file.path);
@@ -1203,26 +1278,34 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       }
 
       // Skip YOLO detection if user manually cropped the image
-      final skipDetection = _croppedImageBytes != null || (_isCropMode && _cropRect != null);
+      final skipDetection =
+          _croppedImageBytes != null || (_isCropMode && _cropRect != null);
 
       _enterSearchPhase();
       _setTargetProgress(0.8);
 
-      print('[SAVE] Calling analyzeImage with searchType: ${widget.searchType}');
-      print('[CACHE] Source URL for cache lookup: ${widget.imageUrl}');
-      final results = await ref
-          .read(detectionProvider.notifier)
-          .analyzeImage(
+      print(
+          '[SAVE] Calling analyzeImage with searchType: ${widget.searchType}');
+      print(
+          '[CACHE] Source URL for cache lookup: ${widget.sourceUrl ?? widget.imageUrl}');
+      final results = await ref.read(detectionProvider.notifier).analyzeImage(
             imageToAnalyze,
             skipDetection: skipDetection,
             cloudinaryUrl: imageUrl,
             searchType: widget.searchType,
-            sourceUrl: widget.imageUrl,
+            sourceUrl: widget.sourceUrl ?? widget.imageUrl,
           );
+      final wasCacheHit =
+          ref.read(detectionServiceProvider).lastResponseFromCache;
 
       if (mounted && results.isNotEmpty) {
-        _finishOverlayForNavigation();
-        await Future.delayed(const Duration(milliseconds: 320));
+        _finishOverlayForNavigation(immediate: wasCacheHit);
+        await _waitForProgressCompletion();
+        await Future.delayed(
+          wasCacheHit
+              ? const Duration(milliseconds: 200)
+              : const Duration(milliseconds: 320),
+        );
         if (!mounted) return;
 
         // Trigger haptic feedback when results appear

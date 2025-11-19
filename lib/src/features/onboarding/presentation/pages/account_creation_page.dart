@@ -58,6 +58,9 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final targetPlatform = Theme.of(context).platform;
+    final isAppleSignInAvailable = targetPlatform == TargetPlatform.iOS ||
+        targetPlatform == TargetPlatform.macOS;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -110,150 +113,153 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                       constraints: const BoxConstraints(maxWidth: 400),
                       child: Column(
                         children: [
-                          // Apple button
-                          _AuthButton(
-                            icon: Icons.apple,
-                            iconSize: 32,
-                            label: 'Continue with Apple',
-                            backgroundColor: Colors.black,
-                            textColor: Colors.white,
-                            onPressed: () async {
-                              final authService = ref.read(authServiceProvider);
+                          if (isAppleSignInAvailable) ...[
+                            // Apple button
+                            _AuthButton(
+                              icon: Icons.apple,
+                              iconSize: 32,
+                              label: 'Continue with Apple',
+                              backgroundColor: Colors.black,
+                              textColor: Colors.white,
+                              onPressed: () async {
+                                final authService =
+                                    ref.read(authServiceProvider);
 
-                              try {
-                                await authService.signInWithApple();
-                              } catch (e) {
-                                print(
-                                    '[AccountCreation] Apple sign in error: $e');
-                                // Check if auth actually succeeded despite the error
-                                if (authService.currentUser == null &&
-                                    context.mounted) {
-                                  ScaffoldMessenger.of(context)
-                                      .clearSnackBars();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Error signing in with Apple: ${e.toString()}',
-                                        style: context.snackTextStyle(
-                                          merge: const TextStyle(
-                                              fontFamily: 'PlusJakartaSans'),
-                                        ),
-                                      ),
-                                      duration:
-                                          const Duration(milliseconds: 2500),
-                                    ),
-                                  );
-                                  return;
-                                }
-                              }
-
-                              // Wait briefly for auth state to fully propagate
-                              await Future.delayed(
-                                  const Duration(milliseconds: 500));
-
-                              // Check if auth succeeded
-                              if (context.mounted) {
-                                final userId = authService.currentUser?.id;
-                                print(
-                                    '[AccountCreation] Apple - User ID after sign in: $userId');
-                                if (userId != null) {
-                                  // First check if user went through onboarding already (providers have values)
-                                  final selectedGender =
-                                      ref.read(selectedGenderProvider);
+                                try {
+                                  await authService.signInWithApple();
+                                } catch (e) {
                                   print(
-                                      '[AccountCreation] Apple - Gender from provider: ${selectedGender?.name}');
-
-                                  if (selectedGender != null) {
-                                    // User went through onboarding BEFORE creating account
-                                    // Go to welcome page which will save preferences and initialize credits
-                                    print(
-                                        '[AccountCreation] Apple - User completed onboarding, going to welcome page');
-                                    Navigator.of(context).pushAndRemoveUntil(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const WelcomeFreeAnalysisPage(),
+                                      '[AccountCreation] Apple sign in error: $e');
+                                  // Check if auth actually succeeded despite the error
+                                  if (authService.currentUser == null &&
+                                      context.mounted) {
+                                    ScaffoldMessenger.of(context)
+                                        .clearSnackBars();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Error signing in with Apple: ${e.toString()}',
+                                          style: context.snackTextStyle(
+                                            merge: const TextStyle(
+                                                fontFamily: 'PlusJakartaSans'),
+                                          ),
+                                        ),
+                                        duration:
+                                            const Duration(milliseconds: 2500),
                                       ),
-                                      (route) => false,
                                     );
-                                  } else {
-                                    // No provider values, check database to see if returning user
-                                    try {
-                                      final supabase = Supabase.instance.client;
-                                      final userResponse = await supabase
-                                          .from('users')
-                                          .select('gender')
-                                          .eq('id', userId)
-                                          .maybeSingle();
+                                    return;
+                                  }
+                                }
 
+                                // Wait briefly for auth state to fully propagate
+                                await Future.delayed(
+                                    const Duration(milliseconds: 500));
+
+                                // Check if auth succeeded
+                                if (context.mounted) {
+                                  final userId = authService.currentUser?.id;
+                                  print(
+                                      '[AccountCreation] Apple - User ID after sign in: $userId');
+                                  if (userId != null) {
+                                    // First check if user went through onboarding already (providers have values)
+                                    final selectedGender =
+                                        ref.read(selectedGenderProvider);
+                                    print(
+                                        '[AccountCreation] Apple - Gender from provider: ${selectedGender?.name}');
+
+                                    if (selectedGender != null) {
+                                      // User went through onboarding BEFORE creating account
+                                      // Go to welcome page which will save preferences and initialize credits
                                       print(
-                                          '[AccountCreation] Apple - User record found: ${userResponse != null}');
+                                          '[AccountCreation] Apple - User completed onboarding, going to welcome page');
+                                      Navigator.of(context).pushAndRemoveUntil(
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const WelcomeFreeAnalysisPage(),
+                                        ),
+                                        (route) => false,
+                                      );
+                                    } else {
+                                      // No provider values, check database to see if returning user
+                                      try {
+                                        final supabase =
+                                            Supabase.instance.client;
+                                        final userResponse = await supabase
+                                            .from('users')
+                                            .select('gender')
+                                            .eq('id', userId)
+                                            .maybeSingle();
 
-                                      // Check if user has completed onboarding (gender will be set during onboarding)
-                                      final hasCompletedOnboarding =
-                                          userResponse != null &&
-                                              userResponse['gender'] != null;
-                                      print(
-                                          '[AccountCreation] Apple - Has completed onboarding in DB: $hasCompletedOnboarding');
-
-                                      if (hasCompletedOnboarding) {
-                                        // Existing user who completed onboarding - go to main app
                                         print(
-                                            '[AccountCreation] Apple - Existing user - navigating to main app');
-                                        // Reset to home tab
-                                        ref
-                                            .read(
-                                                selectedIndexProvider.notifier)
-                                            .state = 0;
-                                        // Invalidate all providers to refresh state
-                                        ref.invalidate(selectedIndexProvider);
-                                        ref.invalidate(
-                                            scrollToTopTriggerProvider);
-                                        ref.invalidate(isAtHomeRootProvider);
-                                        Navigator.of(context)
-                                            .pushAndRemoveUntil(
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const MainNavigation(
-                                                    key: ValueKey(
-                                                        'fresh-main-nav')),
-                                          ),
-                                          (route) => false,
-                                        );
-                                      } else {
-                                        // New user - start onboarding from gender selection
+                                            '[AccountCreation] Apple - User record found: ${userResponse != null}');
+
+                                        // Check if user has completed onboarding (gender will be set during onboarding)
+                                        final hasCompletedOnboarding =
+                                            userResponse != null &&
+                                                userResponse['gender'] != null;
                                         print(
-                                            '[AccountCreation] Apple - New user - navigating to gender selection');
-                                        Navigator.of(context)
-                                            .pushAndRemoveUntil(
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const GenderSelectionPage(),
-                                          ),
-                                          (route) => false,
-                                        );
-                                      }
-                                    } catch (e) {
-                                      // If check fails, assume new user
-                                      print(
-                                          '[AccountCreation] Apple - Check error, assuming new user: $e');
-                                      if (context.mounted) {
-                                        Navigator.of(context)
-                                            .pushAndRemoveUntil(
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const GenderSelectionPage(),
-                                          ),
-                                          (route) => false,
-                                        );
+                                            '[AccountCreation] Apple - Has completed onboarding in DB: $hasCompletedOnboarding');
+
+                                        if (hasCompletedOnboarding) {
+                                          // Existing user who completed onboarding - go to main app
+                                          print(
+                                              '[AccountCreation] Apple - Existing user - navigating to main app');
+                                          // Reset to home tab
+                                          ref
+                                              .read(selectedIndexProvider
+                                                  .notifier)
+                                              .state = 0;
+                                          // Invalidate all providers to refresh state
+                                          ref.invalidate(selectedIndexProvider);
+                                          ref.invalidate(
+                                              scrollToTopTriggerProvider);
+                                          ref.invalidate(isAtHomeRootProvider);
+                                          Navigator.of(context)
+                                              .pushAndRemoveUntil(
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const MainNavigation(
+                                                      key: ValueKey(
+                                                          'fresh-main-nav')),
+                                            ),
+                                            (route) => false,
+                                          );
+                                        } else {
+                                          // New user - start onboarding from gender selection
+                                          print(
+                                              '[AccountCreation] Apple - New user - navigating to gender selection');
+                                          Navigator.of(context)
+                                              .pushAndRemoveUntil(
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const GenderSelectionPage(),
+                                            ),
+                                            (route) => false,
+                                          );
+                                        }
+                                      } catch (e) {
+                                        // If check fails, assume new user
+                                        print(
+                                            '[AccountCreation] Apple - Check error, assuming new user: $e');
+                                        if (context.mounted) {
+                                          Navigator.of(context)
+                                              .pushAndRemoveUntil(
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const GenderSelectionPage(),
+                                            ),
+                                            (route) => false,
+                                          );
+                                        }
                                       }
                                     }
                                   }
                                 }
-                              }
-                            },
-                          ),
-
-                          SizedBox(height: spacing.m),
+                              },
+                            ),
+                            SizedBox(height: spacing.m),
+                          ],
 
                           // Google button
                           _AuthButtonWithSvg(
