@@ -469,12 +469,14 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                             ),
                           ),
                           const SizedBox(width: 4),
-                          SnaplookCircularIconButton(
-                            icon: Icons.more_horiz,
+                          IconButton(
+                            icon: const Icon(Icons.more_horiz),
                             iconSize: 18,
                             onPressed: _showOptionsMenu,
                             tooltip: 'More options',
-                            semanticLabel: 'Product options',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ],
                       ),

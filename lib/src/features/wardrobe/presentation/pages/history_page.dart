@@ -333,11 +333,11 @@ class _HistoryCard extends StatelessWidget {
         return 'Safari';
       case 'web':
       case 'browser':
-        return 'Web Share';
+        return 'Web';
       case 'share':
       case 'share_extension':
       case 'shareextension':
-        return 'Share Extension';
+        return 'Snaplook';
     }
 
     if (type == null || _snaplookOriginTypes.contains(type)) {
@@ -513,20 +513,42 @@ class _HistoryCard extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SnaplookCircularIconButton(
-                    icon: Icons.share_outlined,
-                    iconSize: 18,
-                    onPressed: () => _shareSearch(context),
-                    tooltip: 'Share search',
-                    semanticLabel: 'Share search',
+                  GestureDetector(
+                    onTap: () => _shareSearch(context),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: colorScheme.secondary,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.share_outlined,
+                        color: colorScheme.onSecondary,
+                        size: 14,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  SnaplookCircularIconButton(
-                    icon: Icons.link,
-                    iconSize: 16,
-                    onPressed: () => _copyLink(context),
-                    tooltip: 'Copy link',
-                    semanticLabel: 'Copy search link',
+                  GestureDetector(
+                    onTap: () => _copyLink(context),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        border: Border.all(
+                          color: colorScheme.secondary,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.link,
+                        color: colorScheme.secondary,
+                        size: 16,
+                      ),
+                    ),
                   ),
                 ],
               ),

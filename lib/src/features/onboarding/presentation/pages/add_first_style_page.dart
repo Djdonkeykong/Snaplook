@@ -13,7 +13,7 @@ import 'pinterest_tutorial_page.dart';
 import 'tiktok_tutorial_page.dart';
 import 'safari_tutorial_page.dart';
 import 'photos_tutorial_page.dart';
-import 'rating_social_proof_page.dart';
+import 'notification_permission_page.dart';
 
 class AddFirstStylePage extends ConsumerStatefulWidget {
   const AddFirstStylePage({super.key});
@@ -174,35 +174,33 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
         ),
       ),
       bottomNavigationBar: OnboardingBottomBar(
-        secondaryButton: SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const RatingSocialProofPage(
-                    continueToTrialFlow: true,
-                  ),
+        primaryButton: GestureDetector(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const NotificationPermissionPage(
+                  continueToTrialFlow: true,
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
               ),
-            ),
-            child: const Text(
-              'Skip',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -0.2,
+            );
+          },
+          child: const SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: Center(
+              child: Text(
+                'Skip',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black,
+                  fontFamily: 'PlusJakartaSans',
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                  decoration: TextDecoration.underline,
+                  decorationColor: Colors.black,
+                  decorationThickness: 1.5,
+                ),
               ),
             ),
           ),

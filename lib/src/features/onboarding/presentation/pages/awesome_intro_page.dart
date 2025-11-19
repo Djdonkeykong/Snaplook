@@ -6,7 +6,6 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
-import 'trial_intro_page.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 
 class AwesomeIntroPage extends ConsumerStatefulWidget {
@@ -169,34 +168,6 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
                 fontWeight: FontWeight.bold,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
-              ),
-            ),
-          ),
-        ),
-        secondaryButton: GestureDetector(
-          onTap: () {
-            HapticFeedback.mediumImpact();
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const TrialIntroPage(),
-              ),
-            );
-          },
-          child: const SizedBox(
-            width: double.infinity,
-            child: Center(
-              child: Text(
-                'Skip',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.2,
-                  decoration: TextDecoration.underline,
-                  decorationColor: Colors.black,
-                  decorationThickness: 1.5,
-                ),
               ),
             ),
           ),

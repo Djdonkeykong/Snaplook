@@ -9,7 +9,7 @@ class SupabaseService {
 
   Future<List<Map<String, dynamic>>> getUserSearches({
     required String userId,
-    int limit = 50,
+    int limit = 20,
     int offset = 0,
   }) async {
     try {
@@ -17,11 +17,13 @@ class SupabaseService {
         '[SupabaseService] getUserSearches user=$userId limit=$limit offset=$offset',
       );
 
+      // Single JOIN query - only fetch fields needed for history list display
       final response = await client
           .from('user_searches')
           .select(
             'id, user_id, search_type, source_url, source_username, created_at, image_cache_id, '
-            'saved:user_saved_searches!left (id)',
+            'saved:user_saved_searches!left (id), '
+            'cache:image_cache!left (cloudinary_url, total_results)',
           )
           .eq('user_id', userId)
           .order('created_at', ascending: false)
@@ -32,46 +34,11 @@ class SupabaseService {
 
       for (final search in searches) {
         final cacheId = search['image_cache_id'] as String?;
-        Map<String, dynamic> cacheData = {};
-        int totalResults = 0;
-        List<dynamic>? detectedGarments;
-        List<dynamic>? searchResults;
+        final cacheData = search['cache'] as Map<String, dynamic>?;
+        final savedEntries = search['saved'] as List<dynamic>?;
 
-        if (cacheId != null) {
-          try {
-            final cacheResponse = await client
-                .from('image_cache')
-                .select(
-                  'cloudinary_url, total_results, detected_garments, search_results',
-                )
-                .eq('id', cacheId)
-                .maybeSingle();
-
-            if (cacheResponse != null) {
-              print(
-                '[SupabaseService] cache response for $cacheId -> $cacheResponse',
-              );
-              cacheData = Map<String, dynamic>.from(cacheResponse);
-              totalResults =
-                  (cacheData['total_results'] as num?)?.toInt() ?? 0;
-              detectedGarments =
-                  cacheData['detected_garments'] as List<dynamic>?;
-              searchResults =
-                  cacheData['search_results'] as List<dynamic>?;
-            } else {
-              print('[SupabaseService] cache miss for $cacheId');
-            }
-          } catch (e) {
-            print('Error fetching cache entry $cacheId: $e');
-          }
-        }
-
-        final savedEntries = (search['saved'] as List<dynamic>?);
-
-        print(
-          '[SupabaseService] mapped search id=${search['id']} cache=$cacheId '
-          'cloudinary=${cacheData['cloudinary_url']} total=$totalResults',
-        );
+        final cloudinaryUrl = cacheData?['cloudinary_url'] as String?;
+        final totalResults = (cacheData?['total_results'] as num?)?.toInt() ?? 0;
 
         mapped.add({
           'id': search['id'],
@@ -81,10 +48,8 @@ class SupabaseService {
           'source_username': search['source_username'],
           'created_at': search['created_at'],
           'image_cache_id': cacheId,
-          'cloudinary_url': cacheData['cloudinary_url'],
+          'cloudinary_url': cloudinaryUrl,
           'total_results': totalResults,
-          'detected_garments': detectedGarments,
-          'search_results': searchResults,
           'is_saved': savedEntries != null && savedEntries.isNotEmpty,
         });
       }

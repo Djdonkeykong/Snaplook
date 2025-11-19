@@ -290,7 +290,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               : Stack(
               children: [
                 Positioned.fill(
-                  child: widget.imageUrl != null || _loadedImageUrl != null
+                  // Only use network image if we don't have a local selectedImage
+                  // widget.imageUrl may be a source URL (e.g., Instagram post) not a direct image URL
+                  child: selectedImage == null && (widget.imageUrl != null || _loadedImageUrl != null)
                       ? SizedBox.expand(
                           child: Stack(
                             children: [

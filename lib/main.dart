@@ -587,8 +587,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         print(
           "[SHARE EXTENSION] Setting pending shared image for HomePage (initial share)",
         );
+        print("[SHARE EXTENSION] Source URL for initial share: ${sharedFile.message}");
         _skipNextResumePendingCheck = true;
         ref.read(pendingSharedImageProvider.notifier).state = imageFile;
+        ref.read(pendingShareSourceUrlProvider.notifier).state = sharedFile.message;
         _hasHandledInitialShare = true;
         _shouldIgnoreNextStreamEmission = true;
         unawaited(ShareImportStatus.markComplete());
@@ -601,7 +603,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       ref.read(pendingSharedImageProvider.notifier).state = null;
       FocusManager.instance.primaryFocus?.unfocus();
       print("[SHARE EXTENSION] Navigating to DetectionPage immediately");
-      _navigateToDetection();
+      print("[SHARE EXTENSION] Source URL from share extension: ${sharedFile.message}");
+      _navigateToDetection(sourceUrl: sharedFile.message);
     } else if (sharedFile.type == SharedMediaType.text ||
         sharedFile.type == SharedMediaType.url) {
       print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
@@ -611,7 +614,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
   }
 
-  Future<void> _navigateToDetection({String? overrideSearchType}) async {
+  Future<void> _navigateToDetection({String? overrideSearchType, String? sourceUrl}) async {
     if (_isNavigatingToDetection) {
       print("[SHARE EXTENSION] Navigation already in progress");
       return;
@@ -627,6 +630,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       searchType = platformType ?? 'share';
     }
     print("[SHARE EXTENSION] Using searchType: $searchType");
+    print("[SHARE EXTENSION] Using sourceUrl: $sourceUrl");
 
     // Ensure the main navigation is showing the home tab before pushing detection.
     ref.read(selectedIndexProvider.notifier).state = 0;
@@ -643,7 +647,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       navigator
           .push(
         MaterialPageRoute(
-          builder: (_) => DetectionPage(searchType: searchType),
+          builder: (_) => DetectionPage(
+            searchType: searchType,
+            imageUrl: sourceUrl,
+          ),
           settings: const RouteSettings(name: 'detection-from-share'),
         ),
       )
@@ -791,7 +798,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         await ShareImportStatus.markComplete();
 
-        _navigateToDetection(overrideSearchType: 'instagram');
+        _navigateToDetection(overrideSearchType: 'instagram', sourceUrl: instagramUrl);
       } else {
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
@@ -826,7 +833,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         await ShareImportStatus.markComplete();
 
-        _navigateToDetection(overrideSearchType: 'tiktok');
+        _navigateToDetection(overrideSearchType: 'tiktok', sourceUrl: tiktokUrl);
       } else {
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
@@ -861,7 +868,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         await ShareImportStatus.markComplete();
 
-        _navigateToDetection(overrideSearchType: 'pinterest');
+        _navigateToDetection(overrideSearchType: 'pinterest', sourceUrl: pinterestUrl);
       } else {
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
@@ -896,7 +903,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         await ShareImportStatus.markComplete();
 
-        _navigateToDetection(overrideSearchType: 'youtube');
+        _navigateToDetection(overrideSearchType: 'youtube', sourceUrl: youtubeUrl);
       } else {
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
@@ -927,7 +934,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         await ShareImportStatus.markComplete();
 
-        _navigateToDetection(overrideSearchType: 'web');
+        _navigateToDetection(overrideSearchType: 'web', sourceUrl: url);
       } else {
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();
@@ -958,7 +965,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         await ShareImportStatus.markComplete();
 
-        _navigateToDetection(overrideSearchType: 'web');
+        _navigateToDetection(overrideSearchType: 'web', sourceUrl: url);
       } else {
         ref.read(pendingSharedImageProvider.notifier).state = null;
         await ShareImportStatus.markComplete();

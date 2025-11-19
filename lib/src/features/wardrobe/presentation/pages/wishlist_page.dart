@@ -580,12 +580,25 @@ class _FavoriteCard extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  SnaplookCircularIconButton(
-                    icon: Icons.more_horiz,
-                    iconSize: 18,
-                    onPressed: () => _showShareMenu(context),
-                    tooltip: 'More options',
-                    semanticLabel: 'More share options',
+                  GestureDetector(
+                    onTap: () => _showShareMenu(context),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        border: Border.all(
+                          color: colorScheme.secondary,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.more_horiz,
+                        color: colorScheme.secondary,
+                        size: 18,
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -30,11 +30,20 @@ class DetectionResult {
   });
 
   factory DetectionResult.fromJson(Map<String, dynamic> json) {
+    // Handle price which can be either a num or a Map with extracted_value
+    double priceValue = 0.0;
+    final priceData = json['price'];
+    if (priceData is num) {
+      priceValue = priceData.toDouble();
+    } else if (priceData is Map<String, dynamic>) {
+      priceValue = (priceData['extracted_value'] as num?)?.toDouble() ?? 0.0;
+    }
+
     return DetectionResult(
       id: json['id'] as String,
       productName: json['product_name'] as String,
       brand: json['brand'] as String,
-      price: (json['price'] as num).toDouble(),
+      price: priceValue,
       imageUrl: json['image_url'] as String,
       category: json['category'] as String,
       confidence: (json['confidence'] as num).toDouble(),

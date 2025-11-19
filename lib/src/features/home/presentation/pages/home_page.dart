@@ -132,13 +132,21 @@ class _HomePageState extends ConsumerState<HomePage> {
     print('[HOME PAGE] Navigating to DetectionPage for shared image');
     _isProcessingPendingNavigation = true;
 
+    // Get source URL for cache matching
+    final sourceUrl = ref.read(pendingShareSourceUrlProvider);
+    print('[HOME PAGE] Source URL for shared image: $sourceUrl');
+
     ref.read(pendingSharedImageProvider.notifier).state = null;
+    ref.read(pendingShareSourceUrlProvider.notifier).state = null;
 
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) {
           print('[HOME PAGE] DetectionPage builder called for shared image');
-          return const DetectionPage(searchType: 'share');
+          return DetectionPage(
+            searchType: 'share',
+            imageUrl: sourceUrl,
+          );
         },
       ),
     ).whenComplete(() {
