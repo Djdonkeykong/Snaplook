@@ -959,6 +959,63 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     });
   }
 
+  void _showNoResultsDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Icon(
+              Icons.search_off,
+              size: 48,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No Results Found',
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'We couldn\'t find any matching products.\nTry a different image with clearer clothing items.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 14,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+            ),
+            child: const Text(
+              'OK',
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   double get _resultsOverlayOpacity {
     if (!_isResultsSheetVisible) return 0;
     final range = _resultsMaxExtent - _resultsMinExtent;
@@ -1186,18 +1243,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       } else {
         _hideAnalysisOverlay();
         if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'No similar items found. Try another photo.',
-                style: context.snackTextStyle(
-                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-                ),
-              ),
-              duration: const Duration(milliseconds: 2500),
-            ),
-          );
+          _showNoResultsDialog();
         }
       }
     } catch (e) {

@@ -2358,6 +2358,103 @@ open class RSIShareViewController: SLComposeServiceViewController {
         task.resume()
     }
 
+    // Show UI when no results are found
+    private func showNoResultsUI() {
+        shareLog("Displaying no results UI")
+
+        // Hide loading indicator
+        activityIndicator?.stopAnimating()
+        activityIndicator?.isHidden = true
+        statusLabel?.isHidden = true
+
+        guard let loadingView = loadingView else {
+            shareLog("ERROR: loadingView is nil - cannot show no results UI")
+            return
+        }
+
+        // Create container for no results message
+        let noResultsContainer = UIView()
+        noResultsContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        // Icon
+        let iconImageView = UIImageView()
+        iconImageView.translatesAutoresizingMaskIntoConstraints = false
+        let config = UIImage.SymbolConfiguration(pointSize: 48, weight: .light)
+        iconImageView.image = UIImage(systemName: "magnifyingglass", withConfiguration: config)
+        iconImageView.tintColor = UIColor.systemGray3
+        iconImageView.contentMode = .scaleAspectFit
+
+        // Title
+        let titleLabel = UILabel()
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.text = "No Results Found"
+        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
+        titleLabel.textColor = .label
+        titleLabel.textAlignment = .center
+
+        // Subtitle
+        let subtitleLabel = UILabel()
+        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        subtitleLabel.text = "We couldn't find any matching products.\nTry a different image with clearer clothing items."
+        subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
+        subtitleLabel.textColor = .secondaryLabel
+        subtitleLabel.textAlignment = .center
+        subtitleLabel.numberOfLines = 0
+
+        // Open App button
+        let openAppButton = UIButton(type: .system)
+        openAppButton.translatesAutoresizingMaskIntoConstraints = false
+        openAppButton.setTitle("Open Snaplook", for: .normal)
+        openAppButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        openAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        openAppButton.setTitleColor(.white, for: .normal)
+        openAppButton.layer.cornerRadius = 28
+        openAppButton.addTarget(self, action: #selector(openAppFromNoResults), for: .touchUpInside)
+
+        // Add to container
+        noResultsContainer.addSubview(iconImageView)
+        noResultsContainer.addSubview(titleLabel)
+        noResultsContainer.addSubview(subtitleLabel)
+        noResultsContainer.addSubview(openAppButton)
+
+        loadingView.addSubview(noResultsContainer)
+
+        NSLayoutConstraint.activate([
+            noResultsContainer.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
+            noResultsContainer.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor, constant: -40),
+            noResultsContainer.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 32),
+            noResultsContainer.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -32),
+
+            iconImageView.topAnchor.constraint(equalTo: noResultsContainer.topAnchor),
+            iconImageView.centerXAnchor.constraint(equalTo: noResultsContainer.centerXAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 64),
+            iconImageView.heightAnchor.constraint(equalToConstant: 64),
+
+            titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 16),
+            titleLabel.leadingAnchor.constraint(equalTo: noResultsContainer.leadingAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor),
+
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            subtitleLabel.leadingAnchor.constraint(equalTo: noResultsContainer.leadingAnchor),
+            subtitleLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor),
+
+            openAppButton.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 24),
+            openAppButton.centerXAnchor.constraint(equalTo: noResultsContainer.centerXAnchor),
+            openAppButton.widthAnchor.constraint(equalToConstant: 200),
+            openAppButton.heightAnchor.constraint(equalToConstant: 56),
+            openAppButton.bottomAnchor.constraint(equalTo: noResultsContainer.bottomAnchor)
+        ])
+
+        // Haptic feedback
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.warning)
+    }
+
+    @objc private func openAppFromNoResults() {
+        shareLog("Open app tapped from no results screen")
+        openSnaplookApp()
+    }
+
     // Show detection results in table view
     private func showDetectionResults() {
         shareLog("=== showDetectionResults START ===")
@@ -2366,7 +2463,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("resultsTableView exists: \(resultsTableView != nil)")
 
         guard !detectionResults.isEmpty else {
-            shareLog("ERROR: detectionResults is empty, returning")
+            shareLog("No results found - showing empty state UI")
+            showNoResultsUI()
             return
         }
 
