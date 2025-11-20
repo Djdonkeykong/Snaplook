@@ -191,6 +191,7 @@ class _ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final radius = context.radius;
+    final mediaQuery = MediaQuery.of(context);
 
     return InkWell(
       onTap: onTap,
@@ -267,10 +268,13 @@ class _ProductCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: AppColors.textTertiary,
+            Padding(
+              padding: EdgeInsets.only(right: mediaQuery.size.width * 0.01),
+              child: Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppColors.textTertiary,
+              ),
             ),
           ],
         ),

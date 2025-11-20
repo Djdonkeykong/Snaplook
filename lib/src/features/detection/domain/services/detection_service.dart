@@ -34,6 +34,10 @@ class DetectionService {
   static const int _maxPerDomain = 5; // Increased from 3 to match server caps
 
   String _lastKnownCurrencyCode = 'USD';
+  static const String _countryOverride =
+      String.fromEnvironment('SEARCH_COUNTRY_OVERRIDE', defaultValue: '');
+  static const String _languageOverride =
+      String.fromEnvironment('SEARCH_LANGUAGE_OVERRIDE', defaultValue: '');
 
   // serp cache keyed by imageUrl + textQuery
   static final Map<String, List<Map<String, dynamic>>> _serpCache = {};
@@ -128,9 +132,18 @@ class DetectionService {
       throw Exception('No image or URL provided');
     }
 
+    // Hard override for localization (useful for test builds)
+    if (_countryOverride.isNotEmpty) {
+      payload['country'] = _countryOverride;
+      if (_languageOverride.isNotEmpty) {
+        payload['language'] = _languageOverride;
+      }
+      _lastKnownCurrencyCode = SearchLocations.getCurrency(_countryOverride);
+    }
+
     // Get user's profile for localization (country + language + currency)
     final userProfile = await _userProfileRepo.getCurrentUserProfile();
-    if (userProfile != null) {
+    if (userProfile != null && _countryOverride.isEmpty) {
       // Use country code if available (PREFERRED by SearchAPI)
       if (userProfile.countryCode != null &&
           userProfile.countryCode!.isNotEmpty) {
@@ -145,7 +158,18 @@ class DetectionService {
       // Add language preference
       if (userProfile.preferredLanguage.isNotEmpty) {
         payload['language'] = userProfile.preferredLanguage; // e.g., 'en', 'nb'
-        debugPrint('≡ƒ£ò Using language: ${userProfile.preferredLanguage}');
+        debugPrint('🜕 Using language: ');
+      }
+      _lastKnownCurrencyCode = SearchLocations.getCurrency(userProfile.countryCode);
+    } else if (_countryOverride.isEmpty) {
+      // No profile - use Norway defaults
+      payload['country'] = 'NO';
+      payload['language'] = 'nb';
+      debugPrint('🌎 No user profile - using defaults (NO, nb)');
+      _lastKnownCurrencyCode = SearchLocations.getCurrency('NO');
+    }
+
+    debugPrint('≡ƒ£ò Using language: ${userProfile.preferredLanguage}');
       }
           _lastKnownCurrencyCode = SearchLocations.getCurrency(userProfile.countryCode);
 } else {

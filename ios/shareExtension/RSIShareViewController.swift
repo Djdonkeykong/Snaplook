@@ -5603,8 +5603,8 @@ class ResultCell: UITableViewCell {
 
     private let productNameLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 14)
-        label.textColor = .secondaryLabel
+        label.font = .systemFont(ofSize: 12, weight: .medium)
+        label.textColor = .label
         label.numberOfLines = 2
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -5676,7 +5676,8 @@ class ResultCell: UITableViewCell {
 
         NSLayoutConstraint.activate([
             productImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            productImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            productImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            productImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
             productImageView.widthAnchor.constraint(equalToConstant: 80),
             productImageView.heightAnchor.constraint(equalToConstant: 80),
 
@@ -5691,10 +5692,10 @@ class ResultCell: UITableViewCell {
             chevronImageView.heightAnchor.constraint(equalToConstant: 16),
 
             textStackView.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
-            textStackView.trailingAnchor.constraint(equalTo: chevronImageView.leadingAnchor, constant: -12),
+            textStackView.trailingAnchor.constraint(equalTo: chevronImageView.leadingAnchor, constant: -18),
             textStackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
 
-            contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 104)
+            contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 110)
         ])
     }
 
