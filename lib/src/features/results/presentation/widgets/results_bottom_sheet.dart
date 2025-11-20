@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
@@ -151,6 +152,41 @@ class _ProductCard extends StatelessWidget {
     required this.isFirst,
   });
 
+  String _formatPrice(BuildContext context, double price, String? currency) {
+    try {
+      final locale = Localizations.localeOf(context).toString();
+      final effectiveLocale = _localeForCurrency(locale, currency);
+      final formatter = currency != null && currency.isNotEmpty
+          ? NumberFormat.simpleCurrency(
+              locale: effectiveLocale,
+              name: currency,
+            )
+          : NumberFormat.simpleCurrency(locale: effectiveLocale);
+      return formatter.format(price);
+    } catch (_) {
+      final symbol = currency ?? '\$';
+      return '$symbol${price.toStringAsFixed(2)}';
+    }
+  }
+
+  String _localeForCurrency(String locale, String? currencyCode) {
+    if (currencyCode == null || currencyCode.isEmpty) return locale;
+    final lower = locale.toLowerCase();
+    if (lower.contains(currencyCode.toLowerCase())) return locale;
+
+    const currencyLocales = {
+      'NOK': 'nb_NO',
+      'SEK': 'sv_SE',
+      'DKK': 'da_DK',
+      'EUR': 'de_DE',
+      'GBP': 'en_GB',
+      'USD': 'en_US',
+      'CAD': 'en_CA',
+      'AUD': 'en_AU',
+    };
+    return currencyLocales[currencyCode.toUpperCase()] ?? locale;
+  }
+
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
@@ -219,7 +255,7 @@ class _ProductCard extends StatelessWidget {
                   SizedBox(height: spacing.sm),
                   Text(
                     result.price > 0
-                        ? '\$${result.price.toStringAsFixed(2)}'
+                        ? _formatPrice(context, result.price, result.currencyCode)
                         : 'See store',
                     style: const TextStyle(
                       fontSize: 16,

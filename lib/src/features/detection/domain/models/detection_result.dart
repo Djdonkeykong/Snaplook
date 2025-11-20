@@ -3,6 +3,7 @@ class DetectionResult {
   final String productName;
   final String brand;
   final double price;
+  final String? currencyCode;
   final String imageUrl;
   final String category;
   final double confidence;
@@ -18,6 +19,7 @@ class DetectionResult {
     required this.productName,
     required this.brand,
     required this.price,
+    this.currencyCode,
     required this.imageUrl,
     required this.category,
     required this.confidence,
@@ -32,18 +34,22 @@ class DetectionResult {
   factory DetectionResult.fromJson(Map<String, dynamic> json) {
     // Handle price which can be either a num or a Map with extracted_value
     double priceValue = 0.0;
+    String? currencyCode;
     final priceData = json['price'];
     if (priceData is num) {
       priceValue = priceData.toDouble();
     } else if (priceData is Map<String, dynamic>) {
       priceValue = (priceData['extracted_value'] as num?)?.toDouble() ?? 0.0;
+      currencyCode = (priceData['currency'] as String?)?.toUpperCase();
     }
+    currencyCode ??= (json['currency'] as String?)?.toUpperCase();
 
     return DetectionResult(
       id: json['id'] as String,
       productName: json['product_name'] as String,
       brand: json['brand'] as String,
       price: priceValue,
+      currencyCode: currencyCode,
       imageUrl: json['image_url'] as String,
       category: json['category'] as String,
       confidence: (json['confidence'] as num).toDouble(),
@@ -62,6 +68,7 @@ class DetectionResult {
       'product_name': productName,
       'brand': brand,
       'price': price,
+      'currency': currencyCode,
       'image_url': imageUrl,
       'category': category,
       'confidence': confidence,

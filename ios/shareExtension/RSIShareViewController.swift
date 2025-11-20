@@ -232,9 +232,24 @@ struct DetectionResultItem: Codable {
             return text
         }
         if let numeric = priceNumeric, numeric > 0 {
-            return String(format: "$%.2f", numeric)
+            return DetectionResultItem.formatPrice(numeric)
         }
         return nil
+    }
+
+    private static let sharedCurrencyFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        formatter.locale = .autoupdatingCurrent
+        return formatter
+    }()
+
+    private static func formatPrice(_ value: Double) -> String? {
+        // Refresh locale in case the user changes region/language
+        sharedCurrencyFormatter.locale = .autoupdatingCurrent
+        return sharedCurrencyFormatter.string(from: NSNumber(value: value))
     }
 
     var normalizedCategoryAssignment: NormalizedCategoryAssignment {

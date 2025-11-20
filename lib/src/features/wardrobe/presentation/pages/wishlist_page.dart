@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../favorites/domain/providers/favorites_provider.dart';
 import '../../../favorites/domain/models/favorite_item.dart';
-import '../../../product/presentation/pages/product_detail_page.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../../core/constants/history_icon.dart';
@@ -471,27 +471,45 @@ class _FavoriteCard extends ConsumerWidget {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () {
-        final productMap = {
-          'id': favorite.productId,
-          'title': favorite.productName,
-          'brand': favorite.brand,
-          'price': favorite.price,
-          'image_url': favorite.imageUrl,
-          'url': favorite.purchaseUrl ?? '',
-          'purchase_url': favorite.purchaseUrl ?? '',
-          'link': favorite.purchaseUrl ?? '',
-          'category': favorite.category,
-        };
+      onTap: () async {
+        final productUrl = _resolveProductUrl();
 
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => ProductDetailPage(
-              product: productMap,
-              heroTag: 'wishlist_${favorite.productId}',
+        if (productUrl.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Product link unavailable',
+                style: context.snackTextStyle(
+                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                ),
+              ),
+              duration: const Duration(seconds: 2),
             ),
-          ),
-        );
+          );
+          return;
+        }
+
+        final uri = Uri.parse(productUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Could not open product link',
+                  style: context.snackTextStyle(
+                    merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                  ),
+                ),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
       },
       child: Container(
         margin: EdgeInsets.only(bottom: spacing.m),

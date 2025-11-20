@@ -54,7 +54,7 @@ class AppConstants {
   // === 🌐 API Keys ===
   static String get serpApiKey =>
       dotenv.env['SERPAPI_API_KEY'] ??
-      'e65af8658648b412e968ab84fe28e44c98867bc7e1667de031837e5acf356fd6';
+      'YLWTCmiBX9ZzU8EFyedj8MQz';
 
   static String? get searchApiLocation {
     final value = dotenv.env['SEARCHAPI_LOCATION'];
@@ -153,7 +153,7 @@ class AppConstants {
     );
     return isLocal
         ? 'http://10.0.0.25:8000/detect'
-        : 'https://a8cab2965b13.ngrok-free.app/detect';
+        : 'https://3b22d93d76d2.ngrok-free.app/detect';
   }
 
   static String _defaultDetectAndSearchEndpoint() {
@@ -163,12 +163,12 @@ class AppConstants {
     );
     return isLocal
         ? 'http://10.0.0.25:8000/detect-and-search'
-        : 'https://a8cab2965b13.ngrok-free.app/detect-and-search';
+        : 'https://3b22d93d76d2.ngrok-free.app/detect-and-search';
   }
 
   // === 🐝 ScrapingBee Keys ===
   static const List<String> _scrapingBeeKeyPriority = [
-    '55D79GGF9UWXJ4IX0QJ3G5GDCZL07245FYFEHX6A2UJTALDE8EFBFRA0FVCMXQ615UQ7J6DTHC6WMM7C',
+    'N7RYF85TNH33F3S0ENA9MU68EN34296134Y6H4URMDG2ZJR16H2RS9AH37IRQLBT8AQ9PDHO8KPFJXVP',
   ];
 
   static List<String> _parseScrapingBeeEnv(String? raw) {

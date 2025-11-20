@@ -85,7 +85,7 @@ class WebViewController: UIViewController, WKNavigationDelegate {
         // Done button
         doneButton = UIButton(type: .system)
         doneButton.setTitle("Done", for: .normal)
-        doneButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
+        doneButton.titleLabel?.font = .systemFont(ofSize: 16)
         doneButton.tintColor = .systemBlue
         doneButton.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
         doneButton.translatesAutoresizingMaskIntoConstraints = false
@@ -119,7 +119,7 @@ class WebViewController: UIViewController, WKNavigationDelegate {
             urlBar.widthAnchor.constraint(equalTo: toolbarContainer.widthAnchor, multiplier: 0.75),
 
             // Done button - right side, aligned with URL bar
-            doneButton.trailingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+            doneButton.trailingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.trailingAnchor, constant: -18),
             doneButton.centerYAnchor.constraint(equalTo: urlBar.centerYAnchor),
 
             // Lock icon

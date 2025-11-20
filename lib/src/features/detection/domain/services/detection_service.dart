@@ -10,6 +10,7 @@ import '../models/detection_result.dart';
 import '../../../../core/constants/category_rules.dart';
 import '../../../../services/cloudinary_service.dart';
 import '../../../user/repositories/user_profile_repository.dart';
+import '../../../user/models/user_profile.dart';
 
 /// Detection pipeline powered by the backend SerpAPI service (with optional legacy fallback).
 class DetectionService {
@@ -31,6 +32,8 @@ class DetectionService {
   static const int _maxResultsPerGarment =
       10; // limit per garment to keep searches snappy
   static const int _maxPerDomain = 5; // Increased from 3 to match server caps
+
+  String _lastKnownCurrencyCode = 'USD';
 
   // serp cache keyed by imageUrl + textQuery
   static final Map<String, List<Map<String, dynamic>>> _serpCache = {};
@@ -125,7 +128,7 @@ class DetectionService {
       throw Exception('No image or URL provided');
     }
 
-    // Get user's profile for localization (country + language)
+    // Get user's profile for localization (country + language + currency)
     final userProfile = await _userProfileRepo.getCurrentUserProfile();
     if (userProfile != null) {
       // Use country code if available (PREFERRED by SearchAPI)
@@ -144,11 +147,13 @@ class DetectionService {
         payload['language'] = userProfile.preferredLanguage; // e.g., 'en', 'nb'
         debugPrint('≡ƒ£ò Using language: ${userProfile.preferredLanguage}');
       }
-    } else {
-      // No profile - use US defaults
-      payload['country'] = 'US';
-      payload['language'] = 'en';
-      debugPrint('≡ƒîÄ No user profile - using defaults (US, en)');
+          _lastKnownCurrencyCode = SearchLocations.getCurrency(userProfile.countryCode);
+} else {
+      // No profile - use Norway defaults
+      payload['country'] = 'NO';
+      payload['language'] = 'nb';
+      debugPrint('≡ƒîÄ No user profile - using defaults (NO, nb)');
+      _lastKnownCurrencyCode = SearchLocations.getCurrency('NO');
     }
 
     debugPrint('≡ƒÜÇ Sending image to detector+search endpoint: $endpoint');
@@ -179,8 +184,12 @@ class DetectionService {
       return const <DetectionResult>[];
     }
 
-    return resultsRaw
-        .map(_normalizeServerResult)
+    final normalized = resultsRaw.map(_normalizeServerResult).toList();
+    for (final result in normalized) {
+      result.putIfAbsent('currency', () => _lastKnownCurrencyCode);
+    }
+
+    return normalized
         .map(DetectionResult.fromJson)
         .toList(growable: false);
   }
@@ -243,6 +252,7 @@ class DetectionService {
           uniqueMatches,
           url,
           detectionLabel: labelByUrl[url],
+          currencyCode: _lastKnownCurrencyCode,
         );
       } catch (e) {
         debugPrint(
@@ -677,6 +687,7 @@ class DetectionService {
     List<Map<String, dynamic>> matches,
     String fallbackImageUrl, {
     String? detectionLabel,
+    String? currencyCode,
   }) {
     final results = <DetectionResult>[];
 
@@ -693,6 +704,8 @@ class DetectionService {
       final price = (priceObj?['extracted_value'] as num?)?.toDouble() ??
           _extractPrice(snippet) ??
           0.0;
+      final priceCurrency =
+          (priceObj?['currency'] as String?)?.toUpperCase() ?? currencyCode;
 
       final brand = _extractBrand(title, source);
       final category = _categorize(
@@ -709,6 +722,7 @@ class DetectionService {
           productName: _formatTitle(title),
           brand: brand,
           price: price,
+          currencyCode: priceCurrency,
           imageUrl: thumbnail.isNotEmpty ? thumbnail : fallbackImageUrl,
           category: category,
           confidence: confidence,

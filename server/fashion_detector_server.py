@@ -24,9 +24,12 @@ from transformers import AutoImageProcessor, YolosForObjectDetection
 import cloudinary
 import cloudinary.uploader
 
-# Load environment variables from .env file in parent directory
+# Load environment variables from .env file
 # IMPORTANT: Must be before importing supabase_client
+# First load from parent directory (main .env)
 load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env')
+# Then load from server directory (overrides parent if exists)
+load_dotenv(dotenv_path=Path(__file__).parent / '.env', override=True)
 
 from supabase_client import supabase_manager
 
@@ -46,8 +49,8 @@ cloudinary.config(
     secure=True
 )
 
-# SerpAPI credentials and configuration
-SERPAPI_KEY = os.getenv("SERPAPI_KEY", "e65af8658648b412e968ab84fe28e44c98867bc7e1667de031837e5acf356fd6")
+# SearchAPI.io credentials and configuration
+SERPAPI_KEY = os.getenv("SERPAPI_KEY", "YLWTCmiBX9ZzU8EFyedj8MQz")
 SERPAPI_LOCATION = os.getenv("SERPAPI_LOCATION", "United States")  # Location for results
 SERPAPI_DEVICE = os.getenv("SERPAPI_DEVICE", "mobile")  # mobile or desktop
 
@@ -343,10 +346,24 @@ RELEVANCE_BANNED_TERMS = [
 
 # Fashion keywords for relevance detection
 GARMENT_KEYWORDS = [
+    # English
     'dress', 'top', 'shirt', 't-shirt', 'pants', 'jeans', 'skirt', 'coat',
     'jacket', 'sweater', 'hoodie', 'bag', 'handbag', 'backpack', 'tote',
     'sandal', 'boot', 'shoe', 'sneaker', 'heel', 'glasses', 'sunglasses',
     'hat', 'cap', 'scarf', 'outfit', 'clothing', 'apparel', 'fashion',
+    # Norwegian (to avoid over-filtering localized results)
+    'kjole', 'kjoler', 'kjolen',
+    'genser', 'gensere',
+    'topp', 'topper',
+    'bukse', 'bukser',
+    'skjørt',
+    'jakke', 'jakker',
+    'frakk', 'kåpe', 'kåper',
+    'hettegenser',
+    'sko', 'støvlett', 'støvletter', 'hæl', 'hæler', 'sandaler',
+    'veske', 'vesker', 'sekk', 'sekk', 'ryggsekk', 'ryggsekker',
+    'solbriller', 'briller',
+    'lue', 'caps', 'skjerf',
 ]
 
 # Style hint keywords for relevance boost
@@ -1335,6 +1352,8 @@ def search_serp_api(
 
         print(f"✅ Products engine returned {len(matches)} matches")
 
+        relaxed_relevance_candidates = []
+
         for match in matches:
             link = match.get('link', '')
             title = match.get('title', '')
@@ -1357,6 +1376,8 @@ def search_serp_api(
 
             # PRIORITY 3: Semantic relevance
             if not is_relevant_result(title):
+                # Keep around for a relaxed pass (helps localized titles)
+                relaxed_relevance_candidates.append(match)
                 continue
 
             # Extract price if available
@@ -1376,6 +1397,35 @@ def search_serp_api(
 
             if len(results) >= max_results * 3:  # Fetch more before dedup (increased from 2x to 3x)
                 break
+
+        # If strict relevance filtered too much, backfill with relaxed candidates
+        if len(results) < max_results and relaxed_relevance_candidates:
+            for match in relaxed_relevance_candidates:
+                link = match.get('link', '')
+                title = match.get('title', '')
+                source = match.get('source', '')
+                thumbnail = match.get('thumbnail', '')
+                snippet = match.get('snippet', '')
+
+                if not link or not title:
+                    continue
+
+                price = 0.0
+                price_obj = match.get('price', {})
+                if isinstance(price_obj, dict):
+                    price = price_obj.get('extracted_value', 0.0)
+
+                results.append({
+                    'title': title,
+                    'link': link,
+                    'source': source,
+                    'thumbnail': thumbnail,
+                    'snippet': snippet,
+                    'price': price,
+                })
+
+                if len(results) >= max_results:
+                    break
 
     except requests.exceptions.Timeout:
         print(f"⏱️ SerpAPI products timeout after 20s - returning empty results")
@@ -2079,12 +2129,12 @@ def search_visual_products(
     merchant_hints: str = None,
 ):
     """
-    SerpAPI optimized Google Lens search with SMART pagination and proper localization.
+    SearchAPI.io optimized Google Lens search with SMART pagination and proper localization.
 
-    Based on SearchAPI best practices (adapted for SerpAPI):
-    - Use gl (2-letter code) for market localization (SerpAPI Google Lens uses 'gl')
+    Uses SearchAPI.io (not SerpAPI) for proper localization support:
+    - Use country (2-letter ISO code) for market localization
     - Use hl (language) for interface language
-    - Filter products on our side (Google Lens doesn't support type parameter)
+    - Use search_type=products to filter only product results
     - Optional merchant hints via 'q' parameter to bias results (e.g., "Zalando OR ASOS OR H&M")
 
     Strategy for fast UX:
@@ -2096,7 +2146,7 @@ def search_visual_products(
     Args:
         image_url: Publicly accessible image URL
         max_results: Number of results to fetch per garment
-        location: Legacy SearchAPI location string (e.g., "United States")
+        location: Legacy location string (e.g., "United States")
         country: ISO 3166-1 alpha-2 country code (e.g., "US", "NO", "GB") - PREFERRED
         language: Language code (e.g., "en", "nb", "fr")
         merchant_hints: Optional query to bias toward specific merchants
@@ -2130,17 +2180,30 @@ def search_visual_products(
     country = country or 'US'
     language = language or 'en'
 
+    # Log the location parameters being used
+    print(f"[SearchAPI] Using country code: {country}, language: {language}")
+
     while page <= max_pages and len(all_matches) < max_results * 2:
+        # Normalize language for SearchAPI: prefer "no" for Norwegian variants
+        api_language = language
+        if language and language.lower() in ("nb", "nb_no", "nb-no"):
+            api_language = "no"
+
+        # Use country-specific Google domain when possible
+        google_domain = "google.com"
+        if country and country.upper() != "US":
+            google_domain = f"google.{country.lower()}"
+
         params = {
             "engine": "google_lens",
             "api_key": SERPAPI_KEY,
             "url": image_url,
-            "type": "products",  # Filter to only product results
+            "search_type": "products",  # Filter to only product results
+            "country": country,  # 2-letter country code for localization
+            "hl": api_language,  # Language code for interface
+            "google_domain": google_domain,
+            "size[longest_edge]": 1200,  # Explicit size hint required by SearchAPI
         }
-
-        # NOTE: SerpAPI Google Lens does NOT support gl/hl localization parameters
-        # It only returns US market results regardless of parameters
-        # For proper localization, you need to switch to SearchAPI (supports country/hl params)
 
         # Add merchant hints if provided
         if merchant_hints:
@@ -2153,27 +2216,37 @@ def search_visual_products(
         http_timeout = 15.0  # Reduced from 30s for faster failure/retry
 
         try:
-            response = requests.get("https://serpapi.com/search.json", params=params, timeout=http_timeout)
+            response = requests.get("https://www.searchapi.io/api/v1/search", params=params, timeout=http_timeout)
             response.raise_for_status()
         except requests.exceptions.Timeout:
-            print(f"[SerpAPI] HTTP timeout after {http_timeout:.1f}s on page {page}")
+            print(f"[SearchAPI] HTTP timeout after {http_timeout:.1f}s on page {page}")
             break
         except requests.RequestException as exc:
-            print(f"[SerpAPI] Request error on page {page}: {exc}")
+            # Log detailed error payload when available to diagnose localization issues
+            error_payload = None
+            if exc.response is not None:
+                try:
+                    error_payload = exc.response.text
+                except Exception:
+                    error_payload = "<unreadable>"
+            if error_payload:
+                print(f"[SearchAPI] Request error on page {page}: {exc} | payload={error_payload}")
+            else:
+                print(f"[SearchAPI] Request error on page {page}: {exc}")
             break
 
         data = response.json()
         if data.get("error"):
-            print(f"[SerpAPI] API error on page {page}: {data['error']}")
+            print(f"[SearchAPI] API error on page {page}: {data['error']}")
             break
 
-        # SerpAPI returns results in visual_matches array
+        # SearchAPI returns results in visual_matches array
         raw_matches = data.get("visual_matches", [])
         if not isinstance(raw_matches, list):
             raw_matches = []
 
         if not raw_matches:
-            print(f"[SerpAPI] No matches on page {page}, stopping pagination")
+            print(f"[SearchAPI] No matches on page {page}, stopping pagination")
             break
 
         # ENHANCED FILTERING: Only keep buyable products
@@ -2198,24 +2271,24 @@ def search_visual_products(
             filtered_matches.append(match)
 
         all_matches.extend(filtered_matches)
-        print(f"[SerpAPI] Page {page}: fetched {len(raw_matches)} matches, filtered to {len(filtered_matches)} buyable (total: {len(all_matches)})")
+        print(f"[SearchAPI] Page {page}: fetched {len(raw_matches)} matches, filtered to {len(filtered_matches)} buyable (total: {len(all_matches)})")
 
         # SMART EARLY TERMINATION: Skip page 2 if page 1 returned enough quality results
         if page == 1 and len(filtered_matches) >= 15:
-            print(f"[SerpAPI] Page 1 returned {len(filtered_matches)} quality matches (sufficient), skipping page 2 for speed")
+            print(f"[SearchAPI] Page 1 returned {len(filtered_matches)} quality matches (sufficient), skipping page 2 for speed")
             break
 
-        # Check for next page token
+        # Check for next page token (SearchAPI uses serpapi_pagination for backwards compatibility)
         pagination = data.get("serpapi_pagination", {})
         next_token = pagination.get("next_page_token")
 
         if not next_token:
-            print(f"[SerpAPI] No more pages available after page {page}")
+            print(f"[SearchAPI] No more pages available after page {page}")
             break
 
         page += 1
 
-    print(f"[SerpAPI] Search complete: {len(all_matches)} quality matches from {page} page(s)")
+    print(f"[SearchAPI] Search complete: {len(all_matches)} quality matches from {page} page(s)")
     return all_matches[:max_results * 2]  # Return 2x for deduplication
 
 
