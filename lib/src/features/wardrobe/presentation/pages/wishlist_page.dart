@@ -352,6 +352,47 @@ class _FavoriteCard extends ConsumerWidget {
     this.onDelete,
   });
 
+  Future<void> _openProductLink(BuildContext context, String productUrl) async {
+    final uri = Uri.parse(productUrl);
+
+    // Prefer in-app browser (keeps the user inside Snaplook with a SafariViewController/Custom Tab)
+    if (await canLaunchUrl(uri)) {
+      final ok = await launchUrl(
+        uri,
+        mode: LaunchMode.inAppBrowserView,
+      );
+      if (ok) return;
+    }
+
+    // Fallback to in-app webview if custom tab/safari view fails
+    if (await canLaunchUrl(uri)) {
+      final ok = await launchUrl(
+        uri,
+        mode: LaunchMode.inAppWebView,
+      );
+      if (ok) return;
+    }
+
+    // Last resort: external (but warn the user)
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not open product link',
+              style: context.snackTextStyle(
+                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   String _resolveProductUrl() {
     final candidates = [
       favorite.purchaseUrl,
@@ -489,27 +530,7 @@ class _FavoriteCard extends ConsumerWidget {
           return;
         }
 
-        final uri = Uri.parse(productUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(
-            uri,
-            mode: LaunchMode.externalApplication,
-          );
-        } else {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Could not open product link',
-                  style: context.snackTextStyle(
-                    merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-                  ),
-                ),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-        }
+        await _openProductLink(context, productUrl);
       },
       child: Container(
         margin: EdgeInsets.only(bottom: spacing.m),
