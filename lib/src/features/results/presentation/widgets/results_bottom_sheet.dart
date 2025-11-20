@@ -229,43 +229,46 @@ class _ProductCard extends StatelessWidget {
             ),
             SizedBox(width: spacing.m),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    result.brand.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontFamily: 'PlusJakartaSans',
-                      letterSpacing: 0.2,
+              child: Padding(
+                padding: EdgeInsets.only(right: spacing.m),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      result.brand.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: 0.2,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: spacing.xs),
-                  Text(
-                    result.productName,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'PlusJakartaSans',
+                    SizedBox(height: spacing.xs),
+                    Text(
+                      result.productName,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: spacing.sm),
-                  Text(
-                    result.price > 0
-                        ? _formatPrice(context, result.price, result.currencyCode)
-                        : 'See store',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFf2003c),
-                      fontFamily: 'PlusJakartaSans',
+                    SizedBox(height: spacing.sm),
+                    Text(
+                      result.price > 0
+                          ? _formatPrice(context, result.price, result.currencyCode)
+                          : 'See store',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFf2003c),
+                        fontFamily: 'PlusJakartaSans',
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             Padding(

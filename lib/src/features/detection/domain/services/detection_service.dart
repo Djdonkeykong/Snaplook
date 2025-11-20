@@ -148,17 +148,17 @@ class DetectionService {
       if (userProfile.countryCode != null &&
           userProfile.countryCode!.isNotEmpty) {
         payload['country'] = userProfile.countryCode; // e.g., 'US', 'NO', 'GB'
-        debugPrint('≡ƒîÄ Using country code: ${userProfile.countryCode}');
+        debugPrint('🌎 Using country code: ${userProfile.countryCode}');
       } else if (userProfile.location != null) {
         // Fallback to location string
         payload['location'] = userProfile.location; // e.g., 'United States'
-        debugPrint('≡ƒîÄ Using location: ${userProfile.location}');
+        debugPrint('🌎 Using location: ${userProfile.location}');
       }
 
       // Add language preference
       if (userProfile.preferredLanguage.isNotEmpty) {
         payload['language'] = userProfile.preferredLanguage; // e.g., 'en', 'nb'
-        debugPrint('🜕 Using language: ');
+        debugPrint('🜕 Using language: ${userProfile.preferredLanguage}');
       }
       _lastKnownCurrencyCode = SearchLocations.getCurrency(userProfile.countryCode);
     } else if (_countryOverride.isEmpty) {
@@ -169,18 +169,8 @@ class DetectionService {
       _lastKnownCurrencyCode = SearchLocations.getCurrency('NO');
     }
 
-    debugPrint('≡ƒ£ò Using language: ${userProfile.preferredLanguage}');
-      }
-          _lastKnownCurrencyCode = SearchLocations.getCurrency(userProfile.countryCode);
-} else {
-      // No profile - use Norway defaults
-      payload['country'] = 'NO';
-      payload['language'] = 'nb';
-      debugPrint('≡ƒîÄ No user profile - using defaults (NO, nb)');
-      _lastKnownCurrencyCode = SearchLocations.getCurrency('NO');
-    }
-
-    debugPrint('≡ƒÜÇ Sending image to detector+search endpoint: $endpoint');
+    debugPrint('🜕 Using language: ${payload['language'] ?? 'unknown'}');
+    debugPrint('🛰️ Sending image to detector+search endpoint: $endpoint');
     final response = await _client.post(
       Uri.parse(endpoint),
       headers: {'Content-Type': 'application/json'},
