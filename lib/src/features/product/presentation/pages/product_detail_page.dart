@@ -229,6 +229,35 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
     );
   }
 
+  Future<void> _openProductLink(String productUrl) async {
+    final uri = Uri.parse(productUrl);
+
+    // Prefer in-app browser (keeps user inside Snaplook)
+    if (await canLaunchUrl(uri)) {
+      final ok = await launchUrl(
+        uri,
+        mode: LaunchMode.inAppBrowserView,
+      );
+      if (ok) return;
+    }
+
+    // Fallback to in-app webview if custom tab/safari view fails
+    if (await canLaunchUrl(uri)) {
+      final ok = await launchUrl(
+        uri,
+        mode: LaunchMode.inAppWebView,
+      );
+      if (ok) return;
+    }
+
+    // Last resort: external
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      _showSnackBar('Cannot open product link');
+    }
+  }
+
   Future<void> _onLikeToggle() async {
     HapticFeedback.mediumImpact();
 
@@ -393,12 +422,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                               return;
                             }
 
-                            final uri = Uri.parse(productUrl);
-                            if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri);
-                            } else {
-                              _showSnackBar('Cannot open product link');
-                            }
+                            await _openProductLink(productUrl);
                           } catch (e) {
                             _showSnackBar('Error opening link: $e');
                           }
