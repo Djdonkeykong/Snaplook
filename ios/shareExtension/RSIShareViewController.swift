@@ -1726,6 +1726,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 return
             }
 
+            if self.isTikTokBlockedPage(html) {
+                session.invalidateAndCancel()
+                shareLog("TikTok page appears blocked by captcha/login wall")
+                deliver(.failure(self.makeTikTokError("TikTok blocked this request (captcha/login)")))
+                return
+            }
+
             let imageUrls = self.extractTikTokImageUrls(from: html)
             if imageUrls.isEmpty {
                 session.invalidateAndCancel()
@@ -1790,9 +1797,68 @@ open class RSIShareViewController: SLComposeServiceViewController {
         task.resume()
     }
 
+    private func isTikTokBlockedPage(_ html: String) -> Bool {
+        let lowered = html.lowercased()
+        if lowered.contains("captcha") || lowered.contains("verify") || lowered.contains("login") && lowered.contains("tiktok") {
+            return true
+        }
+        if lowered.contains("please enable javascript") || lowered.contains("robot check") {
+            return true
+        }
+        if let titleRange = html.range(of: "<title>([^<]*)</title>", options: .regularExpression),
+           html[titleRange].lowercased().contains("log in | tiktok") {
+            return true
+        }
+        return false
+    }
+
     private func extractTikTokImageUrls(from html: String) -> [String] {
         var priorityResults: [String] = []
         var fallbackResults: [String] = []
+
+        func appendUnique(_ url: String, to array: inout [String]) {
+            if !array.contains(url) {
+                array.append(url)
+            }
+        }
+
+        func cleaned(_ candidate: String) -> String {
+            return candidate.replacingOccurrences(of: "&amp;", with: "&")
+        }
+
+        func isLowValue(_ url: String) -> Bool {
+            return url.contains("avt-") || url.contains("100x100") || url.contains("cropcenter") || url.contains("music")
+        }
+
+        // Meta tags: og:image / twitter:image often hold the best thumbnail
+        let metaPattern = "<meta[^>]+property=\"(?:og:image|twitter:image)\"[^>]+content=\"([^\"]+)\""
+        if let regex = try? NSRegularExpression(pattern: metaPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                let candidate = cleaned(String(html[range]))
+                if !isLowValue(candidate) {
+                    appendUnique(candidate, to: &priorityResults)
+                }
+            }
+        }
+
+        // JSON cover fields (present in TikTok initial data)
+        let coverPattern = "\"cover\"\\s*:\\s*\"(https://[^\"]*tiktokcdn[^\"]*)\""
+        if let regex = try? NSRegularExpression(pattern: coverPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                let candidate = cleaned(String(html[range]))
+                if !isLowValue(candidate) {
+                    appendUnique(candidate, to: &priorityResults)
+                }
+            }
+        }
 
         // Pattern 1: Look for high-quality video thumbnails from tiktokcdn.com
         // These are in img src with tplv-tiktokx-origin.image (highest priority)
@@ -1803,15 +1869,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 guard let match = match,
                       match.numberOfRanges > 1,
                       let range = Range(match.range(at: 1), in: html) else { return }
-                var candidate = String(html[range])
-                candidate = candidate.replacingOccurrences(of: "&amp;", with: "&")
+                let candidate = cleaned(String(html[range]))
                 // Skip avatars and small images
-                if candidate.contains("avt-") || candidate.contains("100x100") || candidate.contains("cropcenter") {
+                if isLowValue(candidate) {
                     return
                 }
-                if !priorityResults.contains(candidate) {
-                    priorityResults.append(candidate)
-                }
+                appendUnique(candidate, to: &priorityResults)
             }
         }
 
@@ -1829,10 +1892,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 guard let match = match,
                       match.numberOfRanges > 1,
                       let range = Range(match.range(at: 1), in: html) else { return }
-                var candidate = String(html[range])
-                candidate = candidate.replacingOccurrences(of: "&amp;", with: "&")
-                if !fallbackResults.contains(candidate) {
-                    fallbackResults.append(candidate)
+                let candidate = cleaned(String(html[range]))
+                if !isLowValue(candidate) {
+                    appendUnique(candidate, to: &fallbackResults)
                 }
             }
         }
@@ -1845,15 +1907,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 guard let match = match,
                       match.numberOfRanges > 1,
                       let range = Range(match.range(at: 1), in: html) else { return }
-                var candidate = String(html[range])
-                candidate = candidate.replacingOccurrences(of: "&amp;", with: "&")
-                // Skip avatars, small images, and music covers
-                if candidate.contains("100x100") || candidate.contains("avt-") ||
-                   candidate.contains("cropcenter") || candidate.contains("music") {
-                    return
+                let candidate = cleaned(String(html[range]))
+                if !isLowValue(candidate) {
+                    appendUnique(candidate, to: &fallbackResults)
                 }
-                if !fallbackResults.contains(candidate) {
-                    fallbackResults.append(candidate)
+            }
+        }
+
+        // Pattern 4: Any tiktokcdn image URL in body as a last resort
+        let loosePattern = "https://[^\"]*tiktokcdn[^\"\\s>]+\\.(?:jpg|jpeg|png|webp)"
+        if let regex = try? NSRegularExpression(pattern: loosePattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 0,
+                      let range = Range(match.range(at: 0), in: html) else { return }
+                let candidate = cleaned(String(html[range]))
+                if !isLowValue(candidate) {
+                    appendUnique(candidate, to: &fallbackResults)
                 }
             }
         }
