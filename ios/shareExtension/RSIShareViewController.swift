@@ -1664,7 +1664,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
             URLQueryItem(name: "api_key", value: apiKey),
             URLQueryItem(name: "url", value: tiktokUrl),
             URLQueryItem(name: "render_js", value: "true"),
-            URLQueryItem(name: "wait", value: "3000")
+            // Give page longer to render to reduce bot walls
+            URLQueryItem(name: "wait", value: "6000"),
+            // Anti-bot hardening
+            URLQueryItem(name: "premium_proxy", value: "true"),
+            URLQueryItem(name: "country_code", value: "us")
         ]
 
         guard let requestURL = components.url else {
@@ -1675,7 +1679,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("Fetching TikTok HTML via ScrapingBee (attempt \(attempt + 1)) for \(tiktokUrl)")
 
         var request = URLRequest(url: requestURL)
-        request.timeoutInterval = 25.0
+        request.timeoutInterval = 35.0
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
 
         let session = URLSession(configuration: .ephemeral)
         let task = session.dataTask(with: request) { [weak self] data, response, error in
@@ -1730,7 +1738,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             if self.isTikTokBlockedPage(html) {
                 session.invalidateAndCancel()
-                shareLog("TikTok page appears blocked by captcha/login wall")
+                let snippet = html.prefix(120).replacingOccurrences(of: "\n", with: " ")
+                shareLog("TikTok page appears blocked by captcha/login wall (html snippet: \(snippet))")
                 deliver(.failure(self.makeTikTokError("TikTok blocked this request (captcha/login)")))
                 return
             }
