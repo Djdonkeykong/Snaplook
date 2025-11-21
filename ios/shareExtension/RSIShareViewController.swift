@@ -1668,7 +1668,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             URLQueryItem(name: "wait", value: "6000"),
             // Anti-bot hardening
             URLQueryItem(name: "premium_proxy", value: "true"),
-            URLQueryItem(name: "country_code", value: "us")
+            URLQueryItem(name: "country_code", value: "no")
         ]
 
         guard let requestURL = components.url else {
