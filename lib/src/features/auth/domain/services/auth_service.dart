@@ -10,6 +10,8 @@ class AuthService {
   StreamSubscription<AuthState>? _authSubscription;
   static const _friendlyGenericError =
       'Could not complete sign in. Please try again.';
+  static final Exception authCancelledException =
+      Exception('__auth_cancelled__');
 
   User? get currentUser => _supabase.auth.currentUser;
   bool get isAuthenticated => currentUser != null;
@@ -156,7 +158,7 @@ class AuthService {
       // Authenticate
       final account = await googleSignIn.authenticate();
       if (account == null) {
-        throw Exception('Sign in was cancelled');
+        throw authCancelledException;
       }
 
       // Get ID token
@@ -181,6 +183,7 @@ class AuthService {
       return response;
     } catch (e) {
       print('Google sign in error: $e');
+      if (e == authCancelledException) rethrow;
       throw Exception(_friendlyGenericError);
     }
   }
@@ -214,6 +217,7 @@ class AuthService {
       return response;
     } catch (e) {
       print('Apple sign in error: $e');
+      if (e == authCancelledException) rethrow;
       throw Exception(_friendlyGenericError);
     }
   }

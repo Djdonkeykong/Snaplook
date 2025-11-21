@@ -307,19 +307,22 @@ class _LoginPageState extends ConsumerState<LoginPage>
                           } catch (e) {
                             if (context.mounted) {
                               Navigator.pop(context);
-                              ScaffoldMessenger.of(context).clearSnackBars();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    e.toString(),
-                                    style: context.snackTextStyle(
-                                      merge: const TextStyle(
-                                          fontFamily: 'PlusJakartaSans'),
+                              if (e != authCancelledException) {
+                                ScaffoldMessenger.of(context).clearSnackBars();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      e.toString(),
+                                      style: context.snackTextStyle(
+                                        merge: const TextStyle(
+                                            fontFamily: 'PlusJakartaSans'),
+                                      ),
                                     ),
+                                    duration:
+                                        const Duration(milliseconds: 2500),
                                   ),
-                                  duration: const Duration(milliseconds: 2500),
-                                ),
-                              );
+                                );
+                              }
                             }
                           }
                         },
@@ -386,19 +389,21 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         } catch (e) {
                           if (context.mounted) {
                             Navigator.pop(context);
-                            ScaffoldMessenger.of(context).clearSnackBars();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  e.toString(),
-                                  style: context.snackTextStyle(
-                                    merge: const TextStyle(
-                                        fontFamily: 'PlusJakartaSans'),
+                            if (e != authCancelledException) {
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    e.toString(),
+                                    style: context.snackTextStyle(
+                                      merge: const TextStyle(
+                                          fontFamily: 'PlusJakartaSans'),
+                                    ),
                                   ),
+                                  duration: const Duration(milliseconds: 2500),
                                 ),
-                                duration: const Duration(milliseconds: 2500),
-                              ),
-                            );
+                              );
+                            }
                           }
                         }
                       },
