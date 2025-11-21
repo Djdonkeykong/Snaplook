@@ -29,6 +29,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
   late List<Animation<double>> _scaleAnimations;
 
   bool _isRouteAware = false;
+  bool _hasAnimated = false;
 
   @override
   void initState() {
@@ -83,7 +84,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
       routeObserver.subscribe(this, route);
       _isRouteAware = true;
       if (route.isCurrent) {
-        _startStaggeredAnimation();
+        _startStaggeredAnimationOnce();
       }
     }
   }
@@ -101,11 +102,18 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
 
   @override
   void didPush() {
-    _startStaggeredAnimation();
+    _startStaggeredAnimationOnce();
   }
 
   @override
   void didPopNext() {
+    _hasAnimated = false; // allow re-run when returning
+    _startStaggeredAnimation();
+  }
+
+  void _startStaggeredAnimationOnce() {
+    if (_hasAnimated) return;
+    _hasAnimated = true;
     _startStaggeredAnimation();
   }
 

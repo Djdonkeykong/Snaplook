@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/favorite_item.dart';
 import '../services/favorites_service.dart';
 import '../../../detection/domain/models/detection_result.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
 
 // Service provider
 final favoritesServiceProvider = Provider((ref) => FavoritesService());
@@ -71,18 +72,16 @@ class FavoritesNotifier extends StateNotifier<AsyncValue<List<FavoriteItem>>> {
 
       // Update with real data from Supabase
       state.whenData((favorites) {
-        final updatedFavorites = favorites
-            .where((f) => f.id != 'temp_${product.id}')
-            .toList();
+        final updatedFavorites =
+            favorites.where((f) => f.id != 'temp_${product.id}').toList();
         state = AsyncValue.data([newFavorite, ...updatedFavorites]);
       });
     } catch (e) {
       // Rollback optimistic update on error
       _favoriteIds.remove(product.id);
       state.whenData((favorites) {
-        final rollbackFavorites = favorites
-            .where((f) => f.productId != product.id)
-            .toList();
+        final rollbackFavorites =
+            favorites.where((f) => f.productId != product.id).toList();
         state = AsyncValue.data(rollbackFavorites);
       });
       rethrow;
@@ -96,9 +95,8 @@ class FavoritesNotifier extends StateNotifier<AsyncValue<List<FavoriteItem>>> {
 
     final previousState = state;
     state.whenData((favorites) {
-      final updatedFavorites = favorites
-          .where((f) => f.productId != productId)
-          .toList();
+      final updatedFavorites =
+          favorites.where((f) => f.productId != productId).toList();
       state = AsyncValue.data(updatedFavorites);
     });
 
@@ -137,11 +135,33 @@ class FavoritesNotifier extends StateNotifier<AsyncValue<List<FavoriteItem>>> {
     });
     state = result;
   }
+
+  void clear() {
+    _favoriteIds = {};
+    state = const AsyncValue.data([]);
+  }
 }
 
 // Provider for favorites state
-final favoritesProvider = StateNotifierProvider<FavoritesNotifier, AsyncValue<List<FavoriteItem>>>(
-  (ref) => FavoritesNotifier(ref.watch(favoritesServiceProvider)),
+final favoritesProvider =
+    StateNotifierProvider<FavoritesNotifier, AsyncValue<List<FavoriteItem>>>(
+  (ref) {
+    final notifier = FavoritesNotifier(ref.watch(favoritesServiceProvider));
+
+    // Reload favorites when auth state changes (e.g., after login), and clear on logout
+    ref.listen(authStateProvider, (previous, next) {
+      final wasAuthenticated = previous?.value?.session != null;
+      final isAuthenticated = next.value?.session != null;
+
+      if (isAuthenticated && !wasAuthenticated) {
+        notifier.loadFavorites();
+      } else if (!isAuthenticated && wasAuthenticated) {
+        notifier.clear();
+      }
+    });
+
+    return notifier;
+  },
 );
 
 // Provider to check if a specific product is favorited

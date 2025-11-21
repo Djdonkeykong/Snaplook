@@ -116,12 +116,6 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
           Positioned.fill(
             child: _buildTutorialImage(),
           ),
-          if (!_isAnalyzing && !_isResultsSheetVisible)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withOpacity(0.35),
-              ),
-            ),
           if (_isAnalyzing)
             DetectionProgressOverlay(
               statusText: 'Analyzing...',

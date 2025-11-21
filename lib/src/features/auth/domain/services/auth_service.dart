@@ -8,6 +8,8 @@ class AuthService {
   final _supabase = Supabase.instance.client;
   static const _authChannel = MethodChannel('snaplook/auth');
   StreamSubscription<AuthState>? _authSubscription;
+  static const _friendlyGenericError =
+      'Could not complete sign in. Please try again.';
 
   User? get currentUser => _supabase.auth.currentUser;
   bool get isAuthenticated => currentUser != null;
@@ -28,7 +30,8 @@ class AuthService {
       );
 
       if (initialUser == null) {
-        print('[Auth] WARNING: Unable to resolve user for initial sync - deferring until auth events fire');
+        print(
+            '[Auth] WARNING: Unable to resolve user for initial sync - deferring until auth events fire');
       }
     }
 
@@ -41,9 +44,11 @@ class AuthService {
     _authSubscription?.cancel();
     _authSubscription = _supabase.auth.onAuthStateChange.listen((authState) {
       print('[Auth] Auth state changed: ${authState.event}');
-      print('[Auth] Event session: ${authState.session != null ? "exists" : "null"}');
+      print(
+          '[Auth] Event session: ${authState.session != null ? "exists" : "null"}');
       print('[Auth] Event user: ${authState.session?.user.id ?? "null"}');
-      print('[Auth] Current user (at event time): ${currentUser?.id ?? "null"}');
+      print(
+          '[Auth] Current user (at event time): ${currentUser?.id ?? "null"}');
 
       // IMPORTANT: Only sync if we have a valid user, or if we're explicitly signing out
       // This prevents race conditions where session exists but user is momentarily null
@@ -61,7 +66,8 @@ class AuthService {
         _updateAuthFlag(false);
       } else {
         // Session exists but no user - this is a race condition, skip sync
-        print('[Auth] WARNING: Session exists but no user - skipping sync to prevent clearing userId');
+        print(
+            '[Auth] WARNING: Session exists but no user - skipping sync to prevent clearing userId');
       }
     });
 
@@ -92,7 +98,8 @@ class AuthService {
         effectiveUserId ??= currentUser?.id;
 
         if (effectiveUserId == null) {
-          print('[Auth] INFO: Authenticated but userId not yet available - waiting briefly before syncing');
+          print(
+              '[Auth] INFO: Authenticated but userId not yet available - waiting briefly before syncing');
           final resolvedUser = await _waitForAuthenticatedUser(
             context: 'authenticated sync',
             timeout: const Duration(seconds: 2),
@@ -101,7 +108,8 @@ class AuthService {
         }
 
         if (effectiveUserId == null) {
-          print('[Auth] WARNING: Skipping auth sync - userId still null after waiting');
+          print(
+              '[Auth] WARNING: Skipping auth sync - userId still null after waiting');
           return;
         }
       }
@@ -114,15 +122,18 @@ class AuthService {
       // This ensures old user_id values are cleared from UserDefaults
       final result = await _authChannel.invokeMethod('setAuthFlag', {
         'isAuthenticated': isAuthenticated,
-        'userId': effectiveUserId,  // Will be null if not authenticated, clearing old values
+        'userId':
+            effectiveUserId, // Will be null if not authenticated, clearing old values
       });
 
       print('[Auth] Method channel call completed, result: $result');
 
       if (isAuthenticated && effectiveUserId != null) {
-        print('[Auth] Synced to share extension - authenticated with userId: $effectiveUserId');
+        print(
+            '[Auth] Synced to share extension - authenticated with userId: $effectiveUserId');
       } else {
-        print('[Auth] Synced to share extension - NOT authenticated, cleared user_id');
+        print(
+            '[Auth] Synced to share extension - NOT authenticated, cleared user_id');
       }
     } catch (e) {
       print('[Auth] ERROR calling method channel: $e');
@@ -136,14 +147,16 @@ class AuthService {
 
       // Initialize with server client ID
       await googleSignIn.initialize(
-        clientId: '134752292541-4289b71rova6eldn9f67qom4u2qc5onp.apps.googleusercontent.com',
-        serverClientId: '134752292541-hekkkdi2mbl0jrdsct0l2n3hjm2sckmh.apps.googleusercontent.com',
+        clientId:
+            '134752292541-4289b71rova6eldn9f67qom4u2qc5onp.apps.googleusercontent.com',
+        serverClientId:
+            '134752292541-hekkkdi2mbl0jrdsct0l2n3hjm2sckmh.apps.googleusercontent.com',
       );
 
       // Authenticate
       final account = await googleSignIn.authenticate();
       if (account == null) {
-        throw Exception('Google sign in was cancelled');
+        throw Exception('Sign in was cancelled');
       }
 
       // Get ID token
@@ -151,7 +164,7 @@ class AuthService {
       final idToken = auth.idToken;
 
       if (idToken == null) {
-        throw Exception('No ID token found');
+        throw Exception(_friendlyGenericError);
       }
 
       final response = await _supabase.auth.signInWithIdToken(
@@ -168,7 +181,7 @@ class AuthService {
       return response;
     } catch (e) {
       print('Google sign in error: $e');
-      rethrow;
+      throw Exception(_friendlyGenericError);
     }
   }
 
@@ -183,7 +196,7 @@ class AuthService {
 
       final idToken = credential.identityToken;
       if (idToken == null) {
-        throw Exception('Failed to get Apple ID token');
+        throw Exception(_friendlyGenericError);
       }
 
       final response = await _supabase.auth.signInWithIdToken(
@@ -201,7 +214,7 @@ class AuthService {
       return response;
     } catch (e) {
       print('Apple sign in error: $e');
-      rethrow;
+      throw Exception(_friendlyGenericError);
     }
   }
 
@@ -242,7 +255,7 @@ class AuthService {
       );
     } catch (e) {
       print('OTP sign in error: $e');
-      rethrow;
+      throw Exception('Could not send the code. Please try again.');
     }
   }
 
@@ -291,7 +304,8 @@ class AuthService {
     }
 
     try {
-      print('[Auth] INFO: Polling timed out for $context - attempting direct user fetch');
+      print(
+          '[Auth] INFO: Polling timed out for $context - attempting direct user fetch');
       final response = await _supabase.auth.getUser();
       return response.user;
     } catch (e) {

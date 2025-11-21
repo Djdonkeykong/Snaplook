@@ -2,7 +2,11 @@
   "mcpServers": {
     "supabase": {
       "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=tlqpkoknwfptfzejpchy"
+      "url": "https://mcp.supabase.com/mcp?project_ref=tlqpkoknwfptfzejpchy",
+      "authorization": {
+        "type": "bearer",
+        "token": "${SUPABASE_MCP_KEY}"
+      }
     },
     "revenuecat": {
       "type": "http",

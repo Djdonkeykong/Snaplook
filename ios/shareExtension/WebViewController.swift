@@ -119,7 +119,7 @@ class WebViewController: UIViewController, WKNavigationDelegate {
             urlBar.widthAnchor.constraint(equalTo: toolbarContainer.widthAnchor, multiplier: 0.75),
 
             // Done button - right side, aligned with URL bar
-            doneButton.trailingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.trailingAnchor, constant: -28),
+            doneButton.trailingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.trailingAnchor, constant: -26),
             doneButton.centerYAnchor.constraint(equalTo: urlBar.centerYAnchor),
 
             // Lock icon

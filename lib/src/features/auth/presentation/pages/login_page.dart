@@ -311,7 +311,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    'Error signing in with Apple: ${e.toString()}',
+                                    e.toString(),
                                     style: context.snackTextStyle(
                                       merge: const TextStyle(
                                           fontFamily: 'PlusJakartaSans'),
@@ -390,7 +390,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  'Error signing in with Google: ${e.toString()}',
+                                  e.toString(),
                                   style: context.snackTextStyle(
                                     merge: const TextStyle(
                                         fontFamily: 'PlusJakartaSans'),

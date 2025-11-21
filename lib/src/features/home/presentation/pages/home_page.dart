@@ -682,6 +682,12 @@ class _HomePageState extends ConsumerState<HomePage> {
         }
 
         if (mounted) {
+          if (source == ImageSource.camera) {
+            // Small pause to match the smoother pacing of the Upload flow
+            await Future.delayed(const Duration(milliseconds: 250));
+            if (!mounted) return;
+          }
+
           print(
               "[IMAGE PICKER] Widget is mounted - navigating to DetectionPage");
           final searchType = source == ImageSource.camera ? 'camera' : 'photos';
@@ -689,7 +695,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             MaterialPageRoute(
               builder: (context) {
                 print("[IMAGE PICKER] DetectionPage builder called");
-                return DetectionPage(searchType: searchType);
+                return DetectionPage(
+                  searchType: searchType,
+                );
               },
             ),
           ).then((value) {
@@ -1761,14 +1769,16 @@ class _FloatingActionBar extends StatelessWidget {
             Expanded(
               child: Transform.translate(
                 offset: const Offset(0, -1),
-                child: _FloatingActionButtonSvg(
-                  svgIcon: 'assets/icons/camera_filled.svg',
-                  label: 'Snap',
-                  onTap: onSnapTap,
-                  iconSize: 27,
-                  spacing: 3,
-                ),
+              child: _FloatingActionButtonSvg(
+                svgIcon: 'assets/icons/camera_filled.svg',
+                label: 'Snap',
+                onTap: onSnapTap,
+                iconSize: 26,
+                spacing: 3,
+                labelOffset: const Offset(0, 1),
+                iconOffset: const Offset(0, 1),
               ),
+            ),
             ),
             const SizedBox(width: 4),
             Expanded(
@@ -1889,6 +1899,8 @@ class _FloatingActionButtonSvg extends StatelessWidget {
   final VoidCallback onTap;
   final double iconSize;
   final double spacing;
+  final Offset? labelOffset;
+  final Offset? iconOffset;
 
   const _FloatingActionButtonSvg({
     required this.svgIcon,
@@ -1896,6 +1908,8 @@ class _FloatingActionButtonSvg extends StatelessWidget {
     required this.onTap,
     this.iconSize = 24,
     this.spacing = 4,
+    this.labelOffset,
+    this.iconOffset,
   });
 
   @override
@@ -1914,22 +1928,28 @@ class _FloatingActionButtonSvg extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SvgPicture.asset(
-                svgIcon,
-                width: iconSize,
-                height: iconSize,
-                colorFilter: ColorFilter.mode(
-                  navColors.actionBarIcon,
-                  BlendMode.srcIn,
+              Transform.translate(
+                offset: iconOffset ?? Offset.zero,
+                child: SvgPicture.asset(
+                  svgIcon,
+                  width: iconSize,
+                  height: iconSize,
+                  colorFilter: ColorFilter.mode(
+                    navColors.actionBarIcon,
+                    BlendMode.srcIn,
+                  ),
                 ),
               ),
               SizedBox(height: spacing),
-              Text(
-                label,
-                style: TextStyle(
-                  color: navColors.actionBarLabel,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+              Transform.translate(
+                offset: labelOffset ?? Offset.zero,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: navColors.actionBarLabel,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

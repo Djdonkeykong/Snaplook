@@ -462,6 +462,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
   Future<void> _shareImage() async {
     try {
+      // Give tactile response when the share action is available (results showing).
+      HapticFeedback.selectionClick();
       if (widget.imageUrl != null) {
         final uri = Uri.parse(widget.imageUrl!);
         final response = await http.get(uri);
@@ -982,15 +984,14 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           immediate ? 'Loaded saved results...' : 'Opening results...';
     });
     if (immediate) {
+      // Force to 100% immediately for cache hits to avoid visible backtracking
+      _isBoostingProgress = false;
+      _targetProgress = 1.0;
+      _currentProgress = 1.0;
+    } else {
       _isBoostingProgress = true;
       _setTargetProgress(1.0);
-      return;
     }
-    _setTargetProgress(0.92);
-    _scheduleOverlayTimer(
-      const Duration(milliseconds: 180),
-      () => _setTargetProgress(1.0),
-    );
   }
 
   void _hideAnalysisOverlay() {
@@ -1131,13 +1132,18 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   }
 
   Future<void> _waitForProgressCompletion({
-    Duration timeout = const Duration(milliseconds: 600),
+    Duration timeout = const Duration(milliseconds: 800),
   }) async {
     if (!_isAnalysisOverlayVisible) return;
     final stopwatch = Stopwatch()..start();
     while (mounted && _isAnalysisOverlayVisible && _currentProgress < 0.999) {
       if (stopwatch.elapsed > timeout) break;
       await Future.delayed(const Duration(milliseconds: 16));
+    }
+    if (mounted && _isAnalysisOverlayVisible) {
+      setState(() => _currentProgress = 1.0);
+    } else {
+      _currentProgress = 1.0;
     }
   }
 

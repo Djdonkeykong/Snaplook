@@ -134,7 +134,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
 
               // Title
               const Text(
-                'Choose your style',
+                'Choose your catalog',
                 style: TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.bold,
@@ -149,7 +149,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
 
               // Subtitle
               const Text(
-                'Select your style preference to personalize\nyour experience.',
+                'Pick what you want to see and we’ll tailor the feed.',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.black,

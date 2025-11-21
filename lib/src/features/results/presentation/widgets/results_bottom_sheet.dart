@@ -257,9 +257,13 @@ class _ProductCard extends StatelessWidget {
                     ),
                     SizedBox(height: spacing.sm),
                     Text(
-                      result.price > 0
-                          ? _formatPrice(context, result.price, result.currencyCode)
-                          : 'See store',
+                      (result.priceDisplay != null &&
+                              result.priceDisplay!.trim().isNotEmpty)
+                          ? result.priceDisplay!
+                          : result.price > 0
+                              ? _formatPrice(
+                                  context, result.price, result.currencyCode)
+                              : 'See store',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../services/share_extension_logs_service.dart';
+import '../services/review_prompt_logs_service.dart';
 
 class ShareLogsPage extends StatefulWidget {
   const ShareLogsPage({super.key});
@@ -12,6 +13,7 @@ class ShareLogsPage extends StatefulWidget {
 
 class _ShareLogsPageState extends State<ShareLogsPage> {
   List<String> _logs = const [];
+  List<String> _reviewLogs = const [];
   bool _loading = true;
 
   @override
@@ -23,26 +25,35 @@ class _ShareLogsPageState extends State<ShareLogsPage> {
   Future<void> _loadLogs() async {
     setState(() => _loading = true);
     final entries = await ShareExtensionLogsService.fetchLogs();
+    final reviewEntries = await ReviewPromptLogsService.fetchLogs();
     setState(() {
       _logs = entries.reversed.toList();
+      _reviewLogs = reviewEntries.reversed.toList();
       _loading = false;
     });
   }
 
   Future<void> _clearLogs() async {
     await ShareExtensionLogsService.clearLogs();
+    await ReviewPromptLogsService.clearLogs();
     await _loadLogs();
   }
 
   Future<void> _shareLogs() async {
-    if (_logs.isEmpty) {
+    if (_logs.isEmpty && _reviewLogs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No logs to share')),
       );
       return;
     }
 
-    final logsText = _logs.join('\n\n');
+    final logsText = [
+      if (_logs.isNotEmpty)
+        '--- Share Extension Logs ---\n${_logs.join('\n\n')}',
+      if (_reviewLogs.isNotEmpty)
+        '--- Review Prompt Logs ---\n${_reviewLogs.join('\n\n')}',
+    ].where((s) => s.isNotEmpty).join('\n\n');
+
     await Share.share(
       logsText,
       subject: 'Share Extension Logs',
@@ -74,22 +85,63 @@ class _ShareLogsPageState extends State<ShareLogsPage> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _logs.isEmpty
-          ? const Center(child: Text('No logs recorded yet.'))
-          : ListView.separated(
-              itemCount: _logs.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final entry = _logs[index];
-                return Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    entry,
-                    style: Theme.of(context).textTheme.bodyMedium,
+          : (_logs.isEmpty && _reviewLogs.isEmpty)
+              ? const Center(child: Text('No logs recorded yet.'))
+              : ListView(
+                  children: [
+                    _LogSection(
+                      title: 'Share Extension Logs',
+                      logs: _logs,
+                    ),
+                    const Divider(height: 1),
+                    _LogSection(
+                      title: 'Review Prompt Logs',
+                      logs: _reviewLogs,
+                    ),
+                  ],
+                ),
+    );
+  }
+}
+
+class _LogSection extends StatelessWidget {
+  final String title;
+  final List<String> logs;
+
+  const _LogSection({
+    required this.title,
+    required this.logs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ExpansionTile(
+      title: Text(title, style: theme.textTheme.titleMedium),
+      initiallyExpanded: true,
+      children: logs.isEmpty
+          ? [
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('No entries'),
+              )
+            ]
+          : List.generate(logs.length, (index) {
+              final entry = logs[index];
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      entry,
+                      style: theme.textTheme.bodyMedium,
+                    ),
                   ),
-                );
-              },
-            ),
+                  if (index != logs.length - 1)
+                    const Divider(height: 1, thickness: 0.5),
+                ],
+              );
+            }),
     );
   }
 }

@@ -495,7 +495,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                           const SizedBox(width: 4),
                           IconButton(
                             icon: const Icon(Icons.more_horiz),
-                            iconSize: 18,
+                            iconSize: 22,
                             onPressed: _showOptionsMenu,
                             tooltip: 'More options',
                             padding: EdgeInsets.zero,

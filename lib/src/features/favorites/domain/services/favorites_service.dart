@@ -11,7 +11,8 @@ class FavoritesService {
   /// Fetch all favorites for current user
   Future<List<FavoriteItem>> getFavorites() async {
     if (_currentUserId == null) {
-      throw Exception('User not authenticated');
+      // If not authenticated, return empty list instead of erroring so UI can stay calm
+      return [];
     }
 
     try {

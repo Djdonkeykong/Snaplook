@@ -40,8 +40,8 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
   }
 
   void _updateButtonState() {
-    final isValid = _emailController.text.isNotEmpty &&
-        _emailController.text.contains('@');
+    final isValid =
+        _emailController.text.isNotEmpty && _emailController.text.contains('@');
     if (isValid != _isButtonEnabled) {
       setState(() {
         _isButtonEnabled = isValid;
@@ -73,7 +73,7 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Error sending verification code: ${e.toString()}',
+              e.toString(),
               style: context.snackTextStyle(
                 merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
               ),
@@ -105,139 +105,139 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: SnaplookBackButton(
-          onPressed: _handleBackNavigation,
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: SnaplookBackButton(
+            onPressed: _handleBackNavigation,
+          ),
         ),
-        ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: spacing.l),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: spacing.l),
+        body: Padding(
+          padding: EdgeInsets.symmetric(horizontal: spacing.l),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: spacing.l),
 
-            // Title
-            const Text(
-              'Sign In',
-              style: TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -1.0,
-                height: 1.3,
+              // Title
+              const Text(
+                'Sign In',
+                style: TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  fontFamily: 'PlusJakartaSans',
+                  letterSpacing: -1.0,
+                  height: 1.3,
+                ),
               ),
-            ),
 
-            SizedBox(height: spacing.m),
+              SizedBox(height: spacing.m),
 
-            // Subtitle
-            const Text(
-              'Enter your email to continue',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF6B7280),
-                fontFamily: 'PlusJakartaSans',
-                height: 1.5,
+              // Subtitle
+              const Text(
+                'Enter your email to continue',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF6B7280),
+                  fontFamily: 'PlusJakartaSans',
+                  height: 1.5,
+                ),
               ),
-            ),
 
-            SizedBox(height: spacing.xl),
+              SizedBox(height: spacing.xl),
 
-            // Email input
-            TextField(
-              controller: _emailController,
-              focusNode: _emailFocusNode,
-              keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(
-                fontSize: 16,
-                fontFamily: 'PlusJakartaSans',
-                color: Colors.black,
-              ),
-              decoration: InputDecoration(
-                hintText: 'Email',
-                hintStyle: const TextStyle(
-                  color: Color(0xFFD1D5DB),
+              // Email input
+              TextField(
+                controller: _emailController,
+                focusNode: _emailFocusNode,
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(
                   fontSize: 16,
                   fontFamily: 'PlusJakartaSans',
+                  color: Colors.black,
                 ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 20,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(
-                    color: Colors.black,
-                    width: 2,
+                decoration: InputDecoration(
+                  hintText: 'Email',
+                  hintStyle: const TextStyle(
+                    color: Color(0xFFD1D5DB),
+                    fontSize: 16,
+                    fontFamily: 'PlusJakartaSans',
                   ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(
-                    color: Colors.black,
-                    width: 2,
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
                   ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(
-                    color: Colors.black,
-                    width: 2,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: Colors.black,
+                      width: 2,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: Colors.black,
+                      width: 2,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: Colors.black,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            const Spacer(),
+              const Spacer(),
 
-            // Continue button
-            Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                color: _isButtonEnabled
-                    ? const Color(0xFFf2003c)
-                    : const Color(0xFFD1D5DB),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: ElevatedButton(
-                onPressed: _isButtonEnabled ? _handleContinue : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isButtonEnabled
+              // Continue button
+              Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: _isButtonEnabled
                       ? const Color(0xFFf2003c)
                       : const Color(0xFFD1D5DB),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shadowColor: Colors.transparent,
-                  disabledBackgroundColor: const Color(0xFFD1D5DB),
-                  disabledForegroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Text(
-                  'Continue',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -0.2,
+                child: ElevatedButton(
+                  onPressed: _isButtonEnabled ? _handleContinue : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isButtonEnabled
+                        ? const Color(0xFFf2003c)
+                        : const Color(0xFFD1D5DB),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    disabledBackgroundColor: const Color(0xFFD1D5DB),
+                    disabledForegroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text(
+                    'Continue',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -0.2,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            SizedBox(height: spacing.xxl),
-          ],
+              SizedBox(height: spacing.xxl),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }

@@ -894,7 +894,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // "Analyze in app" button
         let analyzeInAppButton = UIButton(type: .system)
         analyzeInAppButton.setTitle("Analyze in app", for: .normal)
-        analyzeInAppButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        analyzeInAppButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
         analyzeInAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         analyzeInAppButton.setTitleColor(.white, for: .normal)
         analyzeInAppButton.layer.cornerRadius = 28
@@ -904,7 +905,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // "Analyze now" button
         let analyzeNowButton = UIButton(type: .system)
         analyzeNowButton.setTitle("Analyze now", for: .normal)
-        analyzeNowButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        analyzeNowButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
         analyzeNowButton.backgroundColor = .clear
         analyzeNowButton.setTitleColor(.black, for: .normal)
         analyzeNowButton.layer.cornerRadius = 28
@@ -3067,7 +3069,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let openAppButton = UIButton(type: .system)
         openAppButton.translatesAutoresizingMaskIntoConstraints = false
         openAppButton.setTitle("Open Snaplook", for: .normal)
-        openAppButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        openAppButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
         openAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         openAppButton.setTitleColor(.white, for: .normal)
         openAppButton.layer.cornerRadius = 28
@@ -3228,7 +3231,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Share button (primary style - previously Save button)
         let shareButton = UIButton(type: .system)
         shareButton.setTitle("Share", for: .normal)
-        shareButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        shareButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
         shareButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         shareButton.setTitleColor(.white, for: .normal)
         shareButton.layer.cornerRadius = 28
@@ -5043,7 +5047,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // "Open Snaplook" button (pill-shaped)
         let openAppButton = UIButton(type: .system)
         openAppButton.setTitle("Open Snaplook", for: .normal)
-        openAppButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        openAppButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
         openAppButton.setTitleColor(.white, for: .normal)
         openAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         openAppButton.layer.cornerRadius = 28
@@ -5052,7 +5057,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // "Cancel" button (pill-shaped with border)
         let cancelActionButton = UIButton(type: .system)
         cancelActionButton.setTitle("Cancel", for: .normal)
-        cancelActionButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        cancelActionButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
         cancelActionButton.setTitleColor(.black, for: .normal)
         cancelActionButton.backgroundColor = .clear
         cancelActionButton.layer.cornerRadius = 28
@@ -5666,7 +5672,8 @@ class ResultCell: UITableViewCell {
 
     private let brandLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
         label.numberOfLines = 2
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -5674,8 +5681,10 @@ class ResultCell: UITableViewCell {
 
     private let productNameLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 12, weight: .medium)
-        label.textColor = .label
+        label.font = UIFont(name: "PlusJakartaSans-Medium", size: 12)
+            ?? .systemFont(ofSize: 12, weight: .medium)
+        // Match Flutter onSurface color (0xFF1c1c25) for consistency with in-app results
+        label.textColor = UIColor(red: 0x1c/255.0, green: 0x1c/255.0, blue: 0x25/255.0, alpha: 1.0)
         label.numberOfLines = 2
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -5683,7 +5692,8 @@ class ResultCell: UITableViewCell {
 
     private let priceLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 16, weight: .bold)
+        label.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
         label.textColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -5733,10 +5743,15 @@ class ResultCell: UITableViewCell {
     }
 
     private func setupUI() {
-        // Create a vertical stack for the text labels
-        let textStackView = UIStackView(arrangedSubviews: [brandLabel, productNameLabel, priceLabel])
+        // Create a vertical stack for the text labels (with spacer to keep price anchored at bottom)
+        let spacer = UIView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .vertical)
+        spacer.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+
+        let textStackView = UIStackView(arrangedSubviews: [brandLabel, productNameLabel, spacer, priceLabel])
         textStackView.axis = .vertical
         textStackView.spacing = 4
+        textStackView.distribution = .fill
         textStackView.translatesAutoresizingMaskIntoConstraints = false
 
         contentView.addSubview(productImageView)
@@ -5764,7 +5779,8 @@ class ResultCell: UITableViewCell {
 
             textStackView.leadingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: 12),
             textStackView.trailingAnchor.constraint(equalTo: chevronImageView.leadingAnchor, constant: -18),
-            textStackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            textStackView.topAnchor.constraint(equalTo: productImageView.topAnchor),
+            textStackView.bottomAnchor.constraint(equalTo: productImageView.bottomAnchor),
 
             contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 110)
         ])
@@ -5773,12 +5789,14 @@ class ResultCell: UITableViewCell {
     func configure(with result: DetectionResultItem, isFavorited: Bool = false) {
         // Store product for favorite callback
         self.product = result
-
+        let brandText: String
         if let brand = result.brand, !brand.isEmpty {
-            brandLabel.text = brand
+            brandText = brand
         } else {
-            brandLabel.text = "Snaplook match"
+            brandText = "Snaplook match"
         }
+        // Match in-app behavior: always show brand in uppercase
+        brandLabel.text = brandText.uppercased()
         productNameLabel.text = result.product_name
 
         if let displayPrice = result.priceDisplay {

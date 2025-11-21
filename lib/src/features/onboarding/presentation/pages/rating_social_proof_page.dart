@@ -8,6 +8,7 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
 import 'notification_permission_page.dart';
+import '../../../../shared/services/review_prompt_logs_service.dart';
 
 class RatingSocialProofPage extends StatelessWidget {
   const RatingSocialProofPage({
@@ -76,8 +77,26 @@ class RatingSocialProofPage extends StatelessWidget {
 
               // Request in-app review
               final inAppReview = InAppReview.instance;
-              if (await inAppReview.isAvailable()) {
-                await inAppReview.requestReview();
+              final timestamp = DateTime.now().toIso8601String();
+              try {
+                final available = await inAppReview.isAvailable();
+                await ReviewPromptLogsService.addLog(
+                  '[$timestamp] requestReview() available=$available (RatingSocialProofPage)',
+                );
+                if (available) {
+                  await inAppReview.requestReview();
+                  await ReviewPromptLogsService.addLog(
+                    '[$timestamp] requestReview() invoked successfully',
+                  );
+                } else {
+                  await ReviewPromptLogsService.addLog(
+                    '[$timestamp] requestReview() skipped (not available)',
+                  );
+                }
+              } catch (e) {
+                await ReviewPromptLogsService.addLog(
+                  '[$timestamp] requestReview() error: $e',
+                );
               }
 
               if (context.mounted) {
@@ -130,6 +149,18 @@ class _EncouragementCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          SizedBox(
+            height: 320,
+            width: 320,
+            child: Transform.scale(
+              scale: 1.7, // Increased zoom to fill more of the box
+              child: Lottie.asset(
+                'assets/animations/twitter.json',
+                repeat: true,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
           const Text(
             "You're doing great so far!",
             textAlign: TextAlign.center,
@@ -140,23 +171,15 @@ class _EncouragementCard extends StatelessWidget {
               fontFamily: 'PlusJakartaSans',
             ),
           ),
-          SizedBox(
-            height: 280,
-            width: 280,
-            child: Lottie.asset(
-              'assets/animations/best_heart.json',
-              repeat: true,
-              fit: BoxFit.contain,
-            ),
-          ),
+          const SizedBox(height: 16),
           const Text(
             "If you're enjoying the process, we'd love a quick rating. It really helps us.",
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,
-              height: 1.4,
+              height: 1.25,
             ),
           ),
         ],
