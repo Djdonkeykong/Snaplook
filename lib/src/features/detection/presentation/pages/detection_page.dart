@@ -463,7 +463,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   Future<void> _shareImage() async {
     try {
       // Give tactile response when the share action is available (results showing).
-      HapticFeedback.selectionClick();
+      HapticFeedback.mediumImpact();
       if (widget.imageUrl != null) {
         final uri = Uri.parse(widget.imageUrl!);
         final response = await http.get(uri);
