@@ -15,6 +15,7 @@ import '../../../onboarding/presentation/pages/gender_selection_page.dart';
 import '../../domain/providers/auth_provider.dart';
 import 'email_sign_in_page.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
+import '../../domain/services/auth_service.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -307,7 +308,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                           } catch (e) {
                             if (context.mounted) {
                               Navigator.pop(context);
-                              if (e != authCancelledException) {
+                              if (e != AuthService.authCancelledException) {
                                 ScaffoldMessenger.of(context).clearSnackBars();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -389,7 +390,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         } catch (e) {
                           if (context.mounted) {
                             Navigator.pop(context);
-                            if (e != authCancelledException) {
+                            if (e != AuthService.authCancelledException) {
                               ScaffoldMessenger.of(context).clearSnackBars();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
