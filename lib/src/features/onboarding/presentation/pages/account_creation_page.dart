@@ -24,18 +24,12 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 class AccountCreationPage extends ConsumerStatefulWidget {
   const AccountCreationPage({super.key});
 
-  @override
-  ConsumerState<AccountCreationPage> createState() =>
-      _AccountCreationPageState();
-}
-
-class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
-  Future<void> _openLegalDocument({
+  /// Opens the legal document bottom sheet used across auth flows.
+  static Future<void> openLegalSheet({
+    required BuildContext context,
     required String title,
     required String url,
   }) async {
-    if (!mounted) return;
-
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -52,6 +46,25 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
           ),
         );
       },
+    );
+  }
+
+  @override
+  ConsumerState<AccountCreationPage> createState() =>
+      _AccountCreationPageState();
+}
+
+class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
+  Future<void> _openLegalDocument({
+    required String title,
+    required String url,
+  }) async {
+    if (!mounted) return;
+
+    await AccountCreationPage.openLegalSheet(
+      context: context,
+      title: title,
+      url: url,
     );
   }
 

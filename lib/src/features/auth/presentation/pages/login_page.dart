@@ -12,6 +12,7 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../onboarding/presentation/pages/gender_selection_page.dart';
+import '../../../onboarding/presentation/pages/account_creation_page.dart' show AccountCreationPage;
 import '../../domain/providers/auth_provider.dart';
 import 'email_sign_in_page.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
@@ -450,7 +451,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               ),
                               recognizer: TapGestureRecognizer()
                                 ..onTap = () {
-                                  // TODO: Open Terms of Conditions
+                                  HapticFeedback.selectionClick();
+                                  AccountCreationPage.openLegalSheet(
+                                    context: context,
+                                    title: 'Terms of Service',
+                                    url: 'https://truefindr.com/terms-of-service/',
+                                  );
                                 },
                             ),
                             const TextSpan(
@@ -474,7 +480,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               ),
                               recognizer: TapGestureRecognizer()
                                 ..onTap = () {
-                                  // TODO: Open Privacy Policy
+                                  HapticFeedback.selectionClick();
+                                  AccountCreationPage.openLegalSheet(
+                                    context: context,
+                                    title: 'Privacy Policy',
+                                    url: 'https://truefindr.com/privacy-policy/',
+                                  );
                                 },
                             ),
                           ],
