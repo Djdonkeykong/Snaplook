@@ -34,6 +34,36 @@ import 'src/features/favorites/domain/providers/favorites_provider.dart';
 import 'src/services/revenue_cat_service.dart';
 import 'dart:io';
 
+Future<void> _precacheSplashLogo() async {
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  final provider =
+      const AssetImage('assets/images/snaplook-logo-splash.png');
+  final devicePixelRatio =
+      binding.platformDispatcher.implicitView?.devicePixelRatio ??
+          (binding.platformDispatcher.views.isNotEmpty
+              ? binding.platformDispatcher.views.first.devicePixelRatio
+              : 1.0);
+  final configuration = ImageConfiguration(
+    bundle: rootBundle,
+    devicePixelRatio: devicePixelRatio,
+  );
+
+  final stream = provider.resolve(configuration);
+  final completer = Completer<void>();
+  late final ImageStreamListener listener;
+  listener = ImageStreamListener(
+    (image, synchronousCall) => completer.complete(),
+    onError: (error, stackTrace) {
+      debugPrint('[Splash] precache error: $error');
+      completer.complete();
+    },
+  );
+
+  stream.addListener(listener);
+  await completer.future;
+  stream.removeListener(listener);
+}
+
 // Custom LocalStorage implementation using SharedPreferences
 // This avoids flutter_secure_storage crash on iOS 18.6.2
 class SharedPreferencesLocalStorage extends LocalStorage {
@@ -155,6 +185,9 @@ void main() async {
 
   // Initialize shared config for iOS share extension
   unawaited(ShareExtensionConfigService.initializeSharedConfig());
+
+  // Precache splash logo so the splash displays without a flicker
+  await _precacheSplashLogo();
 
   runApp(const ProviderScope(child: SnaplookApp()));
 }
