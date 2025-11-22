@@ -5,20 +5,17 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import com.snaplook.snaplook.R
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import androidx.core.content.res.ResourcesCompat
+import android.graphics.BitmapFactory
 
 class MainActivity: FlutterActivity() {
+    private val launchLogTag = "SnaplookLaunch"
     private val shareLogsChannel = "snaplook/share_extension_logs"
     private val shareStatusChannelName = "com.snaplook.snaplook/share_status"
     private val authChannelName = "snaplook/auth"
-    private var splashOverlay: View? = null
     private val shareStatusPrefs by lazy {
         getSharedPreferences("snaplook_share_status", MODE_PRIVATE)
     }
@@ -101,7 +98,7 @@ class MainActivity: FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        addSplashOverlay()
+        logSplashResourceState()
         handleIntent(intent)
     }
 
@@ -181,27 +178,23 @@ class MainActivity: FlutterActivity() {
         return packageName
     }
 
-    private fun addSplashOverlay() {
-        val rootView = findViewById<ViewGroup>(android.R.id.content)
-        if (rootView != null && splashOverlay == null) {
-            splashOverlay = LayoutInflater.from(this)
-                .inflate(R.layout.launch_splash_overlay, rootView, false)
-            rootView.addView(
-                splashOverlay,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                ),
+    private fun logSplashResourceState() {
+        val splashId = resources.getIdentifier("transparent_splash_icon", "drawable", packageName)
+        if (splashId != 0) {
+            val bmp = BitmapFactory.decodeResource(resources, splashId)
+            Log.d(
+                launchLogTag,
+                "transparent_splash_icon -> resId=$splashId size=${bmp.width}x${bmp.height}"
             )
+        } else {
+            Log.w(launchLogTag, "transparent_splash_icon drawable not found at runtime")
         }
-    }
-
-    override fun onFlutterUiDisplayed() {
-        super.onFlutterUiDisplayed()
-        splashOverlay?.let { overlay ->
-            val parent = overlay.parent as? ViewGroup
-            parent?.removeView(overlay)
+        val bgColorId = resources.getIdentifier("splash_background", "color", packageName)
+        if (bgColorId != 0) {
+            val color = ResourcesCompat.getColor(resources, bgColorId, theme)
+            Log.d(launchLogTag, "splash_background -> color=#${Integer.toHexString(color)}")
+        } else {
+            Log.w(launchLogTag, "splash_background color not found at runtime")
         }
-        splashOverlay = null
     }
 }

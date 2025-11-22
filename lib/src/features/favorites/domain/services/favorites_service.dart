@@ -17,7 +17,7 @@ class FavoritesService {
 
     try {
       final response = await _supabase
-          .from('favorites')
+          .from('user_favorites')
           .select('*')
           .eq('user_id', _currentUserId!)
           .order('created_at', ascending: false);
@@ -52,7 +52,7 @@ class FavoritesService {
 
       print('DEBUG: Inserting data: $favoriteData');
       final response = await _supabase
-          .from('favorites')
+          .from('user_favorites')
           .insert(favoriteData)
           .select()
           .single();
@@ -73,7 +73,7 @@ class FavoritesService {
 
     try {
       await _supabase
-          .from('favorites')
+          .from('user_favorites')
           .delete()
           .eq('user_id', _currentUserId!)
           .eq('product_id', productId);
@@ -91,7 +91,7 @@ class FavoritesService {
 
     try {
       final response = await _supabase
-          .from('favorites')
+          .from('user_favorites')
           .select('id')
           .eq('user_id', _currentUserId!)
           .eq('product_id', productId)
@@ -112,7 +112,7 @@ class FavoritesService {
 
     try {
       final response = await _supabase
-          .from('favorites')
+          .from('user_favorites')
           .select('id')
           .eq('user_id', _currentUserId!);
 
@@ -131,7 +131,7 @@ class FavoritesService {
 
     try {
       final response = await _supabase
-          .from('favorites')
+          .from('user_favorites')
           .select('*')
           .eq('user_id', _currentUserId!)
           .eq('category', category)

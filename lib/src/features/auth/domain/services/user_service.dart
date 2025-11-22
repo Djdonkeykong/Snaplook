@@ -75,35 +75,14 @@ class UserService {
       final authUser = _supabase.auth.currentUser;
       if (authUser == null) throw Exception('No authenticated user');
 
-      // Check if user already exists
-      final existingUser = await _supabase
-          .from('users')
-          .select()
-          .eq('id', authUser.id)
-          .maybeSingle();
-
-      if (existingUser != null) {
-        // User exists, just update preferences
-        print('[UserService] User exists, updating preferences...');
-        await _supabase.from('users').update({
-          'gender': gender,
-          'notification_enabled': notificationEnabled,
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('id', authUser.id);
-        print('[UserService] Updated onboarding preferences for existing user ${authUser.id}');
-      } else {
-        // New user, insert with all required fields
-        print('[UserService] User does not exist, inserting new record...');
-        await _supabase.from('users').insert({
-          'id': authUser.id,
-          'email': authUser.email,
-          'gender': gender,
-          'notification_enabled': notificationEnabled,
-          'created_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        });
-        print('[UserService] Created new user record with onboarding preferences for ${authUser.id}');
-      }
+      // Minimal save: upsert gender/notification and timestamps.
+      await _supabase.from('users').upsert({
+        'id': authUser.id,
+        'email': authUser.email,
+        'gender': gender,
+        'notification_enabled': notificationEnabled,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'id');
 
       // Verify the save by reading back
       final verification = await _supabase

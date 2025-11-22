@@ -9,6 +9,7 @@ import '../../../../../src/features/paywall/providers/credit_provider.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'account_creation_page.dart';
+import 'welcome_free_analysis_page.dart';
 import 'onboarding_paywall_page.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
@@ -162,7 +163,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                     // User already paid -> skip paywall, go to account creation
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const AccountCreationPage(),
+                        builder: (context) => WelcomeFreeAnalysisPage(),
                       ),
                     );
                   } else {

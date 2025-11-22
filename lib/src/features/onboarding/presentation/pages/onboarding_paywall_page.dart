@@ -10,6 +10,7 @@ import '../../../paywall/providers/credit_provider.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'account_creation_page.dart';
+import 'welcome_free_analysis_page.dart';
 
 enum OnboardingPaywallPlanType { monthly, yearly }
 
@@ -286,7 +287,7 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const AccountCreationPage(),
+        builder: (context) => const WelcomeFreeAnalysisPage(),
       ),
     );
   }
@@ -319,9 +320,9 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
 
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) => const AccountCreationPage(),
-            ),
-          );
+                    builder: (context) => const WelcomeFreeAnalysisPage(),
+                  ),
+                );
         }
       } else {
         if (context.mounted) {

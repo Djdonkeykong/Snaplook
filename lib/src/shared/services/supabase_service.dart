@@ -72,7 +72,7 @@ class SupabaseService {
   }) async {
     try {
       final response = await client
-          .from('v_user_favorites_enriched')
+          .from('user_favorites')
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false)

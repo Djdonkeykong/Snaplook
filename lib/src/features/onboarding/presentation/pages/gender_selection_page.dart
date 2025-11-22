@@ -5,6 +5,9 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../../shared/navigation/route_observer.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
+import '../../../auth/domain/services/user_service.dart';
+import 'notification_permission_page.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'discovery_source_page.dart';
@@ -108,16 +111,17 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
     final selectedGender = ref.watch(selectedGenderProvider);
     final spacing = context.spacing;
 
-    // Check if we can pop (if there are routes to go back to)
-    final canPop = Navigator.of(context).canPop();
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: canPop ? const SnaplookBackButton() : null,
+        // Always show back button to mirror other onboarding pages.
+        // Pop this page (non-root so it works when pushed from the auth sheet flow).
+        leading: SnaplookBackButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 1,
@@ -263,6 +267,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
             onPressed: selectedGender != null
                 ? () {
                     HapticFeedback.mediumImpact();
+
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => const DiscoverySourcePage(),

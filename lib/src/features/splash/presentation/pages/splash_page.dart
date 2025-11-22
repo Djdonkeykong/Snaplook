@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
-import 'dart:ui';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -14,6 +13,8 @@ class SplashPage extends ConsumerStatefulWidget {
 }
 
 class _SplashPageState extends ConsumerState<SplashPage> {
+  static const _assetPath = 'assets/images/snaplook-logo-splash.png';
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -21,11 +22,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   }
 
   Future<void> _precacheAndNavigate() async {
-    // Precache the logo image first
-    await precacheImage(
-      const AssetImage('assets/images/splash_logo.png'),
-      context,
-    );
+    await precacheImage(const AssetImage(_assetPath), context);
 
     // Wait for auth state to be ready (with minimum 1.0s splash time)
     final authStateAsync = ref.read(authStateProvider);
@@ -86,15 +83,21 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         // Android: light icons directly
         statusBarIconBrightness: Brightness.light,
       ),
-      child: Scaffold(
+    child: Scaffold(
         backgroundColor: const Color(0xFFF2003C),
         body: Center(
-          child: SizedBox(
-            width: 180,
-            child: Image.asset(
-              'assets/images/splash_logo.png',
-              fit: BoxFit.contain,
-            ),
+          child: Builder(
+            builder: (context) {
+              // Slightly smaller than launch icon: ~22% of screen width.
+              final logoWidth = MediaQuery.of(context).size.width * 0.22;
+              return SizedBox(
+                width: logoWidth,
+                child: Image.asset(
+                  _assetPath,
+                  fit: BoxFit.contain,
+                ),
+              );
+            },
           ),
         ),
       ),

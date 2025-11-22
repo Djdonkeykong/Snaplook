@@ -368,7 +368,7 @@ class PaywallPage extends ConsumerWidget {
 
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) => const AccountCreationPage(),
+              builder: (context) => const WelcomeFreeAnalysisPage(),
             ),
           );
         }
@@ -429,7 +429,7 @@ class PaywallPage extends ConsumerWidget {
 
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) => const AccountCreationPage(),
+              builder: (context) => const WelcomeFreeAnalysisPage(),
             ),
           );
         }

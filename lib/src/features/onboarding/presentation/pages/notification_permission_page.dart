@@ -104,7 +104,7 @@ class _NotificationPermissionPageState
       // User not authenticated yet - go to account creation
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => const AccountCreationPage(),
+          builder: (context) => const WelcomeFreeAnalysisPage(),
         ),
       );
     }

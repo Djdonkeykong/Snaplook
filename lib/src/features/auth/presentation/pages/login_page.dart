@@ -295,12 +295,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     (route) => false,
                                   );
                                 } else {
-                                  navigator.pushAndRemoveUntil(
+                                  navigator.push(
                                     MaterialPageRoute(
                                       builder: (context) =>
                                           const GenderSelectionPage(),
                                     ),
-                                    (route) => false,
                                   );
                                 }
                               }
@@ -375,19 +374,18 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     ),
                                   ),
                                   (route) => false,
-                                );
-                              } else {
-                                navigator.pushAndRemoveUntil(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const GenderSelectionPage(),
-                                  ),
-                                  (route) => false,
-                                );
+                                  );
+                                } else {
+                                  navigator.push(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const GenderSelectionPage(),
+                                    ),
+                                  );
+                                }
                               }
                             }
-                          }
-                        } catch (e) {
+                          } catch (e) {
                           if (context.mounted) {
                             Navigator.pop(context);
                             if (e != AuthService.authCancelledException) {

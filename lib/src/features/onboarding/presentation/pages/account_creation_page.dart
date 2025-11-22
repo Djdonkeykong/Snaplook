@@ -229,13 +229,11 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                           // New user - start onboarding from gender selection
                                           print(
                                               '[AccountCreation] Apple - New user - navigating to gender selection');
-                                          Navigator.of(context)
-                                              .pushAndRemoveUntil(
+                                          Navigator.of(context).push(
                                             MaterialPageRoute(
                                               builder: (context) =>
                                                   const GenderSelectionPage(),
                                             ),
-                                            (route) => false,
                                           );
                                         }
                                       } catch (e) {
@@ -243,13 +241,11 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                         print(
                                             '[AccountCreation] Apple - Check error, assuming new user: $e');
                                         if (context.mounted) {
-                                          Navigator.of(context)
-                                              .pushAndRemoveUntil(
+                                          Navigator.of(context).push(
                                             MaterialPageRoute(
                                               builder: (context) =>
                                                   const GenderSelectionPage(),
                                             ),
-                                            (route) => false,
                                           );
                                         }
                                       }
@@ -374,13 +370,11 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                         // New user - start onboarding from gender selection
                                         print(
                                             '[AccountCreation] Google - New user - navigating to gender selection');
-                                        Navigator.of(context)
-                                            .pushAndRemoveUntil(
+                                        Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (context) =>
                                                 const GenderSelectionPage(),
                                           ),
-                                          (route) => false,
                                         );
                                       }
                                     } catch (e) {
@@ -388,13 +382,11 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                       print(
                                           '[AccountCreation] Google - Check error, assuming new user: $e');
                                       if (context.mounted) {
-                                        Navigator.of(context)
-                                            .pushAndRemoveUntil(
+                                        Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (context) =>
                                                 const GenderSelectionPage(),
                                           ),
-                                          (route) => false,
                                         );
                                       }
                                     }
