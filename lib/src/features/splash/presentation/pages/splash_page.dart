@@ -14,6 +14,8 @@ class SplashPage extends ConsumerStatefulWidget {
 
 class _SplashPageState extends ConsumerState<SplashPage> {
   static const _assetPath = 'assets/images/snaplook-logo-splash.png';
+  // Keep launch and splash logos in sync: fixed width so it doesn't vary by device size.
+  static const double _logoWidth = 93.027; // about +8% from original (~+1% from prior)
 
   @override
   void didChangeDependencies() {
@@ -86,18 +88,12 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     child: Scaffold(
         backgroundColor: const Color(0xFFF2003C),
         body: Center(
-          child: Builder(
-            builder: (context) {
-              // Slightly smaller than launch icon: ~22% of screen width.
-              final logoWidth = MediaQuery.of(context).size.width * 0.22;
-              return SizedBox(
-                width: logoWidth,
-                child: Image.asset(
-                  _assetPath,
-                  fit: BoxFit.contain,
-                ),
-              );
-            },
+          child: SizedBox(
+            width: _logoWidth,
+            child: Image.asset(
+              _assetPath,
+              fit: BoxFit.contain,
+            ),
           ),
         ),
       ),
