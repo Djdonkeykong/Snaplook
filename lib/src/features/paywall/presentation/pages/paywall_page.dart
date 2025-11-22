@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart';
+import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
 import '../../providers/credit_provider.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
@@ -366,9 +368,12 @@ class PaywallPage extends ConsumerWidget {
             ),
           );
 
+          final authService = ref.read(authServiceProvider);
+          final hasAccount = authService.currentUser != null;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) => const WelcomeFreeAnalysisPage(),
+              builder: (context) =>
+                  hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage(),
             ),
           );
         }
@@ -427,9 +432,12 @@ class PaywallPage extends ConsumerWidget {
             ),
           );
 
+          final authService = ref.read(authServiceProvider);
+          final hasAccount = authService.currentUser != null;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) => const WelcomeFreeAnalysisPage(),
+              builder: (context) =>
+                  hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage(),
             ),
           );
         }

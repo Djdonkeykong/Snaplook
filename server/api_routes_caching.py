@@ -242,7 +242,7 @@ async def analyze_with_caching(
 
 @router.post("/favorites")
 async def add_favorite(request: FavoriteRequest):
-    """Add product to favorites table (idempotent)"""
+    """Add product to user_favorites table (idempotent)"""
     if not supabase_manager.enabled:
         raise HTTPException(status_code=503, detail="Database not available")
 

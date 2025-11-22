@@ -334,7 +334,7 @@ class SupabaseManager:
                 'category': category
             }
 
-            response = self.client.table('favorites')\
+            response = self.client.table('user_favorites')\
                 .insert(favorite_entry)\
                 .execute()
 
@@ -366,7 +366,7 @@ class SupabaseManager:
             return None
 
         try:
-            response = self.client.table('favorites')\
+            response = self.client.table('user_favorites')\
                 .select('*')\
                 .eq('user_id', user_id)\
                 .eq('product_id', product_id)\
@@ -388,7 +388,7 @@ class SupabaseManager:
             return False
 
         try:
-            response = self.client.table('favorites')\
+            response = self.client.table('user_favorites')\
                 .delete()\
                 .eq('id', favorite_id)\
                 .eq('user_id', user_id)\
@@ -406,12 +406,12 @@ class SupabaseManager:
         limit: int = 50,
         offset: int = 0
     ) -> List[Dict[str, Any]]:
-        """Get user's favorites from favorites table"""
+        """Get user's favorites from user_favorites table"""
         if not self.enabled:
             return []
 
         try:
-            response = self.client.table('favorites')\
+            response = self.client.table('user_favorites')\
                 .select('*')\
                 .eq('user_id', user_id)\
                 .order('created_at', desc=True)\
@@ -431,13 +431,13 @@ class SupabaseManager:
     ) -> List[str]:
         """
         Check which product IDs from the list are already favorited by this user.
-        Returns a list of product_ids that exist in favorites.
+        Returns a list of product_ids that exist in user_favorites.
         """
         if not self.enabled or not product_ids:
             return []
 
         try:
-            response = self.client.table('favorites')\
+            response = self.client.table('user_favorites')\
                 .select('product_id')\
                 .eq('user_id', user_id)\
                 .in_('product_id', product_ids)\

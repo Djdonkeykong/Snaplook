@@ -93,21 +93,13 @@ class _NotificationPermissionPageState
     final authService = ref.read(authServiceProvider);
     final isAuthenticated = authService.currentUser != null;
 
-    if (isAuthenticated) {
-      // User already authenticated (came from email sign-in flow) - go to welcome
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const WelcomeFreeAnalysisPage(),
-        ),
-      );
-    } else {
-      // User not authenticated yet - go to account creation
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const WelcomeFreeAnalysisPage(),
-        ),
-      );
-    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => isAuthenticated
+            ? const WelcomeFreeAnalysisPage()
+            : const AccountCreationPage(),
+      ),
+    );
   }
 
   @override

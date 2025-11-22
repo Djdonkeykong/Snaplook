@@ -11,6 +11,7 @@ import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'account_creation_page.dart';
 import 'welcome_free_analysis_page.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
 
 enum OnboardingPaywallPlanType { monthly, yearly }
 
@@ -285,9 +286,13 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
   void _handleContinue(BuildContext context) {
     HapticFeedback.mediumImpact();
 
+    final authService = ref.read(authServiceProvider);
+    final hasAccount = authService.currentUser != null;
+
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const WelcomeFreeAnalysisPage(),
+        builder: (context) =>
+            hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage(),
       ),
     );
   }
@@ -318,11 +323,15 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
             ),
           );
 
+          final authService = ref.read(authServiceProvider);
+          final hasAccount = authService.currentUser != null;
+
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-                    builder: (context) => const WelcomeFreeAnalysisPage(),
-                  ),
-                );
+              builder: (context) =>
+                  hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage(),
+            ),
+          );
         }
       } else {
         if (context.mounted) {

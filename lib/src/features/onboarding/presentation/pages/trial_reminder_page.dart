@@ -11,6 +11,7 @@ import '../widgets/onboarding_bottom_bar.dart';
 import 'account_creation_page.dart';
 import 'welcome_free_analysis_page.dart';
 import 'onboarding_paywall_page.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
   const TrialReminderPage({super.key});
@@ -160,10 +161,14 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                       ref.read(hasActiveSubscriptionProvider);
 
                   if (hasActiveSubscription) {
-                    // User already paid -> skip paywall, go to account creation
+                    // User already paid -> skip paywall, go to next step based on auth
+                    final authService = ref.read(authServiceProvider);
+                    final hasAccount = authService.currentUser != null;
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => WelcomeFreeAnalysisPage(),
+                        builder: (context) => hasAccount
+                            ? WelcomeFreeAnalysisPage()
+                            : const AccountCreationPage(),
                       ),
                     );
                   } else {
