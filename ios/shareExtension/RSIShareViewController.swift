@@ -1644,8 +1644,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Fallback to ScrapingBee if configured.
             guard let apiKey = self.scrapingBeeApiKey(), !apiKey.isEmpty else {
-                self.shareLog("ScrapingBee API key missing - cannot download TikTok image")
-                self.shareLog("TikTok URL detected but ScrapingBee not configured. Please run the main app first to set up API keys.")
+                shareLog("ScrapingBee API key missing - cannot download TikTok image")
+                shareLog("TikTok URL detected but ScrapingBee not configured. Please run the main app first to set up API keys.")
                 completion(.failure(self.makeTikTokError("ScrapingBee API key not configured. Please open the Snaplook app first.")))
                 return
             }
@@ -1699,7 +1699,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     ?? (json["thumbnailUrl"] as? String)
                     ?? (json["thumbnailURL"] as? String),
                    !thumb.isEmpty {
-                    self.shareLog("TikTok oEmbed thumbnail: \(thumb.prefix(80))...")
+                    shareLog("TikTok oEmbed thumbnail: \(thumb.prefix(80))...")
                     completion(thumb)
                     return
                 }
