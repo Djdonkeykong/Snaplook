@@ -2489,7 +2489,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         let cropped = UIImage(cgImage: cgImage)
                         if let croppedData = cropped.jpegData(compressionQuality: 0.95) {
                             dataToSave = croppedData
-                            shareLog("Cropped \(platform) image to aspect \(String(format: \"%.2f\", targetAspect)) -> \(Int(cropRect.width))x\(Int(cropRect.height))")
+                            shareLog("Cropped \(platform) image to aspect \(String(format: "%.2f", targetAspect)) -> \(Int(cropRect.width))x\(Int(cropRect.height))")
                         }
                     }
                 }
