@@ -6,6 +6,7 @@ import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import 'edit_profile_page.dart';
+import 'feed_preferences_page.dart';
 import 'help_faq_page.dart';
 import 'contact_support_page.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
@@ -249,6 +250,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _SimpleSettingItem(
                   title: 'Manage Subscription',
                   onTap: _handleManageSubscription,
+                ),
+                _SimpleSettingItem(
+                  title: 'Feed Preferences',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const FeedPreferencesPage(),
+                      ),
+                    );
+                  },
                 ),
                 _SimpleSettingItem(
                   title: 'Notifications',

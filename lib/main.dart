@@ -615,6 +615,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       print("[SHARE EXTENSION] File exists: $fileExists");
       ref.read(selectedImagesProvider.notifier).setImage(imageFile);
 
+      // Pre-cache the shared image so DetectionPage shows it instantly (avoids black flash)
+      if (navigatorKey.currentContext != null) {
+        final fileImage = FileImage(File(imageFile.path));
+        await precacheImage(fileImage, navigatorKey.currentContext!).catchError(
+          (e) => print('[ShareExtension] Precaching error: $e'),
+        );
+      }
+
       // Also set in pending share provider so HomePage can handle navigation
       if (isInitial) {
         print(

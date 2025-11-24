@@ -261,6 +261,7 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
   late final List<String> _tokens;
   late final Timer _timer;
   int _currentIndex = 0;
+  bool _hasCompleted = false;
 
   @override
   void initState() {
@@ -302,12 +303,35 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
   void _onStreamingComplete() {
     // Wait 2 seconds after streaming completes for reading
     Future.delayed(const Duration(milliseconds: 2000), () {
+      if (!mounted || _hasCompleted) return;
+      _completeWithFade();
+    });
+  }
+
+  void _handleTapToDismiss() {
+    _completeWithFade(fadeDuration: const Duration(milliseconds: 200));
+  }
+
+  void _completeWithFade({Duration fadeDuration = const Duration(milliseconds: 800)}) {
+    if (_hasCompleted) return;
+    _hasCompleted = true;
+
+    if (_timer.isActive) {
+      _timer.cancel();
+    }
+    if (!_streamController.isClosed) {
+      _streamController.close();
+    }
+
+    _fadeController
+        .animateTo(
+      0.0,
+      duration: fadeDuration,
+      curve: Curves.easeOut,
+    )
+        .then((_) {
       if (mounted) {
-        _fadeController.reverse().then((_) {
-          if (mounted) {
-            widget.onComplete();
-          }
-        });
+        widget.onComplete();
       }
     });
   }
@@ -315,28 +339,34 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
   @override
   void dispose() {
     _timer.cancel();
-    _streamController.close();
+    if (!_streamController.isClosed) {
+      _streamController.close();
+    }
     _fadeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: Container(
-        color: Colors.black.withValues(alpha: 0.70),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40.0),
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              children: List.generate(_words.length, (index) {
-                return _FadeInWord(
-                  key: ValueKey('word_$index'),
-                  word: _words[index],
-                );
-              }),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _handleTapToDismiss,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.70),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                children: List.generate(_words.length, (index) {
+                  return _FadeInWord(
+                    key: ValueKey('word_$index'),
+                    word: _words[index],
+                  );
+                }),
+              ),
             ),
           ),
         ),

@@ -118,15 +118,41 @@ class SubscriptionSyncService {
 
   /// Link Supabase user to RevenueCat user ID
   /// Call this when user creates account or logs in
-  Future<void> linkRevenueCatUser(String userId) async {
+  /// Returns true if linking succeeded, false if subscription conflict detected
+  Future<bool> linkRevenueCatUser(String userId) async {
     try {
-      // Set user ID in RevenueCat
+      // Check for existing subscription in Supabase BEFORE linking
+      final existingData = await getCachedSubscriptionStatus();
+      final hadExistingSubscription = existingData?['subscription_status'] == 'active';
+
+      debugPrint('[SubscriptionSync] Linking user $userId to RevenueCat');
+      if (hadExistingSubscription) {
+        debugPrint('[SubscriptionSync] User already has active subscription in Supabase');
+      }
+
+      // Set user ID in RevenueCat (this also calls syncPurchases internally)
       await _revenueCat.setUserId(userId);
+
+      // Verify entitlements are still active after linking
+      final customerInfo = _revenueCat.currentCustomerInfo;
+      final hasActivePremium = customerInfo?.entitlements.active
+          .containsKey(RevenueCatService.premiumEntitlementId) ?? false;
+
+      if (hadExistingSubscription && !hasActivePremium) {
+        debugPrint('[SubscriptionSync] WARNING: Subscription conflict detected - user may have lost access');
+        debugPrint('[SubscriptionSync] This can happen when signing into an account that already has a subscription');
+
+        // Sync anyway to update the database
+        await syncSubscriptionToSupabase();
+
+        return false; // Indicate conflict detected
+      }
 
       // Sync subscription data to Supabase
       await syncSubscriptionToSupabase();
 
-      debugPrint('[SubscriptionSync] Linked user $userId to RevenueCat');
+      debugPrint('[SubscriptionSync] Successfully linked user $userId to RevenueCat');
+      return true;
     } catch (e) {
       debugPrint('[SubscriptionSync] Error linking RevenueCat user: $e');
       rethrow;

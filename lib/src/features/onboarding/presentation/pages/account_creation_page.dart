@@ -20,6 +20,9 @@ import '../../../../../shared/navigation/main_navigation.dart'
         scrollToTopTriggerProvider,
         isAtHomeRootProvider;
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../services/subscription_sync_service.dart';
+import '../../../../services/fraud_prevention_service.dart';
+import '../../../../services/onboarding_state_service.dart';
 
 class AccountCreationPage extends ConsumerStatefulWidget {
   const AccountCreationPage({super.key});
@@ -65,6 +68,99 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
       context: context,
       title: title,
       url: url,
+    );
+  }
+
+  /// Link RevenueCat subscription to newly created account
+  /// This handles anonymous purchases being transferred to identified users
+  Future<bool> _linkSubscriptionToAccount(String userId) async {
+    try {
+      debugPrint('[AccountCreation] Linking subscription for user $userId');
+
+      // Link RevenueCat user (transfers anonymous purchase to identified user)
+      final linkSuccess =
+          await SubscriptionSyncService().linkRevenueCatUser(userId);
+
+      if (!linkSuccess) {
+        debugPrint('[AccountCreation] Subscription conflict detected');
+        if (mounted) {
+          _showSubscriptionConflictDialog();
+        }
+        return false;
+      }
+
+      // Update device fingerprint for fraud prevention
+      await FraudPreventionService.updateUserDeviceFingerprint(userId);
+
+      // Calculate fraud score
+      final authService = ref.read(authServiceProvider);
+      final email = authService.currentUser?.email;
+      if (email != null) {
+        await FraudPreventionService.calculateFraudScore(
+          userId,
+          email: email,
+        );
+      }
+
+      debugPrint('[AccountCreation] Subscription linked successfully');
+      return true;
+    } catch (e) {
+      debugPrint('[AccountCreation] Error linking subscription: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error linking subscription. Please try again.',
+              style: context.snackTextStyle(
+                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
+  void _showSubscriptionConflictDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Subscription Already Exists',
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'This account already has an active subscription.\n\n'
+          'Your recent purchase will be refunded within 24 hours.\n\n'
+          'Please use the existing subscription or create a new account.',
+          style: TextStyle(fontFamily: 'PlusJakartaSans'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Go back to paywall
+              Navigator.of(context).pop();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+              textStyle: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -175,6 +271,15 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                   print(
                                       '[AccountCreation] Apple - User ID after sign in: $userId');
                                   if (userId != null) {
+                                    // CRITICAL: Link RevenueCat subscription to new account
+                                    // This transfers any anonymous purchases to the identified user
+                                    final linkSuccess =
+                                        await _linkSubscriptionToAccount(userId);
+                                    if (!linkSuccess) {
+                                      // Subscription conflict - dialog already shown
+                                      return;
+                                    }
+
                                     // First check if user went through onboarding already (providers have values)
                                     final selectedGender =
                                         ref.read(selectedGenderProvider);
@@ -200,17 +305,17 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                             Supabase.instance.client;
                                         final userResponse = await supabase
                                             .from('users')
-                                            .select('gender')
+                                            .select('onboarding_state')
                                             .eq('id', userId)
                                             .maybeSingle();
 
                                         print(
                                             '[AccountCreation] Apple - User record found: ${userResponse != null}');
 
-                                        // Check if user has completed onboarding (gender will be set during onboarding)
+                                        // Check if user has completed onboarding
                                         final hasCompletedOnboarding =
                                             userResponse != null &&
-                                                userResponse['gender'] != null;
+                                                userResponse['onboarding_state'] == 'completed';
                                         print(
                                             '[AccountCreation] Apple - Has completed onboarding in DB: $hasCompletedOnboarding');
 
@@ -317,6 +422,15 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                 print(
                                     '[AccountCreation] Google - User ID after sign in: $userId');
                                 if (userId != null) {
+                                  // CRITICAL: Link RevenueCat subscription to new account
+                                  // This transfers any anonymous purchases to the identified user
+                                  final linkSuccess =
+                                      await _linkSubscriptionToAccount(userId);
+                                  if (!linkSuccess) {
+                                    // Subscription conflict - dialog already shown
+                                    return;
+                                  }
+
                                   // First check if user went through onboarding already (providers have values)
                                   final selectedGender =
                                       ref.read(selectedGenderProvider);
@@ -341,17 +455,17 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                       final supabase = Supabase.instance.client;
                                       final userResponse = await supabase
                                           .from('users')
-                                          .select('gender')
+                                          .select('onboarding_state')
                                           .eq('id', userId)
                                           .maybeSingle();
 
                                       print(
                                           '[AccountCreation] Google - User record found: ${userResponse != null}');
 
-                                      // Check if user has completed onboarding (gender will be set during onboarding)
+                                      // Check if user has completed onboarding
                                       final hasCompletedOnboarding =
                                           userResponse != null &&
-                                              userResponse['gender'] != null;
+                                              userResponse['onboarding_state'] == 'completed';
                                       print(
                                           '[AccountCreation] Google - Has completed onboarding in DB: $hasCompletedOnboarding');
 

@@ -108,18 +108,18 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
 
         if (userId != null) {
           try {
-            // Check if user has completed onboarding by looking at gender field
+            // Check if user has completed onboarding
             final supabase = Supabase.instance.client;
             final userResponse = await supabase
                 .from('users')
-                .select('gender')
+                .select('onboarding_state')
                 .eq('id', userId)
                 .maybeSingle();
 
             print('[EmailVerification] User record found: ${userResponse != null}');
 
-            // Check if user has completed onboarding (gender will be set during onboarding)
-            final hasCompletedOnboarding = userResponse != null && userResponse['gender'] != null;
+            // Check if user has completed onboarding
+            final hasCompletedOnboarding = userResponse != null && userResponse['onboarding_state'] == 'completed';
             print('[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
 
             if (hasCompletedOnboarding) {

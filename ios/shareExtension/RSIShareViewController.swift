@@ -1627,22 +1627,115 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urlString: String,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
-        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
-            shareLog("ScrapingBee API key missing - cannot download TikTok image")
-            shareLog("TikTok URL detected but ScrapingBee not configured. Please run the main app first to set up API keys.")
-            completion(.failure(makeTikTokError("ScrapingBee API key not configured. Please open the Snaplook app first.")))
-            return
-        }
+        // Free path: try TikTok oEmbed first (no ScrapingBee credits).
+        fetchTikTokOEmbedThumbnail(urlString: urlString) { [weak self] thumbUrl in
+            guard let self = self else { return }
 
-        performTikTokScrape(
-            tiktokUrl: urlString,
-            apiKey: apiKey,
-            attempt: 0,
-            completion: completion
-        )
+            if let thumbUrl = thumbUrl {
+                self.downloadFirstValidImage(
+                    from: [thumbUrl],
+                    platform: "tiktok",
+                    session: URLSession.shared,
+                    cropToAspect: 9.0 / 16.0,
+                    completion: completion
+                )
+                return
+            }
+
+            // Fallback to ScrapingBee if configured.
+            guard let apiKey = self.scrapingBeeApiKey(), !apiKey.isEmpty else {
+                self.shareLog("ScrapingBee API key missing - cannot download TikTok image")
+                self.shareLog("TikTok URL detected but ScrapingBee not configured. Please run the main app first to set up API keys.")
+                completion(.failure(self.makeTikTokError("ScrapingBee API key not configured. Please open the Snaplook app first.")))
+                return
+            }
+
+            self.performTikTokScrape(
+                tiktokUrl: urlString,
+                apiKey: apiKey,
+                attempt: 0,
+                completion: completion
+            )
+        }
     }
 
     private let maxTikTokScrapeAttempts = 2
+
+    private func fetchTikTokOEmbedThumbnail(
+        urlString: String,
+        completion: @escaping (String?) -> Void
+    ) {
+        resolveTikTokRedirect(urlString: urlString) { [weak self] resolvedUrl in
+            guard let self = self else { return }
+
+            let targetUrl = resolvedUrl ?? urlString
+
+            guard let encoded = targetUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let oembedUrl = URL(string: "https://www.tiktok.com/oembed?url=\(encoded)") else {
+                completion(nil)
+                return
+            }
+
+            var request = URLRequest(url: oembedUrl)
+            request.timeoutInterval = 10.0
+            request.setValue(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+                forHTTPHeaderField: "User-Agent"
+            )
+
+            let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+                guard let self = self else { return }
+
+                guard error == nil,
+                      let httpResponse = response as? HTTPURLResponse,
+                      httpResponse.statusCode == 200,
+                      let data = data,
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    completion(nil)
+                    return
+                }
+
+                if let thumb = (json["thumbnail_url"] as? String)
+                    ?? (json["thumbnailUrl"] as? String)
+                    ?? (json["thumbnailURL"] as? String),
+                   !thumb.isEmpty {
+                    self.shareLog("TikTok oEmbed thumbnail: \(thumb.prefix(80))...")
+                    completion(thumb)
+                    return
+                }
+
+                completion(nil)
+            }
+            task.resume()
+        }
+    }
+
+    private func resolveTikTokRedirect(
+        urlString: String,
+        completion: @escaping (String?) -> Void
+    ) {
+        guard let url = URL(string: urlString) else {
+            completion(nil)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10.0
+        request.httpMethod = "GET"
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            guard error == nil else {
+                completion(nil)
+                return
+            }
+            if let finalUrl = response?.url?.absoluteString, finalUrl != urlString {
+                completion(finalUrl)
+            } else {
+                completion(nil)
+            }
+        }
+        task.resume()
+    }
 
     private func performTikTokScrape(
         tiktokUrl: String,
@@ -2095,6 +2188,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urlString: String,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
+        let isShortsLink = urlString.lowercased().contains("/shorts")
         guard let videoId = extractYouTubeVideoId(from: urlString) else {
             shareLog("Unable to extract YouTube video ID from \(urlString)")
             completion(.failure(makeDownloadError("YouTube", "Could not extract video ID")))
@@ -2104,7 +2198,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let thumbnailUrls = buildYouTubeThumbnailCandidates(videoId: videoId)
         shareLog("Trying \(thumbnailUrls.count) YouTube thumbnail candidates for video \(videoId)")
 
-        downloadFirstValidImage(from: thumbnailUrls, platform: "youtube", session: URLSession.shared, completion: completion)
+        downloadFirstValidImage(
+            from: thumbnailUrls,
+            platform: "youtube",
+            session: URLSession.shared,
+            cropToAspect: isShortsLink ? (9.0 / 16.0) : nil,
+            completion: completion
+        )
     }
 
     private func extractYouTubeVideoId(from urlString: String) -> String? {
@@ -2161,6 +2261,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let variants = [
             "maxresdefault.jpg",
             "maxres1.jpg",
+            "maxres2.jpg",
+            "maxres3.jpg",
             "sddefault.jpg",
             "hq720.jpg",
             "hqdefault.jpg",
@@ -2173,6 +2275,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 candidates.append("\(host)/\(videoId)/\(variant)")
             }
         }
+
+        // Live and WebP fallbacks
+        candidates.append("https://i.ytimg.com/vi/\(videoId)/maxresdefault_live.jpg")
+        candidates.append("https://i.ytimg.com/vi_webp/\(videoId)/maxresdefault.webp")
+        candidates.append("https://i.ytimg.com/vi_webp/\(videoId)/hqdefault.webp")
 
         return candidates
     }
@@ -2320,6 +2427,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urls: [String],
         platform: String,
         session: URLSession,
+        cropToAspect: CGFloat? = nil,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
         guard !urls.isEmpty else {
@@ -2334,7 +2442,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         guard let url = URL(string: firstUrl) else {
             // Try next URL
-            downloadFirstValidImage(from: urlsToTry, platform: platform, session: session, completion: completion)
+            downloadFirstValidImage(from: urlsToTry, platform: platform, session: session, cropToAspect: cropToAspect, completion: completion)
             return
         }
 
@@ -2347,7 +2455,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             if let error = error {
                 shareLog("Failed to download from \(firstUrl.prefix(50))...: \(error.localizedDescription)")
                 // Try next URL
-                self.downloadFirstValidImage(from: urlsToTry, platform: platform, session: session, completion: completion)
+                self.downloadFirstValidImage(from: urlsToTry, platform: platform, session: session, cropToAspect: cropToAspect, completion: completion)
                 return
             }
 
@@ -2355,8 +2463,36 @@ open class RSIShareViewController: SLComposeServiceViewController {
                   let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
                 // Try next URL
-                self.downloadFirstValidImage(from: urlsToTry, platform: platform, session: session, completion: completion)
+                self.downloadFirstValidImage(from: urlsToTry, platform: platform, session: session, cropToAspect: cropToAspect, completion: completion)
                 return
+            }
+
+            var dataToSave = data
+            if let targetAspect = cropToAspect,
+               let image = UIImage(data: data),
+               image.size.width > 0,
+               image.size.height > 0 {
+                let currentAspect = image.size.width / image.size.height
+                if abs(currentAspect - targetAspect) > 0.01 {
+                    var cropRect = CGRect(origin: .zero, size: image.size)
+                    if currentAspect > targetAspect {
+                        let targetWidth = image.size.height * targetAspect
+                        let originX = max(0, (image.size.width - targetWidth) / 2)
+                        cropRect = CGRect(x: originX, y: 0, width: targetWidth, height: image.size.height)
+                    } else {
+                        let targetHeight = image.size.width / targetAspect
+                        let originY = max(0, (image.size.height - targetHeight) / 2)
+                        cropRect = CGRect(x: 0, y: originY, width: image.size.width, height: targetHeight)
+                    }
+
+                    if let cgImage = image.cgImage?.cropping(to: cropRect.integral) {
+                        let cropped = UIImage(cgImage: cgImage)
+                        if let croppedData = cropped.jpegData(compressionQuality: 0.95) {
+                            dataToSave = croppedData
+                            shareLog("Cropped \(platform) image to aspect \(String(format: \"%.2f\", targetAspect)) -> \(Int(cropRect.width))x\(Int(cropRect.height))")
+                        }
+                    }
+                }
             }
 
             // Save to shared container
@@ -2372,8 +2508,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let fileURL = containerURL.appendingPathComponent(fileName)
 
             do {
-                try data.write(to: fileURL, options: .atomic)
-                shareLog("Saved \(platform) image to \(fileName) (\(data.count) bytes)")
+                try dataToSave.write(to: fileURL, options: .atomic)
+                shareLog("Saved \(platform) image to \(fileName) (\(dataToSave.count) bytes)")
 
                 let sharedFile = SharedMediaFile(
                     path: fileURL.absoluteString,

@@ -1084,7 +1084,50 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
 
-                    SizedBox(height: spacing.m),
+                    SizedBox(height: spacing.l),
+
+                    // Note about credits & cropping
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(spacing.m),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withOpacity(
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? 0.4
+                                  : 0.6,
+                            ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          SizedBox(width: spacing.m),
+                          Expanded(
+                            child: Text(
+                              'Each garment costs 1 credit. If there are multiple items in a photo, cropping to just one helps conserve credits.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.4,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: spacing.l),
                   ],
                 ),
               ),
@@ -1767,18 +1810,11 @@ class _FloatingActionBar extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Transform.translate(
-                offset: const Offset(0, -1),
               child: _FloatingActionButtonSvg(
-                svgIcon: 'assets/icons/camera_filled.svg',
+                svgIcon: 'assets/icons/solar--camera-square-bold-new.svg',
                 label: 'Snap',
                 onTap: onSnapTap,
-                iconSize: 26,
-                spacing: 3,
-                labelOffset: const Offset(0, 1),
-                iconOffset: const Offset(0, 1),
               ),
-            ),
             ),
             const SizedBox(width: 4),
             Expanded(

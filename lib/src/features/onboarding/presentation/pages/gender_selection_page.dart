@@ -11,6 +11,8 @@ import 'notification_permission_page.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'discovery_source_page.dart';
+import '../../../../services/onboarding_state_service.dart';
+import '../../../../services/fraud_prevention_service.dart';
 
 enum Gender { male, female, other }
 
@@ -54,6 +56,78 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
         CurvedAnimation(parent: controller, curve: Curves.easeOutBack),
       );
     }).toList();
+
+    // Start onboarding tracking if user is authenticated
+    _initializeOnboarding();
+  }
+
+  Future<void> _initializeOnboarding() async {
+    try {
+      final user = ref.read(authServiceProvider).currentUser;
+      if (user != null) {
+        debugPrint('[GenderSelection] Initializing onboarding for user ${user.id}');
+
+        // Start onboarding tracking
+        await OnboardingStateService().startOnboarding(user.id);
+
+        // Update device fingerprint for fraud prevention
+        await FraudPreventionService.updateUserDeviceFingerprint(user.id);
+
+        debugPrint('[GenderSelection] Onboarding initialized successfully');
+      } else {
+        debugPrint('[GenderSelection] No authenticated user - skipping onboarding init');
+      }
+    } catch (e) {
+      debugPrint('[GenderSelection] Error initializing onboarding: $e');
+      // Non-critical error - allow user to continue
+    }
+  }
+
+  Future<void> _saveGenderPreference() async {
+    try {
+      final selectedGender = ref.read(selectedGenderProvider);
+      if (selectedGender == null) return;
+
+      final user = ref.read(authServiceProvider).currentUser;
+      if (user == null) {
+        debugPrint('[GenderSelection] No authenticated user - preferences will be saved after login');
+        return;
+      }
+
+      debugPrint('[GenderSelection] Saving gender preference: ${selectedGender.name}');
+
+      // Map Gender enum to preferred_gender_filter
+      String filterValue;
+
+      switch (selectedGender) {
+        case Gender.male:
+          filterValue = 'men';
+          break;
+        case Gender.female:
+          filterValue = 'women';
+          break;
+        case Gender.other:
+          filterValue = 'all';   // Show all products in feed
+          break;
+      }
+
+      // Save preferences to database
+      await OnboardingStateService().saveUserPreferences(
+        userId: user.id,
+        preferredGenderFilter: filterValue,
+      );
+
+      // Update checkpoint
+      await OnboardingStateService().updateCheckpoint(
+        user.id,
+        OnboardingCheckpoint.gender,
+      );
+
+      debugPrint('[GenderSelection] Gender preference saved successfully');
+    } catch (e) {
+      debugPrint('[GenderSelection] Error saving gender preference: $e');
+      // Non-critical error - allow user to continue
+    }
   }
 
   void _startStaggeredAnimation() {
@@ -265,14 +339,20 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
           height: 56,
           child: ElevatedButton(
             onPressed: selectedGender != null
-                ? () {
+                ? () async {
                     HapticFeedback.mediumImpact();
 
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const DiscoverySourcePage(),
-                      ),
-                    );
+                    // Save gender preference to database
+                    await _saveGenderPreference();
+
+                    // Navigate to next page
+                    if (mounted) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const DiscoverySourcePage(),
+                        ),
+                      );
+                    }
                   }
                 : null,
             style: ElevatedButton.styleFrom(

@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/inspiration_service.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
 
 class InspirationState {
   final List<Map<String, dynamic>> images;
@@ -31,10 +33,36 @@ class InspirationState {
 
 class InspirationNotifier extends StateNotifier<InspirationState> {
   final InspirationService _service;
+  final Ref _ref;
   int _currentPage = 0;
   final Set<String> _seenImageUrls = {}; // Track seen images to prevent duplicates
 
-  InspirationNotifier(this._service) : super(const InspirationState());
+  InspirationNotifier(this._service, this._ref) : super(const InspirationState());
+
+  /// Get user's gender filter preference from database
+  Future<String> _getUserGenderFilter() async {
+    try {
+      final user = _ref.read(authServiceProvider).currentUser;
+      if (user == null) {
+        print('DEBUG: No authenticated user, using default filter (all)');
+        return 'all';
+      }
+
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('users')
+          .select('preferred_gender_filter')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      final genderFilter = response?['preferred_gender_filter'] as String? ?? 'all';
+      print('DEBUG: User gender filter: $genderFilter');
+      return genderFilter;
+    } catch (e) {
+      print('DEBUG: Error fetching gender filter: $e');
+      return 'all'; // Default to showing all if there's an error
+    }
+  }
 
   /// Load initial inspiration images
   Future<void> loadImages() async {
@@ -44,9 +72,11 @@ class InspirationNotifier extends StateNotifier<InspirationState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
+      final genderFilter = await _getUserGenderFilter();
       final images = await _service.fetchInspirationImages(
         page: 0,
         excludeImageUrls: _seenImageUrls,
+        genderFilter: genderFilter,
       );
       print('DEBUG: Loaded ${images.length} images');
 
@@ -87,9 +117,11 @@ class InspirationNotifier extends StateNotifier<InspirationState> {
     state = state.copyWith(isLoading: true);
 
     try {
+      final genderFilter = await _getUserGenderFilter();
       final newImages = await _service.fetchInspirationImages(
         page: _currentPage,
         excludeImageUrls: _seenImageUrls,
+        genderFilter: genderFilter,
       );
 
 
@@ -138,9 +170,11 @@ class InspirationNotifier extends StateNotifier<InspirationState> {
     _seenImageUrls.clear(); // Clear seen images on refresh
 
     try {
+      final genderFilter = await _getUserGenderFilter();
       final images = await _service.fetchInspirationImages(
         page: 0,
         excludeImageUrls: _seenImageUrls,
+        genderFilter: genderFilter,
       );
 
       // Track new images
@@ -182,5 +216,5 @@ final inspirationServiceProvider = Provider<InspirationService>((ref) {
 
 final inspirationProvider = StateNotifierProvider<InspirationNotifier, InspirationState>((ref) {
   final service = ref.watch(inspirationServiceProvider);
-  return InspirationNotifier(service);
+  return InspirationNotifier(service, ref);
 });

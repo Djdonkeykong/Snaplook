@@ -3,7 +3,6 @@ class UserModel {
   final String email;
   final String? fullName;
   final String? avatarUrl;
-  final String? gender;
   final bool notificationEnabled;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -13,7 +12,6 @@ class UserModel {
     required this.email,
     this.fullName,
     this.avatarUrl,
-    this.gender,
     this.notificationEnabled = false,
     required this.createdAt,
     required this.updatedAt,
@@ -25,7 +23,6 @@ class UserModel {
       email: json['email'] as String,
       fullName: json['full_name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
-      gender: json['gender'] as String?,
       notificationEnabled: json['notification_enabled'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -38,7 +35,6 @@ class UserModel {
       'email': email,
       'full_name': fullName,
       'avatar_url': avatarUrl,
-      'gender': gender,
       'notification_enabled': notificationEnabled,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -50,7 +46,6 @@ class UserModel {
     String? email,
     String? fullName,
     String? avatarUrl,
-    String? gender,
     bool? notificationEnabled,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -60,7 +55,6 @@ class UserModel {
       email: email ?? this.email,
       fullName: fullName ?? this.fullName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
-      gender: gender ?? this.gender,
       notificationEnabled: notificationEnabled ?? this.notificationEnabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

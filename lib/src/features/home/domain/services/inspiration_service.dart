@@ -64,18 +64,24 @@ class InspirationService {
   /// Fetch inspiration images from Supabase.
   /// Uses the `get_random_products` RPC for random results.
   /// Falls back to normal query + shuffle if the RPC fails.
+  ///
+  /// [genderFilter] can be 'men', 'women', or 'all' (default)
   Future<List<Map<String, dynamic>>> fetchInspirationImages({
     int page = 0,
     int limit = 50,
     Set<String>? excludeImageUrls,
+    String genderFilter = 'all',
   }) async {
     final supabase = Supabase.instance.client;
 
     try {
-      // 🌀 Try using the random RPC first
+      // 🌀 Try using the random RPC first with gender filter
       final response = await supabase.rpc(
         'get_random_products',
-        params: {'limit_count': limit},
+        params: {
+          'limit_count': limit,
+          'gender_filter': genderFilter,
+        },
       );
 
       final data = List<Map<String, dynamic>>.from(response ?? []);
@@ -86,16 +92,23 @@ class InspirationService {
         return url != null && !(excludeImageUrls?.contains(url) ?? false);
       }).toList();
 
-      print('🎲 Randomly fetched ${filtered.length} inspiration images');
+      print('🎲 Randomly fetched ${filtered.length} inspiration images (filter: $genderFilter)');
       return filtered;
     } catch (e) {
       // 🔁 Fallback to standard query if RPC fails
       print('⚠️ Random RPC failed, falling back to ordered fetch: $e');
       try {
-        final fallback = await supabase
+        var query = supabase
             .from('products')
             .select('id, title, image_url, category, brand')
-            .neq('image_url', '')
+            .neq('image_url', '');
+
+        // Apply gender filter if not 'all'
+        if (genderFilter != 'all') {
+          query = query.eq('target_gender', genderFilter);
+        }
+
+        final fallback = await query
             .order('created_at', ascending: false)
             .range(page * limit, (page * limit) + limit * 3 - 1);
 
@@ -106,7 +119,7 @@ class InspirationService {
           return url != null && !(excludeImageUrls?.contains(url) ?? false);
         }).take(limit).toList();
 
-        print('🪄 Fallback loaded ${filtered.length} inspiration images');
+        print('🪄 Fallback loaded ${filtered.length} inspiration images (filter: $genderFilter)');
         return filtered;
       } catch (err) {
         print('❌ Failed to fetch inspiration images: $err');
@@ -116,19 +129,30 @@ class InspirationService {
   }
 
   /// Search inspiration images by keyword.
-  Future<List<Map<String, dynamic>>> searchInspirationImages(String query) async {
+  /// [genderFilter] can be 'men', 'women', or 'all' (default)
+  Future<List<Map<String, dynamic>>> searchInspirationImages(
+    String query, {
+    String genderFilter = 'all',
+  }) async {
     try {
       final supabase = Supabase.instance.client;
-      final response = await supabase
+      var queryBuilder = supabase
           .from('products')
           .select('id, title, image_url, category, brand')
           .neq('image_url', '')
-          .or('category.ilike.%$query%,brand.ilike.%$query%')
+          .or('category.ilike.%$query%,brand.ilike.%$query%');
+
+      // Apply gender filter if not 'all'
+      if (genderFilter != 'all') {
+        queryBuilder = queryBuilder.eq('target_gender', genderFilter);
+      }
+
+      final response = await queryBuilder
           .order('created_at', ascending: false)
           .limit(50);
 
       final data = List<Map<String, dynamic>>.from(response ?? []);
-      print('🔍 Found ${data.length} inspiration images for "$query"');
+      print('🔍 Found ${data.length} inspiration images for "$query" (filter: $genderFilter)');
       return data;
     } catch (e) {
       print('❌ Search failed: $e');
@@ -137,19 +161,30 @@ class InspirationService {
   }
 
   /// Fetch featured or trending images.
-  Future<List<Map<String, dynamic>>> fetchTrendingImages({int limit = 20}) async {
+  /// [genderFilter] can be 'men', 'women', or 'all' (default)
+  Future<List<Map<String, dynamic>>> fetchTrendingImages({
+    int limit = 20,
+    String genderFilter = 'all',
+  }) async {
     try {
       final supabase = Supabase.instance.client;
-      final response = await supabase
+      var query = supabase
           .from('products')
           .select('id, title, image_url, category, brand')
-          .neq('image_url', '')
+          .neq('image_url', '');
+
+      // Apply gender filter if not 'all'
+      if (genderFilter != 'all') {
+        query = query.eq('target_gender', genderFilter);
+      }
+
+      final response = await query
           .order('created_at', ascending: false)
           .limit(limit);
 
       final data = List<Map<String, dynamic>>.from(response ?? []);
       data.shuffle();
-      print('🔥 Fetched ${data.length} trending images');
+      print('🔥 Fetched ${data.length} trending images (filter: $genderFilter)');
       return data;
     } catch (e) {
       print('❌ Failed to fetch trending images: $e');

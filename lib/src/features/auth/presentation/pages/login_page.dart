@@ -268,18 +268,18 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               if (userId != null) {
                                 final userResponse = await supabase
                                     .from('users')
-                                    .select('gender')
+                                    .select('onboarding_state')
                                     .eq('id', userId)
                                     .maybeSingle();
 
                                 print(
                                     '[LoginPage] Apple sign-in - user ID: $userId');
                                 print(
-                                    '[LoginPage] User gender from DB: ${userResponse?['gender']}');
+                                    '[LoginPage] User onboarding_state from DB: ${userResponse?['onboarding_state']}');
 
                                 final hasCompletedOnboarding =
                                     userResponse != null &&
-                                        userResponse['gender'] != null;
+                                        userResponse['onboarding_state'] == 'completed';
 
                                 if (hasCompletedOnboarding) {
                                   ref
@@ -351,18 +351,18 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             if (userId != null) {
                               final userResponse = await supabase
                                   .from('users')
-                                  .select('gender')
+                                  .select('onboarding_state')
                                   .eq('id', userId)
                                   .maybeSingle();
 
                               print(
                                   '[LoginPage] Google sign-in - user ID: $userId');
                               print(
-                                  '[LoginPage] User gender from DB: ${userResponse?['gender']}');
+                                  '[LoginPage] User onboarding_state from DB: ${userResponse?['onboarding_state']}');
 
                               final hasCompletedOnboarding =
                                   userResponse != null &&
-                                      userResponse['gender'] != null;
+                                      userResponse['onboarding_state'] == 'completed';
 
                               if (hasCompletedOnboarding) {
                                 ref.read(selectedIndexProvider.notifier).state =

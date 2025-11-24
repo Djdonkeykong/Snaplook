@@ -12,6 +12,9 @@ import '../widgets/onboarding_bottom_bar.dart';
 import 'account_creation_page.dart';
 import 'welcome_free_analysis_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
+import '../../../../services/fraud_prevention_service.dart';
+import '../../../../services/onboarding_state_service.dart';
+import '../../../../services/subscription_sync_service.dart';
 
 enum OnboardingPaywallPlanType { monthly, yearly }
 
@@ -19,6 +22,7 @@ final selectedOnboardingPlanProvider = StateProvider<OnboardingPaywallPlanType>(
   (ref) => OnboardingPaywallPlanType.yearly,
 );
 final isOnboardingPurchasingProvider = StateProvider<bool>((ref) => false);
+final isTrialEligibleProvider = StateProvider<bool>((ref) => true);
 
 class OnboardingPaywallPage extends ConsumerStatefulWidget {
   const OnboardingPaywallPage({super.key});
@@ -29,6 +33,34 @@ class OnboardingPaywallPage extends ConsumerStatefulWidget {
 }
 
 class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
+  @override
+  void initState() {
+    super.initState();
+    _checkTrialEligibility();
+  }
+
+  Future<void> _checkTrialEligibility() async {
+    try {
+      debugPrint('[OnboardingPaywall] Checking trial eligibility...');
+      final isEligible = await FraudPreventionService.isDeviceEligibleForTrial();
+
+      if (mounted) {
+        ref.read(isTrialEligibleProvider.notifier).state = isEligible;
+        debugPrint('[OnboardingPaywall] Trial eligible: $isEligible');
+
+        if (!isEligible) {
+          // Auto-switch to monthly plan if trial not available
+          ref.read(selectedOnboardingPlanProvider.notifier).state =
+              OnboardingPaywallPlanType.monthly;
+          debugPrint('[OnboardingPaywall] Trial not available - switched to monthly plan');
+        }
+      }
+    } catch (e) {
+      debugPrint('[OnboardingPaywall] Error checking trial eligibility: $e');
+      // Default to eligible on error
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedPlan = ref.watch(selectedOnboardingPlanProvider);
@@ -283,18 +315,28 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
     );
   }
 
-  void _handleContinue(BuildContext context) {
+  void _handleContinue(BuildContext context) async {
     HapticFeedback.mediumImpact();
 
     final authService = ref.read(authServiceProvider);
     final hasAccount = authService.currentUser != null;
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) =>
-            hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage(),
-      ),
-    );
+    // TODO: Add actual purchase logic here when RevenueCat is fully activated
+    // When purchase is implemented, call:
+    // if (hasAccount) {
+    //   await OnboardingStateService().markPaymentComplete(authService.currentUser!.id);
+    //   await SubscriptionSyncService().syncSubscriptionToSupabase();
+    // }
+    // For anonymous users, payment will be tracked after account creation
+
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) =>
+              hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage(),
+        ),
+      );
+    }
   }
 
   Future<void> _handleRestore(BuildContext context, WidgetRef ref) async {
@@ -311,6 +353,23 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
       if (success) {
         HapticFeedback.mediumImpact();
 
+        final authService = ref.read(authServiceProvider);
+        final hasAccount = authService.currentUser != null;
+
+        // Sync restored subscription to Supabase
+        if (hasAccount) {
+          final user = authService.currentUser;
+          if (user != null) {
+            try {
+              await SubscriptionSyncService().syncSubscriptionToSupabase();
+              await OnboardingStateService().markPaymentComplete(user.id);
+              debugPrint('[OnboardingPaywall] Subscription restored and synced for user ${user.id}');
+            } catch (e) {
+              debugPrint('[OnboardingPaywall] Error syncing restored subscription: $e');
+            }
+          }
+        }
+
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -322,9 +381,6 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
               behavior: SnackBarBehavior.floating,
             ),
           );
-
-          final authService = ref.read(authServiceProvider);
-          final hasAccount = authService.currentUser != null;
 
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(

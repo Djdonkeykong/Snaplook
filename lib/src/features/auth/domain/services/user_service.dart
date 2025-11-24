@@ -40,7 +40,6 @@ class UserService {
   Future<void> updateUser({
     String? fullName,
     String? avatarUrl,
-    String? gender,
     bool? notificationEnabled,
   }) async {
     try {
@@ -53,7 +52,6 @@ class UserService {
 
       if (fullName != null) updates['full_name'] = fullName;
       if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
-      if (gender != null) updates['gender'] = gender;
       if (notificationEnabled != null) updates['notification_enabled'] = notificationEnabled;
 
       await _supabase
@@ -62,42 +60,6 @@ class UserService {
           .eq('id', authUser.id);
     } catch (e) {
       print('Error updating user: $e');
-      rethrow;
-    }
-  }
-
-  /// Save onboarding preferences for a new user
-  Future<void> saveOnboardingPreferences({
-    required String gender,
-    required bool notificationEnabled,
-  }) async {
-    try {
-      final authUser = _supabase.auth.currentUser;
-      if (authUser == null) throw Exception('No authenticated user');
-
-      // Minimal save: upsert gender/notification and timestamps.
-      await _supabase.from('users').upsert({
-        'id': authUser.id,
-        'email': authUser.email,
-        'gender': gender,
-        'notification_enabled': notificationEnabled,
-        'updated_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'id');
-
-      // Verify the save by reading back
-      final verification = await _supabase
-          .from('users')
-          .select('gender, notification_enabled')
-          .eq('id', authUser.id)
-          .single();
-
-      print('[UserService] VERIFICATION: Database shows gender=${verification['gender']}, notification_enabled=${verification['notification_enabled']}');
-
-      if (verification['gender'] != gender) {
-        throw Exception('Gender verification failed! Expected: $gender, Got: ${verification['gender']}');
-      }
-    } catch (e) {
-      print('[UserService] Error saving onboarding preferences: $e');
       rethrow;
     }
   }

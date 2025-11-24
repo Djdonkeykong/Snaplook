@@ -1,0 +1,265 @@
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'revenue_cat_service.dart';
+import 'fraud_prevention_service.dart';
+
+/// States of the onboarding process
+enum OnboardingState {
+  notStarted('not_started'),
+  inProgress('in_progress'),
+  paymentComplete('payment_complete'),
+  completed('completed');
+
+  final String value;
+  const OnboardingState(this.value);
+
+  static OnboardingState fromString(String value) {
+    return OnboardingState.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => OnboardingState.notStarted,
+    );
+  }
+}
+
+/// Checkpoints in the onboarding flow
+enum OnboardingCheckpoint {
+  gender('gender'),
+  discovery('discovery'),
+  tutorial('tutorial'),
+  paywall('paywall'),
+  account('account'),
+  welcome('welcome');
+
+  final String value;
+  const OnboardingCheckpoint(this.value);
+
+  static OnboardingCheckpoint? fromString(String? value) {
+    if (value == null) return null;
+    return OnboardingCheckpoint.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => OnboardingCheckpoint.gender,
+    );
+  }
+}
+
+/// Service for managing onboarding state
+class OnboardingStateService {
+  static final OnboardingStateService _instance = OnboardingStateService._internal();
+  factory OnboardingStateService() => _instance;
+  OnboardingStateService._internal();
+
+  final _supabase = Supabase.instance.client;
+  final _revenueCat = RevenueCatService();
+
+  /// Start onboarding process
+  Future<void> startOnboarding(String userId) async {
+    try {
+      await _supabase.from('users').update({
+        'onboarding_state': OnboardingState.inProgress.value,
+        'onboarding_started_at': DateTime.now().toIso8601String(),
+        'onboarding_checkpoint': OnboardingCheckpoint.gender.value,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+
+      debugPrint('[OnboardingState] Started onboarding for user $userId');
+    } catch (e) {
+      debugPrint('[OnboardingState] Error starting onboarding: $e');
+      rethrow;
+    }
+  }
+
+  /// Update onboarding checkpoint
+  Future<void> updateCheckpoint(String userId, OnboardingCheckpoint checkpoint) async {
+    try {
+      await _supabase.from('users').update({
+        'onboarding_checkpoint': checkpoint.value,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+
+      debugPrint('[OnboardingState] Updated checkpoint to ${checkpoint.value} for user $userId');
+    } catch (e) {
+      debugPrint('[OnboardingState] Error updating checkpoint: $e');
+    }
+  }
+
+  /// Mark payment as complete during onboarding
+  Future<void> markPaymentComplete(String userId) async {
+    try {
+      await _supabase.from('users').update({
+        'onboarding_state': OnboardingState.paymentComplete.value,
+        'payment_completed_at': DateTime.now().toIso8601String(),
+        'onboarding_checkpoint': OnboardingCheckpoint.account.value,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+
+      // Record trial start if applicable
+      final isInTrial = await _revenueCat.isInTrialPeriod();
+      if (isInTrial) {
+        await FraudPreventionService.recordTrialStart(userId);
+      }
+
+      debugPrint('[OnboardingState] Marked payment complete for user $userId');
+    } catch (e) {
+      debugPrint('[OnboardingState] Error marking payment complete: $e');
+      rethrow;
+    }
+  }
+
+  /// Mark onboarding as complete
+  Future<void> completeOnboarding(String userId) async {
+    try {
+      await _supabase.from('users').update({
+        'onboarding_state': OnboardingState.completed.value,
+        'onboarding_completed_at': DateTime.now().toIso8601String(),
+        'onboarding_checkpoint': OnboardingCheckpoint.welcome.value,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+
+      debugPrint('[OnboardingState] Completed onboarding for user $userId');
+    } catch (e) {
+      debugPrint('[OnboardingState] Error completing onboarding: $e');
+      rethrow;
+    }
+  }
+
+  /// Reset onboarding to start (used when user abandons and restarts)
+  Future<void> resetOnboarding(String userId) async {
+    try {
+      await _supabase.from('users').update({
+        'onboarding_state': OnboardingState.notStarted.value,
+        'onboarding_checkpoint': null,
+        'onboarding_started_at': null,
+        'payment_completed_at': null,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+
+      debugPrint('[OnboardingState] Reset onboarding for user $userId');
+    } catch (e) {
+      debugPrint('[OnboardingState] Error resetting onboarding: $e');
+    }
+  }
+
+  /// Save user preferences during onboarding
+  Future<void> saveUserPreferences({
+    required String userId,
+    String? preferredGenderFilter,
+    bool? notificationEnabled,
+  }) async {
+    try {
+      final updates = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      if (preferredGenderFilter != null) updates['preferred_gender_filter'] = preferredGenderFilter;
+      if (notificationEnabled != null) updates['notification_enabled'] = notificationEnabled;
+
+      await _supabase.from('users').update(updates).eq('id', userId);
+
+      debugPrint('[OnboardingState] Saved preferences for user $userId: $updates');
+    } catch (e) {
+      debugPrint('[OnboardingState] Error saving preferences: $e');
+    }
+  }
+
+  /// Get current onboarding state for a user
+  Future<Map<String, dynamic>?> getOnboardingState(String userId) async {
+    try {
+      final response = await _supabase
+          .from('users')
+          .select('onboarding_state, onboarding_checkpoint, '
+              'payment_completed_at, subscription_status, is_trial, '
+              'onboarding_started_at, preferred_gender_filter')
+          .eq('id', userId)
+          .maybeSingle();
+
+      return response;
+    } catch (e) {
+      debugPrint('[OnboardingState] Error getting onboarding state: $e');
+      return null;
+    }
+  }
+
+  /// Determine where user should be routed based on onboarding state
+  /// Returns the route name or null if home screen
+  Future<String?> determineOnboardingRoute(String userId) async {
+    try {
+      final state = await getOnboardingState(userId);
+      if (state == null) return 'gender';
+
+      final onboardingState = OnboardingState.fromString(state['onboarding_state'] ?? 'not_started');
+      final subscriptionStatus = state['subscription_status'] ?? 'free';
+      final isTrial = state['is_trial'] == true;
+
+      // Check if user has completed onboarding
+      if (onboardingState == OnboardingState.completed) {
+        // Check if subscription is active or in trial
+        if (subscriptionStatus == 'active' || isTrial) {
+          return null; // Go to home screen
+        } else {
+          // Subscription expired - show paywall
+          return 'resubscribe_paywall';
+        }
+      }
+
+      // Check if payment completed but onboarding not finished
+      if (onboardingState == OnboardingState.paymentComplete) {
+        final checkpoint = OnboardingCheckpoint.fromString(state['onboarding_checkpoint']);
+
+        // If payment complete but no account created, go to welcome
+        // (account creation would have happened at payment)
+        return 'welcome';
+      }
+
+      // Check if onboarding in progress
+      if (onboardingState == OnboardingState.inProgress) {
+        // Reset onboarding on app restart if not paid
+        // User must start from beginning
+        await resetOnboarding(userId);
+        return 'gender';
+      }
+
+      // Onboarding not started
+      return 'gender';
+    } catch (e) {
+      debugPrint('[OnboardingState] Error determining route: $e');
+      return 'gender'; // Default to start of onboarding
+    }
+  }
+
+  /// Check if user can access home screen
+  Future<bool> canAccessHome(String userId) async {
+    try {
+      final state = await getOnboardingState(userId);
+      if (state == null) return false;
+
+      final onboardingState = OnboardingState.fromString(state['onboarding_state'] ?? 'not_started');
+      final subscriptionStatus = state['subscription_status'] ?? 'free';
+      final isTrial = state['is_trial'] == true;
+
+      // User must complete onboarding AND have active subscription or trial
+      return onboardingState == OnboardingState.completed && (subscriptionStatus == 'active' || isTrial);
+    } catch (e) {
+      debugPrint('[OnboardingState] Error checking home access: $e');
+      return false;
+    }
+  }
+
+  /// Update device fingerprint for user
+  Future<void> updateDeviceFingerprint(String userId) async {
+    try {
+      await FraudPreventionService.updateUserDeviceFingerprint(userId);
+    } catch (e) {
+      debugPrint('[OnboardingState] Error updating device fingerprint: $e');
+    }
+  }
+
+  /// Check if user is eligible for trial
+  Future<bool> isEligibleForTrial() async {
+    try {
+      return await FraudPreventionService.isDeviceEligibleForTrial();
+    } catch (e) {
+      debugPrint('[OnboardingState] Error checking trial eligibility: $e');
+      return true; // Default to eligible if check fails
+    }
+  }
+}

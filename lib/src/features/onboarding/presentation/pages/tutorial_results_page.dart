@@ -9,13 +9,13 @@ import 'package:flutter_confetti/flutter_confetti.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../domain/services/tutorial_service.dart';
-import 'rating_social_proof_page.dart';
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
+import 'tutorial_next_steps_page.dart';
 
 class TutorialResultsPage extends ConsumerStatefulWidget {
   final String? imagePath;
@@ -44,6 +44,9 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
   final TutorialService _tutorialService = TutorialService();
   final PanelController _panelController = PanelController();
   double _panelOverlayOpacity = 0.15;
+  double _congratsOpacity = 1.0;
+  bool _isHidingCongratulations = false;
+  Duration _congratsFadeDuration = const Duration(milliseconds: 250);
 
   @override
   void initState() {
@@ -63,9 +66,7 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
 
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
-        setState(() {
-          _showCongratulations = false;
-        });
+        _fadeOutCongratulations();
       }
     });
   }
@@ -130,17 +131,13 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
           _TopIconButton(
             icon: Icons.check,
             onPressed: () {
-              if (widget.returnToOnboarding) {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (context) => const RatingSocialProofPage(
-                      continueToTrialFlow: true,
-                    ),
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => TutorialNextStepsPage(
+                    returnToOnboarding: widget.returnToOnboarding,
                   ),
-                );
-              } else {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              }
+                ),
+              );
             },
           ),
         ],
@@ -387,6 +384,17 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
     }
   }
 
+  void _fadeOutCongratulations({bool fast = false}) {
+    if (!_showCongratulations || _isHidingCongratulations) return;
+    _isHidingCongratulations = true;
+
+    setState(() {
+      _congratsFadeDuration =
+          fast ? const Duration(milliseconds: 150) : const Duration(milliseconds: 250);
+      _congratsOpacity = 0.0;
+    });
+  }
+
   void _launchConfetti() {
     // Launch multiple confetti bursts for better effect
     Confetti.launch(
@@ -452,31 +460,49 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
 
   Widget _buildCongratulationsOverlay() {
     return Positioned.fill(
-      child: Container(
-        color: Colors.black.withOpacity(0.8),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Congratulations!',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  fontFamily: 'PlusJakartaSans',
-                ),
+      child: AnimatedOpacity(
+        opacity: _congratsOpacity,
+        duration: _congratsFadeDuration,
+        onEnd: () {
+          if (_isHidingCongratulations &&
+              _congratsOpacity == 0.0 &&
+              mounted &&
+              _showCongratulations) {
+            setState(() {
+              _showCongratulations = false;
+            });
+          }
+        },
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _fadeOutCongratulations(fast: true),
+          child: Container(
+            color: Colors.black.withOpacity(0.8),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Congratulations!',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '${widget.scenario} insights unlocked.',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white70,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              Text(
-                '${widget.scenario} insights unlocked.',
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.white70,
-                  fontFamily: 'PlusJakartaSans',
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

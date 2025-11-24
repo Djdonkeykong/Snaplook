@@ -536,7 +536,7 @@ class _FloatingActionBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _FloatingActionButtonSvg(
-              svgIcon: 'assets/icons/camera_filled.svg',
+              svgIcon: 'assets/icons/solar--camera-square-bold-new.svg',
               label: 'Snap',
               onTap: onSnapTap,
             ),

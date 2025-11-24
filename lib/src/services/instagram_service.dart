@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
+import 'package:image/image.dart' as img;
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:image_picker/image_picker.dart';
@@ -275,7 +278,10 @@ class InstagramService {
   static Future<XFile?> downloadExternalImage(String imageUrl) =>
       _downloadImage(imageUrl);
 
-  static Future<XFile?> _downloadImage(String imageUrl) async {
+  static Future<XFile?> _downloadImage(
+    String imageUrl, {
+    double? cropToAspectRatio,
+  }) async {
     try {
       print('Downloading image from: $imageUrl');
 
@@ -303,13 +309,59 @@ class InstagramService {
         'Image downloaded successfully, size: ${imageResponse.bodyBytes.length} bytes',
       );
 
+      // Optionally crop to a target aspect ratio (e.g., 9:16 for Shorts thumbnails)
+      Uint8List imageBytes = Uint8List.fromList(imageResponse.bodyBytes);
+      if (cropToAspectRatio != null) {
+        final decoded = img.decodeImage(imageBytes);
+        if (decoded != null && decoded.width > 0 && decoded.height > 0) {
+          final currentAspect = decoded.width / decoded.height;
+          if ((currentAspect - cropToAspectRatio).abs() > 0.01) {
+            // Too wide: crop width; too tall: crop height.
+            int cropWidth = decoded.width;
+            int cropHeight = decoded.height;
+            int offsetX = 0;
+            int offsetY = 0;
+
+            if (currentAspect > cropToAspectRatio) {
+              cropWidth = (decoded.height * cropToAspectRatio).round();
+              offsetX = ((decoded.width - cropWidth) / 2)
+                  .round()
+                  .clamp(0, decoded.width - cropWidth)
+                  .toInt();
+            } else {
+              cropHeight = (decoded.width / cropToAspectRatio).round();
+              offsetY = ((decoded.height - cropHeight) / 2)
+                  .round()
+                  .clamp(0, decoded.height - cropHeight)
+                  .toInt();
+            }
+
+            final cropped = img.copyCrop(
+              decoded,
+              x: offsetX,
+              y: offsetY,
+              width: cropWidth,
+              height: cropHeight,
+            );
+            imageBytes = Uint8List.fromList(
+              img.encodeJpg(cropped, quality: 90),
+            );
+            print(
+              'Cropped image to aspect ${cropToAspectRatio.toStringAsFixed(2)} -> ${cropWidth}x$cropHeight',
+            );
+          }
+        } else {
+          print('Skipping crop: unable to decode image');
+        }
+      }
+
       // Save image to temporary file
       final tempDir = Directory.systemTemp;
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = 'instagram_image_$timestamp.jpg';
       final file = File('${tempDir.path}/$fileName');
 
-      await file.writeAsBytes(imageResponse.bodyBytes);
+      await file.writeAsBytes(imageBytes);
       print('Image saved to: ${file.path}');
 
       return XFile(file.path);
@@ -392,6 +444,21 @@ class InstagramService {
   static Future<List<XFile>> downloadImageFromTikTokUrl(
     String tiktokUrl,
   ) async {
+    // Free path: TikTok oEmbed exposes a direct thumbnail without credits.
+    final oembedThumb = await _fetchTikTokOembedThumbnail(tiktokUrl);
+    if (oembedThumb != null) {
+      final oembedImage = await _downloadImage(
+        oembedThumb,
+        cropToAspectRatio: 9 / 16,
+      );
+      if (oembedImage != null) {
+        print('Successfully downloaded TikTok thumbnail via oEmbed');
+        return [oembedImage];
+      } else {
+        print('TikTok oEmbed thumbnail download failed, falling back to ScrapingBee');
+      }
+    }
+
     try {
       print('Fetching TikTok post using ScrapingBee API: $tiktokUrl');
 
@@ -417,6 +484,69 @@ class InstagramService {
       print('Error downloading TikTok images: $e');
       return [];
     }
+  }
+
+  static Future<String?> _fetchTikTokOembedThumbnail(String tiktokUrl) async {
+    try {
+      final resolvedUrl = await _resolveTikTokRedirect(tiktokUrl) ?? tiktokUrl;
+
+      final oembedUri = Uri.https(
+        'www.tiktok.com',
+        '/oembed',
+        {'url': resolvedUrl},
+      );
+      final response = await http
+          .get(
+            oembedUri,
+            headers: {
+              'User-Agent': _userAgent,
+            },
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode != 200) {
+        print('TikTok oEmbed request failed with ${response.statusCode}');
+        return null;
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        final thumb = (decoded['thumbnail_url'] ??
+                decoded['thumbnailUrl'] ??
+                decoded['thumbnailURL'])
+            as String?;
+        if (thumb != null && thumb.isNotEmpty) {
+          final sanitized = _sanitizeTikTokUrl(thumb);
+          print('TikTok oEmbed thumbnail: ${_previewUrl(sanitized)}');
+          return sanitized;
+        }
+      }
+    } on TimeoutException {
+      print('TikTok oEmbed request timed out');
+    } catch (e) {
+      print('TikTok oEmbed error: $e');
+    }
+    return null;
+  }
+
+  static Future<String?> _resolveTikTokRedirect(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      final request = http.Request('GET', uri);
+      request.followRedirects = true;
+      request.maxRedirects = 5;
+      final client = http.Client();
+      final response = await client.send(request).timeout(const Duration(seconds: 8));
+      client.close();
+      final finalUrl = response.request?.url.toString();
+      if (finalUrl != null && finalUrl.isNotEmpty && finalUrl != url) {
+        print('Resolved TikTok URL redirect: ${_previewUrl(finalUrl)}');
+        return finalUrl;
+      }
+    } catch (e) {
+      print('TikTok redirect resolution failed: $e');
+    }
+    return null;
   }
 
   /// ScrapingBee TikTok scraper with priority-based image extraction
@@ -834,6 +964,7 @@ class InstagramService {
   static Future<List<XFile>> downloadImageFromYouTubeUrl(
     String youtubeUrl,
   ) async {
+    final shouldCropToPortrait = _isYouTubeShortsUrl(youtubeUrl);
     final videoId = _extractYouTubeVideoId(youtubeUrl);
     if (videoId == null || videoId.isEmpty) {
       print('Unable to extract YouTube video ID from $youtubeUrl');
@@ -847,7 +978,10 @@ class InstagramService {
 
     for (final candidate in thumbnailCandidates) {
       print('Trying YouTube thumbnail candidate: ${_previewUrl(candidate)}');
-      final downloadedImage = await _downloadImage(candidate);
+      final downloadedImage = await _downloadImage(
+        candidate,
+        cropToAspectRatio: shouldCropToPortrait ? 9 / 16 : null,
+      );
       if (downloadedImage != null) {
         print(
             'Successfully downloaded YouTube thumbnail: ${_previewUrl(candidate)}');
@@ -892,6 +1026,11 @@ class InstagramService {
     candidates.add('https://i.ytimg.com/vi_webp/$videoId/hqdefault.webp');
 
     return candidates;
+  }
+
+  static bool _isYouTubeShortsUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('/shorts');
   }
 
   static String? _extractYouTubeVideoId(String url) {

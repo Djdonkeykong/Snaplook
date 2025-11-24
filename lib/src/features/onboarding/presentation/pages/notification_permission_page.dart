@@ -10,6 +10,7 @@ import 'account_creation_page.dart';
 import 'welcome_free_analysis_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import 'trial_intro_page.dart';
+import '../../../../services/onboarding_state_service.dart';
 
 // Provider to store notification permission choice
 final notificationPermissionGrantedProvider =
@@ -32,6 +33,30 @@ class _NotificationPermissionPageState
     extends ConsumerState<NotificationPermissionPage> {
   bool _isRequesting = false;
 
+  /// Save notification preference to database if user is authenticated
+  Future<void> _saveNotificationPreference(bool granted) async {
+    try {
+      final user = ref.read(authServiceProvider).currentUser;
+      if (user == null) {
+        debugPrint('[NotificationPermission] No authenticated user - preference will be saved later');
+        return;
+      }
+
+      debugPrint('[NotificationPermission] Saving notification preference: $granted');
+
+      // Save notification preference to database
+      await OnboardingStateService().saveUserPreferences(
+        userId: user.id,
+        notificationEnabled: granted,
+      );
+
+      debugPrint('[NotificationPermission] Notification preference saved successfully');
+    } catch (e) {
+      debugPrint('[NotificationPermission] Error saving notification preference: $e');
+      // Non-critical error - allow user to continue
+    }
+  }
+
   Future<void> _handleAllow() async {
     if (_isRequesting) return;
 
@@ -51,6 +76,9 @@ class _NotificationPermissionPageState
       // Store permission result in provider
       ref.read(notificationPermissionGrantedProvider.notifier).state = granted;
 
+      // Save preference to database if user is authenticated
+      await _saveNotificationPreference(granted);
+
       _navigateToNextStep();
     } catch (e) {
       print('[NotificationPermission] Error requesting permission: $e');
@@ -67,13 +95,16 @@ class _NotificationPermissionPageState
     }
   }
 
-  void _handleDontAllow() {
+  Future<void> _handleDontAllow() async {
     HapticFeedback.mediumImpact();
 
     print('[NotificationPermission] User declined permission');
 
     // Store that permission was denied
     ref.read(notificationPermissionGrantedProvider.notifier).state = false;
+
+    // Save preference to database if user is authenticated
+    await _saveNotificationPreference(false);
 
     _navigateToNextStep();
   }

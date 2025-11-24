@@ -218,11 +218,19 @@ class RevenueCatService {
   }
 
   /// Set user ID (for identifying users across devices)
+  /// IMPORTANT: Always syncs purchases after login to prevent access loss
   Future<void> setUserId(String userId) async {
     try {
       await Purchases.logIn(userId);
+
+      // CRITICAL: Sync purchases immediately after login
+      // This re-grants any purchases made while logged out/anonymous
+      // Prevents subscription loss due to timing issues with store servers
+      await Purchases.syncPurchases();
+
       _currentCustomerInfo = await Purchases.getCustomerInfo();
       debugPrint('User ID set: $userId');
+      debugPrint('Active entitlements: ${_currentCustomerInfo?.entitlements.active.keys}');
     } catch (e) {
       debugPrint('Error setting user ID: $e');
       rethrow;

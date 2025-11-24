@@ -10,6 +10,7 @@ import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import 'gender_selection_page.dart';
 import 'notification_permission_page.dart';
+import '../../../../services/onboarding_state_service.dart';
 
 class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
   const WelcomeFreeAnalysisPage({super.key});
@@ -67,34 +68,19 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
         return;
       }
 
-      // Save onboarding preferences FIRST
-      final selectedGender = ref.read(selectedGenderProvider);
-      final notificationGranted = ref.read(notificationPermissionGrantedProvider) ?? false;
+      // Note: Preferences are already saved in previous onboarding steps:
+      // - Gender/preferred_gender_filter saved in gender_selection_page.dart
+      // - Notification preference saved in notification_permission_page.dart
+      print('[WelcomePage] Preferences already saved in previous steps');
 
-      print('[WelcomePage] Selected gender from provider: ${selectedGender?.name}');
-      print('[WelcomePage] Notification granted from provider: $notificationGranted');
-
-      if (selectedGender == null) {
-        print('[WelcomePage] ERROR: selectedGender is NULL! Cannot save preferences!');
-        print('[WelcomePage] This should not happen - user should have selected gender');
-        // Don't fail completely, but mark as initialized
-        if (mounted) setState(() => _isInitialized = true);
-        return;
-      }
-
-      print('[WelcomePage] Saving onboarding preferences...');
-      final userService = ref.read(userServiceProvider);
-
+      // Mark onboarding as completed
+      print('[WelcomePage] Marking onboarding as completed...');
       try {
-        await userService.saveOnboardingPreferences(
-          gender: selectedGender.name,
-          notificationEnabled: notificationGranted,
-        );
-        print('[WelcomePage] SUCCESS: Saved gender=${selectedGender.name}, notifications=$notificationGranted');
-      } catch (saveError) {
-        print('[WelcomePage] ERROR saving preferences: $saveError');
-        print('[WelcomePage] Stack trace: ${StackTrace.current}');
-        rethrow;
+        await OnboardingStateService().completeOnboarding(userId);
+        print('[WelcomePage] SUCCESS: Onboarding marked as completed');
+      } catch (completeError) {
+        print('[WelcomePage] ERROR completing onboarding: $completeError');
+        // Non-critical - allow user to continue
       }
 
       // Initialize credits (auto-initialized when first accessed)
