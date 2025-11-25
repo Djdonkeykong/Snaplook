@@ -5836,8 +5836,33 @@ open class RSIShareViewController: SLComposeServiceViewController {
         } else if let imageData = pendingImageData {
             shareLog("Showing preview for direct image with \(imageData.count) bytes")
 
-            // Show preview instead of immediately analyzing
-            showImagePreview(imageData: imageData)
+            // Start UI setup for direct image shares
+            updateProcessingStatus("processing")
+            setupLoadingUI()
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+
+                // Start smooth progress animation
+                self.stopStatusPolling()
+                self.startSmoothProgress()
+                self.targetProgress = 0.2
+                self.updateProgress(0.2, status: "Loading image...")
+
+                // Smoothly progress to completion
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                    self?.targetProgress = 0.6
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+                    self?.targetProgress = 0.95
+                    self?.updateProgress(0.95, status: "Loading preview...")
+                }
+
+                // Show preview after progress completes
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
+                    self?.showImagePreview(imageData: imageData)
+                }
+            }
         } else if !sharedMedia.isEmpty {
             // Fallback: For non-social-media URLs, we can't analyze directly
             // Just redirect to the app with the URL
