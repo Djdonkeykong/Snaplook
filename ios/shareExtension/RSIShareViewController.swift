@@ -6195,8 +6195,8 @@ extension RSIShareViewController: TOCropViewControllerDelegate {
         }
 
         // Dismiss crop view controller
-        cropViewController.dismiss(animated: true) { [weak self] in
-            self?.shareLog("Crop view controller dismissed")
+        cropViewController.dismiss(animated: true) {
+            shareLog("Crop view controller dismissed")
         }
     }
 
