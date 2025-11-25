@@ -140,20 +140,36 @@ class _HomePageState extends ConsumerState<HomePage> {
     ref.read(pendingSharedImageProvider.notifier).state = null;
     ref.read(pendingShareSourceUrlProvider.notifier).state = null;
 
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (context) {
-          print('[HOME PAGE] DetectionPage builder called for shared image');
-          return DetectionPage(
-            searchType: 'share',
-            sourceUrl: sourceUrl,
-          );
-        },
-      ),
-    ).whenComplete(() {
-      print('[HOME PAGE] Returned from DetectionPage (shared image)');
-      _isProcessingPendingNavigation = false;
-    });
+    () async {
+      try {
+        // Ensure the shared image is available to DetectionPage immediately.
+        ref.read(selectedImagesProvider.notifier).setImage(image);
+
+        // Pre-cache the image to avoid any white/black flash during navigation.
+        final fileImage = FileImage(File(image.path));
+        await precacheImage(fileImage, context).catchError((_) {});
+
+        if (!mounted) return;
+
+        await Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute(
+            builder: (context) {
+              print('[HOME PAGE] DetectionPage builder called for shared image');
+              return DetectionPage(
+                searchType: 'share',
+                sourceUrl: sourceUrl,
+              );
+            },
+          ),
+        );
+
+        print('[HOME PAGE] Returned from DetectionPage (shared image)');
+      } catch (e) {
+        print('[HOME PAGE] Error handling pending shared image: $e');
+      } finally {
+        _isProcessingPendingNavigation = false;
+      }
+    }();
   }
 
   @override
