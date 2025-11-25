@@ -5679,8 +5679,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         self.targetProgress = 0.95
                         self.updateProgress(0.95, status: "Opening Snaplook...")
 
-                        // Small delay to show the completion, then redirect
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        // Delay to allow progress bar to complete before redirecting
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            // Stop smooth progress to lock at 95%
+                            self.stopSmoothProgress()
                             self.saveAndRedirect(message: self.pendingInstagramUrl)
                         }
                     }
@@ -5700,6 +5702,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
                   let fileURL = URL(string: sharedFile.path) {
             shareLog("Saving direct image to app")
 
+            // Start UI setup for direct image shares
+            updateProcessingStatus("processing")
+            setupLoadingUI()
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+
+                // Start smooth progress animation
+                self.stopStatusPolling()
+                self.startSmoothProgress()
+                self.targetProgress = 0.5
+                self.updateProgress(0.2, status: "Preparing image...")
+
+                // Progress to completion
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.targetProgress = 0.95
+                    self?.updateProgress(0.95, status: "Opening Snaplook...")
+                }
+            }
+
             do {
                 // Write the file to shared container
                 if FileManager.default.fileExists(atPath: fileURL.path) {
@@ -5711,17 +5733,48 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // Add to shared media array
                 sharedMedia.append(sharedFile)
 
-                // Open app with the saved file (no detection)
-                saveAndRedirect(message: pendingImageUrl)
+                // Delay to allow progress bar to complete before redirecting
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    guard let self = self else { return }
+                    // Stop smooth progress to lock at 95%
+                    self.stopSmoothProgress()
+                    self.saveAndRedirect(message: self.pendingImageUrl)
+                }
 
             } catch {
                 shareLog("ERROR: Failed to save image - \(error.localizedDescription)")
             }
         } else if !sharedMedia.isEmpty {
             // Fallback: We have media in sharedMedia (e.g., from a non-social-media URL)
-            // Just proceed with the redirect
             shareLog("Using already-processed media from sharedMedia array")
-            saveAndRedirect(message: nil)
+
+            // Start UI setup
+            updateProcessingStatus("processing")
+            setupLoadingUI()
+
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+
+                // Start smooth progress animation
+                self.stopStatusPolling()
+                self.startSmoothProgress()
+                self.targetProgress = 0.5
+                self.updateProgress(0.2, status: "Preparing...")
+
+                // Progress to completion
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.targetProgress = 0.95
+                    self?.updateProgress(0.95, status: "Opening Snaplook...")
+                }
+
+                // Delay to allow progress bar to complete before redirecting
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    guard let self = self else { return }
+                    // Stop smooth progress to lock at 95%
+                    self.stopSmoothProgress()
+                    self.saveAndRedirect(message: nil)
+                }
+            }
         } else {
             shareLog("ERROR: No pending URL, image data, or shared media")
         }
@@ -5797,6 +5850,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                                 // Delay to allow progress bar to complete before showing preview
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                    // Stop smooth progress to lock at 95%
+                                    self.stopSmoothProgress()
                                     self.showImagePreview(imageData: imageData)
                                 }
                             } else {
@@ -5863,6 +5918,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 // Show preview after progress completes (2 second total delay)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                    // Stop smooth progress to lock at 95%
+                    self?.stopSmoothProgress()
                     self?.showImagePreview(imageData: imageData)
                 }
             }
