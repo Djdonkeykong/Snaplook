@@ -5023,6 +5023,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         doneButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Medium", size: 17)
             ?? .systemFont(ofSize: 17, weight: .medium)
         doneButton.translatesAutoresizingMaskIntoConstraints = false
+        doneButton.alpha = 0
         doneButton.tag = 9999
 
         // Create custom Cancel button
@@ -5032,6 +5033,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cancelButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Medium", size: 17)
             ?? .systemFont(ofSize: 17, weight: .medium)
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
+        cancelButton.alpha = 0
         cancelButton.tag = 9998
 
         // Add buttons to crop view controller's view
@@ -5052,6 +5054,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Connect actions
         doneButton.addTarget(self, action: #selector(customCropDoneTapped(_:)), for: .touchUpInside)
         cancelButton.addTarget(self, action: #selector(customCropCancelTapped(_:)), for: .touchUpInside)
+
+        // Fade in custom buttons and toolbar buttons
+        UIView.animate(withDuration: 0.3, delay: 0.1, options: .curveEaseOut, animations: {
+            doneButton.alpha = 1.0
+            cancelButton.alpha = 1.0
+            // Fade in the other toolbar buttons (flip, rotate, aspect ratio)
+            cropViewController.toolbar.subviews.forEach { subview in
+                if subview != cropViewController.toolbar.doneTextButton &&
+                   subview != cropViewController.toolbar.cancelTextButton {
+                    subview.alpha = 1.0
+                }
+            }
+        }, completion: nil)
     }
 
     @objc private func customCropDoneTapped(_ sender: UIButton) {
@@ -5101,9 +5116,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cropViewController.rotateClockwiseButtonHidden = true
         cropViewController.toolbar.clampButtonHidden = true
 
-        // Hide default toolbar buttons immediately to prevent flash
+        // Hide all toolbar buttons initially to prevent flash - they will fade in
         cropViewController.toolbar.doneTextButton.alpha = 0
         cropViewController.toolbar.cancelTextButton.alpha = 0
+        cropViewController.toolbar.subviews.forEach { $0.alpha = 0 }
 
         // Set toolbar buttons tint to white for better visibility
         cropViewController.toolbar.tintColor = .white
