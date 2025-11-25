@@ -18,6 +18,14 @@ class LinkScraperService {
     final resolvedUrl = await _resolveFinalUrl(url) ?? url;
     print('[LINK SCRAPER] Resolved shared URL -> $resolvedUrl');
 
+    // Direct image URL: download immediately (no credits)
+    if (_looksLikeImageUrl(resolvedUrl)) {
+      final file = await InstagramService.downloadExternalImage(resolvedUrl);
+      if (file != null) {
+        return [file];
+      }
+    }
+
     // Lightweight HTML fetch to grab og:image/twitter:image/first img (no credits).
     final directImages = await _fetchImagesDirect(resolvedUrl);
     if (directImages.isNotEmpty) {
@@ -124,6 +132,18 @@ class LinkScraperService {
     } catch (_) {
       return null;
     }
+  }
+
+  static bool _looksLikeImageUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp') ||
+        lower.contains('.jpg?') ||
+        lower.contains('.jpeg?') ||
+        lower.contains('.png?') ||
+        lower.contains('.webp?');
   }
 
   static Future<List<XFile>> _fetchImagesDirect(String url) async {

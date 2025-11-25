@@ -2283,6 +2283,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
+        // Direct image URL: return immediately
+        if looksLikeImageUrl(urlString) {
+            completion([urlString])
+            return
+        }
+
         guard let url = URL(string: urlString) else {
             completion([])
             return
@@ -2363,6 +2369,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         return results
+    }
+
+    private func looksLikeImageUrl(_ urlString: String) -> Bool {
+        let lower = urlString.lowercased()
+        return lower.hasSuffix(".jpg") ||
+            lower.hasSuffix(".jpeg") ||
+            lower.hasSuffix(".png") ||
+            lower.hasSuffix(".webp") ||
+            lower.contains(".jpg?") ||
+            lower.contains(".jpeg?") ||
+            lower.contains(".png?") ||
+            lower.contains(".webp?")
     }
 
     private func extractGoogleImgUrl(from urlString: String) -> String? {
