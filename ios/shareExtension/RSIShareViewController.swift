@@ -6171,7 +6171,7 @@ class ResultCell: UITableViewCell {
 }
 
 extension RSIShareViewController: TOCropViewControllerDelegate {
-    func cropViewController(_ cropViewController: TOCropViewController, didCropTo image: UIImage, with cropRect: CGRect, angle: Int) {
+    public func cropViewController(_ cropViewController: TOCropViewController, didCropTo image: UIImage, with cropRect: CGRect, angle: Int) {
         shareLog("Image cropped successfully - size: \(image.size)")
 
         // Convert cropped image to JPEG data with high quality
@@ -6200,7 +6200,7 @@ extension RSIShareViewController: TOCropViewControllerDelegate {
         }
     }
 
-    func cropViewController(_ cropViewController: TOCropViewController, didFinishCancelled cancelled: Bool) {
+    public func cropViewController(_ cropViewController: TOCropViewController, didFinishCancelled cancelled: Bool) {
         shareLog("Crop cancelled by user")
         cropViewController.dismiss(animated: true, completion: nil)
     }
