@@ -5145,17 +5145,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
         DispatchQueue.main.async { [weak self] in
             self?.progressView?.setProgress(0.0, animated: false)
 
-            self?.progressTimer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] _ in
+            self?.progressTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
 
-                // Smoothly increment toward target
+                // Smoothly increment toward target (faster animation)
                 if self.currentProgress < self.targetProgress {
-                    let increment: Float = 0.008 // Smooth increments
+                    let increment: Float = 0.025 // Faster increments for quicker completion
                     self.currentProgress = min(self.currentProgress + increment, self.targetProgress)
                     self.progressView?.setProgress(self.currentProgress, animated: true)
                 } else if self.currentProgress < 0.95 {
                     // Slow automatic progress even when waiting (but never reach 100%)
-                    let slowIncrement: Float = 0.001
+                    let slowIncrement: Float = 0.002
                     self.currentProgress = min(self.currentProgress + slowIncrement, self.targetProgress + 0.05, 0.95)
                     self.progressView?.setProgress(self.currentProgress, animated: true)
                 }
@@ -5679,8 +5679,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         self.targetProgress = 0.95
                         self.updateProgress(0.95, status: "Opening Snaplook...")
 
-                        // Delay to allow progress bar to complete before redirecting
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        // Delay to allow faster progress bar to complete before redirecting
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                             // Stop smooth progress to lock at 95%
                             self.stopSmoothProgress()
                             self.saveAndRedirect(message: self.pendingInstagramUrl)
@@ -5716,7 +5716,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.updateProgress(0.2, status: "Preparing image...")
 
                 // Progress to completion
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
                     self?.targetProgress = 0.95
                     self?.updateProgress(0.95, status: "Opening Snaplook...")
                 }
@@ -5733,8 +5733,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // Add to shared media array
                 sharedMedia.append(sharedFile)
 
-                // Delay to allow progress bar to complete before redirecting
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                // Delay to allow faster progress bar to complete before redirecting
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
                     guard let self = self else { return }
                     // Stop smooth progress to lock at 95%
                     self.stopSmoothProgress()
@@ -5762,13 +5762,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.updateProgress(0.2, status: "Preparing...")
 
                 // Progress to completion
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
                     self?.targetProgress = 0.95
                     self?.updateProgress(0.95, status: "Opening Snaplook...")
                 }
 
-                // Delay to allow progress bar to complete before redirecting
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                // Delay to allow faster progress bar to complete before redirecting
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
                     guard let self = self else { return }
                     // Stop smooth progress to lock at 95%
                     self.stopSmoothProgress()
@@ -5848,8 +5848,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                                 self.targetProgress = 0.95
                                 self.updateProgress(0.95, status: "Loading preview...")
 
-                                // Delay to allow progress bar to complete before showing preview
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                // Delay to allow faster progress bar to complete before showing preview
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                                     // Stop smooth progress to lock at 95%
                                     self.stopSmoothProgress()
                                     self.showImagePreview(imageData: imageData)
@@ -5904,20 +5904,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.targetProgress = 0.2
                 self.updateProgress(0.2, status: "Loading image...")
 
-                // Smoothly progress to completion with longer delays
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                // Smoothly progress to completion with faster timing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
                     self?.targetProgress = 0.5
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
                     self?.targetProgress = 0.7
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                     self?.targetProgress = 0.95
                     self?.updateProgress(0.95, status: "Loading preview...")
                 }
 
-                // Show preview after progress completes (2 second total delay)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                // Show preview after faster progress completes
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                     // Stop smooth progress to lock at 95%
                     self?.stopSmoothProgress()
                     self?.showImagePreview(imageData: imageData)
