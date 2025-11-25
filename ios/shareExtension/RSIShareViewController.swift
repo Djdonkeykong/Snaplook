@@ -1642,24 +1642,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 return
             }
 
-            // Fallback to ScrapingBee if configured.
-            guard let apiKey = self.scrapingBeeApiKey(), !apiKey.isEmpty else {
-                shareLog("ScrapingBee API key missing - cannot download TikTok image")
-                shareLog("TikTok URL detected but ScrapingBee not configured. Please run the main app first to set up API keys.")
-                completion(.failure(self.makeTikTokError("ScrapingBee API key not configured. Please open the Snaplook app first.")))
-                return
+            // Fallback: fetch via Jina proxy and parse HTML.
+            self.fetchTikTokViaJina(urlString: urlString) { imageUrls in
+                guard !imageUrls.isEmpty else {
+                    completion(.failure(self.makeTikTokError("No TikTok thumbnail found")))
+                    return
+                }
+                self.downloadFirstValidImage(
+                    from: Array(imageUrls.prefix(5)),
+                    platform: "tiktok",
+                    session: URLSession.shared,
+                    cropToAspect: 9.0 / 16.0,
+                    completion: completion
+                )
             }
-
-            self.performTikTokScrape(
-                tiktokUrl: urlString,
-                apiKey: apiKey,
-                attempt: 0,
-                completion: completion
-            )
         }
     }
-
-    private let maxTikTokScrapeAttempts = 2
 
     private func fetchTikTokOEmbedThumbnail(
         urlString: String,
@@ -1737,169 +1735,49 @@ open class RSIShareViewController: SLComposeServiceViewController {
         task.resume()
     }
 
-    private func performTikTokScrape(
-        tiktokUrl: String,
-        apiKey: String,
-        attempt: Int,
-        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    private func fetchTikTokViaJina(
+        urlString: String,
+        completion: @escaping ([String]) -> Void
     ) {
-        guard attempt <= maxTikTokScrapeAttempts else {
-            completion(.failure(makeTikTokError("Exceeded TikTok scrape attempts")))
-            return
-        }
-
-        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
-            completion(.failure(makeTikTokError("Invalid ScrapingBee URL")))
-            return
-        }
-
-        components.queryItems = [
-            URLQueryItem(name: "api_key", value: apiKey),
-            URLQueryItem(name: "url", value: tiktokUrl),
-            URLQueryItem(name: "render_js", value: "true"),
-            // Give page longer to render to reduce bot walls
-            URLQueryItem(name: "wait", value: "6000"),
-            // Anti-bot hardening
-            URLQueryItem(name: "premium_proxy", value: "true"),
-            URLQueryItem(name: "country_code", value: "no")
-        ]
-
-        guard let requestURL = components.url else {
-            completion(.failure(makeTikTokError("Failed to build ScrapingBee request URL")))
-            return
-        }
-
-        shareLog("Fetching TikTok HTML via ScrapingBee (attempt \(attempt + 1)) for \(tiktokUrl)")
-
-        var request = URLRequest(url: requestURL)
-        request.timeoutInterval = 35.0
-        request.setValue(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-            forHTTPHeaderField: "User-Agent"
-        )
-
-        let session = URLSession(configuration: .ephemeral)
-        let task = session.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-
-            let deliver: (Result<[SharedMediaFile], Error>) -> Void = { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        completion(result)
-                    case .failure(let error):
-                        if attempt < self.maxTikTokScrapeAttempts {
-                            shareLog("WARNING: ScrapingBee TikTok attempt \(attempt + 1) failed (\(error.localizedDescription)) - retrying")
-                            self.performTikTokScrape(
-                                tiktokUrl: tiktokUrl,
-                                apiKey: apiKey,
-                                attempt: attempt + 1,
-                                completion: completion
-                            )
-                        } else {
-                            shareLog("ERROR: ScrapingBee TikTok failed after \(attempt + 1) attempts - \(error.localizedDescription)")
-                            completion(.failure(error))
-                        }
-                    }
-                }
+        resolveTikTokRedirect(urlString: urlString) { resolvedUrl in
+            let targetUrl = resolvedUrl ?? urlString
+            let rfc3986 = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=")
+            guard let encodedTarget = targetUrl.addingPercentEncoding(withAllowedCharacters: rfc3986) else {
+                completion([])
+                return
             }
-
-            if let error = error {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeTikTokError("Network error: \(error.localizedDescription)")))
+            let proxyString = "https://r.jina.ai/\(encodedTarget)"
+            guard let proxyUrl = URL(string: proxyString) else {
+                completion([])
                 return
             }
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeTikTokError("Invalid HTTP response")))
-                return
-            }
+            var request = URLRequest(url: proxyUrl)
+            request.timeoutInterval = 12.0
+            request.setValue(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+                forHTTPHeaderField: "User-Agent"
+            )
 
-            guard httpResponse.statusCode == 200 else {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeTikTokError("ScrapingBee returned status \(httpResponse.statusCode)", code: httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data,
-                  let html = String(data: data, encoding: .utf8) else {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeTikTokError("Unable to decode ScrapingBee response body")))
-                return
-            }
-
-            if self.isTikTokBlockedPage(html) {
-                session.invalidateAndCancel()
-                let snippet = html.prefix(120).replacingOccurrences(of: "\n", with: " ")
-                shareLog("TikTok page appears blocked by captcha/login wall (html snippet: \(snippet))")
-                deliver(.failure(self.makeTikTokError("TikTok blocked this request (captcha/login)")))
-                return
-            }
-
-            let imageUrls = self.extractTikTokImageUrls(from: html)
-            if imageUrls.isEmpty {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeTikTokError("No image URLs found in TikTok page")))
-                return
-            }
-
-            shareLog("Found \(imageUrls.count) TikTok image URL(s)")
-
-            // Download the first (best) image
-            guard let firstUrl = imageUrls.first, let url = URL(string: firstUrl) else {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeTikTokError("Invalid TikTok image URL")))
-                return
-            }
-
-            shareLog("Downloading TikTok thumbnail: \(firstUrl.prefix(80))...")
-
-            let downloadTask = URLSession.shared.dataTask(with: url) { [weak self] imgData, imgResponse, imgError in
-                session.invalidateAndCancel()
+            let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
                 guard let self = self else { return }
-
-                if let imgError = imgError {
-                    deliver(.failure(self.makeTikTokError("Failed to download image: \(imgError.localizedDescription)")))
+                guard error == nil,
+                      let httpResponse = response as? HTTPURLResponse,
+                      httpResponse.statusCode == 200,
+                      let data = data,
+                      let html = String(data: data, encoding: .utf8) else {
+                    completion([])
                     return
                 }
 
-                guard let imgData = imgData, !imgData.isEmpty else {
-                    deliver(.failure(self.makeTikTokError("Downloaded image data was empty")))
-                    return
-                }
-
-                // Save to shared container
-                guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: self.appGroupId) else {
-                    deliver(.failure(self.makeTikTokError("Cannot access shared container")))
-                    return
-                }
-
-                let timestamp = Int(Date().timeIntervalSince1970 * 1000)
-                let fileName = "tiktok_image_\(timestamp).jpg"
-                let fileURL = containerURL.appendingPathComponent(fileName)
-
-                do {
-                    if FileManager.default.fileExists(atPath: fileURL.path) {
-                        try FileManager.default.removeItem(at: fileURL)
-                    }
-                    try imgData.write(to: fileURL, options: .atomic)
-                    shareLog("Saved TikTok image to: \(fileURL.path)")
-
-                    let sharedFile = SharedMediaFile(
-                        path: fileURL.absoluteString,
-                        mimeType: "image/jpeg",
-                        type: .image
-                    )
-                    deliver(.success([sharedFile]))
-                } catch {
-                    deliver(.failure(self.makeTikTokError("Failed to save image: \(error.localizedDescription)")))
-                }
+                let imageUrls = self.extractTikTokImageUrls(from: html)
+                completion(imageUrls)
             }
-            downloadTask.resume()
+            task.resume()
         }
-        task.resume()
     }
+
+
 
     private func isTikTokBlockedPage(_ html: String) -> Bool {
         let lowered = html.lowercased()
@@ -2018,14 +1896,29 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
         }
 
-        // Pattern 4: Any tiktokcdn image URL in body as a last resort
-        let loosePattern = "https://[^\"]*tiktokcdn[^\"\\s>]+\\.(?:jpg|jpeg|png|webp)"
+        // Pattern 4: Any tiktokcdn image URL in body as a last resort (supports photo-mode without extension)
+        let loosePattern = "https://\\S*tiktokcdn\\S*"
         if let regex = try? NSRegularExpression(pattern: loosePattern, options: [.caseInsensitive]) {
             let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
             regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
                 guard let match = match,
                       match.numberOfRanges > 0,
                       let range = Range(match.range(at: 0), in: html) else { return }
+                let candidate = cleaned(String(html[range]))
+                if !isLowValue(candidate) {
+                    appendUnique(candidate, to: &fallbackResults)
+                }
+            }
+        }
+
+        // Pattern 5: Markdown image syntax ![](url) capturing tiktokcdn URLs specifically
+        let markdownImagePattern = "!\\[[^\\]]*\\]\\((https?://[^)]+tiktokcdn[^)]+)\\)"
+        if let regex = try? NSRegularExpression(pattern: markdownImagePattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
                 let candidate = cleaned(String(html[range]))
                 if !isLowValue(candidate) {
                     appendUnique(candidate, to: &fallbackResults)
@@ -6048,6 +5941,8 @@ extension URL {
         return nil
     }
 }
+
+
 
 
 

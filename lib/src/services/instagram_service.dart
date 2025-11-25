@@ -444,8 +444,10 @@ class InstagramService {
   static Future<List<XFile>> downloadImageFromTikTokUrl(
     String tiktokUrl,
   ) async {
+    final resolvedUrl = await _resolveTikTokRedirect(tiktokUrl) ?? tiktokUrl;
+
     // Free path: TikTok oEmbed exposes a direct thumbnail without credits.
-    final oembedThumb = await _fetchTikTokOembedThumbnail(tiktokUrl);
+    final oembedThumb = await _fetchTikTokOembedThumbnail(resolvedUrl);
     if (oembedThumb != null) {
       final oembedImage = await _downloadImage(
         oembedThumb,
@@ -459,31 +461,14 @@ class InstagramService {
       }
     }
 
-    try {
-      print('Fetching TikTok post using ScrapingBee API: $tiktokUrl');
-
-      final apiKey = AppConstants.scrapingBeeApiKey;
-      if (apiKey.isEmpty ||
-          apiKey.startsWith('your_') ||
-          apiKey.contains('***')) {
-        print('ScrapingBee API key not configured');
-        return [];
-      }
-
-      final result = await _scrapingBeeTikTokScraper(tiktokUrl);
-      if (result.isNotEmpty) {
-        print(
-          'Successfully extracted ${result.length} image(s) from TikTok using ScrapingBee!',
-        );
-        return result;
-      }
-
-      print('ScrapingBee failed to extract TikTok images');
-      return [];
-    } catch (e) {
-      print('Error downloading TikTok images: $e');
-      return [];
+    // Free fallback: fetch via Jina proxy and parse HTML.
+    final jinaImages = await _scrapeTikTokViaJina(resolvedUrl);
+    if (jinaImages.isNotEmpty) {
+      return jinaImages;
     }
+
+    print('No usable TikTok images extracted');
+    return [];
   }
 
   static Future<String?> _fetchTikTokOembedThumbnail(String tiktokUrl) async {
@@ -529,6 +514,33 @@ class InstagramService {
     return null;
   }
 
+  static Future<List<XFile>> _scrapeTikTokViaJina(String tiktokUrl) async {
+    try {
+      final proxyUri = Uri.parse('$_jinaProxyBase$tiktokUrl');
+      final response = await http.get(proxyUri, headers: {
+        'User-Agent': _userAgent,
+      }).timeout(const Duration(seconds: 12));
+
+      if (response.statusCode != 200) {
+        print('TikTok Jina fallback failed with status ${response.statusCode}');
+        return [];
+      }
+
+      print('TikTok Jina fallback response length: ${response.body.length} chars');
+      final images = await _extractImagesFromTikTokHtml(response.body);
+      if (images.isNotEmpty) {
+        print('TikTok Jina fallback succeeded using ${images.length} image(s)');
+      }
+      return images;
+    } on TimeoutException {
+      print('TikTok Jina fallback timed out');
+      return [];
+    } catch (e) {
+      print('TikTok Jina fallback error: $e');
+      return [];
+    }
+  }
+
   static Future<String?> _resolveTikTokRedirect(String url) async {
     try {
       final uri = Uri.parse(url);
@@ -547,56 +559,6 @@ class InstagramService {
       print('TikTok redirect resolution failed: $e');
     }
     return null;
-  }
-
-  /// ScrapingBee TikTok scraper with priority-based image extraction
-  static Future<List<XFile>> _scrapingBeeTikTokScraper(
-    String tiktokUrl,
-  ) async {
-    print('Attempting ScrapingBee TikTok scraper for URL: $tiktokUrl');
-
-    final uri = Uri.parse(_scrapingBeeApiUrl);
-
-    // Standard proxy with optimized wait for TikTok
-    final queryParams = {
-      'api_key': AppConstants.scrapingBeeApiKey,
-      'url': tiktokUrl,
-      'render_js': 'true',
-      'wait': '3000',
-    };
-
-    final requestUri = uri.replace(queryParameters: queryParams);
-    print('ScrapingBee TikTok request (wait=3000ms)');
-
-    http.Response response;
-    try {
-      response =
-          await http.get(requestUri).timeout(const Duration(seconds: 20));
-    } on TimeoutException {
-      print('ScrapingBee TikTok request timed out');
-      return [];
-    } catch (error) {
-      print('ScrapingBee TikTok request error: ${error.toString()}');
-      return [];
-    }
-
-    if (response.statusCode != 200) {
-      print('ScrapingBee TikTok failed with status ${response.statusCode}');
-      print('Response: ${response.body}');
-      return [];
-    }
-
-    final htmlContent = response.body;
-    print(
-        'ScrapingBee TikTok response received, HTML length: ${htmlContent.length} chars');
-
-    final images = await _extractImagesFromTikTokHtml(htmlContent);
-    if (images.isNotEmpty) {
-      return images;
-    }
-
-    print('No usable TikTok images extracted');
-    return [];
   }
 
   /// Extract images from TikTok HTML with priority-based selection
@@ -708,7 +670,7 @@ class InstagramService {
     if (htmlContent.contains('tiktokcdn')) {
       print('HTML contains "tiktokcdn" - checking for patterns');
       // Debug: show sample of how tiktokcdn appears in the HTML
-      final contextPattern = RegExp(r'.{0,30}tiktokcdn.{0,50}');
+      final contextPattern = RegExp(r'.{0,40}tiktokcdn.{0,80}');
       final contextMatches =
           contextPattern.allMatches(htmlContent).take(3).toList();
       for (final match in contextMatches) {
@@ -780,6 +742,60 @@ class InstagramService {
 
     print(
         'TikTok extraction results: ${priorityResults.length} priority, ${fallbackResults.length} fallback');
+
+    // Pattern 7: Jina markdown/plaintext tiktokcdn URLs (photomode, etc.)
+    // Pattern 7: Markdown/plaintext tiktokcdn URLs (photo mode, may lack file extension)
+    // Pattern 7: Markdown/plaintext tiktokcdn URLs (photo mode, may lack extension)
+    final markdownCdnPattern = RegExp(
+      r'https?://\S*tiktokcdn\S*',
+      caseSensitive: false,
+    );
+    final markdownMatches = markdownCdnPattern.allMatches(htmlContent).toList();
+    if (markdownMatches.isNotEmpty) {
+      print('Markdown/plaintext tiktokcdn URLs found: ${markdownMatches.length}');
+    }
+    for (final match in markdownMatches) {
+      final url = match.group(0);
+      if (url != null) {
+        final sanitized = _sanitizeTikTokUrl(url);
+        if (sanitized.isNotEmpty &&
+            !seenUrls.contains(sanitized) &&
+            !sanitized.contains('avt-') &&
+            !sanitized.contains('100x100') &&
+            !sanitized.contains('cropcenter') &&
+            !sanitized.contains('music')) {
+          seenUrls.add(sanitized);
+          fallbackResults.add(sanitized);
+          print('Found markdown TikTok image: ${_previewUrl(sanitized)}');
+        }
+      }
+    }
+
+    // Pattern 8: Markdown image syntax ![](url) capturing tiktokcdn URLs specifically
+    final markdownImagePattern = RegExp(
+      r'!\[[^\]]*\]\((https?://[^)]+tiktokcdn[^)]+)\)',
+      caseSensitive: false,
+    );
+    final mdImageMatches = markdownImagePattern.allMatches(htmlContent).toList();
+    if (mdImageMatches.isNotEmpty) {
+      print('Markdown image tiktokcdn URLs found: ${mdImageMatches.length}');
+    }
+    for (final match in mdImageMatches) {
+      final url = match.group(1);
+      if (url != null) {
+        final sanitized = _sanitizeTikTokUrl(url);
+        if (sanitized.isNotEmpty &&
+            !seenUrls.contains(sanitized) &&
+            !sanitized.contains('avt-') &&
+            !sanitized.contains('100x100') &&
+            !sanitized.contains('cropcenter') &&
+            !sanitized.contains('music')) {
+          seenUrls.add(sanitized);
+          fallbackResults.add(sanitized);
+          print('Found markdown image TikTok URL: ${_previewUrl(sanitized)}');
+        }
+      }
+    }
 
     // Try fallback images
     for (final imageUrl in fallbackResults.take(5)) {
