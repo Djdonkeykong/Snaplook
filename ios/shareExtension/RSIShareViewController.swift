@@ -4937,7 +4937,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cropButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 16)
             ?? .systemFont(ofSize: 16, weight: .semibold)
         cropButton.backgroundColor = .white
-        cropButton.setTitleColor(UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0), for: .normal)
+        cropButton.setTitleColor(UIColor(red: 28/255, green: 28/255, blue: 37/255, alpha: 1.0), for: .normal)
         cropButton.layer.borderWidth = 1.5
         cropButton.layer.borderColor = UIColor(red: 229/255, green: 231/255, blue: 235/255, alpha: 1.0).cgColor
         cropButton.layer.cornerRadius = 28
@@ -5027,7 +5027,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        // Present crop view controller
+        // Present crop view controller with proper layout handling
         let cropViewController = TOCropViewController(image: image)
         cropViewController.delegate = self
         cropViewController.aspectRatioPreset = .presetSquare
@@ -5043,25 +5043,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Make Done button highly visible with red color
         cropViewController.toolbar.doneTextButton.setTitleColor(redColor, for: .normal)
-        cropViewController.toolbar.doneTextButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 18)
-            ?? .systemFont(ofSize: 18, weight: .bold)
 
         // Make Cancel button white for better contrast
         cropViewController.toolbar.cancelTextButton.setTitleColor(.white, for: .normal)
-        cropViewController.toolbar.cancelTextButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 18)
-            ?? .systemFont(ofSize: 18, weight: .semibold)
 
         // Set toolbar buttons tint to white for better visibility
         cropViewController.toolbar.tintColor = .white
 
-        // Add slight background to toolbar for better button visibility
-        cropViewController.toolbar.backgroundColor = UIColor.black.withAlphaComponent(0.3)
-
-        // Fix modal presentation to ensure toolbar fits properly
-        cropViewController.modalPresentationStyle = .fullScreen
+        // Wrap in navigation controller for proper safe area handling in Share Extension
+        let navController = UINavigationController(rootViewController: cropViewController)
+        navController.modalPresentationStyle = .fullScreen
+        navController.isNavigationBarHidden = true
 
         shareLog("Presenting crop view controller")
-        present(cropViewController, animated: true, completion: nil)
+        present(navController, animated: true, completion: nil)
     }
 
     private func startSmoothProgress() {
