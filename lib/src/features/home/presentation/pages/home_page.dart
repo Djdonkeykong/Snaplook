@@ -12,6 +12,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/providers/image_provider.dart';
 import '../../domain/providers/inspiration_provider.dart';
 import '../../domain/providers/pending_share_provider.dart';
+import '../../../profile/domain/providers/feed_preference_provider.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
 import '../../../product/presentation/pages/product_detail_page.dart';
 import '../../../product/presentation/pages/detected_products_page.dart';
@@ -215,6 +216,13 @@ class _HomePageState extends ConsumerState<HomePage> {
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
+      }
+    });
+
+    // Listen to feed preference changes and refresh feed
+    ref.listen(feedPreferenceChangeProvider, (previous, next) {
+      if (previous != next) {
+        ref.read(inspirationProvider.notifier).refreshImages();
       }
     });
 

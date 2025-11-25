@@ -7,6 +7,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
+import '../../domain/providers/feed_preference_provider.dart';
 
 enum FeedPreference { men, women, both }
 
@@ -102,6 +103,9 @@ class _FeedPreferencesPageState
           _selectedPreference = preference;
           _isSaving = false;
         });
+
+        // Notify home feed to refresh with new preference
+        notifyFeedPreferenceChanged(ref);
 
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
