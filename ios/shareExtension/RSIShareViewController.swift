@@ -1083,7 +1083,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             URLQueryItem(name: "api_key", value: apiKey),
             URLQueryItem(name: "url", value: instagramUrl),
             URLQueryItem(name: "render_js", value: "true"),
-            URLQueryItem(name: "wait", value: "2000")
+            URLQueryItem(name: "wait", value: "1500")
         ]
 
         guard let requestURL = components.url else {
@@ -1094,7 +1094,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("Fetching Instagram HTML via ScrapingBee (attempt \(attempt + 1)) for \(instagramUrl)")
 
         var request = URLRequest(url: requestURL)
-        request.timeoutInterval = 20.0
+        request.timeoutInterval = 12.0
 
         let session = URLSession(configuration: .ephemeral)
         let deliver: (Result<[SharedMediaFile], Error>) -> Void = { [weak self] result in
@@ -1735,6 +1735,45 @@ open class RSIShareViewController: SLComposeServiceViewController {
         task.resume()
     }
 
+    private func fetchInstagramViaJina(
+        urlString: String,
+        completion: @escaping ([String]) -> Void
+    ) {
+        let rfc3986 = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=")
+        guard let encodedTarget = urlString.addingPercentEncoding(withAllowedCharacters: rfc3986) else {
+            completion([])
+            return
+        }
+        let proxyString = "https://r.jina.ai/\(encodedTarget)"
+        guard let proxyUrl = URL(string: proxyString) else {
+            completion([])
+            return
+        }
+
+        var request = URLRequest(url: proxyUrl)
+        request.timeoutInterval = 12.0
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            guard error == nil,
+                  let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                completion([])
+                return
+            }
+
+            let imageUrls = self.extractInstagramImageUrls(from: html)
+            completion(imageUrls)
+        }
+        task.resume()
+    }
+
     private func fetchTikTokViaJina(
         urlString: String,
         completion: @escaping ([String]) -> Void
@@ -2215,103 +2254,131 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urlString: String,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
-        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
-            shareLog("ScrapingBee API key missing - cannot download from generic link")
-            completion(.failure(makeDownloadError("GenericLink", "ScrapingBee API key not configured")))
-            return
-        }
-
-        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
-            completion(.failure(makeDownloadError("GenericLink", "Invalid ScrapingBee URL")))
-            return
-        }
-
-        // Use extract_rules to get all img src attributes
-        let extractRules = "{\"images\":{\"selector\":\"img\",\"type\":\"list\",\"output\":{\"src\":\"img@src\"}}}"
-
-        components.queryItems = [
-            URLQueryItem(name: "api_key", value: apiKey),
-            URLQueryItem(name: "url", value: urlString),
-            URLQueryItem(name: "extract_rules", value: extractRules),
-            URLQueryItem(name: "json_response", value: "true"),
-            URLQueryItem(name: "render_js", value: "true"),
-            URLQueryItem(name: "wait", value: "1500")
-        ]
-
-        guard let requestURL = components.url else {
-            completion(.failure(makeDownloadError("GenericLink", "Failed to build request URL")))
-            return
-        }
-
-        shareLog("Fetching generic link via ScrapingBee for \(urlString)")
-
-        var request = URLRequest(url: requestURL)
-        request.timeoutInterval = 20.0
-
-        let session = URLSession(configuration: .ephemeral)
-        let task = session.dataTask(with: request) { [weak self] data, response, error in
+        // Free path: quick HTML fetch to grab og/twitter/img
+        quickGenericImageScrape(urlString: urlString) { [weak self] quickImages in
             guard let self = self else { return }
 
-            if let error = error {
-                session.invalidateAndCancel()
-                DispatchQueue.main.async {
-                    completion(.failure(self.makeDownloadError("GenericLink", "Network error: \(error.localizedDescription)")))
-                }
+            if !quickImages.isEmpty {
+                self.downloadFirstValidImage(
+                    from: Array(quickImages.prefix(5)),
+                    platform: "generic",
+                    session: URLSession.shared,
+                    completion: completion
+                )
                 return
             }
 
-            guard let data = data else {
-                session.invalidateAndCancel()
-                DispatchQueue.main.async {
-                    completion(.failure(self.makeDownloadError("GenericLink", "No data received")))
-                }
+            // No images found in quick scrape; return failure without ScrapingBee
+            completion(.failure(self.makeDownloadError("GenericLink", "No images found on page")))
+        }
+    }
+
+    private func quickGenericImageScrape(
+        urlString: String,
+        completion: @escaping ([String]) -> Void
+    ) {
+        // Google imgres: extract imgurl directly (creditless)
+        if let imgUrl = extractGoogleImgUrl(from: urlString) {
+            completion([imgUrl])
+            return
+        }
+
+        guard let url = URL(string: urlString) else {
+            completion([])
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 8.0
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            guard error == nil,
+                  let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                completion([])
                 return
             }
 
-            // Parse JSON response
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    let body = (json["body"] as? [String: Any]) ?? json
-                    let images = (body["images"] as? [[String: Any]]) ?? []
+            let images = self.extractGenericImageUrls(from: html, baseUrl: url)
+            if let best = images.first {
+                completion([best])
+            } else {
+                completion([])
+            }
+        }.resume()
+    }
 
-                    var imageUrls: [String] = []
-                    let baseUrl = URL(string: urlString)
+    private func extractGenericImageUrls(from html: String, baseUrl: URL) -> [String] {
+        var results: [String] = []
 
-                    for item in images {
-                        if let src = item["src"] as? String, !src.isEmpty, !src.hasPrefix("data:") {
-                            // Resolve relative URLs
-                            if let resolved = baseUrl?.resolve(src) {
-                                imageUrls.append(resolved)
-                            } else if src.hasPrefix("http") {
-                                imageUrls.append(src)
-                            }
-                        }
-                    }
+        func resolve(_ raw: String?) -> String? {
+            guard let raw = raw, !raw.isEmpty, !raw.hasPrefix("data:") else { return nil }
+            let lower = raw.lowercased()
+            if lower.contains("favicon") || lower.contains("tbn:") || lower.contains("tbn0.gstatic.com") {
+                return nil
+            }
+            return baseUrl.resolve(raw)
+        }
 
-                    if imageUrls.isEmpty {
-                        session.invalidateAndCancel()
-                        DispatchQueue.main.async {
-                            completion(.failure(self.makeDownloadError("GenericLink", "No images found on page")))
-                        }
-                        return
-                    }
+        let patterns = [
+            "<meta[^>]+property=\"og:image\"[^>]+content=\"([^\"]+)\"",
+            "<meta[^>]+name=\"twitter:image\"[^>]+content=\"([^\"]+)\"",
+        ]
 
-                    shareLog("Found \(imageUrls.count) images on generic link")
-                    self.downloadFirstValidImage(from: Array(imageUrls.prefix(5)), platform: "generic", session: session, completion: completion)
-                } else {
-                    session.invalidateAndCancel()
-                    DispatchQueue.main.async {
-                        completion(.failure(self.makeDownloadError("GenericLink", "Invalid JSON response")))
-                    }
-                }
-            } catch {
-                session.invalidateAndCancel()
-                DispatchQueue.main.async {
-                    completion(.failure(self.makeDownloadError("GenericLink", "JSON parse error: \(error.localizedDescription)")))
+        for pat in patterns {
+            if let regex = try? NSRegularExpression(pattern: pat, options: [.caseInsensitive]) {
+                let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+                if let match = regex.firstMatch(in: html, options: [], range: nsrange),
+                   match.numberOfRanges > 1,
+                   let range = Range(match.range(at: 1), in: html),
+                   let resolved = resolve(String(html[range])),
+                   !results.contains(resolved) {
+                    results.append(resolved)
                 }
             }
         }
-        task.resume()
+
+        let imgPattern = "<img[^>]+src=\"([^\"]+)\""
+        if let regex = try? NSRegularExpression(pattern: imgPattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            var count = 0
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, stop in
+                guard count < 5,
+                      let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html),
+                      let resolved = resolve(String(html[range])),
+                      !results.contains(resolved) else { return }
+                results.append(resolved)
+                count += 1
+                if count >= 5 { stop.pointee = true }
+            }
+        }
+
+        return results
+    }
+
+    private func extractGoogleImgUrl(from urlString: String) -> String? {
+        let lower = urlString.lowercased()
+        guard lower.contains("google.") && lower.contains("imgurl=") else { return nil }
+
+        let parts = urlString.split(separator: "?")
+        let query = parts.count > 1 ? parts[1] : ""
+        let params = query.split(separator: "&")
+        for param in params {
+            if param.lowercased().hasPrefix("imgurl=") {
+                let raw = String(param.dropFirst("imgurl=".count))
+                return raw.removingPercentEncoding ?? raw
+            }
+        }
+        return nil
     }
 
     // MARK: - Common Download Helper
@@ -4269,81 +4336,78 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func extractInstagramImageUrls(from html: String) -> [String] {
-        var priorityResults: [String] = []
-        var results: [String] = []
+        var urls: [String] = []
+
+        func cleaned(_ raw: String) -> String {
+            return sanitizeInstagramURLString(raw)
+        }
+
+        func appendIfValid(_ candidate: String) {
+            guard !candidate.isEmpty,
+                  !candidate.contains("150x150"),
+                  !candidate.contains("profile"),
+                  !urls.contains(candidate) else { return }
+            urls.append(candidate)
+        }
+
+        // Fast path: first ig_cache_key in JSON
         let cacheKeyPattern = "\"src\":\"(https:\\\\/\\\\/scontent[^\"]+?ig_cache_key[^\"]*)\""
         if let regex = try? NSRegularExpression(pattern: cacheKeyPattern, options: []) {
             let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
-                guard let match = match,
-                    match.numberOfRanges > 1,
-                    let range = Range(match.range(at: 1), in: html) else { return }
-                let candidate = sanitizeInstagramURLString(String(html[range]))
-                if !candidate.isEmpty && !priorityResults.contains(candidate) {
-                    priorityResults.append(candidate)
-                }
+            if let match = regex.firstMatch(in: html, options: [], range: nsrange),
+               match.numberOfRanges > 1,
+               let range = Range(match.range(at: 1), in: html) {
+                appendIfValid(cleaned(String(html[range])))
             }
         }
 
-        let pattern = "\"display_url\"\\s*:\\s*\"([^\"]+)\""
+        if !urls.isEmpty { return urls }
 
-        if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+        // Fast path: first display_url
+        let displayPattern = "\"display_url\"\\s*:\\s*\"([^\"]+)\""
+        if let regex = try? NSRegularExpression(pattern: displayPattern, options: []) {
             let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
-                guard let match = match,
-                    match.numberOfRanges > 1,
-                    let range = Range(match.range(at: 1), in: html) else { return }
-
-                var candidate = String(html[range])
-                candidate = sanitizeInstagramURLString(candidate)
-                if candidate.contains("150x150") || candidate.contains("profile") {
-                    return
-                }
-                if !results.contains(candidate) {
-                    results.append(candidate)
-                }
+            if let match = regex.firstMatch(in: html, options: [], range: nsrange),
+               match.numberOfRanges > 1,
+               let range = Range(match.range(at: 1), in: html) {
+                appendIfValid(cleaned(String(html[range])))
             }
         }
 
+        if !urls.isEmpty { return urls }
+
+        // img src (limit to first 5) - only ig_cache_key to avoid low-quality/blocked URLs
         let imgPattern = "<img[^>]+src=\"([^\"]+)\""
         if let regex = try? NSRegularExpression(pattern: imgPattern, options: [.caseInsensitive]) {
             let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
-            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
-                guard let match = match,
-                    match.numberOfRanges > 1,
-                    let range = Range(match.range(at: 1), in: html) else { return }
-                let candidate = sanitizeInstagramURLString(String(html[range]))
-                if candidate.contains("ig_cache_key") && !priorityResults.contains(candidate) {
-                    priorityResults.append(candidate)
-                } else if !candidate.contains("ig_cache_key"),
-                        !results.contains(candidate) {
-                    results.append(candidate)
-                }
+            var count = 0
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, stop in
+                guard count < 5,
+                      let match = match,
+                      match.numberOfRanges > 1,
+                      let range = Range(match.range(at: 1), in: html) else { return }
+                let candidate = cleaned(String(html[range]))
+                if !candidate.contains("ig_cache_key") { return }
+                appendIfValid(candidate)
+                count += 1
+                if count >= 5 { stop.pointee = true }
             }
         }
 
-        if !priorityResults.isEmpty {
-            return priorityResults
-        }
+        if !urls.isEmpty { return urls }
 
-        if !results.isEmpty {
-            return results
-        }
-
+        // og:image fallback
         let ogPattern = "<meta property=\"og:image\" content=\"([^\"]+)\""
         if let regex = try? NSRegularExpression(pattern: ogPattern, options: [.caseInsensitive]) {
             let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
             if let match = regex.firstMatch(in: html, options: [], range: nsrange),
-            match.numberOfRanges > 1,
-            let range = Range(match.range(at: 1), in: html) {
-                let candidate = sanitizeInstagramURLString(String(html[range]))
-                if !candidate.isEmpty {
-                    results.append(candidate)
-                }
+               match.numberOfRanges > 1,
+               let range = Range(match.range(at: 1), in: html) {
+                appendIfValid(cleaned(String(html[range])))
             }
         }
 
-        return results
+        return urls
     }
 
     private func sanitizeInstagramURLString(_ value: String) -> String {
@@ -5941,6 +6005,9 @@ extension URL {
         return nil
     }
 }
+
+
+
 
 
 

@@ -248,11 +248,34 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   bool _isFetchingOverlayVisible = false;
   String _fetchingOverlayMessage = 'Downloading image...';
+  AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
+  bool _uiReadyForOverlays = false;
+  bool _overlaysAllowed = false;
+  String? _queuedOverlayMessage;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Delay enabling overlays until first frame + brief grace period
+      WidgetsBinding.instance.endOfFrame.then((_) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (!mounted) return;
+          setState(() {
+            _uiReadyForOverlays = true;
+            _overlaysAllowed = true;
+            if (_queuedOverlayMessage != null &&
+                _appLifecycleState == AppLifecycleState.resumed &&
+                !_isFetchingOverlayVisible) {
+              _fetchingOverlayMessage = _queuedOverlayMessage!;
+              _isFetchingOverlayVisible = true;
+              _queuedOverlayMessage = null;
+            }
+          });
+        });
+      });
+    });
 
     // Sync auth state to share extension (runs on widget init, including after hot reload)
     _syncAuthState();
@@ -346,6 +369,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appLifecycleState = state;
     if (state == AppLifecycleState.resumed) {
       _checkForPendingSharedMediaOnResume();
       // Also sync auth state when app resumes
@@ -805,6 +829,10 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     if (!mounted) {
       return;
     }
+    if (!_uiReadyForOverlays || !_overlaysAllowed || _appLifecycleState != AppLifecycleState.resumed) {
+      _queuedOverlayMessage = title;
+      return;
+    }
     setState(() {
       _fetchingOverlayMessage = title;
       _isFetchingOverlayVisible = true;
@@ -817,6 +845,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
     setState(() {
       _isFetchingOverlayVisible = false;
+      _queuedOverlayMessage = null;
     });
   }
 

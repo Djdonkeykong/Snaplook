@@ -45,16 +45,16 @@ class InstagramService {
       'api_key': AppConstants.scrapingBeeApiKey,
       'url': instagramUrl,
       'render_js': 'true',
-      'wait': '2000',
+      'wait': '1500',
     };
 
     final requestUri = uri.replace(queryParameters: queryParams);
-    print('ScrapingBee Instagram request (wait=2000ms)');
+    print('ScrapingBee Instagram request (wait=1500ms, timeout=12s)');
 
     http.Response response;
     try {
       response =
-          await http.get(requestUri).timeout(const Duration(seconds: 15));
+          await http.get(requestUri).timeout(const Duration(seconds: 12));
     } on TimeoutException {
       print('ScrapingBee Instagram request timed out');
       return [];
@@ -91,98 +91,55 @@ class InstagramService {
   static Future<List<XFile>> _extractImagesFromInstagramHtml(
     String htmlContent,
   ) async {
-    final priorityResults = <String>[];
-    final results = <String>[];
     final seenUrls = <String>{};
 
-    // Pattern 1: High-priority ig_cache_key URLs in JSON (matches iOS)
-    // These are Instagram's internal high-quality cached images
-    final cacheKeyPattern = RegExp(
+    Future<XFile?> tryDownload(String? url, {String label = ''}) async {
+      if (url == null || url.isEmpty) return null;
+      final sanitized = _sanitizeInstagramUrl(url);
+      if (sanitized.isEmpty ||
+          seenUrls.contains(sanitized) ||
+          sanitized.contains('150x150') ||
+          sanitized.contains('profile')) {
+        return null;
+      }
+      seenUrls.add(sanitized);
+      if (label.isNotEmpty) {
+        print('$label: ${_previewUrl(sanitized)}');
+      }
+      return await _downloadImage(sanitized);
+    }
+
+    // Fast path: first ig_cache_key in JSON
+    final cacheKeyMatch = RegExp(
       r'"src":"(https:\\/\\/scontent[^"]+?ig_cache_key[^"]*)"',
-    );
-    for (final match in cacheKeyPattern.allMatches(htmlContent)) {
-      final url = match.group(1);
-      if (url != null) {
-        final sanitized = _sanitizeInstagramUrl(url);
-        if (sanitized.isNotEmpty && !seenUrls.contains(sanitized)) {
-          seenUrls.add(sanitized);
-          priorityResults.add(sanitized);
-          print('Found ig_cache_key URL (priority): ${_previewUrl(sanitized)}');
-        }
-      }
-    }
+    ).firstMatch(htmlContent);
+    final cacheDownload =
+        await tryDownload(cacheKeyMatch?.group(1), label: 'Found ig_cache_key URL (priority)');
+    if (cacheDownload != null) return [cacheDownload];
 
-    // Pattern 2: display_url in JSON (matches iOS)
-    final displayUrlPattern = RegExp(
+    // Fast path: first display_url
+    final displayMatch = RegExp(
       r'"display_url"\s*:\s*"([^"]+)"',
-    );
-    for (final match in displayUrlPattern.allMatches(htmlContent)) {
-      final url = match.group(1);
-      if (url != null) {
-        final sanitized = _sanitizeInstagramUrl(url);
-        if (sanitized.isNotEmpty &&
-            !seenUrls.contains(sanitized) &&
-            !sanitized.contains('150x150') &&
-            !sanitized.contains('profile')) {
-          seenUrls.add(sanitized);
-          results.add(sanitized);
-          print('Found display_url: ${_previewUrl(sanitized)}');
-        }
-      }
-    }
+    ).firstMatch(htmlContent);
+    final displayDownload =
+        await tryDownload(displayMatch?.group(1), label: 'Found display_url');
+    if (displayDownload != null) return [displayDownload];
 
-    // Pattern 3: img tags - check for ig_cache_key URLs (matches iOS)
+    // img tags (limit to first 5 matches) - only take ig_cache_key variants to avoid low-quality/blocked URLs
     final imgPattern = RegExp(
       r'<img[^>]+src="([^"]+)"',
       caseSensitive: false,
     );
-    for (final match in imgPattern.allMatches(htmlContent)) {
+    final imgMatches = imgPattern.allMatches(htmlContent).take(5).toList();
+    for (final match in imgMatches) {
       final url = match.group(1);
-      if (url != null) {
-        final sanitized = _sanitizeInstagramUrl(url);
-        if (sanitized.isNotEmpty && !seenUrls.contains(sanitized)) {
-          if (sanitized.contains('ig_cache_key')) {
-            seenUrls.add(sanitized);
-            priorityResults.add(sanitized);
-            print(
-                'Found img ig_cache_key URL (priority): ${_previewUrl(sanitized)}');
-          } else if (!sanitized.contains('150x150') &&
-              !sanitized.contains('profile')) {
-            seenUrls.add(sanitized);
-            results.add(sanitized);
-            print('Found img src URL: ${_previewUrl(sanitized)}');
-          }
-        }
-      }
-    }
-
-    print(
-        'Instagram extraction: ${priorityResults.length} priority, ${results.length} regular URLs');
-
-    // Try priority URLs first (ig_cache_key)
-    if (priorityResults.isNotEmpty) {
-      for (int i = 0; i < priorityResults.length; i++) {
-        final imageUrl = priorityResults[i];
-        print(
-            'Downloading priority candidate ${i + 1}/${priorityResults.length}: ${_previewUrl(imageUrl)}');
-        final downloadedImage = await _downloadImage(imageUrl);
-        if (downloadedImage != null) {
-          return [downloadedImage];
-        }
-      }
-    }
-
-    // Try regular results
-    if (results.isNotEmpty) {
-      for (int i = 0; i < results.length; i++) {
-        final imageUrl = results[i];
-        print(
-            'Downloading candidate ${i + 1}/${results.length}: ${_previewUrl(imageUrl)}');
-        final downloadedImage = await _downloadImage(imageUrl);
-        if (downloadedImage != null) {
-          return [downloadedImage];
-        }
-      }
+      final isCache = url != null && url.contains('ig_cache_key');
+      if (!isCache) continue;
+      final download = await tryDownload(
+        url,
+        label: 'Found img ig_cache_key URL (priority)',
+      );
+      if (download != null) return [download];
     }
 
     // Pattern 4: og:image meta tag (fallback, matches iOS)
@@ -193,15 +150,10 @@ class InstagramService {
     final ogMatch = ogImagePattern.firstMatch(htmlContent);
     if (ogMatch != null) {
       final url = ogMatch.group(1);
-      if (url != null) {
-        final sanitized = _sanitizeInstagramUrl(url);
-        if (sanitized.isNotEmpty && !seenUrls.contains(sanitized)) {
-          print('Found og:image (fallback): ${_previewUrl(sanitized)}');
-          final fallbackImage = await _downloadImage(sanitized);
-          if (fallbackImage != null) {
-            return [fallbackImage];
-          }
-        }
+      final download =
+          await tryDownload(url, label: 'Found og:image (fallback)');
+      if (download != null) {
+        return [download];
       }
     }
 

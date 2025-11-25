@@ -1,11 +1,8 @@
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import '../../core/constants/app_constants.dart';
 import 'instagram_service.dart';
 
 class LinkScraperService {
-  static const String _scrapingBeeApiHost = 'app.scrapingbee.com';
   static const String _userAgent =
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -18,105 +15,28 @@ class LinkScraperService {
       return downloadImageFromGoogleImageResult(decodedUrl ?? url);
     }
 
-    final apiKey = AppConstants.scrapingBeeApiKey;
-    if (apiKey.isEmpty) {
-      print('[LINK SCRAPER] ScrapingBee API key is missing');
-      return [];
-    }
-
     final resolvedUrl = await _resolveFinalUrl(url) ?? url;
     print('[LINK SCRAPER] Resolved shared URL -> $resolvedUrl');
 
-    try {
-      final extractRules = jsonEncode({
-        'images': {
-          'selector': 'img',
-          'type': 'list',
-          'output': {'src': 'img@src'},
-        },
-      });
-
-      final requestUri = Uri.https(_scrapingBeeApiHost, '/api/v1/', {
-        'api_key': apiKey,
-        'url': resolvedUrl,
-        'extract_rules': extractRules,
-        'json_response': 'true',
-        'render_js': 'true',
-        'wait': '1500',
-      });
-
-      print('[LINK SCRAPER] Requesting ScrapingBee for $resolvedUrl');
-      final response =
-          await http.get(requestUri).timeout(const Duration(seconds: 15));
-
-      Map<String, dynamic>? data;
-      try {
-        data = jsonDecode(response.body) as Map<String, dynamic>;
-      } catch (_) {
-        data = null;
-      }
-
-      if (response.statusCode != 200 && data == null) {
-        print(
-          '[LINK SCRAPER] ScrapingBee request failed: ${response.statusCode}',
-        );
-        print('[LINK SCRAPER] Body: ${response.body}');
-        return [];
-      }
-
-      final body = (data?['body'] ?? data) as Map<String, dynamic>?;
-      final images = body?['images'] as List<dynamic>? ?? [];
-
-      if (images.isEmpty) {
-        print('[LINK SCRAPER] No images found for $resolvedUrl');
-        return [];
-      }
-
-      final baseUri = Uri.parse(resolvedUrl);
-      final resolvedUrls = <String>{};
-
-      for (final item in images) {
-        if (item is Map<String, dynamic>) {
-          final rawSrc = item['src'] as String?;
-          if (rawSrc == null || rawSrc.isEmpty || rawSrc.startsWith('data:')) {
-            continue;
-          }
-          Uri? resolved;
-          try {
-            resolved = baseUri.resolve(rawSrc);
-          } catch (_) {
-            resolved = null;
-          }
-          if (resolved != null &&
-              (resolved.scheme == 'http' || resolved.scheme == 'https')) {
-            resolvedUrls.add(resolved.toString());
-          }
-        }
-      }
-
-      if (resolvedUrls.isEmpty) {
-        print(
-          '[LINK SCRAPER] No valid HTTP image URLs resolved for $resolvedUrl',
-        );
-        return [];
-      }
-
-      final List<XFile> downloaded = [];
-      for (final imageUrl in resolvedUrls.take(5)) {
-        final file = await InstagramService.downloadExternalImage(imageUrl);
-        if (file != null) {
-          downloaded.add(file);
-        }
-      }
-
+    // Lightweight HTML fetch to grab og:image/twitter:image/first img (no credits).
+    final directImages = await _fetchImagesDirect(resolvedUrl);
+    if (directImages.isNotEmpty) {
       print(
-        '[LINK SCRAPER] Downloaded ${downloaded.length} image(s) for generic URL',
+        '[LINK SCRAPER] Direct HTML scrape succeeded with ${directImages.length} image(s)',
       );
-      return downloaded;
-    } catch (e) {
-      print('[LINK SCRAPER] Error scraping $resolvedUrl -> $e');
-      return [];
+      return [directImages.first];
     }
+
+    // If resolved URL is a Google image result, use imgurl extraction (creditless).
+    if (isGoogleImageResultUrl(resolvedUrl)) {
+      final googleImages = await downloadImageFromGoogleImageResult(resolvedUrl);
+      if (googleImages.isNotEmpty) {
+        return googleImages;
+      }
+    }
+
+    print('[LINK SCRAPER] Direct HTML scrape found no images for $resolvedUrl');
+    return [];
   }
 
   static Future<String?> _resolveFinalUrl(String url) async {
@@ -204,5 +124,105 @@ class LinkScraperService {
     } catch (_) {
       return null;
     }
+  }
+
+  static Future<List<XFile>> _fetchImagesDirect(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      final resp = await http.get(
+        uri,
+        headers: {'User-Agent': _userAgent},
+      ).timeout(const Duration(seconds: 6));
+
+      if (resp.statusCode != 200) {
+        print('[LINK SCRAPER] Direct fetch failed with ${resp.statusCode}');
+        return [];
+      }
+
+      final html = resp.body;
+      final candidates = _extractImageCandidates(html, uri).toList();
+      if (candidates.isEmpty) return [];
+
+      final best = _pickBestImage(candidates);
+      if (best == null) return [];
+
+      final file = await InstagramService.downloadExternalImage(best);
+      if (file != null) return [file];
+      return [];
+    } catch (e) {
+      print('[LINK SCRAPER] Direct fetch error: $e');
+      return [];
+    }
+  }
+
+  static Set<String> _extractImageCandidates(String html, Uri base) {
+    final results = <String>{};
+
+    String? resolve(String? raw) {
+      if (raw == null || raw.isEmpty) return null;
+      if (raw.startsWith('data:')) return null;
+      final lower = raw.toLowerCase();
+      if (lower.contains('favicon') || lower.contains('tbn:') || lower.contains('tbn0.gstatic.com')) {
+        return null;
+      }
+      try {
+        final resolved = base.resolve(raw);
+        if (resolved.hasScheme) return resolved.toString();
+      } catch (_) {}
+      return null;
+    }
+
+    final patterns = [
+      RegExp(r'<meta[^>]+property="og:image"[^>]+content="([^"]+)"', caseSensitive: false),
+      RegExp(r'<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"', caseSensitive: false),
+    ];
+
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(html);
+      if (match != null) {
+        final url = resolve(match.group(1));
+        if (url != null) results.add(url);
+      }
+    }
+
+    final imgPattern = RegExp(r'<img[^>]+src="([^"]+)"', caseSensitive: false);
+    for (final match in imgPattern.allMatches(html).take(5)) {
+      final url = resolve(match.group(1));
+      if (url != null) results.add(url);
+    }
+
+    return results;
+  }
+
+  static String? _pickBestImage(List<String> urls) {
+    bool isBadThumb(String u) {
+      final lower = u.toLowerCase();
+      return lower.contains('favicon') ||
+          lower.contains('googlelogo') ||
+          lower.contains('gstatic.com/favicon') ||
+          lower.contains('tbn:') ||
+          lower.contains('tbn0.gstatic.com');
+    }
+
+    final filtered = urls.where((u) => !isBadThumb(u)).toList();
+    if (filtered.isEmpty) return null;
+
+    // Prefer file extensions that indicate full images
+    String scoreExt(String u) {
+      final lower = u.toLowerCase();
+      if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return '1';
+      if (lower.endsWith('.png')) return '2';
+      if (lower.endsWith('.webp')) return '3';
+      return '9';
+    }
+
+    filtered.sort((a, b) {
+      final sa = scoreExt(a);
+      final sb = scoreExt(b);
+      if (sa != sb) return sa.compareTo(sb);
+      return b.length.compareTo(a.length); // longer URL often has full image params
+    });
+
+    return filtered.first;
   }
 }
