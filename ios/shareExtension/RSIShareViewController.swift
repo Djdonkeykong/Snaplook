@@ -5153,10 +5153,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     let increment: Float = 0.018 // Balanced increments for smooth completion
                     self.currentProgress = min(self.currentProgress + increment, self.targetProgress)
                     self.progressView?.setProgress(self.currentProgress, animated: true)
-                } else if self.currentProgress < 0.95 {
-                    // Slow automatic progress even when waiting (but never reach 100%)
+                } else if self.currentProgress < 1.0 {
+                    // Slow automatic progress even when waiting
                     let slowIncrement: Float = 0.002
-                    self.currentProgress = min(self.currentProgress + slowIncrement, self.targetProgress + 0.05, 0.95)
+                    self.currentProgress = min(self.currentProgress + slowIncrement, self.targetProgress + 0.05, 1.0)
                     self.progressView?.setProgress(self.currentProgress, animated: true)
                 }
             }
@@ -5675,13 +5675,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         self.sharedMedia.append(contentsOf: downloaded)
                         shareLog("Downloaded and saved \(downloaded.count) \(platformName) file(s)")
 
-                        // Update progress to near completion
-                        self.targetProgress = 0.95
-                        self.updateProgress(0.95, status: "Opening Snaplook...")
+                        // Update progress to completion
+                        self.targetProgress = 1.0
+                        self.updateProgress(1.0, status: "Opening Snaplook...")
 
                         // Delay to allow faster progress bar to complete before redirecting
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                            // Stop smooth progress to lock at 95%
+                            // Stop smooth progress to lock at 100%
                             self.stopSmoothProgress()
                             self.saveAndRedirect(message: self.pendingInstagramUrl)
                         }
@@ -5717,8 +5717,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 // Progress to completion
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                    self?.targetProgress = 0.95
-                    self?.updateProgress(0.95, status: "Opening Snaplook...")
+                    self?.targetProgress = 1.0
+                    self?.updateProgress(1.0, status: "Opening Snaplook...")
                 }
             }
 
@@ -5736,7 +5736,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // Delay to allow faster progress bar to complete before redirecting
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
                     guard let self = self else { return }
-                    // Stop smooth progress to lock at 95%
+                    // Stop smooth progress to lock at 100%
                     self.stopSmoothProgress()
                     self.saveAndRedirect(message: self.pendingImageUrl)
                 }
@@ -5763,14 +5763,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 // Progress to completion
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                    self?.targetProgress = 0.95
-                    self?.updateProgress(0.95, status: "Opening Snaplook...")
+                    self?.targetProgress = 1.0
+                    self?.updateProgress(1.0, status: "Opening Snaplook...")
                 }
 
                 // Delay to allow faster progress bar to complete before redirecting
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
                     guard let self = self else { return }
-                    // Stop smooth progress to lock at 95%
+                    // Stop smooth progress to lock at 100%
                     self.stopSmoothProgress()
                     self.saveAndRedirect(message: nil)
                 }
@@ -5845,12 +5845,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
                                 shareLog("Downloaded \(platformName) image (\(imageData.count) bytes) - showing preview")
 
                                 // Update progress to completion
-                                self.targetProgress = 0.95
-                                self.updateProgress(0.95, status: "Loading preview...")
+                                self.targetProgress = 1.0
+                                self.updateProgress(1.0, status: "Loading preview...")
 
                                 // Delay to allow faster progress bar to complete before showing preview
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                                    // Stop smooth progress to lock at 95%
+                                    // Stop smooth progress to lock at 100%
                                     self.stopSmoothProgress()
                                     self.showImagePreview(imageData: imageData)
                                 }
@@ -5912,13 +5912,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     self?.targetProgress = 0.7
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                    self?.targetProgress = 0.95
-                    self?.updateProgress(0.95, status: "Loading preview...")
+                    self?.targetProgress = 1.0
+                    self?.updateProgress(1.0, status: "Loading preview...")
                 }
 
                 // Show preview after faster progress completes
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                    // Stop smooth progress to lock at 95%
+                    // Stop smooth progress to lock at 100%
                     self?.stopSmoothProgress()
                     self?.showImagePreview(imageData: imageData)
                 }
