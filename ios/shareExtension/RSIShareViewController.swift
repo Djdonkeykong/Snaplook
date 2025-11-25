@@ -4940,8 +4940,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Layout constraints
         NSLayoutConstraint.activate([
-            // Image takes most of the space, with padding
-            imageView.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 20),
+            // Image takes most of the space, with padding for header (logo + cancel button)
+            imageView.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 70),
             imageView.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 20),
             imageView.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -20),
             imageView.bottomAnchor.constraint(equalTo: analyzeButton.topAnchor, constant: -20),
