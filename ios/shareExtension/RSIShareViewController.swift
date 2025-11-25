@@ -5475,7 +5475,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Check if this is a URL (before download) or direct image (after download)
         if let socialUrl = pendingInstagramUrl {
             let platformName = getPlatformDisplayName(pendingPlatformType)
-            shareLog("\(platformName) URL detected - checking cache first")
+            let shouldCheckCache = (pendingPlatformType == "instagram")
 
             // Start UI setup early
             updateProcessingStatus("processing")
@@ -5492,60 +5492,68 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.startStatusRotation(messages: checkingMessages, interval: 2.5)
             }
 
-            // Check cache before downloading
-            checkCacheForInstagram(url: socialUrl) { [weak self] isCached in
+            let proceedToDownload: () -> Void = { [weak self] in
                 guard let self = self else { return }
 
-                if isCached {
-                    shareLog("Cache HIT - skipping \(platformName) download")
-                    // Results already displayed by checkCacheForInstagram
-                    self.pendingInstagramCompletion = nil
-                    self.pendingInstagramUrl = nil
-                } else {
-                    shareLog("Cache MISS - proceeding with \(platformName) download")
+                DispatchQueue.main.async {
+                    // Start rotating status messages for the fetch phase
+                    let fetchMessages = [
+                        "Fetching your photo...",
+                        "Downloading image..."
+                    ]
+                    self.startStatusRotation(messages: fetchMessages, interval: 2.5)
+                }
 
-                    DispatchQueue.main.async {
-                        // Start rotating status messages for the fetch phase
-                        let fetchMessages = [
-                            "Fetching your photo...",
-                            "Downloading image..."
-                        ]
-                        self.startStatusRotation(messages: fetchMessages, interval: 2.5)
-                    }
+                let downloadFunction = self.getDownloadFunction(for: self.pendingPlatformType)
+                downloadFunction(socialUrl) { [weak self] result in
+                    guard let self = self else { return }
 
-                    let downloadFunction = self.getDownloadFunction(for: self.pendingPlatformType)
-                    downloadFunction(socialUrl) { [weak self] result in
-                        guard let self = self else { return }
-
-                        switch result {
-                        case .success(let downloaded):
-                            if downloaded.isEmpty {
-                                shareLog("\(platformName) download succeeded but returned no files")
-                                self.dismissWithError()
-                            } else {
-                                // Get the first downloaded file and start detection
-                                if let firstFile = downloaded.first,
-                                   let fileURL = URL(string: firstFile.path),
-                                   let imageData = try? Data(contentsOf: fileURL) {
-                                    shareLog("Downloaded \(platformName) image, starting detection with \(imageData.count) bytes")
-                                    self.uploadAndDetect(imageData: imageData)
-                                } else {
-                                    shareLog("ERROR: Could not read downloaded \(platformName) file")
-                                    self.dismissWithError()
-                                }
-                            }
-
-                            // DON'T call completion - we're analyzing now, not redirecting
-                            // The extension will stay open for detection results
-                            self.pendingInstagramCompletion = nil
-                            self.pendingInstagramUrl = nil
-
-                        case .failure(let error):
-                            shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
+                    switch result {
+                    case .success(let downloaded):
+                        if downloaded.isEmpty {
+                            shareLog("\(platformName) download succeeded but returned no files")
                             self.dismissWithError()
+                        } else {
+                            // Get the first downloaded file and start detection
+                            if let firstFile = downloaded.first,
+                               let fileURL = URL(string: firstFile.path),
+                               let imageData = try? Data(contentsOf: fileURL) {
+                                shareLog("Downloaded \(platformName) image, starting detection with \(imageData.count) bytes")
+                                self.uploadAndDetect(imageData: imageData)
+                            } else {
+                                shareLog("ERROR: Could not read downloaded \(platformName) file")
+                                self.dismissWithError()
+                            }
                         }
+
+                        // DON'T call completion - we're analyzing now, not redirecting
+                        // The extension will stay open for detection results
+                        self.pendingInstagramCompletion = nil
+                        self.pendingInstagramUrl = nil
+
+                    case .failure(let error):
+                        shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
+                        self.dismissWithError()
                     }
                 }
+            }
+
+            if shouldCheckCache {
+                checkCacheForInstagram(url: socialUrl) { [weak self] isCached in
+                    guard let self = self else { return }
+
+                    if isCached {
+                        shareLog("Cache HIT - skipping \(platformName) download")
+                        // Results already displayed by checkCacheForInstagram
+                        self.pendingInstagramCompletion = nil
+                        self.pendingInstagramUrl = nil
+                    } else {
+                        shareLog("Cache MISS - proceeding with \(platformName) download")
+                        proceedToDownload()
+                    }
+                }
+            } else {
+                proceedToDownload()
             }
         } else if let imageData = pendingImageData {
             shareLog("Starting detection on direct image with \(imageData.count) bytes")
