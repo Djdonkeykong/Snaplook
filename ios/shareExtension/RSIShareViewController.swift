@@ -5145,12 +5145,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         DispatchQueue.main.async { [weak self] in
             self?.progressView?.setProgress(0.0, animated: false)
 
-            self?.progressTimer = Timer.scheduledTimer(withTimeInterval: 0.025, repeats: true) { [weak self] _ in
+            self?.progressTimer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
 
                 // Smoothly increment toward target with consistent speed
                 if self.currentProgress < self.targetProgress {
-                    let increment: Float = 0.015 // Consistent smooth increments
+                    let increment: Float = 0.012 // Smooth, not too fast increments
                     self.currentProgress = min(self.currentProgress + increment, self.targetProgress)
                     self.progressView?.setProgress(self.currentProgress, animated: true)
                 }

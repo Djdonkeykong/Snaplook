@@ -244,8 +244,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         statusBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor:
-            _isLoadingExistingResults ? Colors.white : Colors.black,
+        backgroundColor: Colors.white,
         extendBodyBehindAppBar: true,
         extendBody: true,
         appBar: AppBar(
