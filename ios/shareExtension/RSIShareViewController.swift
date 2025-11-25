@@ -4893,6 +4893,98 @@ open class RSIShareViewController: SLComposeServiceViewController {
         hideDefaultUI()
     }
 
+    private func showImagePreview(imageData: Data) {
+        shareLog("Showing image preview")
+
+        // Hide loading UI
+        hideLoadingUI()
+
+        // Store image data for later analysis
+        analyzedImageData = imageData
+
+        // Create preview overlay
+        let overlay = UIView(frame: view.bounds)
+        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        overlay.backgroundColor = UIColor.systemBackground
+        overlay.tag = 9997 // Tag to identify preview overlay
+
+        // Image view with aspect-fit
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+
+        if let image = UIImage(data: imageData) {
+            imageView.image = image
+            shareLog("Preview image loaded - size: \(image.size)")
+        } else {
+            shareLog("ERROR: Failed to create UIImage from imageData")
+            dismissWithError()
+            return
+        }
+
+        overlay.addSubview(imageView)
+
+        // "Analyze" button at bottom
+        let analyzeButton = UIButton(type: .system)
+        analyzeButton.setTitle("Analyze", for: .normal)
+        analyzeButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
+        analyzeButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        analyzeButton.setTitleColor(.white, for: .normal)
+        analyzeButton.layer.cornerRadius = 28
+        analyzeButton.translatesAutoresizingMaskIntoConstraints = false
+        analyzeButton.addTarget(self, action: #selector(analyzeFromPreviewTapped), for: .touchUpInside)
+
+        overlay.addSubview(analyzeButton)
+
+        // Layout constraints
+        NSLayoutConstraint.activate([
+            // Image takes most of the space, with padding
+            imageView.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 20),
+            imageView.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 20),
+            imageView.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -20),
+            imageView.bottomAnchor.constraint(equalTo: analyzeButton.topAnchor, constant: -20),
+
+            // Analyze button at bottom
+            analyzeButton.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            analyzeButton.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
+            analyzeButton.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -24),
+            analyzeButton.heightAnchor.constraint(equalToConstant: 56),
+        ])
+
+        view.addSubview(overlay)
+        loadingView = overlay
+
+        if let header = addResultsHeaderIfNeeded() {
+            overlay.bringSubviewToFront(header)
+        }
+
+        hideDefaultUI()
+        shareLog("Image preview displayed")
+    }
+
+    @objc private func analyzeFromPreviewTapped() {
+        shareLog("Analyze button tapped from preview")
+
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+
+        // Get the stored image data
+        guard let imageData = analyzedImageData else {
+            shareLog("ERROR: No image data available for analysis")
+            dismissWithError()
+            return
+        }
+
+        // Hide preview overlay
+        hideLoadingUI()
+
+        // Start detection
+        shareLog("Starting detection from preview with \(imageData.count) bytes")
+        uploadAndDetect(imageData: imageData)
+    }
+
     private func startSmoothProgress() {
         stopSmoothProgress()
 
@@ -5517,13 +5609,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let proceedToDownload: () -> Void = { [weak self] in
                 guard let self = self else { return }
 
-                DispatchQueue.main.async {
-                    // Start rotating status messages for the fetch phase
-                    let fetchMessages = [
-                        "Fetching your photo...",
-                        "Downloading image..."
-                    ]
-                    self.startStatusRotation(messages: fetchMessages, interval: 2.5)
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    self.startSmoothProgress()
+                    self.targetProgress = 0.8
+                    self.updateProgress(0.2, status: "Downloading your photo...")
+                }
+
+                // Simulate intermediate progress during download
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    self?.targetProgress = 0.5
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                    self?.targetProgress = 0.7
                 }
 
                 let downloadFunction = self.getDownloadFunction(for: self.pendingPlatformType)
@@ -5536,20 +5634,27 @@ open class RSIShareViewController: SLComposeServiceViewController {
                             shareLog("\(platformName) download succeeded but returned no files")
                             self.dismissWithError()
                         } else {
-                            // Get the first downloaded file and start detection
+                            // Get the first downloaded file and show preview
                             if let firstFile = downloaded.first,
                                let fileURL = URL(string: firstFile.path),
                                let imageData = try? Data(contentsOf: fileURL) {
-                                shareLog("Downloaded \(platformName) image, starting detection with \(imageData.count) bytes")
-                                self.uploadAndDetect(imageData: imageData)
+                                shareLog("Downloaded \(platformName) image (\(imageData.count) bytes) - showing preview")
+
+                                // Update progress to completion
+                                self.targetProgress = 0.95
+                                self.updateProgress(0.95, status: "Loading preview...")
+
+                                // Small delay to show completion, then show preview
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    self.showImagePreview(imageData: imageData)
+                                }
                             } else {
                                 shareLog("ERROR: Could not read downloaded \(platformName) file")
                                 self.dismissWithError()
                             }
                         }
 
-                        // DON'T call completion - we're analyzing now, not redirecting
-                        // The extension will stay open for detection results
+                        // DON'T call completion - we're showing preview, not redirecting
                         self.pendingInstagramCompletion = nil
                         self.pendingInstagramUrl = nil
 
@@ -5578,10 +5683,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 proceedToDownload()
             }
         } else if let imageData = pendingImageData {
-            shareLog("Starting detection on direct image with \(imageData.count) bytes")
+            shareLog("Showing preview for direct image with \(imageData.count) bytes")
 
-            // Start the upload and detection process
-            uploadAndDetect(imageData: imageData)
+            // Show preview instead of immediately analyzing
+            showImagePreview(imageData: imageData)
         } else if !sharedMedia.isEmpty {
             // Fallback: For non-social-media URLs, we can't analyze directly
             // Just redirect to the app with the URL
