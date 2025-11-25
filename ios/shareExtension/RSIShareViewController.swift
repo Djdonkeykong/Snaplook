@@ -13,6 +13,7 @@ import Photos
 import UniformTypeIdentifiers
 import AVFoundation
 import WebKit
+import TOCropViewController
 
 let kSchemePrefix = "ShareMedia"
 let kUserDefaultsKey = "ShareKey"
@@ -643,6 +644,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var currentSearchId: String?
     private var currentImageCacheId: String?
     private var analyzedImageData: Data? // Store the analyzed image for sharing
+    private var previewImageView: UIImageView? // Reference to preview image for updating after crop
     private var selectedGroup: CategoryGroup? = nil
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
@@ -4914,6 +4916,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         imageView.clipsToBounds = true
         imageView.layer.cornerRadius = 16
         imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.tag = 9998 // Tag to identify image view for later updates
 
         if let image = UIImage(data: imageData) {
             imageView.image = image
@@ -4924,9 +4927,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
+        // Store reference for later updates
+        previewImageView = imageView
         overlay.addSubview(imageView)
 
-        // "Analyze" button at bottom
+        // "Crop" button (secondary style - white with border)
+        let cropButton = UIButton(type: .system)
+        cropButton.setTitle("Crop", for: .normal)
+        cropButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .semibold)
+        cropButton.backgroundColor = .white
+        cropButton.setTitleColor(UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0), for: .normal)
+        cropButton.layer.borderWidth = 1.5
+        cropButton.layer.borderColor = UIColor(red: 229/255, green: 231/255, blue: 235/255, alpha: 1.0).cgColor
+        cropButton.layer.cornerRadius = 28
+        cropButton.translatesAutoresizingMaskIntoConstraints = false
+        cropButton.addTarget(self, action: #selector(cropButtonTapped), for: .touchUpInside)
+
+        overlay.addSubview(cropButton)
+
+        // "Analyze" button at bottom (primary red style)
         let analyzeButton = UIButton(type: .system)
         analyzeButton.setTitle("Analyze", for: .normal)
         analyzeButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
@@ -4945,7 +4965,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             imageView.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 70),
             imageView.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 20),
             imageView.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -20),
-            imageView.bottomAnchor.constraint(equalTo: analyzeButton.topAnchor, constant: -20),
+            imageView.bottomAnchor.constraint(equalTo: cropButton.topAnchor, constant: -16),
+
+            // Crop button above analyze button
+            cropButton.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            cropButton.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
+            cropButton.bottomAnchor.constraint(equalTo: analyzeButton.topAnchor, constant: -12),
+            cropButton.heightAnchor.constraint(equalToConstant: 56),
 
             // Analyze button at bottom
             analyzeButton.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
@@ -4985,6 +5011,41 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Start detection
         shareLog("Starting detection from preview with \(imageData.count) bytes")
         uploadAndDetect(imageData: imageData)
+    }
+
+    @objc private func cropButtonTapped() {
+        shareLog("Crop button tapped")
+
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+
+        // Get the current image
+        guard let imageData = analyzedImageData,
+              let image = UIImage(data: imageData) else {
+            shareLog("ERROR: No image available for cropping")
+            return
+        }
+
+        // Present crop view controller
+        let cropViewController = TOCropViewController(image: image)
+        cropViewController.delegate = self
+        cropViewController.aspectRatioPreset = .presetSquare
+        cropViewController.aspectRatioLockEnabled = false
+        cropViewController.resetAspectRatioEnabled = true
+        cropViewController.aspectRatioPickerButtonHidden = false
+        cropViewController.rotateButtonsHidden = false
+        cropViewController.rotateClockwiseButtonHidden = true
+        cropViewController.toolbar.clampButtonHidden = true
+
+        // Customize appearance to match app theme
+        cropViewController.toolbar.tintColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        cropViewController.toolbar.doneTextButton.setTitleColor(UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0), for: .normal)
+        cropViewController.toolbar.doneTextButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 17)
+            ?? .systemFont(ofSize: 17, weight: .bold)
+
+        shareLog("Presenting crop view controller")
+        present(cropViewController, animated: true, completion: nil)
     }
 
     private func startSmoothProgress() {
@@ -6106,6 +6167,42 @@ class ResultCell: UITableViewCell {
             applyAppearance()
             favoriteButton.transform = .identity
         }
+    }
+}
+
+extension RSIShareViewController: TOCropViewControllerDelegate {
+    func cropViewController(_ cropViewController: TOCropViewController, didCropTo image: UIImage, with cropRect: CGRect, angle: Int) {
+        shareLog("Image cropped successfully - size: \(image.size)")
+
+        // Convert cropped image to JPEG data with high quality
+        guard let croppedImageData = image.jpegData(compressionQuality: 0.9) else {
+            shareLog("ERROR: Failed to convert cropped image to data")
+            cropViewController.dismiss(animated: true, completion: nil)
+            return
+        }
+
+        shareLog("Cropped image data: \(croppedImageData.count) bytes")
+
+        // Update the stored image data with cropped version
+        analyzedImageData = croppedImageData
+
+        // Update the preview image
+        if let previewImageView = previewImageView {
+            UIView.transition(with: previewImageView, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                previewImageView.image = image
+            }, completion: nil)
+            shareLog("Updated preview with cropped image")
+        }
+
+        // Dismiss crop view controller
+        cropViewController.dismiss(animated: true) { [weak self] in
+            self?.shareLog("Crop view controller dismissed")
+        }
+    }
+
+    func cropViewController(_ cropViewController: TOCropViewController, didFinishCancelled cancelled: Bool) {
+        shareLog("Crop cancelled by user")
+        cropViewController.dismiss(animated: true, completion: nil)
     }
 }
 
