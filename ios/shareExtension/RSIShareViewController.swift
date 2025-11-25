@@ -4912,6 +4912,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 16
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
         if let image = UIImage(data: imageData) {
