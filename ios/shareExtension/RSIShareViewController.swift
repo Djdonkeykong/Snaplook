@@ -5795,8 +5795,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                                 self.targetProgress = 0.95
                                 self.updateProgress(0.95, status: "Loading preview...")
 
-                                // Small delay to show completion, then show preview
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                // Delay to allow progress bar to complete before showing preview
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                                     self.showImagePreview(imageData: imageData)
                                 }
                             } else {
