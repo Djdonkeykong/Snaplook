@@ -5014,18 +5014,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func addCustomCropButtons(to cropViewController: TOCropViewController) {
-        // Hide the default toolbar buttons (keep toolbar for aspect ratio/rotate controls)
-        cropViewController.toolbar.doneTextButton.alpha = 0
-        cropViewController.toolbar.cancelTextButton.alpha = 0
-
         let redColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
 
         // Create custom Done button
         let doneButton = UIButton(type: .system)
         doneButton.setTitle("Done", for: .normal)
         doneButton.setTitleColor(redColor, for: .normal)
-        doneButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 17)
-            ?? .systemFont(ofSize: 17, weight: .bold)
+        doneButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Medium", size: 17)
+            ?? .systemFont(ofSize: 17, weight: .medium)
         doneButton.translatesAutoresizingMaskIntoConstraints = false
         doneButton.tag = 9999
 
@@ -5033,8 +5029,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
         cancelButton.setTitleColor(.white, for: .normal)
-        cancelButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 17)
-            ?? .systemFont(ofSize: 17, weight: .semibold)
+        cancelButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Medium", size: 17)
+            ?? .systemFont(ofSize: 17, weight: .medium)
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
         cancelButton.tag = 9998
 
@@ -5105,14 +5101,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cropViewController.rotateClockwiseButtonHidden = true
         cropViewController.toolbar.clampButtonHidden = true
 
-        // Customize appearance for better visibility
-        let redColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-
-        // Make Done button highly visible with red color
-        cropViewController.toolbar.doneTextButton.setTitleColor(redColor, for: .normal)
-
-        // Make Cancel button white for better contrast
-        cropViewController.toolbar.cancelTextButton.setTitleColor(.white, for: .normal)
+        // Hide default toolbar buttons immediately to prevent flash
+        cropViewController.toolbar.doneTextButton.alpha = 0
+        cropViewController.toolbar.cancelTextButton.alpha = 0
 
         // Set toolbar buttons tint to white for better visibility
         cropViewController.toolbar.tintColor = .white
