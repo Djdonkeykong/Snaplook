@@ -5038,11 +5038,27 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cropViewController.rotateClockwiseButtonHidden = true
         cropViewController.toolbar.clampButtonHidden = true
 
-        // Customize appearance to match app theme
-        cropViewController.toolbar.tintColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-        cropViewController.toolbar.doneTextButton.setTitleColor(UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0), for: .normal)
-        cropViewController.toolbar.doneTextButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 17)
-            ?? .systemFont(ofSize: 17, weight: .bold)
+        // Customize appearance for better visibility
+        let redColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+
+        // Make Done button highly visible with red color
+        cropViewController.toolbar.doneTextButton.setTitleColor(redColor, for: .normal)
+        cropViewController.toolbar.doneTextButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 18)
+            ?? .systemFont(ofSize: 18, weight: .bold)
+
+        // Make Cancel button white for better contrast
+        cropViewController.toolbar.cancelTextButton.setTitleColor(.white, for: .normal)
+        cropViewController.toolbar.cancelTextButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 18)
+            ?? .systemFont(ofSize: 18, weight: .semibold)
+
+        // Set toolbar buttons tint to white for better visibility
+        cropViewController.toolbar.tintColor = .white
+
+        // Add slight background to toolbar for better button visibility
+        cropViewController.toolbar.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+
+        // Fix modal presentation to ensure toolbar fits properly
+        cropViewController.modalPresentationStyle = .fullScreen
 
         shareLog("Presenting crop view controller")
         present(cropViewController, animated: true, completion: nil)
