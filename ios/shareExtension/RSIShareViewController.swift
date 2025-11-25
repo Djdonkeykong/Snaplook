@@ -5849,17 +5849,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.targetProgress = 0.2
                 self.updateProgress(0.2, status: "Loading image...")
 
-                // Smoothly progress to completion
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                    self?.targetProgress = 0.6
+                // Smoothly progress to completion with longer delays
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.targetProgress = 0.5
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                    self?.targetProgress = 0.7
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                     self?.targetProgress = 0.95
                     self?.updateProgress(0.95, status: "Loading preview...")
                 }
 
-                // Show preview after progress completes
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
+                // Show preview after progress completes (2 second total delay)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                     self?.showImagePreview(imageData: imageData)
                 }
             }
