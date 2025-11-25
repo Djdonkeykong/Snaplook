@@ -261,6 +261,13 @@ class InstagramService {
         'Image downloaded successfully, size: ${imageResponse.bodyBytes.length} bytes',
       );
 
+      // Validate that the payload is actually an image
+      final decodedImage = img.decodeImage(imageResponse.bodyBytes);
+      if (decodedImage == null) {
+        print('Downloaded data is not a valid image');
+        return null;
+      }
+
       // Optionally crop to a target aspect ratio (e.g., 9:16 for Shorts thumbnails)
       Uint8List imageBytes = Uint8List.fromList(imageResponse.bodyBytes);
       if (cropToAspectRatio != null) {

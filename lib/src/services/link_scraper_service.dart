@@ -182,7 +182,11 @@ class LinkScraperService {
       if (raw == null || raw.isEmpty) return null;
       if (raw.startsWith('data:')) return null;
       final lower = raw.toLowerCase();
-      if (lower.contains('favicon') || lower.contains('tbn:') || lower.contains('tbn0.gstatic.com')) {
+      if (lower.contains('favicon') ||
+          lower.contains('googlelogo') ||
+          lower.contains('gstatic.com/favicon') ||
+          lower.contains('tbn:') ||
+          lower.contains('tbn0.gstatic.com')) {
         return null;
       }
       try {

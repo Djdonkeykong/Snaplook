@@ -2327,7 +2327,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         func resolve(_ raw: String?) -> String? {
             guard let raw = raw, !raw.isEmpty, !raw.hasPrefix("data:") else { return nil }
             let lower = raw.lowercased()
-            if lower.contains("favicon") || lower.contains("tbn:") || lower.contains("tbn0.gstatic.com") {
+            if lower.contains("favicon") ||
+                lower.contains("googlelogo") ||
+                lower.contains("gstatic.com/favicon") ||
+                lower.contains("tbn:") ||
+                lower.contains("tbn0.gstatic.com") {
                 return nil
             }
             return baseUrl.resolve(raw)
