@@ -5013,6 +5013,73 @@ open class RSIShareViewController: SLComposeServiceViewController {
         uploadAndDetect(imageData: imageData)
     }
 
+    private func addCustomCropButtons(to cropViewController: TOCropViewController) {
+        // Hide the default toolbar buttons (keep toolbar for aspect ratio/rotate controls)
+        cropViewController.toolbar.doneTextButton.alpha = 0
+        cropViewController.toolbar.cancelTextButton.alpha = 0
+
+        let redColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+
+        // Create custom Done button
+        let doneButton = UIButton(type: .system)
+        doneButton.setTitle("Done", for: .normal)
+        doneButton.setTitleColor(redColor, for: .normal)
+        doneButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 17)
+            ?? .systemFont(ofSize: 17, weight: .bold)
+        doneButton.translatesAutoresizingMaskIntoConstraints = false
+        doneButton.tag = 9999
+
+        // Create custom Cancel button
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.setTitleColor(.white, for: .normal)
+        cancelButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 17)
+            ?? .systemFont(ofSize: 17, weight: .semibold)
+        cancelButton.translatesAutoresizingMaskIntoConstraints = false
+        cancelButton.tag = 9998
+
+        // Add buttons to crop view controller's view
+        cropViewController.view.addSubview(doneButton)
+        cropViewController.view.addSubview(cancelButton)
+
+        // Position buttons higher up (120pt from bottom instead of default position)
+        NSLayoutConstraint.activate([
+            cancelButton.leadingAnchor.constraint(equalTo: cropViewController.view.leadingAnchor, constant: 20),
+            cancelButton.bottomAnchor.constraint(equalTo: cropViewController.view.safeAreaLayoutGuide.bottomAnchor, constant: -120),
+            cancelButton.heightAnchor.constraint(equalToConstant: 44),
+
+            doneButton.trailingAnchor.constraint(equalTo: cropViewController.view.trailingAnchor, constant: -20),
+            doneButton.bottomAnchor.constraint(equalTo: cropViewController.view.safeAreaLayoutGuide.bottomAnchor, constant: -120),
+            doneButton.heightAnchor.constraint(equalToConstant: 44),
+        ])
+
+        // Connect actions
+        doneButton.addTarget(self, action: #selector(customCropDoneTapped(_:)), for: .touchUpInside)
+        cancelButton.addTarget(self, action: #selector(customCropCancelTapped(_:)), for: .touchUpInside)
+    }
+
+    @objc private func customCropDoneTapped(_ sender: UIButton) {
+        // Find the crop view controller
+        guard let navController = presentedViewController as? UINavigationController,
+              let cropViewController = navController.viewControllers.first as? TOCropViewController else {
+            return
+        }
+
+        // Trigger the built-in done action
+        cropViewController.toolbar.doneTextButton.sendActions(for: .touchUpInside)
+    }
+
+    @objc private func customCropCancelTapped(_ sender: UIButton) {
+        // Find the crop view controller
+        guard let navController = presentedViewController as? UINavigationController,
+              let cropViewController = navController.viewControllers.first as? TOCropViewController else {
+            return
+        }
+
+        // Trigger the built-in cancel action
+        cropViewController.toolbar.cancelTextButton.sendActions(for: .touchUpInside)
+    }
+
     @objc private func cropButtonTapped() {
         shareLog("Crop button tapped")
 
@@ -5056,7 +5123,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         navController.isNavigationBarHidden = true
 
         shareLog("Presenting crop view controller")
-        present(navController, animated: true, completion: nil)
+        present(navController, animated: true) {
+            // Add custom buttons after presentation for better positioning
+            self.addCustomCropButtons(to: cropViewController)
+        }
     }
 
     private func startSmoothProgress() {
