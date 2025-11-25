@@ -4908,9 +4908,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         overlay.backgroundColor = UIColor.systemBackground
         overlay.tag = 9997 // Tag to identify preview overlay
 
-        // Image view with aspect-fit
+        // Image view with aspect-fill to cover entire rectangle
         let imageView = UIImageView()
-        imageView.contentMode = .scaleAspectFit
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
         if let image = UIImage(data: imageData) {
