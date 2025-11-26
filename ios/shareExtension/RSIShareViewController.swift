@@ -5013,82 +5013,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         uploadAndDetect(imageData: imageData)
     }
 
-    private func addCustomCropButtons(to cropViewController: TOCropViewController) {
-        let redColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-
-        // Create custom Done button
-        let doneButton = UIButton(type: .system)
-        doneButton.setTitle("Done", for: .normal)
-        doneButton.setTitleColor(redColor, for: .normal)
-        doneButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Medium", size: 17)
-            ?? .systemFont(ofSize: 17, weight: .medium)
-        doneButton.translatesAutoresizingMaskIntoConstraints = false
-        doneButton.alpha = 0
-        doneButton.tag = 9999
-
-        // Create custom Cancel button
-        let cancelButton = UIButton(type: .system)
-        cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.setTitleColor(.white, for: .normal)
-        cancelButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Medium", size: 17)
-            ?? .systemFont(ofSize: 17, weight: .medium)
-        cancelButton.translatesAutoresizingMaskIntoConstraints = false
-        cancelButton.alpha = 0
-        cancelButton.tag = 9998
-
-        // Add buttons to crop view controller's view
-        cropViewController.view.addSubview(doneButton)
-        cropViewController.view.addSubview(cancelButton)
-
-        // Position buttons higher up (120pt from bottom instead of default position)
-        NSLayoutConstraint.activate([
-            cancelButton.leadingAnchor.constraint(equalTo: cropViewController.view.leadingAnchor, constant: 20),
-            cancelButton.bottomAnchor.constraint(equalTo: cropViewController.view.safeAreaLayoutGuide.bottomAnchor, constant: -120),
-            cancelButton.heightAnchor.constraint(equalToConstant: 44),
-
-            doneButton.trailingAnchor.constraint(equalTo: cropViewController.view.trailingAnchor, constant: -20),
-            doneButton.bottomAnchor.constraint(equalTo: cropViewController.view.safeAreaLayoutGuide.bottomAnchor, constant: -120),
-            doneButton.heightAnchor.constraint(equalToConstant: 44),
-        ])
-
-        // Connect actions
-        doneButton.addTarget(self, action: #selector(customCropDoneTapped(_:)), for: .touchUpInside)
-        cancelButton.addTarget(self, action: #selector(customCropCancelTapped(_:)), for: .touchUpInside)
-
-        // Fade in custom buttons and toolbar buttons
+    private func fadeInCropToolbarButtons(_ cropViewController: TOCropViewController) {
         UIView.animate(withDuration: 0.3, delay: 0.1, options: .curveEaseOut, animations: {
-            doneButton.alpha = 1.0
-            cancelButton.alpha = 1.0
-            // Fade in the other toolbar buttons (flip, rotate, aspect ratio)
-            cropViewController.toolbar.subviews.forEach { subview in
-                if subview != cropViewController.toolbar.doneTextButton &&
-                   subview != cropViewController.toolbar.cancelTextButton {
-                    subview.alpha = 1.0
-                }
-            }
+            cropViewController.toolbar.subviews.forEach { $0.alpha = 1.0 }
         }, completion: nil)
-    }
-
-    @objc private func customCropDoneTapped(_ sender: UIButton) {
-        // Find the crop view controller
-        guard let navController = presentedViewController as? UINavigationController,
-              let cropViewController = navController.viewControllers.first as? TOCropViewController else {
-            return
-        }
-
-        // Trigger the built-in done action
-        cropViewController.toolbar.doneTextButton.sendActions(for: .touchUpInside)
-    }
-
-    @objc private func customCropCancelTapped(_ sender: UIButton) {
-        // Find the crop view controller
-        guard let navController = presentedViewController as? UINavigationController,
-              let cropViewController = navController.viewControllers.first as? TOCropViewController else {
-            return
-        }
-
-        // Trigger the built-in cancel action
-        cropViewController.toolbar.cancelTextButton.sendActions(for: .touchUpInside)
     }
 
     @objc private func cropButtonTapped() {
@@ -5116,7 +5044,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cropViewController.rotateClockwiseButtonHidden = true
         cropViewController.toolbar.clampButtonHidden = true
 
-        // Hide all toolbar buttons initially to prevent flash - they will fade in
+        // Hide toolbar buttons initially to prevent flash - they will fade in
         cropViewController.toolbar.doneTextButton.alpha = 0
         cropViewController.toolbar.cancelTextButton.alpha = 0
         cropViewController.toolbar.subviews.forEach { $0.alpha = 0 }
@@ -5131,8 +5059,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Presenting crop view controller")
         present(navController, animated: true) {
-            // Add custom buttons after presentation for better positioning
-            self.addCustomCropButtons(to: cropViewController)
+            // Fade in the built-in toolbar buttons (Done/Cancel + tools)
+            self.fadeInCropToolbarButtons(cropViewController)
         }
     }
 
