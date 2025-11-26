@@ -3208,7 +3208,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         NSLayoutConstraint.activate([
             noResultsContainer.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
-            noResultsContainer.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor, constant: -40),
+            noResultsContainer.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor),
             noResultsContainer.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 32),
             noResultsContainer.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -32),
 
@@ -3217,15 +3217,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
             iconImageView.widthAnchor.constraint(equalToConstant: 64),
             iconImageView.heightAnchor.constraint(equalToConstant: 64),
 
-            titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 16),
+            titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 20),
             titleLabel.leadingAnchor.constraint(equalTo: noResultsContainer.leadingAnchor),
             titleLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor),
 
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
             subtitleLabel.leadingAnchor.constraint(equalTo: noResultsContainer.leadingAnchor),
             subtitleLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor),
 
-            tipLabel.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 24),
+            tipLabel.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 32),
             tipLabel.leadingAnchor.constraint(equalTo: noResultsContainer.leadingAnchor, constant: 16),
             tipLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor, constant: -16),
             tipLabel.bottomAnchor.constraint(equalTo: noResultsContainer.bottomAnchor)
