@@ -5143,7 +5143,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self?.statusRotationTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
                 guard let timer = self.statusRotationTimer, timer.isValid else {
-                    self?.stopStatusRotation()
+                    self.stopStatusRotation()
                     return
                 }
 
