@@ -1,14 +1,13 @@
 import 'package:equatable/equatable.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
+import '../../../services/superwall_service.dart';
 
-/// Represents the user's subscription status from RevenueCat
+/// Represents the user's subscription status (Superwall-backed).
 class SubscriptionStatus extends Equatable {
   final bool isActive;
   final bool isInTrialPeriod;
   final String? productIdentifier;
   final DateTime? expirationDate;
   final DateTime? purchaseDate;
-  final EntitlementInfo? entitlementInfo;
 
   const SubscriptionStatus({
     required this.isActive,
@@ -16,30 +15,17 @@ class SubscriptionStatus extends Equatable {
     this.productIdentifier,
     this.expirationDate,
     this.purchaseDate,
-    this.entitlementInfo,
   });
 
-  /// Create from RevenueCat CustomerInfo
-  factory SubscriptionStatus.fromCustomerInfo(CustomerInfo customerInfo) {
-    // Check if user has premium entitlement
-    final entitlement = customerInfo.entitlements.active['premium'];
-    final isActive = entitlement != null;
-
+  factory SubscriptionStatus.fromSnapshot(SubscriptionStatusSnapshot snapshot) {
     return SubscriptionStatus(
-      isActive: isActive,
-      isInTrialPeriod: entitlement?.periodType == PeriodType.trial,
-      productIdentifier: entitlement?.productIdentifier,
-      expirationDate: entitlement?.expirationDate != null
-          ? DateTime.tryParse(entitlement!.expirationDate!)
-          : null,
-      purchaseDate: entitlement?.latestPurchaseDate != null
-          ? DateTime.tryParse(entitlement!.latestPurchaseDate!)
-          : null,
-      entitlementInfo: entitlement,
+      isActive: snapshot.isActive,
+      isInTrialPeriod: snapshot.isInTrialPeriod,
+      productIdentifier: snapshot.productIdentifier,
+      expirationDate: snapshot.expirationDate,
     );
   }
 
-  /// Initial state (no subscription)
   factory SubscriptionStatus.initial() {
     return const SubscriptionStatus(
       isActive: false,
@@ -47,27 +33,23 @@ class SubscriptionStatus extends Equatable {
     );
   }
 
-  /// Check if subscription is expired
   bool get isExpired {
     if (expirationDate == null) return false;
     return DateTime.now().isAfter(expirationDate!);
   }
 
-  /// Get days remaining in trial
   int? get daysRemainingInTrial {
     if (!isInTrialPeriod || expirationDate == null) return null;
     final daysRemaining = expirationDate!.difference(DateTime.now()).inDays;
     return daysRemaining > 0 ? daysRemaining : 0;
   }
 
-  /// Get days until expiration
   int? get daysUntilExpiration {
     if (expirationDate == null) return null;
     final daysRemaining = expirationDate!.difference(DateTime.now()).inDays;
     return daysRemaining > 0 ? daysRemaining : 0;
   }
 
-  /// Check if user should see renewal reminder
   bool get shouldShowRenewalReminder {
     final daysRemaining = daysUntilExpiration;
     if (daysRemaining == null) return false;

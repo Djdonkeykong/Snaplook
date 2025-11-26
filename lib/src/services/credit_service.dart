@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../features/paywall/models/credit_balance.dart';
 import '../features/paywall/models/subscription_plan.dart';
-import 'revenue_cat_service.dart';
+import 'superwall_service.dart';
 
 /// Service for managing user credits
 class CreditService {
@@ -11,7 +11,7 @@ class CreditService {
   factory CreditService() => _instance;
   CreditService._internal();
 
-  final RevenueCatService _revenueCatService = RevenueCatService();
+  final SuperwallService _superwallService = SuperwallService();
 
   static const String _creditBalanceKey = 'credit_balance';
   static const String _lastRefillDateKey = 'last_refill_date';
@@ -31,8 +31,8 @@ class CreditService {
       // Check if user has used free trial
       final hasUsedFreeTrial = prefs.getBool(_freeTrialUsedKey) ?? false;
 
-      // Get subscription status from RevenueCat
-      final subscriptionStatus = await _revenueCatService.getSubscriptionStatus();
+      // Get subscription status from Superwall
+      final subscriptionStatus = _superwallService.getSubscriptionSnapshot();
 
       // If user has never used free trial and has no subscription, give 1 free credit
       if (!hasUsedFreeTrial && !subscriptionStatus.isActive) {
@@ -66,8 +66,8 @@ class CreditService {
       if (subscriptionStatus.isActive) {
         // User has subscription - give full credits
         final plan = SubscriptionPlan.getPlanByProductId(
-          subscriptionStatus.productIdentifier ?? '',
-        );
+              subscriptionStatus.productIdentifier ?? SubscriptionPlan.yearly.productId) ??
+            SubscriptionPlan.yearly;
         final credits = plan?.creditsPerMonth ?? 100;
 
         _cachedBalance = CreditBalance(
@@ -121,15 +121,15 @@ class CreditService {
   /// Refill credits (called when subscription is renewed monthly)
   Future<CreditBalance> refillCredits() async {
     try {
-      final subscriptionStatus = await _revenueCatService.getSubscriptionStatus();
+      final subscriptionStatus = _superwallService.getSubscriptionSnapshot();
 
       if (!subscriptionStatus.isActive) {
         throw Exception('No active subscription');
       }
 
       final plan = SubscriptionPlan.getPlanByProductId(
-        subscriptionStatus.productIdentifier ?? '',
-      );
+            subscriptionStatus.productIdentifier ?? SubscriptionPlan.yearly.productId) ??
+          SubscriptionPlan.yearly;
 
       if (plan == null) {
         throw Exception('Unknown subscription plan');
@@ -227,7 +227,7 @@ class CreditService {
   /// Sync credits with subscription status (call after purchase/restore)
   Future<CreditBalance> syncWithSubscription() async {
     try {
-      final subscriptionStatus = await _revenueCatService.getSubscriptionStatus();
+      final subscriptionStatus = _superwallService.getSubscriptionSnapshot();
 
       if (subscriptionStatus.isActive) {
         // User has active subscription - refill credits

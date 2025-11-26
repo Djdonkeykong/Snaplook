@@ -31,7 +31,7 @@ import 'src/features/auth/domain/services/auth_service.dart';
 import 'src/features/auth/domain/providers/auth_provider.dart';
 import 'src/features/auth/presentation/pages/login_page.dart';
 import 'src/features/favorites/domain/providers/favorites_provider.dart';
-import 'src/services/revenue_cat_service.dart';
+import 'src/services/superwall_service.dart';
 import 'dart:io';
 
 Future<void> _precacheSplashLogo() async {
@@ -153,13 +153,13 @@ void main() async {
     debugPrint('[Auth] Failed to sync auth state: $e');
   }
 
-  // Initialize RevenueCat for subscriptions (allows .env override but falls back to bundled keys)
+  // Initialize Superwall for subscriptions (allows .env override but falls back to bundled key)
   try {
-    final revenueCatApiKey = dotenv.env['REVENUECAT_API_KEY'];
-    await RevenueCatService().initialize(apiKeyOverride: revenueCatApiKey);
-    debugPrint('[RevenueCat] Initialized successfully');
+    final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'] ?? 'pk_JerHRerDi63JoAtFh1MtT';
+    await SuperwallService().initialize(apiKey: superwallApiKey);
+    debugPrint('[Superwall] Initialized successfully');
   } catch (e) {
-    debugPrint('[RevenueCat] Initialization failed: $e');
+    debugPrint('[Superwall] Initialization failed: $e');
   }
 
   // Preload video immediately on app startup

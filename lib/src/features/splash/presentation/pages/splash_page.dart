@@ -65,8 +65,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         nextPage = const LoginPage();
       } else {
         try {
-          // Sync subscription data from RevenueCat
-          // TODO: Re-enable when RevenueCat is configured in production
+          // Sync subscription data from Superwall
+          // TODO: Re-enable when Superwall is configured in production
           // await SubscriptionSyncService().syncSubscriptionToSupabase();
 
           // Get onboarding state

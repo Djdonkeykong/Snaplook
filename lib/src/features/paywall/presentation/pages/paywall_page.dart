@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -16,10 +15,6 @@ enum PaywallPlanType { monthly, yearly }
 final selectedPlanProvider = StateProvider<PaywallPlanType>(
   (ref) => PaywallPlanType.yearly,
 );
-final offeringsProvider = FutureProvider<Offerings?>((ref) async {
-  final purchaseController = ref.read(purchaseControllerProvider);
-  return await purchaseController.getOfferings();
-});
 final isPurchasingProvider = StateProvider<bool>((ref) => false);
 
 class PaywallPage extends ConsumerWidget {
@@ -36,7 +31,6 @@ class PaywallPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedPlan = ref.watch(selectedPlanProvider);
     final spacing = context.spacing;
-    final offerings = ref.watch(offeringsProvider);
     final isPurchasing = ref.watch(isPurchasingProvider);
     final maxSheetHeight =
         MediaQuery.of(context).size.height * maxHeightFactor;
@@ -247,7 +241,6 @@ class PaywallPage extends ConsumerWidget {
                             : () => _handlePurchase(
                                 context,
                                 ref,
-                                offerings.value,
                               ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFf2003c),
@@ -312,44 +305,19 @@ class PaywallPage extends ConsumerWidget {
   Future<void> _handlePurchase(
     BuildContext context,
     WidgetRef ref,
-    Offerings? offerings,
   ) async {
     try {
       HapticFeedback.mediumImpact();
 
-      if (offerings == null || offerings.current == null) {
-        _showErrorDialog(
-          context,
-          'No subscription plans available. Please try again later.',
-        );
-        return;
-      }
-
       final selectedPlan = ref.read(selectedPlanProvider);
       final purchaseController = ref.read(purchaseControllerProvider);
 
-      Package? targetPackage;
-      final currentOffering = offerings.current!;
-
-      if (selectedPlan == PaywallPlanType.yearly) {
-        targetPackage =
-            currentOffering.annual ??
-            currentOffering.availablePackages.firstWhere(
-              (p) => p.packageType == PackageType.annual,
-              orElse: () => currentOffering.availablePackages.first,
-            );
-      } else {
-        targetPackage =
-            currentOffering.monthly ??
-            currentOffering.availablePackages.firstWhere(
-              (p) => p.packageType == PackageType.monthly,
-              orElse: () => currentOffering.availablePackages.first,
-            );
-      }
-
       ref.read(isPurchasingProvider.notifier).state = true;
 
-      final success = await purchaseController.purchasePackage(targetPackage);
+      final success = await purchaseController.showPaywall(
+        // Use a single Superwall placement for both monthly/yearly options.
+        placement: 'onboarding_paywall',
+      );
 
       ref.read(isPurchasingProvider.notifier).state = false;
 
@@ -388,14 +356,11 @@ class PaywallPage extends ConsumerWidget {
     } on PlatformException catch (e) {
       ref.read(isPurchasingProvider.notifier).state = false;
 
-      final errorCode = PurchasesErrorHelper.getErrorCode(e);
-      if (errorCode != PurchasesErrorCode.purchaseCancelledError) {
-        if (context.mounted) {
-          _showErrorDialog(
-            context,
-            e.message ?? 'Purchase failed. Please try again.',
-          );
-        }
+      if (context.mounted) {
+        _showErrorDialog(
+          context,
+          e.message ?? 'Purchase failed. Please try again.',
+        );
       }
     } catch (e) {
       ref.read(isPurchasingProvider.notifier).state = false;

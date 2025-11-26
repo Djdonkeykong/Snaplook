@@ -153,15 +153,13 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   HapticFeedback.mediumImpact();
 
-                  // Check if user already has active subscription
                   final hasActiveSubscription =
                       ref.read(hasActiveSubscriptionProvider);
 
                   if (hasActiveSubscription) {
-                    // User already paid -> skip paywall, go to next step based on auth
                     final authService = ref.read(authServiceProvider);
                     final hasAccount = authService.currentUser != null;
                     Navigator.of(context).push(
@@ -172,12 +170,24 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                       ),
                     );
                   } else {
-                    // No subscription -> show paywall
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const OnboardingPaywallPage(),
-                      ),
+                    // No subscription -> present Superwall paywall
+                    final purchaseController =
+                        ref.read(purchaseControllerProvider);
+                    final success = await purchaseController.showPaywall(
+                      placement: 'onboarding_paywall',
                     );
+
+                    if (success && context.mounted) {
+                      final authService = ref.read(authServiceProvider);
+                      final hasAccount = authService.currentUser != null;
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => hasAccount
+                              ? WelcomeFreeAnalysisPage()
+                              : const AccountCreationPage(),
+                        ),
+                      );
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(

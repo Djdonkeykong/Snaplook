@@ -1,15 +1,18 @@
 import 'package:flutter/foundation.dart';
-import '../../../services/revenue_cat_service.dart';
+import '../../../services/superwall_service.dart';
 import '../../../services/credit_service.dart';
 
-/// Initialize RevenueCat and credit system
+/// Initialize Superwall and credit system
 /// Call this in main.dart before runApp()
 Future<void> initializePaywallSystem({String? userId}) async {
   try {
     debugPrint('Initializing paywall system...');
 
-    // Initialize RevenueCat
-    await RevenueCatService().initialize(userId: userId);
+    // Initialize Superwall
+    await SuperwallService().initialize(
+      apiKey: 'pk_JerHRerDi63JoAtFh1MtT',
+      userId: userId,
+    );
 
     // Initialize credit service (will load initial balance)
     await CreditService().getCreditBalance();
@@ -28,8 +31,8 @@ Future<void> initializePaywallWithUser(String userId) async {
   try {
     debugPrint('Initializing paywall for user: $userId');
 
-    // Set user ID in RevenueCat
-    await RevenueCatService().setUserId(userId);
+    // Identify user in Superwall
+    await SuperwallService().identify(userId);
 
     // Refresh credit balance for this user
     CreditService().clearCache();
@@ -46,8 +49,8 @@ Future<void> cleanupPaywallOnLogout() async {
   try {
     debugPrint('Cleaning up paywall on logout...');
 
-    // Logout from RevenueCat
-    await RevenueCatService().logout();
+    // Reset Superwall identity
+    await SuperwallService().reset();
 
     // Clear credit cache
     CreditService().clearCache();

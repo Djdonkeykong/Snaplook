@@ -33,8 +33,7 @@ dependencies:
   sign_in_with_apple: ^7.0.1
 
   # Subscriptions & Payments
-  purchases_flutter: ^8.5.1
-  purchases_ui_flutter: ^8.5.1
+  superwallkit_flutter: ^2.4.5
 
   # Image Processing
   image_picker: ^1.1.2

@@ -1,8 +1,8 @@
-/// Subscription plan model for RevenueCat integration
+/// Subscription plan model for Superwall integration
 class SubscriptionPlan {
   final String id;
   final String name;
-  final String productId; // RevenueCat product identifier
+  final String productId; // Store product identifier
   final double price;
   final String priceString;
   final int creditsPerMonth;

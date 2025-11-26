@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import '../models/credit_balance.dart';
 import '../models/subscription_status.dart';
 import '../../../services/credit_service.dart';
-import '../../../services/revenue_cat_service.dart';
+import '../../../services/superwall_service.dart';
 import '../../../services/subscription_sync_service.dart';
 
 /// Provider for credit service
@@ -11,9 +10,9 @@ final creditServiceProvider = Provider<CreditService>((ref) {
   return CreditService();
 });
 
-/// Provider for RevenueCat service
-final revenueCatServiceProvider = Provider<RevenueCatService>((ref) {
-  return RevenueCatService();
+/// Provider for Superwall service
+final superwallServiceProvider = Provider<SuperwallService>((ref) {
+  return SuperwallService();
 });
 
 /// Provider for credit balance
@@ -23,7 +22,7 @@ final creditBalanceProvider = StateNotifierProvider<CreditBalanceNotifier, Async
 
 /// Provider for subscription status
 final subscriptionStatusProvider = StateNotifierProvider<SubscriptionStatusNotifier, AsyncValue<SubscriptionStatus>>((ref) {
-  return SubscriptionStatusNotifier(ref.read(revenueCatServiceProvider));
+  return SubscriptionStatusNotifier(ref.read(superwallServiceProvider));
 });
 
 /// Notifier for managing credit balance state
@@ -87,9 +86,9 @@ class CreditBalanceNotifier extends StateNotifier<AsyncValue<CreditBalance>> {
 
 /// Notifier for managing subscription status state
 class SubscriptionStatusNotifier extends StateNotifier<AsyncValue<SubscriptionStatus>> {
-  final RevenueCatService _revenueCatService;
+  final SuperwallService _superwallService;
 
-  SubscriptionStatusNotifier(this._revenueCatService) : super(const AsyncValue.loading()) {
+  SubscriptionStatusNotifier(this._superwallService) : super(const AsyncValue.loading()) {
     loadStatus();
   }
 
@@ -97,7 +96,7 @@ class SubscriptionStatusNotifier extends StateNotifier<AsyncValue<SubscriptionSt
   Future<void> loadStatus() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      return await _revenueCatService.getSubscriptionStatus();
+      return SubscriptionStatus.fromSnapshot(_superwallService.getSubscriptionSnapshot());
     });
   }
 
@@ -146,7 +145,7 @@ final isInTrialPeriodProvider = Provider<bool>((ref) {
 /// Purchase controller for handling purchase operations
 final purchaseControllerProvider = Provider<PurchaseController>((ref) {
   return PurchaseController(
-    ref.read(revenueCatServiceProvider),
+    ref.read(superwallServiceProvider),
     ref.read(creditBalanceProvider.notifier),
     ref.read(subscriptionStatusProvider.notifier),
   );
@@ -154,23 +153,22 @@ final purchaseControllerProvider = Provider<PurchaseController>((ref) {
 
 /// Controller for purchase operations
 class PurchaseController {
-  final RevenueCatService _revenueCatService;
+  final SuperwallService _superwallService;
   final CreditBalanceNotifier _creditNotifier;
   final SubscriptionStatusNotifier _subscriptionNotifier;
   final _subscriptionSyncService = SubscriptionSyncService();
 
   PurchaseController(
-    this._revenueCatService,
+    this._superwallService,
     this._creditNotifier,
     this._subscriptionNotifier,
   );
 
-  /// Purchase a package
-  Future<bool> purchasePackage(Package package) async {
+  /// Present Superwall paywall and wait for activation.
+  Future<bool> showPaywall({String placement = SuperwallService.defaultPlacement}) async {
     try {
-      final customerInfo = await _revenueCatService.purchasePackage(package);
-      if (customerInfo != null) {
-        // Purchase successful - sync credit balance and subscription status
+      final success = await _superwallService.presentPaywall(placement: placement);
+      if (success) {
         await _creditNotifier.syncWithSubscription();
         await _subscriptionNotifier.refresh();
 
@@ -185,33 +183,6 @@ class PurchaseController {
     }
   }
 
-  /// Restore purchases
-  Future<bool> restorePurchases() async {
-    try {
-      final customerInfo = await _revenueCatService.restorePurchases();
-      if (customerInfo != null) {
-        // Restore successful - sync credit balance and subscription status
-        await _creditNotifier.syncWithSubscription();
-        await _subscriptionNotifier.refresh();
-
-        // Sync subscription data to Supabase
-        await _subscriptionSyncService.syncSubscriptionToSupabase();
-
-        return true;
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Get available offerings
-  Future<Offerings?> getOfferings() async {
-    return await _revenueCatService.getOfferings();
-  }
-
-  /// Show management UI
-  Future<void> showManagementUI() async {
-    await _revenueCatService.showManagementUI();
-  }
+  /// Restore purchases is handled inside Superwall; show the paywall to trigger restore if needed.
+  Future<bool> restorePurchases() async => showPaywall();
 }

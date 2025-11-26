@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'revenue_cat_service.dart';
+import 'superwall_service.dart';
 import 'fraud_prevention_service.dart';
 
 /// States of the onboarding process
@@ -49,7 +49,7 @@ class OnboardingStateService {
   OnboardingStateService._internal();
 
   final _supabase = Supabase.instance.client;
-  final _revenueCat = RevenueCatService();
+  final _superwall = SuperwallService();
 
   /// Start onboarding process
   Future<void> startOnboarding(String userId) async {
@@ -93,7 +93,7 @@ class OnboardingStateService {
       }).eq('id', userId);
 
       // Record trial start if applicable
-      final isInTrial = await _revenueCat.isInTrialPeriod();
+      final isInTrial = _superwall.getSubscriptionSnapshot().isInTrialPeriod;
       if (isInTrial) {
         await FraudPreventionService.recordTrialStart(userId);
       }

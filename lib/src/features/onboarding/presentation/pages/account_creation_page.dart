@@ -71,23 +71,12 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
     );
   }
 
-  /// Link RevenueCat subscription to newly created account
-  /// This handles anonymous purchases being transferred to identified users
+  /// Link Superwall subscription to newly created account
   Future<bool> _linkSubscriptionToAccount(String userId) async {
     try {
-      debugPrint('[AccountCreation] Linking subscription for user $userId');
+      debugPrint('[AccountCreation] Linking subscription for user $userId via Superwall');
 
-      // Link RevenueCat user (transfers anonymous purchase to identified user)
-      final linkSuccess =
-          await SubscriptionSyncService().linkRevenueCatUser(userId);
-
-      if (!linkSuccess) {
-        debugPrint('[AccountCreation] Subscription conflict detected');
-        if (mounted) {
-          _showSubscriptionConflictDialog();
-        }
-        return false;
-      }
+      await SubscriptionSyncService().identifyWithSuperwall(userId);
 
       // Update device fingerprint for fraud prevention
       await FraudPreventionService.updateUserDeviceFingerprint(userId);
@@ -271,7 +260,7 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                   print(
                                       '[AccountCreation] Apple - User ID after sign in: $userId');
                                   if (userId != null) {
-                                    // CRITICAL: Link RevenueCat subscription to new account
+                                    // CRITICAL: Link subscription to new account
                                     // This transfers any anonymous purchases to the identified user
                                     final linkSuccess =
                                         await _linkSubscriptionToAccount(userId);
@@ -422,7 +411,7 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                 print(
                                     '[AccountCreation] Google - User ID after sign in: $userId');
                                 if (userId != null) {
-                                  // CRITICAL: Link RevenueCat subscription to new account
+                                  // CRITICAL: Link subscription to new account
                                   // This transfers any anonymous purchases to the identified user
                                   final linkSuccess =
                                       await _linkSubscriptionToAccount(userId);
