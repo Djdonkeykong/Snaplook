@@ -925,7 +925,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Disclaimer label
         let disclaimerLabel = UILabel()
-        disclaimerLabel.text = "Note: “Analyze now” stays here. “Analyze in app” opens Snaplook. Cropping helps save credits because each garment scanned costs one."
+        disclaimerLabel.text = "Note: “Analyze now” processes your scan here. “Analyze in app” opens Snaplook.\nTip: Cropping can help you save credits—each garment scanned uses one."
         disclaimerLabel.font = .systemFont(ofSize: 12, weight: .regular)
         disclaimerLabel.textColor = UIColor.secondaryLabel
         disclaimerLabel.textAlignment = .center
