@@ -1381,6 +1381,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Choice UI is already visible - just wait for user decision
             shareLog("\(platformName) URL detected - awaiting user decision (buttons already visible)")
+            shareLog("DEBUG: Stored pendingInstagramUrl for \(platformName) - URL: \(item.prefix(50))...")
             return
         } else {
             // No detection configured - proceed with normal download flow
@@ -5112,7 +5113,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func configureProgressProfile(for platform: String?) {
         let normalized = platform?.lowercased()
         if let normalized = normalized,
-           ["instagram", "tiktok", "pinterest", "facebook", "twitter", "x", "snapchat"].contains(normalized) {
+           ["instagram", "tiktok", "pinterest", "youtube", "facebook", "twitter", "x", "snapchat"].contains(normalized) {
             // Slower crawl for heavier/social flows
             progressRateMultiplier = 1.0
             previewTargetCap = 0.92
@@ -5727,6 +5728,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     @objc private func analyzeNowTapped() {
         shareLog("Analyze now tapped - starting detection")
+        shareLog("DEBUG: pendingInstagramUrl=\(pendingInstagramUrl != nil ? "SET" : "NIL"), pendingPlatformType=\(pendingPlatformType ?? "NIL"), sharedMedia.count=\(sharedMedia.count)")
 
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
