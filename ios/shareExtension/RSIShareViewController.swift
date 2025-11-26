@@ -5005,8 +5005,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        // Hide preview overlay
+        // Replace preview overlay with the standard loading UI used during detection
         hideLoadingUI()
+        updateProcessingStatus("processing")
+        setupLoadingUI()
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.stopStatusPolling()
+            self.startSmoothProgress()
+            self.targetProgress = 0.15
+            self.updateProgress(0.2, status: "Preparing photo...")
+            let rotatingMessages = ["Detecting garments...", "Searching for products...", "Finding similar items..."]
+            self.startStatusRotation(messages: rotatingMessages, interval: 2.0)
+        }
 
         // Start detection
         shareLog("Starting detection from preview with \(imageData.count) bytes")
@@ -5050,7 +5062,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cropViewController.toolbar.subviews.forEach { $0.alpha = 0 }
 
         // Set toolbar buttons tint to white for better visibility
+        let snaplookRed = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
         cropViewController.toolbar.tintColor = .white
+        cropViewController.toolbar.doneTextButton.setTitleColor(snaplookRed, for: .normal)
+        cropViewController.toolbar.doneTextButton.setTitleColor(snaplookRed.withAlphaComponent(0.8), for: .highlighted)
 
         // Wrap in navigation controller for proper safe area handling in Share Extension
         let navController = UINavigationController(rootViewController: cropViewController)
