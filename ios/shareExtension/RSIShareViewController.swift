@@ -5747,11 +5747,27 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let proceedToDownload: () -> Void = { [weak self] in
                 guard let self = self else { return }
 
+                // Instagram gets special treatment with rotating messages
+                let isInstagram = (self.pendingPlatformType == "instagram")
+
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
                     self.startSmoothProgress()
                     self.targetProgress = 0.92
-                    self.updateProgress(0.0, status: "Loading preview...")
+
+                    if isInstagram {
+                        // Instagram: rotating messages for more engaging UX
+                        let instagramMessages = [
+                            "Getting image...",
+                            "Downloading from Instagram...",
+                            "Fetching photo...",
+                            "Almost there..."
+                        ]
+                        self.startStatusRotation(messages: instagramMessages, interval: 2.0)
+                    } else {
+                        // TikTok, Pinterest, etc.: simple single message
+                        self.updateProgress(0.0, status: "Loading preview...")
+                    }
                 }
 
                 let downloadFunction = self.getDownloadFunction(for: self.pendingPlatformType)
@@ -5771,6 +5787,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
                                 shareLog("Downloaded \(platformName) image (\(imageData.count) bytes) - showing preview")
 
                                 // Update progress to completion
+                                if isInstagram {
+                                    self.stopStatusRotation()
+                                }
                                 self.targetProgress = 1.0
                                 self.updateProgress(1.0, status: "Loading preview...")
 
