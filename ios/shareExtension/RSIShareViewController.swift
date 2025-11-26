@@ -2715,19 +2715,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Use new caching endpoint
         let analyzeEndpoint = serverBaseUrl + "/api/v1/analyze"
         shareLog("Detection endpoint: \(analyzeEndpoint)")
-        targetProgress = 0.60
+        targetProgress = 0.80
 
-        // Start rotating status messages for the search phase
+        // Start rotating status messages for the analysis phase
         let searchMessages = [
-            "Searching for products...",
+            "Detecting garments...",
+            "Analyzing outfit...",
             "Finding similar items...",
-            "Analyzing style...",
-            "Checking retailers...",
-            "Almost there...",
-            "Finalizing results...",
-            "Preparing your matches..."
+            "Finalizing results..."
         ]
-        startStatusRotation(messages: searchMessages, interval: 2.5, stopAtLast: true)
+        startStatusRotation(messages: searchMessages, interval: 2.0, stopAtLast: true)
 
         // Determine search type based on source
         var searchType = "unknown"
@@ -3036,24 +3033,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stopStatusPolling()
         hasPresentedDetectionFailureAlert = false
 
-        // Progress should already be started from the source fetch; keep things moving
-        updateProgress(0.25, status: "Preparing photo...")
-
         let base64Image = imageData.base64EncodedString()
         shareLog("Base64 encoded - length: \(base64Image.count) chars")
 
         let resolvedUrl = pendingImageUrl?.isEmpty == false ? pendingImageUrl : downloadedImageUrl
         downloadedImageUrl = resolvedUrl
-
-        targetProgress = 0.25
         shareLog("Calling runDetectionAnalysis...")
 
-        let detectionMessages = [
-            "Detecting garments...",
-            "Analyzing clothing...",
-            "Identifying items..."
-        ]
-        startStatusRotation(messages: detectionMessages, interval: 2.5)
+        // Bump progress as we hand off to the detector
+        updateProgress(0.4, status: "Uploading photo...")
 
         runDetectionAnalysis(imageUrl: resolvedUrl, imageBase64: base64Image)
     }
@@ -5014,10 +5002,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard let self = self else { return }
             self.stopStatusPolling()
             self.startSmoothProgress()
-            self.targetProgress = 0.15
+            self.targetProgress = 0.2
             self.updateProgress(0.2, status: "Preparing photo...")
-            let rotatingMessages = ["Detecting garments...", "Searching for products...", "Finding similar items..."]
-            self.startStatusRotation(messages: rotatingMessages, interval: 2.0)
         }
 
         // Start detection
@@ -5156,10 +5142,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         DispatchQueue.main.async { [weak self] in
             self?.statusRotationTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
+                guard let timer = self.statusRotationTimer, timer.isValid else {
+                    self?.stopStatusRotation()
+                    return
+                }
 
                 // Safety check: Stop if messages array became empty
                 guard !self.currentStatusMessages.isEmpty else {
-                    shareLog("Status rotation stopped - messages array is empty")
                     self.stopStatusRotation()
                     return
                 }
