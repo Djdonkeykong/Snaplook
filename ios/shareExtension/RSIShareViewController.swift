@@ -3207,9 +3207,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingView.addSubview(tipLabel)
 
         NSLayoutConstraint.activate([
-            // Main content centered (moved up more to make room for tip at bottom)
+            // Main content centered (same approach as choice buttons page)
             noResultsContainer.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
-            noResultsContainer.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor, constant: -80),
+            noResultsContainer.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor),
             noResultsContainer.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 32),
             noResultsContainer.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -32),
 
@@ -3227,12 +3227,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             subtitleLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor),
             subtitleLabel.bottomAnchor.constraint(equalTo: noResultsContainer.bottomAnchor),
 
-            // Tip at bottom of screen - use view's bottom directly
+            // Tip at bottom (same approach as disclaimer on choice buttons page)
             tipLabel.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 32),
             tipLabel.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -32),
-            tipLabel.bottomAnchor.constraint(equalTo: loadingView.bottomAnchor, constant: -40),
-            // Ensure tip stays below main content
-            tipLabel.topAnchor.constraint(greaterThanOrEqualTo: noResultsContainer.bottomAnchor, constant: 32)
+            tipLabel.bottomAnchor.constraint(equalTo: loadingView.safeAreaLayoutGuide.bottomAnchor, constant: -32)
         ])
 
         // Haptic feedback
