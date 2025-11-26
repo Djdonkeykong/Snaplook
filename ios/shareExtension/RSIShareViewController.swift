@@ -652,6 +652,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var progressTimer: Timer?
     private var currentProgress: Float = 0.0
     private var targetProgress: Float = 0.0
+    private var progressRateMultiplier: Float = 1.0
+    private var previewTargetCap: Float = 0.92
+    private var detectTargetCap: Float = 0.96
     private var statusRotationTimer: Timer?
     private var currentStatusMessages: [String] = []
     private var currentStatusIndex: Int = 0
@@ -2715,7 +2718,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Use new caching endpoint
         let analyzeEndpoint = serverBaseUrl + "/api/v1/analyze"
         shareLog("Detection endpoint: \(analyzeEndpoint)")
-        targetProgress = 1.0
+        targetProgress = max(targetProgress, detectTargetCap)
 
         // Ensure status rotation is running (in case we came from a path that didn't start it)
         if currentStatusMessages.isEmpty {
@@ -4999,9 +5002,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
+            // Choose progress speed/caps based on source (social vs browser/direct)
+            let platform = self.pendingPlatformType ?? (self.pendingInstagramUrl != nil ? "instagram" : "web")
+            self.configureProgressProfile(for: platform)
             self.stopStatusPolling()
             self.startSmoothProgress()
-            self.targetProgress = 1.0
+            self.targetProgress = previewTargetCap
 
             let rotatingMessages = [
                 "Analyzing look...",
@@ -5083,10 +5089,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self?.progressTimer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
 
-                // Smoothly increment toward target with consistent speed
+                // Smoothly increment toward target with adaptive speed
                 if self.currentProgress < self.targetProgress {
-                    let increment: Float = 0.003 // Slow, steady climb (~10s to full)
-                    self.currentProgress = min(self.currentProgress + increment, self.targetProgress)
+                    let remaining = max(self.targetProgress - self.currentProgress, 0)
+                    // Adaptive increment: faster when far, slower when close; scaled per source
+                    let increment: Float = max(remaining * 0.08 * self.progressRateMultiplier,
+                                               0.004 * self.progressRateMultiplier)
+                    let cappedIncrement = min(increment, 0.03) // prevent huge jumps
+                    self.currentProgress = min(self.currentProgress + cappedIncrement, self.targetProgress)
                     self.progressView?.setProgress(self.currentProgress, animated: true)
                 }
             }
@@ -5097,6 +5107,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
         progressTimer?.invalidate()
         progressTimer = nil
         stopStatusRotation()
+    }
+
+    private func configureProgressProfile(for platform: String?) {
+        let normalized = platform?.lowercased()
+        if let normalized = normalized,
+           ["instagram", "tiktok", "pinterest", "facebook", "twitter", "x", "snapchat"].contains(normalized) {
+            // Slower crawl for heavier/social flows
+            progressRateMultiplier = 1.0
+            previewTargetCap = 0.92
+            detectTargetCap = 0.96
+        } else {
+            // Faster ramp for direct/browser shares
+            progressRateMultiplier = 1.6
+            previewTargetCap = 0.98
+            detectTargetCap = 0.995
+        }
     }
 
     private func updateProgress(_ progress: Float, status: String) {
