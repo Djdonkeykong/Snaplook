@@ -5003,12 +5003,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            // Choose progress speed/caps based on source (social vs browser/direct)
-            let platform = self.pendingPlatformType ?? (self.pendingInstagramUrl != nil ? "instagram" : "web")
-            self.configureProgressProfile(for: platform)
             self.stopStatusPolling()
             self.startSmoothProgress()
-            self.targetProgress = previewTargetCap
+
+            // Slow progress for detection phase (6-7 seconds to reach 96%)
+            self.progressRateMultiplier = 0.25
+            self.targetProgress = 0.96
 
             let rotatingMessages = [
                 "Analyzing look...",
