@@ -5544,24 +5544,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingHideWorkItem?.cancel()
         loadingHideWorkItem = nil
 
-        // Smoothly fade out the overlay instead of an abrupt dismiss
-        let overlay = loadingView ?? view
-        overlay?.isUserInteractionEnabled = false
-        UIView.animate(withDuration: 0.18, delay: 0, options: [.curveEaseIn], animations: {
-            overlay?.alpha = 0.0
-        }, completion: { [weak self] _ in
-            guard let self = self else { return }
-            self.clearSharedData()
-            self.hideLoadingUI()
-            self.hideDefaultUI()
-            let error = NSError(
-                domain: "com.snaplook.shareExtension",
-                code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "User cancelled import"]
-            )
-            self.didCompleteRequest = true
-            self.extensionContext?.cancelRequest(withError: error)
-        })
+        // Tear down immediately so the sheet can animate closed naturally
+        clearSharedData()
+        hideLoadingUI()
+        hideDefaultUI()
+        let error = NSError(
+            domain: "com.snaplook.shareExtension",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: "User cancelled import"]
+        )
+        didCompleteRequest = true
+        extensionContext?.cancelRequest(withError: error)
     }
 
     @objc private func analyzeInAppTapped() {
