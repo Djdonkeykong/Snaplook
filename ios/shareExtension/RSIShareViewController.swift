@@ -3146,10 +3146,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func showNoResultsUI() {
         shareLog("Displaying no results UI")
 
-        // Hide loading indicator
+        // Hide loading indicator and progress bar
         activityIndicator?.stopAnimating()
         activityIndicator?.isHidden = true
         statusLabel?.isHidden = true
+        progressView?.isHidden = true
 
         guard let loadingView = loadingView else {
             shareLog("ERROR: loadingView is nil - cannot show no results UI")
@@ -3172,7 +3173,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let titleLabel = UILabel()
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.text = "No Results Found"
-        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
+        titleLabel.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 20)
+            ?? .systemFont(ofSize: 20, weight: .semibold)
         titleLabel.textColor = .label
         titleLabel.textAlignment = .center
 
@@ -3180,27 +3182,27 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let subtitleLabel = UILabel()
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
         subtitleLabel.text = "We couldn't find any matching products.\nTry a different image with clearer clothing items."
-        subtitleLabel.font = .systemFont(ofSize: 14, weight: .regular)
+        subtitleLabel.font = UIFont(name: "PlusJakartaSans-Regular", size: 14)
+            ?? .systemFont(ofSize: 14, weight: .regular)
         subtitleLabel.textColor = .secondaryLabel
         subtitleLabel.textAlignment = .center
         subtitleLabel.numberOfLines = 0
 
-        // Open App button
-        let openAppButton = UIButton(type: .system)
-        openAppButton.translatesAutoresizingMaskIntoConstraints = false
-        openAppButton.setTitle("Open Snaplook", for: .normal)
-        openAppButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
-            ?? .systemFont(ofSize: 16, weight: .bold)
-        openAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-        openAppButton.setTitleColor(.white, for: .normal)
-        openAppButton.layer.cornerRadius = 28
-        openAppButton.addTarget(self, action: #selector(openAppFromNoResults), for: .touchUpInside)
+        // Tip label
+        let tipLabel = UILabel()
+        tipLabel.translatesAutoresizingMaskIntoConstraints = false
+        tipLabel.text = "Tip: Avoid cropping too tight around the garment for better results."
+        tipLabel.font = UIFont(name: "PlusJakartaSans-Regular", size: 12)
+            ?? .systemFont(ofSize: 12, weight: .regular)
+        tipLabel.textColor = UIColor.secondaryLabel
+        tipLabel.textAlignment = .center
+        tipLabel.numberOfLines = 0
 
         // Add to container
         noResultsContainer.addSubview(iconImageView)
         noResultsContainer.addSubview(titleLabel)
         noResultsContainer.addSubview(subtitleLabel)
-        noResultsContainer.addSubview(openAppButton)
+        noResultsContainer.addSubview(tipLabel)
 
         loadingView.addSubview(noResultsContainer)
 
@@ -3223,11 +3225,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             subtitleLabel.leadingAnchor.constraint(equalTo: noResultsContainer.leadingAnchor),
             subtitleLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor),
 
-            openAppButton.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 24),
-            openAppButton.centerXAnchor.constraint(equalTo: noResultsContainer.centerXAnchor),
-            openAppButton.widthAnchor.constraint(equalToConstant: 200),
-            openAppButton.heightAnchor.constraint(equalToConstant: 56),
-            openAppButton.bottomAnchor.constraint(equalTo: noResultsContainer.bottomAnchor)
+            tipLabel.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 24),
+            tipLabel.leadingAnchor.constraint(equalTo: noResultsContainer.leadingAnchor, constant: 16),
+            tipLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor, constant: -16),
+            tipLabel.bottomAnchor.constraint(equalTo: noResultsContainer.bottomAnchor)
         ])
 
         // Haptic feedback
