@@ -10,7 +10,7 @@ import 'feed_preferences_page.dart';
 import 'help_faq_page.dart';
 import 'contact_support_page.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
-import '../../../../../shared/widgets/share_logs_page.dart';
+import '../../../../shared/widgets/share_logs_page.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
