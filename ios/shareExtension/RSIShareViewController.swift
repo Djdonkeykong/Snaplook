@@ -5753,19 +5753,34 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
                     self.startSmoothProgress()
-                    self.targetProgress = 0.92
 
                     if isInstagram {
                         // Instagram: rotating messages for more engaging UX
                         let instagramMessages = [
                             "Getting image...",
-                            "Downloading from Instagram...",
+                            "Downloading photo...",
                             "Fetching photo...",
                             "Almost there..."
                         ]
                         self.startStatusRotation(messages: instagramMessages, interval: 2.0)
+
+                        // Gradually increase progress over ~4 seconds to match download time
+                        self.targetProgress = 0.3
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                            self?.targetProgress = 0.5
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                            self?.targetProgress = 0.7
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                            self?.targetProgress = 0.85
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { [weak self] in
+                            self?.targetProgress = 0.92
+                        }
                     } else {
                         // TikTok, Pinterest, etc.: simple single message
+                        self.targetProgress = 0.92
                         self.updateProgress(0.0, status: "Loading preview...")
                     }
                 }
