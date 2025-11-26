@@ -153,14 +153,16 @@ void main() async {
     debugPrint('[Auth] Failed to sync auth state: $e');
   }
 
+  // TODO: Re-enable Superwall before launch
   // Initialize Superwall for subscriptions (allows .env override but falls back to bundled key)
-  try {
-    final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'] ?? 'pk_JerHRerDi63JoAtFh1MtT';
-    await SuperwallService().initialize(apiKey: superwallApiKey);
-    debugPrint('[Superwall] Initialized successfully');
-  } catch (e) {
-    debugPrint('[Superwall] Initialization failed: $e');
-  }
+  // Temporarily disabled to avoid Apple ID prompt during development
+  // try {
+  //   final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'] ?? 'pk_JerHRerDi63JoAtFh1MtT';
+  //   await SuperwallService().initialize(apiKey: superwallApiKey);
+  //   debugPrint('[Superwall] Initialized successfully');
+  // } catch (e) {
+  //   debugPrint('[Superwall] Initialization failed: $e');
+  // }
 
   // Preload video immediately on app startup
   VideoPreloader.instance.preloadShareVideo();
