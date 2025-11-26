@@ -2715,16 +2715,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Use new caching endpoint
         let analyzeEndpoint = serverBaseUrl + "/api/v1/analyze"
         shareLog("Detection endpoint: \(analyzeEndpoint)")
-        targetProgress = 0.80
+        targetProgress = 1.0
 
-        // Start rotating status messages for the analysis phase
-        let searchMessages = [
-            "Detecting garments...",
-            "Analyzing outfit...",
-            "Finding similar items...",
-            "Finalizing results..."
-        ]
-        startStatusRotation(messages: searchMessages, interval: 2.0, stopAtLast: true)
+        // Ensure status rotation is running (in case we came from a path that didn't start it)
+        if currentStatusMessages.isEmpty {
+            let searchMessages = [
+                "Analyzing look...",
+                "Finding similar items...",
+                "Checking retailers...",
+                "Finalizing results..."
+            ]
+            startStatusRotation(messages: searchMessages, interval: 2.0, stopAtLast: false)
+        }
 
         // Determine search type based on source
         var searchType = "unknown"
@@ -3039,9 +3041,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let resolvedUrl = pendingImageUrl?.isEmpty == false ? pendingImageUrl : downloadedImageUrl
         downloadedImageUrl = resolvedUrl
         shareLog("Calling runDetectionAnalysis...")
-
-        // Bump progress as we hand off to the detector
-        updateProgress(0.4, status: "Uploading photo...")
 
         runDetectionAnalysis(imageUrl: resolvedUrl, imageBase64: base64Image)
     }
@@ -5002,8 +5001,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard let self = self else { return }
             self.stopStatusPolling()
             self.startSmoothProgress()
-            self.targetProgress = 0.2
-            self.updateProgress(0.2, status: "Preparing photo...")
+            self.targetProgress = 1.0
+
+            let rotatingMessages = [
+                "Analyzing look...",
+                "Finding similar items...",
+                "Checking retailers...",
+                "Finalizing results..."
+            ]
+            self.startStatusRotation(messages: rotatingMessages, interval: 2.0, stopAtLast: false)
         }
 
         // Start detection
@@ -5079,7 +5085,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 // Smoothly increment toward target with consistent speed
                 if self.currentProgress < self.targetProgress {
-                    let increment: Float = 0.012 // Smooth, not too fast increments
+                    let increment: Float = 0.003 // Slow, steady climb (~10s to full)
                     self.currentProgress = min(self.currentProgress + increment, self.targetProgress)
                     self.progressView?.setProgress(self.currentProgress, animated: true)
                 }
@@ -5094,7 +5100,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func updateProgress(_ progress: Float, status: String) {
-        targetProgress = progress
+        // Never regress progress; only move forward
+        targetProgress = max(targetProgress, progress)
 
         if isPhotosSourceApp {
             DispatchQueue.main.async { [weak self] in
@@ -5102,7 +5109,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.statusLabel?.text = self.photoImportStatusMessage
                 shareLog("Progress: \(Int(progress * 100))% - \(status)")
             }
-            stopStatusRotation()
             return
         }
 
@@ -5110,9 +5116,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self?.statusLabel?.text = status
             shareLog("Progress: \(Int(progress * 100))% - \(status)")
         }
-
-        // Stop any existing rotation when explicitly setting a status
-        stopStatusRotation()
     }
 
     // Start rotating through multiple status messages
