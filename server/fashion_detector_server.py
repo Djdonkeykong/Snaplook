@@ -1764,6 +1764,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         t0 = time.time()
         source_desc = req.image_url[:80] if req.image_url else f"<base64:{len(req.image_base64 or '')} chars>"
         print(f"\U0001f680 Starting detect-and-search pipeline for: {source_desc}...")
+        print(f"[DEBUG] Request country: '{req.country}', language: '{req.language}', search_type: '{req.search_type}'")
 
         # Step 0: Check cache first (by source_url or image_url)
         cache_lookup_url = req.source_url or req.image_url
