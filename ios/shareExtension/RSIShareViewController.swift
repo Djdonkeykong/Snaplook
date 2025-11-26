@@ -5765,17 +5765,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         self.startStatusRotation(messages: instagramMessages, interval: 2.0)
 
                         // Gradually increase progress over ~4 seconds to match download time
-                        self.targetProgress = 0.3
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                        self.targetProgress = 0.0
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                            self?.targetProgress = 0.3
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                             self?.targetProgress = 0.5
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
                             self?.targetProgress = 0.7
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) { [weak self] in
                             self?.targetProgress = 0.85
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { [weak self] in
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) { [weak self] in
                             self?.targetProgress = 0.92
                         }
                     } else {
