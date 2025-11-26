@@ -36,11 +36,23 @@ class SuperwallService {
 
   /// Identify the current user.
   Future<void> identify(String userId) async {
+    if (!_configured) {
+      if (kDebugMode) {
+        debugPrint('[Superwall] identify called but not configured - skipping');
+      }
+      return;
+    }
     await sw.Superwall.shared.identify(userId);
   }
 
   /// Reset the current user/session.
   Future<void> reset() async {
+    if (!_configured) {
+      if (kDebugMode) {
+        debugPrint('[Superwall] reset called but not configured - skipping');
+      }
+      return;
+    }
     await sw.Superwall.shared.reset();
     _latestStatus = sw.SubscriptionStatus.unknown;
   }
@@ -50,6 +62,13 @@ class SuperwallService {
     String placement = defaultPlacement,
     Duration timeout = const Duration(seconds: 45),
   }) async {
+    if (!_configured) {
+      if (kDebugMode) {
+        debugPrint('[Superwall] presentPaywall called but not configured - skipping');
+      }
+      return false;
+    }
+
     try {
       // Trigger the placement; paywall display is driven by dashboard configuration.
       await sw.Superwall.shared.registerPlacement(placement);
@@ -71,6 +90,12 @@ class SuperwallService {
 
   /// Current cached subscription status.
   SubscriptionStatusSnapshot getSubscriptionSnapshot() {
+    if (!_configured) {
+      if (kDebugMode) {
+        debugPrint('[Superwall] getSubscriptionSnapshot called but not configured - returning inactive');
+      }
+      return SubscriptionStatusSnapshot.initial();
+    }
     return SubscriptionStatusSnapshot.fromSuperwall(_latestStatus);
   }
 
