@@ -153,42 +153,20 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () async {
+                onPressed: () {
                   HapticFeedback.mediumImpact();
 
-                  final hasActiveSubscription =
-                      ref.read(hasActiveSubscriptionProvider);
+                  // Check if user is signed in
+                  final authService = ref.read(authServiceProvider);
+                  final isSignedIn = authService.currentUser != null;
 
-                  if (hasActiveSubscription) {
-                    final authService = ref.read(authServiceProvider);
-                    final hasAccount = authService.currentUser != null;
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => hasAccount
-                            ? WelcomeFreeAnalysisPage()
-                            : const AccountCreationPage(),
-                      ),
-                    );
-                  } else {
-                    // No subscription -> present Superwall paywall
-                    final purchaseController =
-                        ref.read(purchaseControllerProvider);
-                    final success = await purchaseController.showPaywall(
-                      placement: 'onboarding_paywall',
-                    );
-
-                    if (success && context.mounted) {
-                      final authService = ref.read(authServiceProvider);
-                      final hasAccount = authService.currentUser != null;
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => hasAccount
-                              ? WelcomeFreeAnalysisPage()
-                              : const AccountCreationPage(),
-                        ),
-                      );
-                    }
-                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => isSignedIn
+                          ? WelcomeFreeAnalysisPage()
+                          : const AccountCreationPage(),
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFf2003c),
