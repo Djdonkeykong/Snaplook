@@ -18,7 +18,13 @@ class SuperwallService {
   Future<void> initialize({required String apiKey, String? userId}) async {
     if (_configured) return;
 
-    sw.Superwall.configure(apiKey);
+    // Configure with options - enable game controller for sandbox/testing
+    sw.Superwall.configure(
+      apiKey,
+      options: sw.SuperwallOptions(
+        isGameControllerEnabled: kDebugMode, // Enable in debug mode for testing
+      ),
+    );
     _configured = true;
 
     _statusSub = sw.Superwall.shared.subscriptionStatus.listen((status) {
@@ -30,7 +36,7 @@ class SuperwallService {
     }
 
     if (kDebugMode) {
-      debugPrint('[Superwall] configured; user=${userId ?? 'anon'}');
+      debugPrint('[Superwall] configured with sandbox mode; user=${userId ?? 'anon'}');
     }
   }
 
