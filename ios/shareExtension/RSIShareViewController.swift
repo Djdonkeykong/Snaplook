@@ -3198,17 +3198,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
         tipLabel.textAlignment = .center
         tipLabel.numberOfLines = 0
 
-        // Add to container
+        // Add main content to container (without tip)
         noResultsContainer.addSubview(iconImageView)
         noResultsContainer.addSubview(titleLabel)
         noResultsContainer.addSubview(subtitleLabel)
-        noResultsContainer.addSubview(tipLabel)
 
         loadingView.addSubview(noResultsContainer)
+        loadingView.addSubview(tipLabel)
 
         NSLayoutConstraint.activate([
+            // Main content centered (moved up more to make room for tip at bottom)
             noResultsContainer.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
-            noResultsContainer.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor),
+            noResultsContainer.centerYAnchor.constraint(equalTo: loadingView.centerYAnchor, constant: -80),
             noResultsContainer.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 32),
             noResultsContainer.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -32),
 
@@ -3221,14 +3222,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
             titleLabel.leadingAnchor.constraint(equalTo: noResultsContainer.leadingAnchor),
             titleLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor),
 
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
             subtitleLabel.leadingAnchor.constraint(equalTo: noResultsContainer.leadingAnchor),
             subtitleLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor),
+            subtitleLabel.bottomAnchor.constraint(equalTo: noResultsContainer.bottomAnchor),
 
-            tipLabel.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 32),
-            tipLabel.leadingAnchor.constraint(equalTo: noResultsContainer.leadingAnchor, constant: 16),
-            tipLabel.trailingAnchor.constraint(equalTo: noResultsContainer.trailingAnchor, constant: -16),
-            tipLabel.bottomAnchor.constraint(equalTo: noResultsContainer.bottomAnchor)
+            // Tip at bottom of screen - use view's bottom directly
+            tipLabel.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 32),
+            tipLabel.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -32),
+            tipLabel.bottomAnchor.constraint(equalTo: loadingView.bottomAnchor, constant: -40),
+            // Ensure tip stays below main content
+            tipLabel.topAnchor.constraint(greaterThanOrEqualTo: noResultsContainer.bottomAnchor, constant: 32)
         ])
 
         // Haptic feedback
