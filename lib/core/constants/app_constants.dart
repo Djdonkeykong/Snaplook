@@ -54,7 +54,7 @@ class AppConstants {
   // === 🌐 API Keys ===
   static String get serpApiKey =>
       dotenv.env['SERPAPI_API_KEY'] ??
-      'YLWTCmiBX9ZzU8EFyedj8MQz';
+      'LFS5xEY14pxzyzo39G6b83kg';
 
   static String? get searchApiLocation {
     final value = dotenv.env['SEARCHAPI_LOCATION'];

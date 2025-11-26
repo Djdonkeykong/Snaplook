@@ -925,7 +925,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Disclaimer label
         let disclaimerLabel = UILabel()
-        disclaimerLabel.text = "Note: “Analyze now” processes your scan here. “Analyze in app” opens Snaplook.\nTip: Cropping can help you save credits—each garment scanned uses one."
+        disclaimerLabel.text = "Tip: Cropping can help you save credits because each garment scanned uses one."
         disclaimerLabel.font = .systemFont(ofSize: 12, weight: .regular)
         disclaimerLabel.textColor = UIColor.secondaryLabel
         disclaimerLabel.textAlignment = .center
@@ -5606,16 +5606,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 self.startSmoothProgress()
-                self.targetProgress = 0.8
-                self.updateProgress(0.2, status: "Downloading your photo...")
-            }
-
-            // Simulate intermediate progress during download
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-                self?.targetProgress = 0.5
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-                self?.targetProgress = 0.7
+                self.targetProgress = 0.92
+                self.updateProgress(0.0, status: "Opening Snaplook...")
             }
 
             let downloadFunction = getDownloadFunction(for: pendingPlatformType)
@@ -5668,13 +5660,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // Start smooth progress animation
                 self.stopStatusPolling()
                 self.startSmoothProgress()
-                self.targetProgress = 0.5
-                self.updateProgress(0.2, status: "Preparing image...")
+                self.targetProgress = 0.98
+                self.updateProgress(0.0, status: "Opening Snaplook...")
 
-                // Progress to completion
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                // Complete after brief delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
                     self?.targetProgress = 1.0
-                    self?.updateProgress(1.0, status: "Opening Snaplook...")
                 }
             }
 
@@ -5714,21 +5705,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // Start smooth progress animation
                 self.stopStatusPolling()
                 self.startSmoothProgress()
-                self.targetProgress = 0.5
-                self.updateProgress(0.2, status: "Preparing...")
+                self.targetProgress = 0.98
+                self.updateProgress(0.0, status: "Opening Snaplook...")
 
-                // Progress to completion
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                    self?.targetProgress = 1.0
-                    self?.updateProgress(1.0, status: "Opening Snaplook...")
-                }
-
-                // Delay to allow progress bar to complete fully before redirecting
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { [weak self] in
+                // Complete and redirect
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
                     guard let self = self else { return }
-                    // Stop smooth progress to lock at 100%
-                    self.stopSmoothProgress()
-                    self.saveAndRedirect(message: nil)
+                    self.targetProgress = 1.0
+
+                    // Delay to allow progress bar to complete fully before redirecting
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                        self?.stopSmoothProgress()
+                        self?.saveAndRedirect(message: nil)
+                    }
                 }
             }
         } else {
@@ -5755,33 +5744,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             updateProcessingStatus("processing")
             setupLoadingUI()
 
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-
-                self.stopStatusPolling()
-                self.startSmoothProgress()
-                self.targetProgress = 0.05
-
-                let checkingMessages = ["Loading..."]
-                self.startStatusRotation(messages: checkingMessages, interval: 2.5)
-            }
-
             let proceedToDownload: () -> Void = { [weak self] in
                 guard let self = self else { return }
 
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
                     self.startSmoothProgress()
-                    self.targetProgress = 0.8
-                    self.updateProgress(0.2, status: "Downloading your photo...")
-                }
-
-                // Simulate intermediate progress during download
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-                    self?.targetProgress = 0.5
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-                    self?.targetProgress = 0.7
+                    self.targetProgress = 0.92
+                    self.updateProgress(0.0, status: "Loading preview...")
                 }
 
                 let downloadFunction = self.getDownloadFunction(for: self.pendingPlatformType)
@@ -5857,26 +5827,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // Start smooth progress animation
                 self.stopStatusPolling()
                 self.startSmoothProgress()
-                self.targetProgress = 0.2
-                self.updateProgress(0.2, status: "Loading image...")
+                self.targetProgress = 0.98
+                self.updateProgress(0.0, status: "Loading preview...")
 
-                // Smoothly progress to completion with faster timing
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                    self?.targetProgress = 0.5
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
-                    self?.targetProgress = 0.7
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
-                    self?.targetProgress = 1.0
-                    self?.updateProgress(1.0, status: "Loading preview...")
-                }
+                // Complete and show preview
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                    guard let self = self else { return }
+                    self.targetProgress = 1.0
 
-                // Show preview after progress completes fully
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-                    // Stop smooth progress to lock at 100%
-                    self?.stopSmoothProgress()
-                    self?.showImagePreview(imageData: imageData)
+                    // Show preview after progress completes
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                        self?.stopSmoothProgress()
+                        self?.showImagePreview(imageData: imageData)
+                    }
                 }
             }
         } else if !sharedMedia.isEmpty {
