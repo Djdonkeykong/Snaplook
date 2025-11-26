@@ -2766,7 +2766,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         var requestBody: [String: Any] = [
             "user_id": getUserId(),
             "image_base64": imageBase64,
-            "search_type": searchType
+            "search_type": searchType,
+            "country": "NO",
+            "language": "nb"
         ]
 
         if let imageUrl = imageUrl, !imageUrl.isEmpty {
