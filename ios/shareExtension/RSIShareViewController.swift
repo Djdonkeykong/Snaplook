@@ -2300,6 +2300,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
+        // Google Images thumbnail/shared URLs (encrypted-tbn* or imgres without imgurl) - treat as direct images
+        if let host = url.host?.lowercased(), host.contains("gstatic.com"), host.contains("tbn") {
+            completion([urlString])
+            return
+        }
+        if let host = url.host?.lowercased(),
+           host.contains("google."),
+           (url.path.lowercased().contains("/imgres") || url.query?.contains("tbn:") == true) {
+            completion([urlString])
+            return
+        }
+
         var request = URLRequest(url: url)
         request.timeoutInterval = 8.0
         request.setValue(
@@ -2390,7 +2402,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             lower.contains(".jpg?") ||
             lower.contains(".jpeg?") ||
             lower.contains(".png?") ||
-            lower.contains(".webp?")
+            lower.contains(".webp?") ||
+            lower.contains("tbn:") // Google Images thumbnails
     }
 
     private func extractGoogleImgUrl(from urlString: String) -> String? {
