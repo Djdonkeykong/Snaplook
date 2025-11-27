@@ -1336,6 +1336,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
+        // Debug: Log the URL being processed
+        shareLog("handleMedia processing URL: \(item.prefix(120))")
+
         // Determine the platform type
         let platformName: String
         let platformType: String
@@ -1545,12 +1548,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func isYouTubeShareCandidate(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if !trimmed.contains("youtube.com") && !trimmed.contains("youtu.be") {
+
+        // Check if it contains YouTube domain
+        let hasYouTubeDomain = trimmed.contains("youtube.com") ||
+                              trimmed.contains("youtu.be") ||
+                              trimmed.contains("m.youtube.com")
+
+        if !hasYouTubeDomain {
             return false
         }
+
         // Must have video ID indicator
-        return trimmed.contains("/watch") || trimmed.contains("/shorts/") ||
-               trimmed.contains("youtu.be/") || trimmed.contains("/v/")
+        let hasVideoPattern = trimmed.contains("/watch") ||
+                             trimmed.contains("/shorts/") ||
+                             trimmed.contains("youtu.be/") ||
+                             trimmed.contains("/v/") ||
+                             trimmed.contains("/embed/") ||
+                             trimmed.contains("?v=") ||
+                             trimmed.contains("&v=")
+
+        if hasVideoPattern {
+            shareLog("YouTube URL detected: \(trimmed.prefix(80))")
+        } else {
+            shareLog("YouTube domain found but no video pattern: \(trimmed.prefix(80))")
+        }
+
+        return hasVideoPattern
     }
 
     private func isGoogleImageShareCandidate(_ value: String) -> Bool {
