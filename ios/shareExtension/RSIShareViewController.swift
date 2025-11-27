@@ -2305,7 +2305,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             resolveGoogleThumbToOriginal(thumbUrl: urlString) { resolved in
                 if let resolved = resolved {
                     completion([resolved])
-                } else if let preferred = extractPreferredImageParam(from: urlString) {
+                } else if let preferred = self?.extractPreferredImageParam(from: urlString) {
                     completion([preferred])
                 } else {
                     completion([urlString])
@@ -2319,7 +2319,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             resolveGoogleThumbToOriginal(thumbUrl: urlString) { resolved in
                 if let resolved = resolved {
                     completion([resolved])
-                } else if let preferred = extractPreferredImageParam(from: urlString) {
+                } else if let preferred = self?.extractPreferredImageParam(from: urlString) {
                     completion([preferred])
                 } else {
                     completion([urlString])
