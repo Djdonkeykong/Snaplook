@@ -5102,7 +5102,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self.stopStatusPolling()
             self.startSmoothProgress()
 
-            // Slow progress for detection phase (6-7 seconds to reach 96%)
+            // Unified progress profile for all platforms (steady crawl to ~96% until detection completes)
             self.progressRateMultiplier = 0.25
             self.targetProgress = 0.96
 
@@ -5204,22 +5204,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         progressTimer?.invalidate()
         progressTimer = nil
         stopStatusRotation()
-    }
-
-    private func configureProgressProfile(for platform: String?) {
-        let normalized = platform?.lowercased()
-        if let normalized = normalized,
-           ["instagram", "tiktok", "pinterest", "youtube", "facebook", "twitter", "x", "snapchat"].contains(normalized) {
-            // Slower crawl for heavier/social flows
-            progressRateMultiplier = 1.0
-            previewTargetCap = 0.92
-            detectTargetCap = 0.96
-        } else {
-            // Faster ramp for direct/browser shares
-            progressRateMultiplier = 1.6
-            previewTargetCap = 0.98
-            detectTargetCap = 0.995
-        }
     }
 
     private func updateProgress(_ progress: Float, status: String) {
