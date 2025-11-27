@@ -768,6 +768,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
     open override func viewDidLoad() {
         super.viewDidLoad()
 
+        // Force light mode for the share extension UI (prevents dark appearance from host apps like YouTube)
+        if #available(iOS 13.0, *) {
+            overrideUserInterfaceStyle = .light
+        }
+
         // Immediately hide and disable all default SLComposeServiceViewController UI
         hideDefaultUI()
         navigationController?.setNavigationBarHidden(true, animated: false)
@@ -5700,16 +5705,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 switch result {
                 case .success(let downloaded):
-                    if downloaded.isEmpty {
-                        shareLog("\(platformName) download succeeded but returned no files")
-                        self.dismissWithError()
-                    } else {
-                        self.sharedMedia.append(contentsOf: downloaded)
-                        shareLog("Downloaded and saved \(downloaded.count) \(platformName) file(s)")
+                        if downloaded.isEmpty {
+                            shareLog("\(platformName) download succeeded but returned no files")
+                            self.dismissWithError()
+                        } else {
+                            self.sharedMedia.append(contentsOf: downloaded)
+                            shareLog("Downloaded and saved \(downloaded.count) \(platformName) file(s)")
 
-                        // Update progress to completion
-                        self.targetProgress = 1.0
-                        self.updateProgress(1.0, status: "Opening Snaplook...")
+                            // Update progress to completion
+                            self.targetProgress = 1.0
+                            self.updateProgress(1.0, status: "Opening Snaplook...")
 
                         // Delay to allow progress bar to complete fully before redirecting
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
@@ -5871,27 +5876,34 @@ open class RSIShareViewController: SLComposeServiceViewController {
                             self.dismissWithError()
                         } else {
                             // Get the first downloaded file and show preview
-                            if let firstFile = downloaded.first,
-                               let fileURL = URL(string: firstFile.path),
-                               let imageData = try? Data(contentsOf: fileURL) {
-                                shareLog("Downloaded \(platformName) image (\(imageData.count) bytes) - showing preview")
-
-                                // Update progress to completion
-                                if isInstagram {
-                                    self.stopStatusRotation()
+                            if let firstFile = downloaded.first {
+                                let fileURL: URL
+                                if let url = URL(string: firstFile.path), url.scheme != nil {
+                                    fileURL = url
+                                } else {
+                                    fileURL = URL(fileURLWithPath: firstFile.path)
                                 }
-                                self.targetProgress = 1.0
-                                self.updateProgress(1.0, status: "Loading preview...")
 
-                                // Delay to allow progress bar to complete fully before showing preview
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
-                                    // Stop smooth progress to lock at 100%
-                                    self.stopSmoothProgress()
-                                    self.showImagePreview(imageData: imageData)
+                                if let imageData = try? Data(contentsOf: fileURL) {
+                                    shareLog("Downloaded \(platformName) image (\(imageData.count) bytes) - showing preview")
+
+                                    // Update progress to completion
+                                    if isInstagram {
+                                        self.stopStatusRotation()
+                                    }
+                                    self.targetProgress = 1.0
+                                    self.updateProgress(1.0, status: "Loading preview...")
+
+                                    // Delay to allow progress bar to complete fully before showing preview
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+                                        // Stop smooth progress to lock at 100%
+                                        self.stopSmoothProgress()
+                                        self.showImagePreview(imageData: imageData)
+                                    }
+                                } else {
+                                    shareLog("ERROR: Could not read downloaded \(platformName) file")
+                                    self.dismissWithError()
                                 }
-                            } else {
-                                shareLog("ERROR: Could not read downloaded \(platformName) file")
-                                self.dismissWithError()
                             }
                         }
 
