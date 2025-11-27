@@ -2302,12 +2302,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Google Images thumbnail/shared URLs (encrypted-tbn* or imgres without imgurl) - treat as direct images
         if let host = url.host?.lowercased(), host.contains("gstatic.com"), host.contains("tbn") {
+            if let preferred = extractPreferredImageParam(from: urlString) {
+                completion([preferred])
+                return
+            }
             completion([urlString])
             return
         }
         if let host = url.host?.lowercased(),
            host.contains("google."),
            (url.path.lowercased().contains("/imgres") || url.query?.contains("tbn:") == true) {
+            if let preferred = extractPreferredImageParam(from: urlString) {
+                completion([preferred])
+                return
+            }
             completion([urlString])
             return
         }
@@ -2410,13 +2418,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let lower = urlString.lowercased()
         guard lower.contains("google.") && lower.contains("imgurl=") else { return nil }
 
-        let parts = urlString.split(separator: "?")
-        let query = parts.count > 1 ? parts[1] : ""
-        let params = query.split(separator: "&")
-        for param in params {
-            if param.lowercased().hasPrefix("imgurl=") {
-                let raw = String(param.dropFirst("imgurl=".count))
-                return raw.removingPercentEncoding ?? raw
+        return extractPreferredImageParam(from: urlString, keys: ["imgurl"])
+    }
+
+    private func extractPreferredImageParam(from urlString: String, keys: [String] = ["imgurl", "mediaurl", "url", "image_url"]) -> String? {
+        guard let components = URLComponents(string: urlString),
+              let items = components.queryItems else { return nil }
+        for key in keys {
+            if let value = items.first(where: { $0.name.lowercased() == key.lowercased() })?.value,
+               !value.isEmpty {
+                return value.removingPercentEncoding ?? value
             }
         }
         return nil

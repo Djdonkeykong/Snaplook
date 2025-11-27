@@ -54,10 +54,26 @@ class _ShareLogsPageState extends State<ShareLogsPage> {
         '--- Review Prompt Logs ---\n${_reviewLogs.join('\n\n')}',
     ].where((s) => s.isNotEmpty).join('\n\n');
 
-    await Share.share(
-      logsText,
-      subject: 'Share Extension Logs',
-    );
+    final box = context.findRenderObject() as RenderBox?;
+    try {
+      await Share.share(
+        logsText,
+        subject: 'Share Extension Logs',
+        sharePositionOrigin: box != null
+            ? box.localToGlobal(Offset.zero) & box.size
+            : const Rect.fromLTWH(0, 0, 1, 1),
+      );
+    } catch (e) {
+      // Fallback: copy to clipboard and notify user
+      Clipboard.setData(ClipboardData(text: logsText));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Share unavailable; logs copied to clipboard.'),
+          ),
+        );
+      }
+    }
   }
 
   @override
