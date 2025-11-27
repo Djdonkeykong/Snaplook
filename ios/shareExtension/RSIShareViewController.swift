@@ -1225,14 +1225,31 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 completeAttachmentProcessing()
                 return
             }
-            shareLog("Attachment index \(index) is text")
-            handleMedia(
-                forLiteral: text,
-                type: type,
-                index: index,
-                content: content
-            ) { [weak self] in
-                self?.completeAttachmentProcessing()
+
+            // Check if text is actually a URL (YouTube shares often come as text)
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let isUrl = trimmed.lowercased().hasPrefix("http://") || trimmed.lowercased().hasPrefix("https://")
+
+            if isUrl {
+                shareLog("Attachment index \(index) is text but contains URL - promoting to URL type")
+                handleMedia(
+                    forLiteral: trimmed,
+                    type: .url,
+                    index: index,
+                    content: content
+                ) { [weak self] in
+                    self?.completeAttachmentProcessing()
+                }
+            } else {
+                shareLog("Attachment index \(index) is text")
+                handleMedia(
+                    forLiteral: text,
+                    type: type,
+                    index: index,
+                    content: content
+                ) { [weak self] in
+                    self?.completeAttachmentProcessing()
+                }
             }
         case .url:
             if let url = data as? URL {
