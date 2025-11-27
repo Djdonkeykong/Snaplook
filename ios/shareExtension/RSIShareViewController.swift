@@ -5193,7 +5193,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     let baseIncrement: Float = max(remaining * 0.08 * self.progressRateMultiplier,
                                                    0.004 * self.progressRateMultiplier)
                     // Slow slightly once we cross 80% to stretch the final climb
-                    let slowdownFactor: Float = self.currentProgress >= 0.80 ? 0.65 : 1.0
+                    let slowdownFactor: Float = self.currentProgress >= 0.70 ? 0.65 : 1.0
                     let increment = baseIncrement * slowdownFactor
                     let cappedIncrement = min(increment, 0.03) // prevent huge jumps
                     self.currentProgress = min(self.currentProgress + cappedIncrement, self.targetProgress)
