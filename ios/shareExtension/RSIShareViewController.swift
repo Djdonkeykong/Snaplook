@@ -2300,24 +2300,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        // Google Images thumbnail/shared URLs (encrypted-tbn* or imgres without imgurl) - treat as direct images
+        // Google Images thumbnail/shared URLs (encrypted-tbn* or imgres without imgurl)
         if let host = url.host?.lowercased(), host.contains("gstatic.com"), host.contains("tbn") {
-            if let preferred = extractPreferredImageParam(from: urlString) {
-                completion([preferred])
-                return
+            resolveGoogleThumbToOriginal(thumbUrl: urlString) { resolved in
+                if let resolved = resolved {
+                    completion([resolved])
+                } else if let preferred = extractPreferredImageParam(from: urlString) {
+                    completion([preferred])
+                } else {
+                    completion([urlString])
+                }
             }
-            completion([urlString])
-            return
+            return // resolution handled asynchronously
         }
         if let host = url.host?.lowercased(),
            host.contains("google."),
            (url.path.lowercased().contains("/imgres") || url.query?.contains("tbn:") == true) {
-            if let preferred = extractPreferredImageParam(from: urlString) {
-                completion([preferred])
-                return
+            resolveGoogleThumbToOriginal(thumbUrl: urlString) { resolved in
+                if let resolved = resolved {
+                    completion([resolved])
+                } else if let preferred = extractPreferredImageParam(from: urlString) {
+                    completion([preferred])
+                } else {
+                    completion([urlString])
+                }
             }
-            completion([urlString])
-            return
+            return // resolution handled asynchronously
         }
 
         var request = URLRequest(url: url)
@@ -2429,6 +2437,65 @@ open class RSIShareViewController: SLComposeServiceViewController {
                !value.isEmpty {
                 return value.removingPercentEncoding ?? value
             }
+        }
+        return nil
+    }
+
+    private func resolveGoogleThumbToOriginal(thumbUrl: String, completion: @escaping (String?) -> Void) {
+        // Build a Google "search by image" URL to get the best available image URL
+        guard let encodedThumb = thumbUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let searchUrl = URL(string: "https://www.google.com/searchbyimage?image_url=\(encodedThumb)&encoded_url=1&hl=en") else {
+            completion(nil)
+            return
+        }
+
+        var request = URLRequest(url: searchUrl)
+        request.timeoutInterval = 6.0
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { completion(nil); return }
+            guard error == nil,
+                  let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200,
+                  let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                completion(nil)
+                return
+            }
+
+            // Try to extract imgurl= from any link
+            if let preferred = self.extractPreferredImageParam(from: html, keys: ["imgurl"]) {
+                completion(preferred)
+                return
+            }
+
+            // Fallback: look for data:image-url or "imgurl=" inline
+            if let match = self.extractFirstMatch(in: html, pattern: "imgurl=([^&\"'>]+)") {
+                completion(match.removingPercentEncoding ?? match)
+                return
+            }
+            if let match = self.extractFirstMatch(in: html, pattern: "data:image-url=\"([^\"]+)\"") {
+                completion(match.removingPercentEncoding ?? match)
+                return
+            }
+
+            completion(nil)
+        }.resume()
+    }
+
+    private func extractFirstMatch(in text: String, pattern: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return nil
+        }
+        let nsrange = NSRange(text.startIndex..<text.endIndex, in: text)
+        if let match = regex.firstMatch(in: text, options: [], range: nsrange),
+           match.numberOfRanges > 1,
+           let range = Range(match.range(at: 1), in: text) {
+            return String(text[range])
         }
         return nil
     }
