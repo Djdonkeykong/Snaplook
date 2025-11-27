@@ -5104,7 +5104,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Unified progress profile for all platforms (steady crawl to ~96% until detection completes)
             self.progressRateMultiplier = 0.25
-            self.targetProgress = 0.96
+            self.targetProgress = 0.85
 
             let rotatingMessages = [
                 "Analyzing look...",
