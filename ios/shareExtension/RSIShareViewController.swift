@@ -2236,33 +2236,38 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func buildYouTubeThumbnailCandidates(videoId: String) -> [String] {
+        var candidates: [String] = []
+
+        // Priority 1: WebP format (better quality/compression) - highest quality
+        candidates.append("https://i.ytimg.com/vi_webp/\(videoId)/maxresdefault.webp")
+        candidates.append("https://i.ytimg.com/vi_webp/\(videoId)/sddefault.webp")
+        candidates.append("https://i.ytimg.com/vi_webp/\(videoId)/hqdefault.webp")
+
+        // Priority 2: Live stream variants (often higher quality for live content)
+        candidates.append("https://i.ytimg.com/vi/\(videoId)/maxresdefault_live.jpg")
+
+        // Priority 3: Standard JPG - highest quality variants
         let hosts = [
             "https://i.ytimg.com/vi",
             "https://img.youtube.com/vi"
         ]
 
         let variants = [
-            "maxresdefault.jpg",
-            "maxres1.jpg",
+            "maxresdefault.jpg",  // 1920x1080
+            "maxres1.jpg",        // Alternate max res
             "maxres2.jpg",
             "maxres3.jpg",
-            "sddefault.jpg",
-            "hq720.jpg",
-            "hqdefault.jpg",
-            "mqdefault.jpg"
+            "hq720.jpg",          // 1280x720
+            "sddefault.jpg",      // 640x480
+            "hqdefault.jpg",      // 480x360
+            "mqdefault.jpg"       // 320x180 (fallback)
         ]
 
-        var candidates: [String] = []
         for host in hosts {
             for variant in variants {
                 candidates.append("\(host)/\(videoId)/\(variant)")
             }
         }
-
-        // Live and WebP fallbacks
-        candidates.append("https://i.ytimg.com/vi/\(videoId)/maxresdefault_live.jpg")
-        candidates.append("https://i.ytimg.com/vi_webp/\(videoId)/maxresdefault.webp")
-        candidates.append("https://i.ytimg.com/vi_webp/\(videoId)/hqdefault.webp")
 
         return candidates
     }
