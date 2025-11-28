@@ -131,13 +131,19 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
           _TopIconButton(
             icon: Icons.check,
             onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => const RatingSocialProofPage(
-                    continueToTrialFlow: true,
+              if (widget.returnToOnboarding) {
+                // Coming from onboarding flow - continue to rating page
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => const RatingSocialProofPage(
+                      continueToTrialFlow: true,
+                    ),
                   ),
-                ),
-              );
+                );
+              } else {
+                // Coming from home page tutorials - return to home
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              }
             },
           ),
         ],

@@ -348,18 +348,28 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                                     },
                                     itemCount: imagesState.totalImages,
                                     itemBuilder: (context, index) {
-                                      return Image.file(
-                                        File(imagesState.images[index].path),
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                        gaplessPlayback: true,
+                                      final alignment = widget.searchType == 'camera'
+                                          ? const Alignment(-1.0, 0)
+                                          : Alignment.center;
+                                      return Container(
+                                        color: Colors.black,
+                                        child: Image.file(
+                                          File(imagesState.images[index].path),
+                                          fit: BoxFit.cover,
+                                          alignment: alignment,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          gaplessPlayback: true,
+                                        ),
                                       );
                                     },
                                   )
                                 : Image.file(
                                     File(selectedImage!.path),
                                     fit: BoxFit.cover,
+                                    alignment: widget.searchType == 'camera'
+                                        ? const Alignment(-1.0, 0)
+                                        : Alignment.center,
                                     width: double.infinity,
                                     height: double.infinity,
                                     gaplessPlayback: true,

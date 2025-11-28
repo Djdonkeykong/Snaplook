@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -28,6 +29,7 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
   final GlobalKey _previewKey = GlobalKey();
   Uint8List? _frozenFrameBytes;
   bool _hasSeededFreeze = false;
+  bool _showFlashOverlay = false;
 
   Future<CaptureRequest> _buildCaptureRequest(List<Sensor> sensors) async {
     final directory = await getTemporaryDirectory();
@@ -63,6 +65,13 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
     }
 
     ref.read(selectedImagesProvider.notifier).setImage(XFile(path));
+
+    try {
+      final fileImage = FileImage(File(path));
+      await precacheImage(fileImage, context);
+    } catch (_) {
+      // Best effort; if precache fails we still navigate.
+    }
 
     await Navigator.of(context, rootNavigator: true).pushReplacement(
       MaterialPageRoute(
@@ -140,12 +149,22 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
     }
   }
 
+  void _triggerFlash() {
+    setState(() => _showFlashOverlay = true);
+    Future.delayed(const Duration(milliseconds: 80), () {
+      if (mounted) {
+        setState(() => _showFlashOverlay = false);
+      }
+    });
+  }
+
   Future<void> _onShutter(CameraState cameraState) async {
     if (_isProcessingCapture) return;
 
     cameraState.when(
       onPhotoMode: (photoState) async {
         setState(() => _isProcessingCapture = true);
+        _triggerFlash();
         // Kick off a quick snapshot of the preview; overlay will use last known frame immediately.
         _captureFrozenFrame(pixelRatio: 1.0);
         // Attempt to avoid mirrored preview glitches on first capture
@@ -367,7 +386,7 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
         if (_isProcessingCapture)
           Positioned.fill(
             child: Container(
-              color: Colors.black26,
+              color: Colors.transparent,
               child: _frozenFrameBytes != null
                   ? Image.memory(
                       _frozenFrameBytes!,
@@ -376,6 +395,16 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
                       height: double.infinity,
                     )
                   : null,
+            ),
+          ),
+        if (_showFlashOverlay)
+          Positioned.fill(
+            child: AnimatedOpacity(
+              opacity: _showFlashOverlay ? 1 : 0,
+              duration: const Duration(milliseconds: 60),
+              child: Container(
+                color: Colors.black.withOpacity(0.2),
+              ),
             ),
           ),
       ],

@@ -251,6 +251,50 @@ class AuthService {
     }
   }
 
+  Future<UserResponse> updateUserMetadata(Map<String, dynamic> metadata) async {
+    try {
+      final response = await _supabase.auth.updateUser(
+        UserAttributes(
+          data: metadata,
+        ),
+      );
+
+      // Also update the dedicated username column in the users table if username is being updated
+      if (metadata.containsKey('username') && currentUser != null) {
+        final username = metadata['username'] as String?;
+        try {
+          await _supabase
+              .from('users')
+              .update({'username': username})
+              .eq('id', currentUser!.id);
+          print('[Auth] Updated username column in users table: $username');
+        } catch (e) {
+          print('[Auth] Error updating username column: $e');
+          // Don't rethrow - metadata update succeeded, this is supplementary
+        }
+      }
+
+      return response;
+    } catch (e) {
+      print('Update user metadata error: $e');
+      rethrow;
+    }
+  }
+
+  Future<UserResponse> updateEmail(String newEmail) async {
+    try {
+      final response = await _supabase.auth.updateUser(
+        UserAttributes(
+          email: newEmail,
+        ),
+      );
+      return response;
+    } catch (e) {
+      print('Update email error: $e');
+      rethrow;
+    }
+  }
+
   Future<void> signInWithOtp(String email) async {
     try {
       await _supabase.auth.signInWithOtp(

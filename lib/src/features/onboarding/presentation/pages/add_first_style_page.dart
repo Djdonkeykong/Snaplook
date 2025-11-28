@@ -13,6 +13,9 @@ import 'pinterest_tutorial_page.dart';
 import 'tiktok_tutorial_page.dart';
 import 'safari_tutorial_page.dart';
 import 'photos_tutorial_page.dart';
+import 'facebook_tutorial_page.dart';
+import 'youtube_tutorial_page.dart';
+import 'imdb_tutorial_page.dart';
 import 'notification_permission_page.dart';
 
 class AddFirstStylePage extends ConsumerStatefulWidget {
@@ -35,7 +38,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
   void initState() {
     super.initState();
 
-    _animationControllers = List.generate(6, (index) {
+    _animationControllers = List.generate(9, (index) {
       return AnimationController(
         duration: const Duration(milliseconds: 400),
         vsync: this,
@@ -78,6 +81,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
     precacheImage(const AssetImage('assets/icons/insta.png'), context);
     precacheImage(const AssetImage('assets/icons/safari.png'), context);
     precacheImage(const AssetImage('assets/icons/photos.png'), context);
+    precacheImage(const AssetImage('assets/icons/imdb.png'), context);
 
     final route = ModalRoute.of(context);
     if (!_isRouteAware && route is PageRoute) {
@@ -236,7 +240,7 @@ class _AppList extends ConsumerWidget {
     return ListView.separated(
       padding: EdgeInsets.only(bottom: spacing.l),
       physics: const BouncingScrollPhysics(),
-      itemCount: 6,
+      itemCount: 9,
       separatorBuilder: (_, __) => SizedBox(height: spacing.l),
       itemBuilder: (context, index) {
         switch (index) {
@@ -342,7 +346,6 @@ class _AppList extends ConsumerWidget {
               },
             );
           case 5:
-          default:
             return AnimatedBuilder(
               animation: animationControllers[5],
               builder: (context, child) {
@@ -350,6 +353,71 @@ class _AppList extends ConsumerWidget {
                   opacity: fadeAnimations[5],
                   child: ScaleTransition(
                     scale: scaleAnimations[5],
+                    child: _AppCard(
+                      name: 'Facebook',
+                      iconWidget: SvgPicture.asset(
+                          'assets/icons/5296499_fb_facebook_facebook logo_icon.svg',
+                          width: 24,
+                          height: 24),
+                      hasTutorial: true,
+                      accentColor: const Color(0xFF1877F2),
+                      isFacebook: true,
+                    ),
+                  ),
+                );
+              },
+            );
+          case 6:
+            return AnimatedBuilder(
+              animation: animationControllers[6],
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: fadeAnimations[6],
+                  child: ScaleTransition(
+                    scale: scaleAnimations[6],
+                    child: _AppCard(
+                      name: 'YouTube',
+                      iconWidget: SvgPicture.asset(
+                          'assets/icons/5296521_play_video_vlog_youtube_youtube logo_icon.svg',
+                          width: 24,
+                          height: 24),
+                      hasTutorial: true,
+                      accentColor: const Color(0xFFFF0000),
+                      isYouTube: true,
+                    ),
+                  ),
+                );
+              },
+            );
+          case 7:
+            return AnimatedBuilder(
+              animation: animationControllers[7],
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: fadeAnimations[7],
+                  child: ScaleTransition(
+                    scale: scaleAnimations[7],
+                    child: _AppCard(
+                      name: 'IMDb',
+                      iconWidget: Image.asset('assets/icons/imdb.png',
+                          width: 24, height: 24, gaplessPlayback: true),
+                      hasTutorial: true,
+                      accentColor: const Color(0xFFF5C518),
+                      isImdb: true,
+                    ),
+                  ),
+                );
+              },
+            );
+          case 8:
+          default:
+            return AnimatedBuilder(
+              animation: animationControllers[8],
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: fadeAnimations[8],
+                  child: ScaleTransition(
+                    scale: scaleAnimations[8],
                     child: _AppCard(
                       name: 'Other Apps',
                       iconWidget: Icon(Icons.apps,
@@ -376,6 +444,9 @@ class _AppCard extends ConsumerWidget {
   final bool isTikTok;
   final bool isSafari;
   final bool isPhotos;
+  final bool isFacebook;
+  final bool isYouTube;
+  final bool isImdb;
 
   const _AppCard({
     required this.name,
@@ -386,6 +457,9 @@ class _AppCard extends ConsumerWidget {
     this.isTikTok = false,
     this.isSafari = false,
     this.isPhotos = false,
+    this.isFacebook = false,
+    this.isYouTube = false,
+    this.isImdb = false,
   });
 
   @override
@@ -424,6 +498,30 @@ class _AppCard extends ConsumerWidget {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => const PhotosTutorialPage(),
+              ),
+            );
+          } else if (isFacebook) {
+            ref.read(facebookTutorialStepProvider.notifier).state =
+                FacebookTutorialStep.step1;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const FacebookTutorialPage(),
+              ),
+            );
+          } else if (isYouTube) {
+            ref.read(youtubeTutorialStepProvider.notifier).state =
+                YouTubeTutorialStep.step1;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const YouTubeTutorialPage(),
+              ),
+            );
+          } else if (isImdb) {
+            ref.read(imdbTutorialStepProvider.notifier).state =
+                ImdbTutorialStep.step1;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const ImdbTutorialPage(),
               ),
             );
           } else {

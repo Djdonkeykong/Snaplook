@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
@@ -7,10 +8,8 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import 'edit_profile_page.dart';
 import 'feed_preferences_page.dart';
-import 'help_faq_page.dart';
-import 'contact_support_page.dart';
+import 'manage_subscription_page.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
-import '../../../../shared/widgets/share_logs_page.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -127,7 +126,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  void _handleManageSubscription() {}
+  void _handleManageSubscription() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const ManageSubscriptionPage(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -246,12 +251,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
                 SizedBox(height: spacing.m),
 
-                // Account & Settings
-                _SectionHeader(title: 'Account & Settings'),
+                // Account
+                _SectionHeader(title: 'Account'),
                 _SimpleSettingItem(
                   title: 'Manage Subscription',
                   onTap: _handleManageSubscription,
                 ),
+
+                SizedBox(height: spacing.l),
+
+                // Settings
+                _SectionHeader(title: 'Settings'),
                 _SimpleSettingItem(
                   title: 'Feed Preferences',
                   onTap: () {
@@ -272,29 +282,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 // Support Section
                 _SectionHeader(title: 'Support'),
                 _SimpleSettingItem(
-                  title: 'Help & FAQ',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const HelpFaqPage()),
-                    );
-                  },
-                ),
-                _SimpleSettingItem(
-                  title: 'Contact Support',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const ContactSupportPage()),
-                    );
-                  },
-                ),
-                _SimpleSettingItem(
-                  title: 'Share Extension Logs',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const ShareLogsPage()),
-                    );
+                  title: 'Help',
+                  onTap: () async {
+                    final uri = Uri.parse('https://truefindr.com/faq/');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
                   },
                 ),
                 SizedBox(height: spacing.l),
