@@ -1,7 +1,11 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/src/orchestrator/analysis/analysis_to_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -20,6 +24,10 @@ class CameraCapturePage extends ConsumerStatefulWidget {
 class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
   final ImagePicker _picker = ImagePicker();
   bool _isProcessingCapture = false;
+  bool _mirrorConfigured = false;
+  final GlobalKey _previewKey = GlobalKey();
+  Uint8List? _frozenFrameBytes;
+  bool _hasSeededFreeze = false;
 
   Future<CaptureRequest> _buildCaptureRequest(List<Sensor> sensors) async {
     final directory = await getTemporaryDirectory();
@@ -112,12 +120,39 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
     );
   }
 
+  Future<void> _captureFrozenFrame({double pixelRatio = 1.0}) async {
+    try {
+      final boundary =
+          _previewKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+
+      final ui.Image image = await boundary.toImage(
+        pixelRatio: pixelRatio,
+      );
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      if (!mounted) return;
+      setState(() {
+        _frozenFrameBytes = byteData.buffer.asUint8List();
+      });
+    } catch (_) {
+      // Best-effort; if capture fails, we simply won't show the frozen frame.
+    }
+  }
+
   Future<void> _onShutter(CameraState cameraState) async {
     if (_isProcessingCapture) return;
 
     cameraState.when(
       onPhotoMode: (photoState) async {
         setState(() => _isProcessingCapture = true);
+        // Kick off a quick snapshot of the preview; overlay will use last known frame immediately.
+        _captureFrozenFrame(pixelRatio: 1.0);
+        // Attempt to avoid mirrored preview glitches on first capture
+        if (!_mirrorConfigured) {
+          CamerawesomePlugin.setMirrorFrontCamera(false);
+          _mirrorConfigured = true;
+        }
         await photoState.takePhoto(onPhotoFailed: (error) {
           if (!mounted) return;
           setState(() => _isProcessingCapture = false);
@@ -202,7 +237,7 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.35),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(color: Colors.white10),
             ),
             child: Row(
@@ -219,6 +254,7 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
                           color: Colors.white70,
                           fontWeight: FontWeight.w500,
                           fontFamily: 'PlusJakartaSans',
+                          fontSize: 14,
                         ),
                   ),
                 ),
@@ -331,8 +367,15 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
         if (_isProcessingCapture)
           Positioned.fill(
             child: Container(
-              color: Colors.black38,
-              child: _buildSpinner(),
+              color: Colors.black26,
+              child: _frozenFrameBytes != null
+                  ? Image.memory(
+                      _frozenFrameBytes!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                    )
+                  : null,
             ),
           ),
       ],
@@ -343,32 +386,47 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: CameraAwesomeBuilder.custom(
-        saveConfig: SaveConfig.photo(
-          pathBuilder: _buildCaptureRequest,
-          mirrorFrontCamera: true,
-        ),
-        progressIndicator: _buildSpinner(),
-        sensorConfig: SensorConfig.single(
-          sensor: Sensor.position(SensorPosition.back),
-          flashMode: FlashMode.auto,
-          aspectRatio: CameraAspectRatios.ratio_4_3,
-        ),
-        enablePhysicalButton: true,
-        previewFit: CameraPreviewFit.cover,
-        onMediaCaptureEvent: _onMediaCaptureEvent,
+      body: RepaintBoundary(
+        key: _previewKey,
+        child: CameraAwesomeBuilder.custom(
+          saveConfig: SaveConfig.photo(
+            pathBuilder: _buildCaptureRequest,
+            mirrorFrontCamera: false,
+          ),
+          progressIndicator: _buildSpinner(),
+          sensorConfig: SensorConfig.single(
+            sensor: Sensor.position(SensorPosition.back),
+            flashMode: FlashMode.auto,
+            aspectRatio: CameraAspectRatios.ratio_4_3,
+          ),
+          enablePhysicalButton: true,
+          previewFit: CameraPreviewFit.cover,
+          onMediaCaptureEvent: _onMediaCaptureEvent,
         builder: (cameraState, preview) {
           if (cameraState is PreparingCameraState) {
             return _buildSpinner();
           }
+          if (!_mirrorConfigured) {
+            CamerawesomePlugin.setMirrorFrontCamera(false);
+            _mirrorConfigured = true;
+          }
+          if (!_hasSeededFreeze) {
+            _hasSeededFreeze = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _captureFrozenFrame(pixelRatio: 1.0);
+              }
+            });
+          }
           return _buildCameraOverlay(cameraState, preview);
         },
-        theme: AwesomeTheme(
-          bottomActionsBackgroundColor: Colors.transparent,
-          buttonTheme: AwesomeButtonTheme(
-            foregroundColor: Colors.white,
-            backgroundColor: Colors.white.withOpacity(0.12),
-            iconSize: 22,
+          theme: AwesomeTheme(
+            bottomActionsBackgroundColor: Colors.transparent,
+            buttonTheme: AwesomeButtonTheme(
+              foregroundColor: Colors.white,
+              backgroundColor: Colors.white.withOpacity(0.12),
+              iconSize: 22,
+            ),
           ),
         ),
       ),
