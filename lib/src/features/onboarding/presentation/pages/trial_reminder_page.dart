@@ -5,12 +5,11 @@ import 'package:video_player/video_player.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
-import '../../../../../src/features/paywall/providers/credit_provider.dart';
+import '../../../../shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'account_creation_page.dart';
 import 'welcome_free_analysis_page.dart';
-import 'onboarding_paywall_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
@@ -20,44 +19,39 @@ class TrialReminderPage extends ConsumerStatefulWidget {
   ConsumerState<TrialReminderPage> createState() => _TrialReminderPageState();
 }
 
-class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
-  VideoPlayerController? _controller;
-  bool _isInitialized = false;
+class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
+    with WidgetsBindingObserver {
+  VideoPlayerController? get _controller =>
+      VideoPreloader.instance.bellVideoController;
 
   @override
   void initState() {
     super.initState();
-    _initializeVideo();
-  }
-
-  Future<void> _initializeVideo() async {
-    try {
-      _controller = VideoPlayerController.asset(
-        'assets/videos/bell-new.mp4',
-        videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: true,
-          allowBackgroundPlayback: false,
-        ),
-      );
-      await _controller!.initialize();
-      _controller!.setLooping(true);
-      _controller!.setVolume(0.0);
-      _controller!.play();
-
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Ensure video plays when page loads
+      VideoPreloader.instance.playBellVideo();
       if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
+        setState(() {});
       }
-    } catch (e) {
-      print('Error initializing bell video: $e');
-    }
+    });
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    VideoPreloader.instance.pauseBellVideo();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      VideoPreloader.instance.playBellVideo();
+    } else if (state == AppLifecycleState.paused) {
+      VideoPreloader.instance.pauseBellVideo();
+    }
   }
 
   @override
@@ -106,7 +100,8 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
               child: SizedBox(
                 width: 180,
                 height: 180,
-                child: _isInitialized && _controller != null
+                child: _controller != null &&
+                        VideoPreloader.instance.isBellVideoInitialized
                     ? AspectRatio(
                         aspectRatio: _controller!.value.aspectRatio,
                         child: VideoPlayer(_controller!),

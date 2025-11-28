@@ -13,16 +13,20 @@ class VideoPreloader {
   VideoPlayerController? _shareVideoController;
   VideoPlayerController? _loginVideoController;
   VideoPlayerController? _trialVideoController;
+  VideoPlayerController? _bellVideoController;
   bool _isInitialized = false;
   bool _isLoginVideoInitialized = false;
   bool _isTrialVideoInitialized = false;
+  bool _isBellVideoInitialized = false;
 
   VideoPlayerController? get shareVideoController => _shareVideoController;
   VideoPlayerController? get loginVideoController => _loginVideoController;
   VideoPlayerController? get trialVideoController => _trialVideoController;
+  VideoPlayerController? get bellVideoController => _bellVideoController;
   bool get isInitialized => _isInitialized;
   bool get isLoginVideoInitialized => _isLoginVideoInitialized;
   bool get isTrialVideoInitialized => _isTrialVideoInitialized;
+  bool get isBellVideoInitialized => _isBellVideoInitialized;
 
   Future<void> preloadShareVideo() async {
     if (_shareVideoController != null) return;
@@ -133,6 +137,42 @@ class VideoPreloader {
     }
   }
 
+  Future<void> preloadBellVideo() async {
+    if (_bellVideoController != null) return;
+
+    try {
+      _bellVideoController = VideoPlayerController.asset(
+        'assets/videos/bell-new.mp4',
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+        ),
+        closedCaptionFile: null,
+      );
+
+      await _bellVideoController!.initialize();
+      _bellVideoController!.setLooping(true);
+      _bellVideoController!.setVolume(0.0);
+      _isBellVideoInitialized = true;
+
+      _bellVideoController!.play();
+    } catch (e) {
+      print('Error preloading bell video: $e');
+    }
+  }
+
+  void playBellVideo() {
+    if (_bellVideoController != null && _isBellVideoInitialized) {
+      _bellVideoController!.play();
+    }
+  }
+
+  void pauseBellVideo() {
+    if (_bellVideoController != null && _isBellVideoInitialized) {
+      _bellVideoController!.pause();
+    }
+  }
+
   void dispose() {
     _shareVideoController?.dispose();
     _shareVideoController = null;
@@ -143,5 +183,8 @@ class VideoPreloader {
     _trialVideoController?.dispose();
     _trialVideoController = null;
     _isTrialVideoInitialized = false;
+    _bellVideoController?.dispose();
+    _bellVideoController = null;
+    _isBellVideoInitialized = false;
   }
 }

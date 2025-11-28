@@ -148,25 +148,20 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Full-screen Safari screenshot (step 1 - only visible during step1)
+          // Base image - ALWAYS visible (like Instagram tutorial)
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/safari_step2.png',
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+            ),
+          ),
+
+          // Step 1 overlay - only shows during step1, on top of base image
           if (currentStep == SafariTutorialStep.step1)
             Positioned.fill(
               child: Image.asset(
                 'assets/images/safari_step1.png',
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Popup overlay for step 2 and beyond (after long-pressing image)
-          if (hasUserTapped && (currentStep == SafariTutorialStep.step2 ||
-              currentStep == SafariTutorialStep.tapMore ||
-              currentStep == SafariTutorialStep.tapEdit ||
-              currentStep == SafariTutorialStep.tapSnaplookShortcut ||
-              currentStep == SafariTutorialStep.tapDone))
-            Positioned.fill(
-              child: Image.asset(
-                'assets/images/safari_step2.png',
                 fit: BoxFit.cover,
                 gaplessPlayback: true,
               ),

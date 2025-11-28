@@ -26,6 +26,7 @@ import '../../../onboarding/presentation/pages/safari_tutorial_page.dart';
 import '../../../onboarding/presentation/pages/photos_tutorial_page.dart';
 import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../detection/domain/models/detection_result.dart';
+import '../../../detection/presentation/pages/camera_capture_page.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show scrollToTopTriggerProvider, isAtHomeRootProvider;
@@ -677,8 +678,18 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    print(
-        "[IMAGE PICKER] Starting image picker - source: ${source == ImageSource.camera ? 'CAMERA' : 'GALLERY'}");
+    if (source == ImageSource.camera) {
+      print("[IMAGE PICKER] Redirecting to custom camera experience");
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (_) => const CameraCapturePage(),
+        ),
+      );
+      return;
+    }
+
+    print("[IMAGE PICKER] Starting image picker - source: GALLERY");
     try {
       print("[IMAGE PICKER] Calling ImagePicker.pickImage...");
       final XFile? image = await _picker.pickImage(
@@ -706,21 +717,14 @@ class _HomePageState extends ConsumerState<HomePage> {
         }
 
         if (mounted) {
-          if (source == ImageSource.camera) {
-            // Small pause to match the smoother pacing of the Upload flow
-            await Future.delayed(const Duration(milliseconds: 250));
-            if (!mounted) return;
-          }
-
           print(
               "[IMAGE PICKER] Widget is mounted - navigating to DetectionPage");
-          final searchType = source == ImageSource.camera ? 'camera' : 'photos';
           Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) {
                 print("[IMAGE PICKER] DetectionPage builder called");
-                return DetectionPage(
-                  searchType: searchType,
+                return const DetectionPage(
+                  searchType: 'photos',
                 );
               },
             ),

@@ -28,6 +28,8 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await VideoPreloader.instance.preloadTrialVideo();
+      // Preload bell video for next page
+      VideoPreloader.instance.preloadBellVideo();
       if (mounted) {
         setState(() {});
         // Ensure video plays when returning to this page

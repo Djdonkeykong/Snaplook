@@ -18,8 +18,36 @@ const double _step2TapAreaLeftFraction = 0.45;
 const double _step2TapAreaWidthFraction = 0.25;
 const double _step2TapAreaHeightFraction = 0.12;
 
+// Step 3 (tapMore) - centered bottom tap area
+const double _tapMoreBottomFraction = 0.083;
+const double _tapMoreLeftFraction = 0.77;
+const double _tapMoreWidthFraction = 0.22;
+const double _tapMoreHeightFraction = 0.1;
+
+// Step 4 (tapEdit) - centered bottom tap area
+const double _tapEditBottomFraction = 0.84;
+const double _tapEditLeftFraction = 0.825;
+const double _tapEditWidthFraction = 0.17;
+const double _tapEditHeightFraction = 0.08;
+
+// Step 5 (tapSnaplookShortcut) - centered tap area
+const double _tapSnaplookShortcutBottomFraction = 0.48;
+const double _tapSnaplookShortcutLeftFraction = 0.068;
+const double _tapSnaplookShortcutWidthFraction = 0.12;
+const double _tapSnaplookShortcutHeightFraction = 0.06;
+
+// Step 6 (tapDone) - top right
+const double _tapDoneTopFraction = 0.09;
+const double _tapDoneRightFraction = 0.03;
+const double _tapDoneWidthFraction = 0.15;
+const double _tapDoneHeightFraction = 0.07;
+
 enum PhotosTutorialStep {
   step1,
+  tapMore,
+  tapEdit,
+  tapSnaplookShortcut,
+  tapDone,
   step2,
 }
 
@@ -60,9 +88,24 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
     switch (step) {
       case PhotosTutorialStep.step1:
         return "When you find a clothing item you love in your Photos, tap the share icon.";
+      case PhotosTutorialStep.tapMore:
+        return "This is a one-time setup to add Snaplook as a shortcut. Scroll to the right and tap 'More'.";
+      case PhotosTutorialStep.tapEdit:
+        return "Tap 'Edit'.";
+      case PhotosTutorialStep.tapSnaplookShortcut:
+        return "Find Snaplook and tap the '+' button to add it.";
+      case PhotosTutorialStep.tapDone:
+        return "Tap 'Done'.";
       case PhotosTutorialStep.step2:
         return "Now tap on Snaplook to share the image with our app.";
     }
+  }
+
+  bool _isOneTimeSetupStep(PhotosTutorialStep step) {
+    return step == PhotosTutorialStep.tapMore ||
+           step == PhotosTutorialStep.tapEdit ||
+           step == PhotosTutorialStep.tapSnaplookShortcut ||
+           step == PhotosTutorialStep.tapDone;
   }
 
   void _onInstructionComplete() {
@@ -106,21 +149,77 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
           ),
 
           // Dark overlay when popup appears
-          if (hasUserTapped && currentStep == PhotosTutorialStep.step2)
+          if (hasUserTapped && (currentStep == PhotosTutorialStep.tapMore ||
+              currentStep == PhotosTutorialStep.tapEdit ||
+              currentStep == PhotosTutorialStep.tapSnaplookShortcut ||
+              currentStep == PhotosTutorialStep.tapDone ||
+              currentStep == PhotosTutorialStep.step2))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.3),
               ),
             ),
 
-          // Popup overlay for step 2 (after tapping photo)
+          // Step 2 popup overlay (after tapping photo - shows More button)
+          if (hasUserTapped && currentStep == PhotosTutorialStep.tapMore)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/photos-step-2-more.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Step 3 popup overlay (after tapping More - shows Edit button)
+          if (hasUserTapped && currentStep == PhotosTutorialStep.tapEdit)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/tap_edit.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Step 4 popup overlay (after tapping Edit - shows Snaplook shortcut)
+          if (hasUserTapped && currentStep == PhotosTutorialStep.tapSnaplookShortcut)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/tap_snaplook.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Step 5 popup overlay (after tapping Snaplook shortcut - shows Done button)
+          if (hasUserTapped && currentStep == PhotosTutorialStep.tapDone)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/tap_done.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Step 6 popup overlay (after tapping Done - final confirmation)
           if (hasUserTapped && currentStep == PhotosTutorialStep.step2)
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/photos-step-2.png',
+                'assets/images/photos-step-3-snaplook.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
@@ -134,11 +233,95 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  _onActionComplete(PhotosTutorialStep.step2);
+                  _onActionComplete(PhotosTutorialStep.tapMore);
                 },
                 child: Container(
                   width: screenWidth * _step1TapAreaWidthFraction,
                   height: screenHeight * _step1TapAreaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Tap More area (tapMore step) - centered bottom tap area
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.tapMore)
+            Positioned(
+              bottom: screenHeight * _tapMoreBottomFraction,
+              left: screenWidth * _tapMoreLeftFraction,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(PhotosTutorialStep.tapEdit);
+                },
+                child: Container(
+                  width: screenWidth * _tapMoreWidthFraction,
+                  height: screenHeight * _tapMoreHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Tap Edit area (tapEdit step) - centered bottom tap area
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.tapEdit)
+            Positioned(
+              bottom: screenHeight * _tapEditBottomFraction,
+              left: screenWidth * _tapEditLeftFraction,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(PhotosTutorialStep.tapSnaplookShortcut);
+                },
+                child: Container(
+                  width: screenWidth * _tapEditWidthFraction,
+                  height: screenHeight * _tapEditHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Tap Snaplook Shortcut area (tapSnaplookShortcut step) - centered tap area
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.tapSnaplookShortcut)
+            Positioned(
+              bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
+              left: screenWidth * _tapSnaplookShortcutLeftFraction,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(PhotosTutorialStep.tapDone);
+                },
+                child: Container(
+                  width: screenWidth * _tapSnaplookShortcutWidthFraction,
+                  height: screenHeight * _tapSnaplookShortcutHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Tap Done area (tapDone step) - top right
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.tapDone)
+            Positioned(
+              top: screenHeight * _tapDoneTopFraction,
+              right: screenWidth * _tapDoneRightFraction,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(PhotosTutorialStep.step2);
+                },
+                child: Container(
+                  width: screenWidth * _tapDoneWidthFraction,
+                  height: screenHeight * _tapDoneHeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
                     border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
@@ -188,6 +371,52 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
             _InstructionOverlay(
               text: _getInstructionText(currentStep),
               onComplete: _onInstructionComplete,
+            ),
+
+          // One-time setup indicator (shows during all 4 setup steps, stays above overlay)
+          if (_isOneTimeSetupStep(currentStep))
+            Positioned(
+              bottom: 60.0,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: const Color(0xFFf2003c),
+                        size: 22,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'One-time setup',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          color: const Color(0xFFf2003c),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
         ],
       ),
