@@ -5672,15 +5672,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
     @objc private func cancelImportTapped() {
         shareLog("Cancel tapped")
 
-        // Haptic feedback for immediate responsiveness
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.impactOccurred()
-
         // Cancel any pending work items
         loadingHideWorkItem?.cancel()
         loadingHideWorkItem = nil
 
-        // Cancel the extension request FIRST to trigger the dismissal animation
+        // Stop any ongoing processes
+        endExtendedExecution()
+
+        // Clear data without touching UI (let system handle dismissal animation)
+        clearSharedData()
+
+        // Cancel the extension request - iOS will handle the dismissal animation
         let error = NSError(
             domain: "com.snaplook.shareExtension",
             code: -1,
@@ -5688,14 +5690,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         )
         didCompleteRequest = true
         extensionContext?.cancelRequest(withError: error)
-
-        // Clean up AFTER dismissal starts (let the animation play)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
-            self?.clearSharedData()
-            self?.hideLoadingUI()
-            self?.hideDefaultUI()
-            self?.endExtendedExecution()
-        }
     }
 
     @objc private func analyzeInAppTapped() {

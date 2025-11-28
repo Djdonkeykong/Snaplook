@@ -13,8 +13,8 @@ const double _step1TapAreaWidthFraction = 0.20;
 const double _step1TapAreaHeightFraction = 0.08;
 
 // Step 2 tap area placements
-const double _step2TapAreaTopFraction = 0.73;
-const double _step2TapAreaLeftFraction = 0.22;
+const double _step2TapAreaTopFraction = 0.81;
+const double _step2TapAreaLeftFraction = 0.45;
 const double _step2TapAreaWidthFraction = 0.25;
 const double _step2TapAreaHeightFraction = 0.12;
 
@@ -120,7 +120,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/photos_step2.png',
+                'assets/images/photos-step-2.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),

@@ -13,7 +13,7 @@ import '../../../detection/presentation/widgets/detection_progress_overlay.dart'
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../results/presentation/widgets/results_bottom_sheet.dart';
 import '../../domain/services/tutorial_service.dart';
-import 'tutorial_next_steps_page.dart';
+import 'rating_social_proof_page.dart';
 
 class TutorialImageAnalysisPage extends ConsumerStatefulWidget {
   final String? imagePath;
@@ -95,8 +95,8 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
                     onPressed: () {
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
-                          builder: (context) => TutorialNextStepsPage(
-                            returnToOnboarding: widget.returnToOnboarding,
+                          builder: (context) => const RatingSocialProofPage(
+                            continueToTrialFlow: true,
                           ),
                         ),
                       );
