@@ -1377,6 +1377,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             platformName = "YouTube"
             platformType = "youtube"
             downloadFunction = downloadYouTubeMedia
+        } else if isSnapchatShareCandidate(item) {
+            platformName = "Snapchat"
+            platformType = "snapchat"
+            downloadFunction = downloadSnapchatMedia
         } else if isGoogleImageShareCandidate(item) {
             platformName = "Google Image"
             platformType = "google_image"
@@ -1593,6 +1597,30 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return hasVideoPattern
     }
 
+    private func isSnapchatShareCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        // Match Snapchat URL formats:
+        // - snapchat.com/spotlight/ (Spotlight videos)
+        // - snapchat.com/t/ (short links)
+        // - snapchat.com/add/ (user profiles)
+        let hasSnapchatDomain = trimmed.contains("snapchat.com")
+        if !hasSnapchatDomain {
+            return false
+        }
+
+        let hasValidPattern = trimmed.contains("/spotlight/") ||
+                             trimmed.contains("/t/") ||
+                             trimmed.contains("/add/")
+
+        if hasValidPattern {
+            shareLog("Snapchat URL detected: \(trimmed.prefix(80))")
+        } else {
+            shareLog("Snapchat domain found but no valid pattern: \(trimmed.prefix(80))")
+        }
+
+        return hasValidPattern
+    }
+
     private func isGoogleImageShareCandidate(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let hasGoogleHost = trimmed.contains("://www.google.") ||
@@ -1610,6 +1638,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                isTikTokShareCandidate(value) ||
                isPinterestShareCandidate(value) ||
                isYouTubeShareCandidate(value) ||
+               isSnapchatShareCandidate(value) ||
                isGoogleImageShareCandidate(value)
     }
 
@@ -2270,6 +2299,159 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         return candidates
+    }
+
+    // MARK: - Snapchat Scraping
+
+    private func downloadSnapchatMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
+            shareLog("⚠️ ScrapingBee API key missing - cannot download Snapchat image")
+            completion(.failure(makeDownloadError("Snapchat", "ScrapingBee API key not configured. Please open the Snaplook app first.")))
+            return
+        }
+
+        performSnapchatScrape(
+            snapchatUrl: urlString,
+            apiKey: apiKey,
+            completion: completion
+        )
+    }
+
+    private func performSnapchatScrape(
+        snapchatUrl: String,
+        apiKey: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        shareLog("Scraping Snapchat URL with ScrapingBee: \(snapchatUrl.prefix(80))...")
+
+        guard let encodedUrl = snapchatUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            shareLog("Failed to encode Snapchat URL")
+            completion(.failure(makeDownloadError("Snapchat", "Invalid URL encoding")))
+            return
+        }
+
+        let scrapingBeeUrlString = "https://app.scrapingbee.com/api/v1/" +
+            "?api_key=\(apiKey)" +
+            "&url=\(encodedUrl)" +
+            "&render_js=true" +
+            "&wait=2000" +
+            "&premium_proxy=true"
+
+        guard let scrapingBeeUrl = URL(string: scrapingBeeUrlString) else {
+            shareLog("Failed to build ScrapingBee URL")
+            completion(.failure(makeDownloadError("Snapchat", "Invalid ScrapingBee request")))
+            return
+        }
+
+        var request = URLRequest(url: scrapingBeeUrl)
+        request.timeoutInterval = 30.0
+        request.httpMethod = "GET"
+
+        shareLog("Sending ScrapingBee request for Snapchat...")
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("ScrapingBee request failed: \(error.localizedDescription)")
+                completion(.failure(self.makeDownloadError("Snapchat", "Network error: \(error.localizedDescription)")))
+                return
+            }
+
+            guard let data = data, !data.isEmpty else {
+                shareLog("ScrapingBee returned empty data")
+                completion(.failure(self.makeDownloadError("Snapchat", "Empty response from ScrapingBee")))
+                return
+            }
+
+            guard let html = String(data: data, encoding: .utf8) else {
+                shareLog("Could not decode HTML from ScrapingBee response")
+                completion(.failure(self.makeDownloadError("Snapchat", "Invalid HTML response")))
+                return
+            }
+
+            shareLog("ScrapingBee returned \(data.count) bytes of HTML")
+
+            let imageUrls = self.extractImagesFromSnapchatHtml(html, baseUrl: snapchatUrl)
+
+            if imageUrls.isEmpty {
+                shareLog("No images extracted from Snapchat HTML")
+                completion(.failure(self.makeDownloadError("Snapchat", "No images found in Snapchat content")))
+                return
+            }
+
+            shareLog("Extracted \(imageUrls.count) image URL(s) from Snapchat HTML")
+
+            self.downloadFirstValidImage(
+                from: Array(imageUrls.prefix(5)),
+                platform: "snapchat",
+                session: URLSession.shared,
+                cropToAspect: 9.0 / 16.0,
+                completion: completion
+            )
+        }
+
+        task.resume()
+    }
+
+    private func extractImagesFromSnapchatHtml(_ html: String, baseUrl: String) -> [String] {
+        var results: [String] = []
+
+        // Pattern 1: og:image meta tag
+        let ogImagePattern = #"<meta\s+(?:[^>]*?\s+)?property\s*=\s*["\']og:image["\']\s+(?:[^>]*?\s+)?content\s*=\s*["\']([^"\']+)["\']"#
+        if let ogRegex = try? NSRegularExpression(pattern: ogImagePattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = ogRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let urlRange = match.range(at: 1)
+                    let imageUrl = nsHtml.substring(with: urlRange)
+                    if !imageUrl.isEmpty {
+                        shareLog("Found og:image: \(imageUrl.prefix(80))")
+                        results.append(imageUrl)
+                    }
+                }
+            }
+        }
+
+        // Pattern 2: poster attribute in video tags
+        let posterPattern = #"<video\s+[^>]*?poster\s*=\s*["\']([^"\']+)["\']"#
+        if let posterRegex = try? NSRegularExpression(pattern: posterPattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = posterRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let urlRange = match.range(at: 1)
+                    let imageUrl = nsHtml.substring(with: urlRange)
+                    if !imageUrl.isEmpty {
+                        shareLog("Found video poster: \(imageUrl.prefix(80))")
+                        results.append(imageUrl)
+                    }
+                }
+            }
+        }
+
+        // Pattern 3: Snapchat CDN images (story.snapchat.com or cf-st.sc-cdn.net)
+        let cdnPattern = #"(https?://(?:story\.snapchat\.com|cf-st\.sc-cdn\.net)/[^\s"\'<>]+\.(?:jpg|jpeg|png|webp))"#
+        if let cdnRegex = try? NSRegularExpression(pattern: cdnPattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = cdnRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches {
+                if match.numberOfRanges > 0 {
+                    let urlRange = match.range(at: 1)
+                    let imageUrl = nsHtml.substring(with: urlRange)
+                    if !imageUrl.isEmpty {
+                        shareLog("Found Snapchat CDN image: \(imageUrl.prefix(80))")
+                        results.append(imageUrl)
+                    }
+                }
+            }
+        }
+
+        return results
     }
 
     // MARK: - Google Image Download
