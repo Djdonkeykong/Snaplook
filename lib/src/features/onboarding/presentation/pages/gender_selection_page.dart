@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -339,20 +340,18 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
           height: 56,
           child: ElevatedButton(
             onPressed: selectedGender != null
-                ? () async {
+                ? () {
                     HapticFeedback.mediumImpact();
 
-                    // Save gender preference to database
-                    await _saveGenderPreference();
+                    // Save gender preference to database in background
+                    unawaited(_saveGenderPreference());
 
-                    // Navigate to next page
-                    if (mounted) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const DiscoverySourcePage(),
-                        ),
-                      );
-                    }
+                    // Navigate to next page immediately
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const DiscoverySourcePage(),
+                      ),
+                    );
                   }
                 : null,
             style: ElevatedButton.styleFrom(

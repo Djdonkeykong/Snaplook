@@ -63,6 +63,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   Timer? _statusRotationTimer;
   final List<Timer> _overlayTimers = [];
   int _statusIndex = 0;
+  Map<String, dynamic>? _loadedSearchData;
 
   // Results sheet state
   static const double _resultsMinExtent = 0.4;
@@ -119,6 +120,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   String? _loadedImageUrl;
 
   Future<void> _loadExistingResults(String searchId) async {
+    final start = DateTime.now();
     try {
       print(
           "[DETECTION PAGE] Loading existing results for searchId: $searchId");
@@ -171,6 +173,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       print(
           "[DETECTION PAGE] Successfully loaded ${results.length} existing results");
 
+      _loadedSearchData = searchData;
+
       // Get the Cloudinary URL for the analyzed image
       final cloudinaryUrl = searchData['cloudinary_url'] as String?;
       print("[DETECTION PAGE] Cloudinary URL: $cloudinaryUrl");
@@ -190,8 +194,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       }
 
       if (!mounted) return;
+      await _ensureMinimumLoadDuration(start);
 
       // Show results directly - image is already in memory
+      if (!mounted) return;
       setState(() {
         _results = results;
         _isResultsSheetVisible = true;
@@ -200,9 +206,21 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       });
     } catch (e) {
       print("[DETECTION PAGE] Error loading existing results: $e");
-      setState(() {
-        _isLoadingExistingResults = false;
-      });
+      await _ensureMinimumLoadDuration(start);
+      if (mounted) {
+        setState(() {
+          _isLoadingExistingResults = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _ensureMinimumLoadDuration(DateTime start) async {
+    const minDuration = Duration(seconds: 1);
+    final elapsed = DateTime.now().difference(start);
+    final remaining = minDuration - elapsed;
+    if (remaining > Duration.zero) {
+      await Future.delayed(remaining);
     }
   }
 
@@ -473,6 +491,14 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     try {
       // Give tactile response when the share action is available (results showing).
       HapticFeedback.mediumImpact();
+
+      // If opened from history and we have the search metadata, share the search entry instead of the image
+      if (widget.searchId != null && _loadedSearchData != null) {
+        final message = _buildHistoryShareMessage(_loadedSearchData!);
+        await Share.share(message, subject: 'Snaplook search');
+        return;
+      }
+
       if (widget.imageUrl != null) {
         final uri = Uri.parse(widget.imageUrl!);
         final response = await http.get(uri);
@@ -493,6 +519,71 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     } catch (e) {
       print('Error sharing image: $e');
     }
+  }
+
+  String _buildHistoryShareMessage(Map<String, dynamic> data) {
+    final rawType = (data['search_type'] as String?)?.trim();
+    final type = rawType?.toLowerCase();
+    final sourceUrl = (data['source_url'] as String?)?.trim() ?? '';
+    final totalResults = (data['total_results'] as num?)?.toInt() ?? 0;
+    final resultsLabel =
+        totalResults == 1 ? '1 product' : '$totalResults products';
+    final sourceLabel = _getSourceLabel(type, rawType, sourceUrl);
+
+    if (sourceUrl.isNotEmpty) {
+      return 'Check out this $sourceLabel Snaplook search – $resultsLabel found: $sourceUrl';
+    }
+    return 'Check out this $sourceLabel Snaplook search – $resultsLabel found!';
+  }
+
+  String _getSourceLabel(String? type, String? rawType, String sourceUrl) {
+    switch (type) {
+      case 'instagram':
+        return 'Instagram';
+      case 'tiktok':
+        return 'TikTok';
+      case 'pinterest':
+        return 'Pinterest';
+      case 'twitter':
+        return 'Twitter';
+      case 'facebook':
+        return 'Facebook';
+      case 'youtube':
+        final lowerUrl = sourceUrl.toLowerCase();
+        final isShorts = lowerUrl.contains('youtube.com/shorts') ||
+            lowerUrl.contains('youtu.be/shorts');
+        return isShorts ? 'YouTube Shorts' : 'YouTube';
+      case 'chrome':
+        return 'Chrome';
+      case 'firefox':
+        return 'Firefox';
+      case 'safari':
+        return 'Safari';
+      case 'web':
+      case 'browser':
+        return 'Web';
+      case 'share':
+      case 'share_extension':
+      case 'shareextension':
+        return 'Snaplook';
+    }
+
+    if (type == null ||
+        type == 'camera' ||
+        type == 'photos' ||
+        type == 'home') {
+      return 'Snaplook';
+    }
+
+    if (rawType != null && rawType.isNotEmpty) {
+      return rawType
+          .split(RegExp(r'[_-]+'))
+          .map((word) =>
+              word.isEmpty ? '' : '${word[0].toUpperCase()}${word.substring(1)}')
+          .join(' ');
+    }
+
+    return 'Snaplook';
   }
 
   void _toggleCropMode() {

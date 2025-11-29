@@ -161,15 +161,7 @@ class _EditProfileFieldsPageState extends ConsumerState<EditProfileFieldsPage> {
             // Save button at bottom
             Container(
               padding: EdgeInsets.all(spacing.l),
-              decoration: BoxDecoration(
-                color: colorScheme.surface,
-                border: Border(
-                  top: BorderSide(
-                    color: colorScheme.outlineVariant,
-                    width: 1,
-                  ),
-                ),
-              ),
+              color: colorScheme.surface,
               child: SizedBox(
                 width: double.infinity,
                 height: 56,

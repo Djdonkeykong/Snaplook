@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
 
-const bool _kShowTouchTargets = true;
+const bool _kShowTouchTargets = false;
 
 // Step 1 (share button) placements
 const double _step1BottomFraction = 0.085;
@@ -19,28 +19,28 @@ const double _tapShareViaWidthFraction = 0.18;
 const double _tapShareViaHeightFraction = 0.08;
 
 // Step 3 (tapMore) placements - scroll right and tap More
-const double _tapMoreBottomFraction = 0.18;
-const double _tapMoreLeftFraction = 0.77;
-const double _tapMoreWidthFraction = 0.22;
-const double _tapMoreHeightFraction = 0.12;
+const double _tapMoreBottomFraction = 0.16;
+const double _tapMoreLeftFraction = 0.72;
+const double _tapMoreWidthFraction = 0.3;
+const double _tapMoreHeightFraction = 0.15;
 
 // Step 4 (tapEdit) placements
-const double _tapEditBottomFraction = 0.84;
-const double _tapEditRightFraction = 0.01;
-const double _tapEditWidthFraction = 0.15;
-const double _tapEditHeightFraction = 0.08;
+const double _tapEditBottomFraction = 0.82;
+const double _tapEditRightFraction = 0.0;
+const double _tapEditWidthFraction = 0.2;
+const double _tapEditHeightFraction = 0.12;
 
 // Step 5 (tapSnaplookShortcut) placements
 const double _tapSnaplookShortcutBottomFraction = 0.47;
-const double _tapSnaplookShortcutLeftFraction = 0.05;
-const double _tapSnaplookShortcutWidthFraction = 0.15;
+const double _tapSnaplookShortcutLeftFraction = 0.035;
+const double _tapSnaplookShortcutWidthFraction = 0.18;
 const double _tapSnaplookShortcutHeightFraction = 0.08;
 
 // Step 6 (tapDone) placements - top positioning
-const double _tapDoneTopPadding = 40.0;
-const double _tapDoneRightFraction = 0.02;
-const double _tapDoneWidthFraction = 0.15;
-const double _tapDoneHeightFraction = 0.06;
+const double _tapDoneTopFraction = 0;
+const double _tapDoneRightFraction = 0;
+const double _tapDoneWidthFraction = 0.2;
+const double _tapDoneHeightFraction = 0.13;
 
 // Step 7 (final selection) placements
 const double _finalSelectBottomFraction = 0.18;
@@ -352,7 +352,7 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
           // Tap area for tapDone - Done button
           if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapDone)
             Positioned(
-              top: MediaQuery.of(context).padding.top + _tapDoneTopPadding,
+              top: MediaQuery.of(context).padding.top + screenHeight * _tapDoneTopFraction,
               right: screenWidth * _tapDoneRightFraction,
               child: GestureDetector(
                 onTap: () {

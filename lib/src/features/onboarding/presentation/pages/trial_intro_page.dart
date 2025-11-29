@@ -97,7 +97,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
 
             SizedBox(height: spacing.xl),
 
-            // Video player
+            // Video player with slight seek to avoid initial flash
             Expanded(
               child: Align(
                 alignment: Alignment.bottomCenter,
@@ -122,7 +122,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
                         )
                       : Container(
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
@@ -196,7 +196,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         secondaryButton: const Align(
           alignment: Alignment.center,
           child: Text(
-            'Just \$59.99 per year (\$4.99/mo)',
+            'Just \$42.99 per year (\$3.49/mo)',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,

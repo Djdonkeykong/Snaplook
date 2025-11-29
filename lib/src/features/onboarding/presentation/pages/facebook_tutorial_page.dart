@@ -4,37 +4,37 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
 
-const bool _kShowTouchTargets = true;
+const bool _kShowTouchTargets = false;
 
 // Step 1 (share button) placements
-const double _step1BottomFraction = 0.025;
-const double _step1LeftFraction = 0.37;
-const double _step1WidthFraction = 0.2;
-const double _step1HeightFraction = 0.08;
+const double _step1BottomFraction = 0.01;
+const double _step1LeftFraction = 0.33;
+const double _step1WidthFraction = 0.26;
+const double _step1HeightFraction = 0.12;
 
 // Step 2 (tapMore) placements
-const double _tapMoreBottomFraction = 0.05;
-const double _tapMoreLeftFraction = 0.4;
-const double _tapMoreWidthFraction = 0.2;
-const double _tapMoreHeightFraction = 0.08;
+const double _tapMoreBottomFraction = 0.16;
+const double _tapMoreLeftFraction = 0.72;
+const double _tapMoreWidthFraction = 0.3;
+const double _tapMoreHeightFraction = 0.15;
 
 // Step 3 (tapEdit) placements
-const double _tapEditBottomFraction = 0.84;
+const double _tapEditBottomFraction = 0.82;
 const double _tapEditRightFraction = 0.0;
-const double _tapEditWidthFraction = 0.17;
-const double _tapEditHeightFraction = 0.08;
+const double _tapEditWidthFraction = 0.2;
+const double _tapEditHeightFraction = 0.12;
 
 // Step 4 (tapSnaplookShortcut) placements
-const double _tapSnaplookShortcutBottomFraction = 0.48;
-const double _tapSnaplookShortcutLeftFraction = 0.068;
-const double _tapSnaplookShortcutWidthFraction = 0.12;
-const double _tapSnaplookShortcutHeightFraction = 0.06;
+const double _tapSnaplookShortcutBottomFraction = 0.47;
+const double _tapSnaplookShortcutLeftFraction = 0.035;
+const double _tapSnaplookShortcutWidthFraction = 0.18;
+const double _tapSnaplookShortcutHeightFraction = 0.08;
 
 // Step 5 (tapDone) placements - top positioning
-const double _tapDoneTopPadding = 35.0;
-const double _tapDoneRightFraction = 0.03;
-const double _tapDoneWidthFraction = 0.15;
-const double _tapDoneHeightFraction = 0.07;
+const double _tapDoneTopFraction = 0;
+const double _tapDoneRightFraction = 0;
+const double _tapDoneWidthFraction = 0.2;
+const double _tapDoneHeightFraction = 0.13;
 
 // Step 6 (final selection) placements
 const double _finalSelectBottomFraction = 0.17;
@@ -308,7 +308,7 @@ class _FacebookTutorialPageState extends ConsumerState<FacebookTutorialPage> {
           // Tap area for tapDone - Done button
           if (hasUserTapped && currentPhase == FacebookTutorialPhase.waitingForAction && currentStep == FacebookTutorialStep.tapDone)
             Positioned(
-              top: MediaQuery.of(context).padding.top + _tapDoneTopPadding,
+              top: MediaQuery.of(context).padding.top + screenHeight * _tapDoneTopFraction,
               right: screenWidth * _tapDoneRightFraction,
               child: GestureDetector(
                 onTap: () {

@@ -254,6 +254,7 @@ class _HistoryCard extends StatelessWidget {
   });
 
   void _shareSearch(BuildContext context) {
+    HapticFeedback.mediumImpact();
     final sourceLabel = _getSourceLabel();
     final totalResults = (search['total_results'] as num?)?.toInt() ?? 0;
     final resultsLabel =
@@ -380,7 +381,7 @@ class _HistoryCard extends StatelessWidget {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () {
+      onTap: () async {
         final searchId = search['id'] as String?;
         if (searchId == null) {
           ScaffoldMessenger.of(context).showSnackBar(

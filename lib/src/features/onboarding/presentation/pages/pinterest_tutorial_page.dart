@@ -19,28 +19,28 @@ const double _step2TapAreaWidthFraction = 0.25;
 const double _step2TapAreaHeightFraction = 0.12;
 
 // Step 3 (tapMore) - centered bottom tap area
-const double _tapMoreBottomFraction = 0.19;
-const double _tapMoreLeftFraction = 0.77;
-const double _tapMoreWidthFraction = 0.22;
-const double _tapMoreHeightFraction = 0.1;
+const double _tapMoreBottomFraction = 0.16;
+const double _tapMoreLeftFraction = 0.72;
+const double _tapMoreWidthFraction = 0.3;
+const double _tapMoreHeightFraction = 0.15;
 
 // Step 4 (tapEdit) - centered bottom tap area
-const double _tapEditBottomFraction = 0.84;
-const double _tapEditLeftFraction = 0.825;
-const double _tapEditWidthFraction = 0.17;
-const double _tapEditHeightFraction = 0.08;
+const double _tapEditBottomFraction = 0.82;
+const double _tapEditLeftFraction = 0.8;
+const double _tapEditWidthFraction = 0.2;
+const double _tapEditHeightFraction = 0.12;
 
 // Step 5 (tapSnaplookShortcut) - centered tap area
-const double _tapSnaplookShortcutBottomFraction = 0.48;
-const double _tapSnaplookShortcutLeftFraction = 0.068;
-const double _tapSnaplookShortcutWidthFraction = 0.12;
-const double _tapSnaplookShortcutHeightFraction = 0.06;
+const double _tapSnaplookShortcutBottomFraction = 0.47;
+const double _tapSnaplookShortcutLeftFraction = 0.035;
+const double _tapSnaplookShortcutWidthFraction = 0.18;
+const double _tapSnaplookShortcutHeightFraction = 0.08;
 
 // Step 6 (tapDone) - top right
-const double _tapDoneTopFraction = 0.09;
-const double _tapDoneRightFraction = 0.03;
-const double _tapDoneWidthFraction = 0.15;
-const double _tapDoneHeightFraction = 0.07;
+const double _tapDoneTopFraction = 0.05;
+const double _tapDoneRightFraction = 0;
+const double _tapDoneWidthFraction = 0.2;
+const double _tapDoneHeightFraction = 0.13;
 
 // Step 3 tap area placements
 const double _step3TapAreaTopFraction = 0.70;

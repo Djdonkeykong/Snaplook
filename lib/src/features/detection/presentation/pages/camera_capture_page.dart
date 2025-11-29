@@ -83,6 +83,7 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
 
   Future<void> _openGallery() async {
     try {
+      HapticFeedback.mediumImpact();
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
