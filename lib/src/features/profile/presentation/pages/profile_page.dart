@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
-import '../../../../../shared/widgets/share_logs_page.dart';
+import '../../../../shared/widgets/share_logs_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import 'edit_profile_page.dart';
