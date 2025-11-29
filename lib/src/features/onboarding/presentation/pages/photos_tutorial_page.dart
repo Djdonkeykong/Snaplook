@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
 
-const bool _kShowTouchTargets = false;
+const bool _kShowTouchTargets = true;
 
 // Step 1 tap area placements
 const double _step1TapAreaTopFraction = 0.9;
@@ -13,13 +13,13 @@ const double _step1TapAreaWidthFraction = 0.20;
 const double _step1TapAreaHeightFraction = 0.08;
 
 // Step 2 tap area placements
-const double _step2TapAreaTopFraction = 0.81;
+const double _step2TapAreaTopFraction = 0.7;
 const double _step2TapAreaLeftFraction = 0.45;
 const double _step2TapAreaWidthFraction = 0.25;
 const double _step2TapAreaHeightFraction = 0.12;
 
 // Step 3 (tapMore) - centered bottom tap area
-const double _tapMoreBottomFraction = 0.083;
+const double _tapMoreBottomFraction = 0.195;
 const double _tapMoreLeftFraction = 0.77;
 const double _tapMoreWidthFraction = 0.22;
 const double _tapMoreHeightFraction = 0.1;
@@ -167,7 +167,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/photos-step-2-more.png',
+                'assets/images/tap-more.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
@@ -219,7 +219,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/photos-step-3-snaplook.png',
+                'assets/images/tap-snaplook-last.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),

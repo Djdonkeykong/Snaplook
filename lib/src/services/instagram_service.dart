@@ -6,6 +6,7 @@ import 'package:image/image.dart' as img;
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/constants/app_constants.dart';
 
 class InstagramService {
@@ -73,9 +74,9 @@ class InstagramService {
     print(
         'ScrapingBee Instagram response received, HTML length: ${htmlContent.length} chars');
 
-    final images = await _extractImagesFromInstagramHtml(htmlContent);
-    if (images.isNotEmpty) {
-      return images;
+    final result = await _extractImagesFromInstagramHtml(htmlContent, instagramUrl);
+    if (result.isNotEmpty) {
+      return result;
     }
 
     print('No usable images extracted - trying Jina AI fallback');
@@ -90,8 +91,10 @@ class InstagramService {
 
   static Future<List<XFile>> _extractImagesFromInstagramHtml(
     String htmlContent,
+    String instagramUrl,
   ) async {
     final seenUrls = <String>{};
+    String? extractedImageUrl;
 
     Future<XFile?> tryDownload(String? url, {String label = ''}) async {
       if (url == null || url.isEmpty) return null;
@@ -106,7 +109,11 @@ class InstagramService {
       if (label.isNotEmpty) {
         print('$label: ${_previewUrl(sanitized)}');
       }
-      return await _downloadImage(sanitized);
+      final result = await _downloadImage(sanitized);
+      if (result != null) {
+        extractedImageUrl = sanitized; // Save for caching
+      }
+      return result;
     }
 
     // Fast path: first ig_cache_key in JSON
@@ -115,7 +122,12 @@ class InstagramService {
     ).firstMatch(htmlContent);
     final cacheDownload =
         await tryDownload(cacheKeyMatch?.group(1), label: 'Found ig_cache_key URL (priority)');
-    if (cacheDownload != null) return [cacheDownload];
+    if (cacheDownload != null) {
+      if (extractedImageUrl != null) {
+        await _saveToInstagramCache(instagramUrl, extractedImageUrl!, 'scrapingbee_cache_key');
+      }
+      return [cacheDownload];
+    }
 
     // Fast path: first display_url
     final displayMatch = RegExp(
@@ -123,7 +135,12 @@ class InstagramService {
     ).firstMatch(htmlContent);
     final displayDownload =
         await tryDownload(displayMatch?.group(1), label: 'Found display_url');
-    if (displayDownload != null) return [displayDownload];
+    if (displayDownload != null) {
+      if (extractedImageUrl != null) {
+        await _saveToInstagramCache(instagramUrl, extractedImageUrl!, 'scrapingbee_display_url');
+      }
+      return [displayDownload];
+    }
 
     // img tags (limit to first 5 matches) - only take ig_cache_key variants to avoid low-quality/blocked URLs
     final imgPattern = RegExp(
@@ -139,7 +156,12 @@ class InstagramService {
         url,
         label: 'Found img ig_cache_key URL (priority)',
       );
-      if (download != null) return [download];
+      if (download != null) {
+        if (extractedImageUrl != null) {
+          await _saveToInstagramCache(instagramUrl, extractedImageUrl!, 'scrapingbee_img_cache_key');
+        }
+        return [download];
+      }
     }
 
     // Pattern 4: og:image meta tag (fallback, matches iOS)
@@ -153,6 +175,9 @@ class InstagramService {
       final download =
           await tryDownload(url, label: 'Found og:image (fallback)');
       if (download != null) {
+        if (extractedImageUrl != null) {
+          await _saveToInstagramCache(instagramUrl, extractedImageUrl!, 'scrapingbee_og_image');
+        }
         return [download];
       }
     }
@@ -175,7 +200,7 @@ class InstagramService {
       }
 
       print('Jina fallback response length: ${response.body.length} chars');
-      final images = await _extractImagesFromInstagramHtml(response.body);
+      final images = await _extractImagesFromInstagramHtml(response.body, instagramUrl);
       if (images.isNotEmpty) {
         print('Jina fallback succeeded using ${images.length} image(s)');
       }
@@ -330,13 +355,85 @@ class InstagramService {
     }
   }
 
+  /// Normalizes Instagram URL by removing query parameters for better cache matching
+  static String _normalizeInstagramUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      // Keep only the path, remove query params like ?igsh=...
+      return '${uri.scheme}://${uri.host}${uri.path}';
+    } catch (e) {
+      return url;
+    }
+  }
+
+  /// Checks cache for Instagram URL and returns cached image URL if available
+  static Future<String?> _checkInstagramCache(String instagramUrl) async {
+    try {
+      final normalized = _normalizeInstagramUrl(instagramUrl);
+      print('Checking cache for Instagram URL: $normalized');
+
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('instagram_url_cache')
+          .select('image_url, id')
+          .or('instagram_url.eq.$instagramUrl,normalized_url.eq.$normalized')
+          .limit(1)
+          .maybeSingle();
+
+      if (response != null) {
+        final imageUrl = response['image_url'] as String;
+        final id = response['id'];
+        print('✅ Cache HIT! Found cached image URL');
+
+        // Update access tracking
+        await supabase
+            .from('instagram_url_cache')
+            .update({'last_accessed_at': DateTime.now().toIso8601String()})
+            .eq('id', id);
+
+        return imageUrl;
+      }
+
+      print('Cache MISS - will fetch from Instagram');
+      return null;
+    } catch (e) {
+      print('Error checking Instagram cache: $e');
+      return null;
+    }
+  }
+
+  /// Saves Instagram URL and extracted image URL to cache
+  static Future<void> _saveToInstagramCache(
+    String instagramUrl,
+    String imageUrl,
+    String extractionMethod,
+  ) async {
+    try {
+      final normalized = _normalizeInstagramUrl(instagramUrl);
+      final supabase = Supabase.instance.client;
+
+      await supabase.from('instagram_url_cache').upsert({
+        'instagram_url': instagramUrl,
+        'normalized_url': normalized,
+        'image_url': imageUrl,
+        'extraction_method': extractionMethod,
+        'created_at': DateTime.now().toIso8601String(),
+        'last_accessed_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'instagram_url');
+
+      print('✅ Saved to Instagram cache: $normalized -> $imageUrl');
+    } catch (e) {
+      print('Error saving to Instagram cache: $e');
+    }
+  }
+
   /// Extracts image URLs from Instagram post URL and downloads the images
   /// Returns a list of XFile objects - single item for regular posts, multiple items for carousels
   static Future<List<XFile>> downloadImageFromInstagramUrl(
     String instagramUrl,
   ) async {
     try {
-      print('Fetching Instagram post using ScrapingBee API: $instagramUrl');
+      print('Fetching Instagram post: $instagramUrl');
 
       final apiKey = AppConstants.scrapingBeeApiKey;
       if (apiKey.isEmpty ||
@@ -346,11 +443,28 @@ class InstagramService {
         return [];
       }
 
+      // Check cache first
+      final cachedImageUrl = await _checkInstagramCache(instagramUrl);
+      if (cachedImageUrl != null) {
+        print('📦 Using cached image URL - saving 5 credits!');
+        final cachedImage = await _downloadImage(cachedImageUrl);
+        if (cachedImage != null) {
+          return [cachedImage];
+        }
+        print('⚠️ Cached image download failed, falling back to scraping');
+      }
+
+      // Cache miss or failed - scrape Instagram
+      print('Fetching from ScrapingBee API (5 credits)...');
       final result = await _scrapingBeeInstagramScraper(instagramUrl);
       if (result.isNotEmpty) {
         print(
           '✅ Successfully extracted ${result.length} image(s) using ScrapingBee!',
         );
+
+        // Save to cache for future requests
+        // Note: We need to extract the image URL that was used
+        // For now, we'll save after successful extraction in _scrapingBeeInstagramScraper
         return result;
       }
 
@@ -382,6 +496,14 @@ class InstagramService {
     final lowercased = url.toLowerCase();
     return lowercased.contains('pinterest.com/pin/') ||
         lowercased.contains('pin.it/');
+  }
+
+  /// Checks if a URL is a Snapchat Spotlight/Story URL
+  static bool isSnapchatUrl(String url) {
+    final lowercased = url.toLowerCase();
+    return lowercased.contains('snapchat.com/spotlight/') ||
+        lowercased.contains('snapchat.com/t/') ||
+        lowercased.contains('snapchat.com/add/');
   }
 
   /// Checks if a URL is a YouTube Shorts/Video URL
@@ -965,6 +1087,124 @@ class InstagramService {
     }
 
     print('Failed to download any YouTube thumbnail for video $videoId');
+    return [];
+  }
+
+  /// Downloads image from Snapchat Spotlight/Story URL
+  static Future<List<XFile>> downloadImageFromSnapchatUrl(
+    String snapchatUrl,
+  ) async {
+    try {
+      print('Fetching Snapchat Spotlight: $snapchatUrl');
+
+      // Use ScrapingBee to scrape Snapchat page
+      final apiKey = AppConstants.scrapingBeeApiKey;
+      if (apiKey.isEmpty || apiKey.startsWith('your_') || apiKey.contains('***')) {
+        print('ScrapingBee API key not configured');
+        return [];
+      }
+
+      final encodedUrl = Uri.encodeComponent(snapchatUrl);
+      final scrapingBeeUrl = 'https://app.scrapingbee.com/api/v1/'
+          '?api_key=$apiKey'
+          '&url=$encodedUrl'
+          '&render_js=true'
+          '&wait=2000'
+          '&premium_proxy=true';
+
+      print('Calling ScrapingBee for Snapchat...');
+      final response = await http.get(Uri.parse(scrapingBeeUrl)).timeout(
+        const Duration(seconds: 30),
+      );
+
+      if (response.statusCode != 200) {
+        print('ScrapingBee request failed with status ${response.statusCode}');
+        return [];
+      }
+
+      print('ScrapingBee Snapchat response received, HTML length: ${response.body.length} chars');
+
+      // Extract image/video thumbnail from Snapchat HTML
+      final images = await _extractImagesFromSnapchatHtml(response.body, snapchatUrl);
+      if (images.isNotEmpty) {
+        print('Successfully extracted ${images.length} image(s) from Snapchat!');
+      }
+      return images;
+    } catch (e) {
+      print('Error downloading Snapchat image: $e');
+      return [];
+    }
+  }
+
+  static Future<List<XFile>> _extractImagesFromSnapchatHtml(
+    String htmlContent,
+    String snapchatUrl,
+  ) async {
+    final seenUrls = <String>{};
+
+    Future<XFile?> tryDownload(String? url, {String label = ''}) async {
+      if (url == null || url.isEmpty) return null;
+      final trimmed = url.trim();
+      if (trimmed.isEmpty || seenUrls.contains(trimmed)) return null;
+      seenUrls.add(trimmed);
+
+      String sanitized = trimmed;
+      if (sanitized.startsWith('//')) {
+        sanitized = 'https:$sanitized';
+      } else if (!sanitized.startsWith('http')) {
+        sanitized = 'https://www.snapchat.com$sanitized';
+      }
+
+      if (label.isNotEmpty) {
+        print('$label: ${_previewUrl(sanitized)}');
+      }
+
+      return await _downloadImage(sanitized);
+    }
+
+    // Pattern 1: Look for video poster/thumbnail images (these don't have play button overlay)
+    final posterPattern = RegExp(
+      r'<meta\s+property="og:image"\s+content="([^"]+)"',
+      caseSensitive: false,
+    );
+    final posterMatch = posterPattern.firstMatch(htmlContent);
+    if (posterMatch != null) {
+      final url = posterMatch.group(1);
+      final download = await tryDownload(url, label: 'Found Snapchat og:image (poster)');
+      if (download != null) {
+        return [download];
+      }
+    }
+
+    // Pattern 2: Look for video thumbnail in video tags
+    final videoThumbPattern = RegExp(
+      r'poster="([^"]+)"',
+      caseSensitive: false,
+    );
+    final thumbMatch = videoThumbPattern.firstMatch(htmlContent);
+    if (thumbMatch != null) {
+      final url = thumbMatch.group(1);
+      final download = await tryDownload(url, label: 'Found Snapchat video poster');
+      if (download != null) {
+        return [download];
+      }
+    }
+
+    // Pattern 3: Look for any image in Snapchat CDN
+    final cdnPattern = RegExp(
+      r'https://[^"]*\.snapchat\.com/[^"]*\.(jpg|jpeg|png|webp)',
+      caseSensitive: false,
+    );
+    final cdnMatches = cdnPattern.allMatches(htmlContent);
+    for (final match in cdnMatches) {
+      final url = match.group(0);
+      final download = await tryDownload(url, label: 'Found Snapchat CDN image');
+      if (download != null) {
+        return [download];
+      }
+    }
+
+    print('No suitable Snapchat image found');
     return [];
   }
 

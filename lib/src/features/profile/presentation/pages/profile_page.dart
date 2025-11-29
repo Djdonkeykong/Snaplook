@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
+import '../../../../../shared/widgets/share_logs_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import 'edit_profile_page.dart';
@@ -101,6 +102,47 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
+  Future<void> _openHelpLink(BuildContext context) async {
+    final uri = Uri.parse('https://truefindr.com/faq/');
+
+    // Prefer in-app browser (keeps the user inside Snaplook with a SafariViewController/Custom Tab)
+    if (await canLaunchUrl(uri)) {
+      final ok = await launchUrl(
+        uri,
+        mode: LaunchMode.inAppBrowserView,
+      );
+      if (ok) return;
+    }
+
+    // Fallback to in-app webview if custom tab/safari view fails
+    if (await canLaunchUrl(uri)) {
+      final ok = await launchUrl(
+        uri,
+        mode: LaunchMode.inAppWebView,
+      );
+      if (ok) return;
+    }
+
+    // Last resort: external (but warn the user)
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not open help link',
+              style: context.snackTextStyle(
+                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+              ),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _openDocumentSheet({
     required String title,
     required String url,
@@ -150,11 +192,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final spacing = context.spacing;
-    // Use read instead of watch to avoid rebuilding when user logs out
-    final user = ref.read(currentUserProvider);
+    // Watch so profile updates (name/initial) reflect after edits.
+    final user = ref.watch(currentUserProvider);
     final userEmail = user?.email ?? 'user@example.com';
+    final metadata = user?.userMetadata ?? <String, dynamic>{};
+    final username = metadata['username'] as String? ?? '';
+    final fullName = metadata['full_name'] as String? ?? '';
+    final displayName = (username.isNotEmpty
+            ? username
+            : (fullName.isNotEmpty ? fullName : userEmail.split('@').first))
+        .trim();
     final profileInitial =
-        userEmail.isNotEmpty ? userEmail[0].toUpperCase() : 'U';
+        displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -221,7 +270,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  userEmail.split('@').first,
+                                  displayName,
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -283,11 +332,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _SectionHeader(title: 'Support'),
                 _SimpleSettingItem(
                   title: 'Help',
-                  onTap: () async {
-                    final uri = Uri.parse('https://truefindr.com/faq/');
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
+                  onTap: () => _openHelpLink(context),
+                ),
+                _SimpleSettingItem(
+                  title: 'Share Extension Logs',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ShareLogsPage(),
+                        settings: const RouteSettings(name: '/share-logs'),
+                      ),
+                    );
                   },
                 ),
                 SizedBox(height: spacing.l),

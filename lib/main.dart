@@ -194,14 +194,58 @@ void main() async {
   runApp(const ProviderScope(child: SnaplookApp()));
 }
 
-class _FetchingOverlay extends StatelessWidget {
-  const _FetchingOverlay({required this.message});
+class _FetchingOverlay extends StatefulWidget {
+  const _FetchingOverlay({required this.message, this.isInstagram = false});
 
   final String message;
+  final bool isInstagram;
+
+  @override
+  State<_FetchingOverlay> createState() => _FetchingOverlayState();
+}
+
+class _FetchingOverlayState extends State<_FetchingOverlay> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _progressAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Match iOS share extension smooth progress animation
+    // iOS uses 0.03s timer interval with adaptive increment toward target
+    // Instagram downloads are slower (8s) due to ScrapingBee API + cache check
+    // Other downloads are faster (3s)
+    final duration = widget.isInstagram
+        ? const Duration(seconds: 8)
+        : const Duration(seconds: 3);
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: duration,
+    );
+
+    _progressAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 1.0, curve: Curves.easeOut), // Slower as it approaches target
+    ));
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Container(
       color: Colors.black.withOpacity(0.6),
       child: SafeArea(
@@ -213,14 +257,32 @@ class _FetchingOverlay extends StatelessWidget {
                 radius: 18,
                 color: Colors.white,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 26),
               Text(
-                message,
+                widget.message,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
                 textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 180,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: AnimatedBuilder(
+                    animation: _progressAnimation,
+                    builder: (context, child) {
+                      return LinearProgressIndicator(
+                        value: _progressAnimation.value,
+                        minHeight: 6,
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFf2003c)),
+                        backgroundColor: const Color(0xFFE5E5EA),
+                      );
+                    },
+                  ),
+                ),
               ),
             ],
           ),
@@ -250,6 +312,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   bool _isFetchingOverlayVisible = false;
   String _fetchingOverlayMessage = 'Downloading image...';
+  bool _isInstagramDownload = false;
   AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
   bool _uiReadyForOverlays = false;
   bool _overlaysAllowed = false;
@@ -262,7 +325,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Delay enabling overlays until first frame + brief grace period
       WidgetsBinding.instance.endOfFrame.then((_) {
-        Future.delayed(const Duration(milliseconds: 300), () {
+        Future.delayed(const Duration(milliseconds: 100), () {
           if (!mounted) return;
           setState(() {
             _uiReadyForOverlays = true;
@@ -377,6 +440,15 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       // Also sync auth state when app resumes
       _syncAuthState();
       _refreshFavoritesOnResume();
+
+      // Show queued overlay message if UI is ready and we have one waiting
+      if (_uiReadyForOverlays && _overlaysAllowed && _queuedOverlayMessage != null && !_isFetchingOverlayVisible && mounted) {
+        setState(() {
+          _fetchingOverlayMessage = _queuedOverlayMessage!;
+          _isFetchingOverlayVisible = true;
+          _queuedOverlayMessage = null;
+        });
+      }
     }
     super.didChangeAppLifecycleState(state);
   }
@@ -771,6 +843,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       await _downloadTikTokImage(effectiveText);
     } else if (InstagramService.isPinterestUrl(effectiveText)) {
       await _downloadPinterestImage(effectiveText);
+    } else if (InstagramService.isSnapchatUrl(effectiveText)) {
+      await _downloadSnapchatImage(effectiveText);
     } else if (hasGoogleImageLink) {
       await _downloadGoogleImageResult(decodedText ?? effectiveText);
     } else if (InstagramService.isYouTubeUrl(effectiveText)) {
@@ -827,16 +901,18 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     return matchedUrl;
   }
 
-  void _showFetchingOverlay({required String title}) {
+  void _showFetchingOverlay({required String title, bool isInstagram = false}) {
     if (!mounted) {
       return;
     }
     if (!_uiReadyForOverlays || !_overlaysAllowed || _appLifecycleState != AppLifecycleState.resumed) {
       _queuedOverlayMessage = title;
+      _isInstagramDownload = isInstagram;
       return;
     }
     setState(() {
       _fetchingOverlayMessage = title;
+      _isInstagramDownload = isInstagram;
       _isFetchingOverlayVisible = true;
     });
   }
@@ -847,12 +923,13 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     }
     setState(() {
       _isFetchingOverlayVisible = false;
+      _isInstagramDownload = false;
       _queuedOverlayMessage = null;
     });
   }
 
   Future<void> _downloadInstagramImage(String instagramUrl) async {
-    _showFetchingOverlay(title: 'Downloading image...');
+    _showFetchingOverlay(title: 'Downloading image...', isInstagram: true);
     try {
       ref.read(shareNavigationInProgressProvider.notifier).state = true;
       final imageFiles = await InstagramService.downloadImageFromInstagramUrl(
@@ -977,6 +1054,49 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showPinterestErrorMessage();
+      ref.read(shareNavigationInProgressProvider.notifier).state = false;
+    } finally {
+      _hideFetchingOverlay();
+    }
+  }
+
+  Future<void> _downloadSnapchatImage(String snapchatUrl) async {
+    _showFetchingOverlay(title: 'Downloading image...');
+    try {
+      ref.read(shareNavigationInProgressProvider.notifier).state = true;
+      final imageFiles = await InstagramService.downloadImageFromSnapchatUrl(
+        snapchatUrl,
+      );
+
+      if (imageFiles.isNotEmpty) {
+        print('Downloaded ${imageFiles.length} image(s) from Snapchat');
+
+        ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
+        ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
+        // Pre-cache the image for instant display
+        if (navigatorKey.currentContext != null) {
+          final fileImage = FileImage(File(imageFiles.first.path));
+          await precacheImage(fileImage, navigatorKey.currentContext!).catchError((e) {
+            print('[Snapchat] Precaching error: $e');
+          });
+        }
+
+        await ShareImportStatus.markComplete();
+
+        _navigateToDetection(overrideSearchType: 'snapchat', sourceUrl: snapchatUrl);
+      } else {
+        ref.read(pendingSharedImageProvider.notifier).state = null;
+        await ShareImportStatus.markComplete();
+        _showSnapchatErrorMessage();
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
+      }
+    } catch (e) {
+      print('Error downloading Snapchat image: $e');
+
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+      await ShareImportStatus.markComplete();
+      _showSnapchatErrorMessage();
       ref.read(shareNavigationInProgressProvider.notifier).state = false;
     } finally {
       _hideFetchingOverlay();
@@ -1244,6 +1364,32 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     });
   }
 
+  void _showSnapchatErrorMessage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigatorKey.currentContext != null) {
+        showDialog(
+          context: navigatorKey.currentContext!,
+          builder: (context) => AlertDialog(
+            title: const Text('Snapchat Image Download Failed'),
+            content: const Text(
+              'Unable to download the image from this Snapchat link. This can happen due to:\n\n'
+              '- The Spotlight video is private or restricted\n'
+              '- Snapchat\'s anti-scraping measures\n'
+              '- Network connectivity issues\n\n'
+              'Try taking a screenshot instead and use the "Upload" button to analyze it.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
   void _showYouTubeErrorMessage() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (navigatorKey.currentContext != null) {
@@ -1335,6 +1481,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
               Positioned.fill(
                 child: _FetchingOverlay(
                   message: _fetchingOverlayMessage,
+                  isInstagram: _isInstagramDownload,
                 ),
               ),
           ],

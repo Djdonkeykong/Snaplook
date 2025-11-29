@@ -14,8 +14,8 @@ import 'tiktok_tutorial_page.dart';
 import 'safari_tutorial_page.dart';
 import 'photos_tutorial_page.dart';
 import 'facebook_tutorial_page.dart';
-import 'youtube_tutorial_page.dart';
 import 'imdb_tutorial_page.dart';
+import 'x_tutorial_page.dart';
 import 'notification_permission_page.dart';
 
 class AddFirstStylePage extends ConsumerStatefulWidget {
@@ -38,7 +38,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
   void initState() {
     super.initState();
 
-    _animationControllers = List.generate(9, (index) {
+    _animationControllers = List.generate(10, (index) {
       return AnimationController(
         duration: const Duration(milliseconds: 400),
         vsync: this,
@@ -376,14 +376,12 @@ class _AppList extends ConsumerWidget {
                   child: ScaleTransition(
                     scale: scaleAnimations[6],
                     child: _AppCard(
-                      name: 'YouTube',
-                      iconWidget: SvgPicture.asset(
-                          'assets/icons/5296521_play_video_vlog_youtube_youtube logo_icon.svg',
-                          width: 24,
-                          height: 24),
+                      name: 'IMDb',
+                      iconWidget: Image.asset('assets/icons/imdb.png',
+                          width: 24, height: 24, gaplessPlayback: true),
                       hasTutorial: true,
-                      accentColor: const Color(0xFFFF0000),
-                      isYouTube: true,
+                      accentColor: const Color(0xFFF5C518),
+                      isImdb: true,
                     ),
                   ),
                 );
@@ -398,12 +396,12 @@ class _AppList extends ConsumerWidget {
                   child: ScaleTransition(
                     scale: scaleAnimations[7],
                     child: _AppCard(
-                      name: 'IMDb',
-                      iconWidget: Image.asset('assets/icons/imdb.png',
+                      name: 'X',
+                      iconWidget: Image.asset('assets/icons/x-logo.png',
                           width: 24, height: 24, gaplessPlayback: true),
                       hasTutorial: true,
-                      accentColor: const Color(0xFFF5C518),
-                      isImdb: true,
+                      accentColor: const Color(0xFF000000),
+                      isX: true,
                     ),
                   ),
                 );
@@ -445,8 +443,8 @@ class _AppCard extends ConsumerWidget {
   final bool isSafari;
   final bool isPhotos;
   final bool isFacebook;
-  final bool isYouTube;
   final bool isImdb;
+  final bool isX;
 
   const _AppCard({
     required this.name,
@@ -458,8 +456,8 @@ class _AppCard extends ConsumerWidget {
     this.isSafari = false,
     this.isPhotos = false,
     this.isFacebook = false,
-    this.isYouTube = false,
     this.isImdb = false,
+    this.isX = false,
   });
 
   @override
@@ -508,20 +506,20 @@ class _AppCard extends ConsumerWidget {
                 builder: (context) => const FacebookTutorialPage(),
               ),
             );
-          } else if (isYouTube) {
-            ref.read(youtubeTutorialStepProvider.notifier).state =
-                YouTubeTutorialStep.step1;
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const YouTubeTutorialPage(),
-              ),
-            );
           } else if (isImdb) {
             ref.read(imdbTutorialStepProvider.notifier).state =
                 ImdbTutorialStep.step1;
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => const ImdbTutorialPage(),
+              ),
+            );
+          } else if (isX) {
+            ref.read(xTutorialStepProvider.notifier).state =
+                XTutorialStep.step1;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const XTutorialPage(),
               ),
             );
           } else {

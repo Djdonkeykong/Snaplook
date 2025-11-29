@@ -4,142 +4,138 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
 
-const bool _kShowTouchTargets = false;
+const bool _kShowTouchTargets = true;
 
-// Step 1 tap area placements (long press on image)
-const double _step1TapAreaTopFraction = 0.1;
-const double _step1TapAreaLeftFraction = 0.0;
-const double _step1TapAreaWidthFraction = 1.0;
-const double _step1TapAreaHeightFraction = 0.55;
+// Step 1 (share button) placements
+const double _step1BottomFraction = 0.085;
+const double _step1LeftFraction = 0.9;
+const double _step1WidthFraction = 0.2;
+const double _step1HeightFraction = 0.07;
 
-// Step 2 tap area placements
-const double _step2TapAreaTopFraction = 0.645;
-const double _step2TapAreaLeftFraction = 0.2;
-const double _step2TapAreaWidthFraction = 0.61;
-const double _step2TapAreaHeightFraction = 0.07;
+// Step 2 (tapShareVia) placements
+const double _tapShareViaBottomFraction = 0.135;
+const double _tapShareViaLeftFraction = 0.03;
+const double _tapShareViaWidthFraction = 0.18;
+const double _tapShareViaHeightFraction = 0.08;
 
-// Step 3 (tapMore) - centered bottom tap area
-const double _tapMoreBottomFraction = 0.19;
+// Step 3 (tapMore) placements - scroll right and tap More
+const double _tapMoreBottomFraction = 0.18;
 const double _tapMoreLeftFraction = 0.77;
 const double _tapMoreWidthFraction = 0.22;
-const double _tapMoreHeightFraction = 0.1;
+const double _tapMoreHeightFraction = 0.12;
 
-// Step 4 (tapEdit) - centered bottom tap area
+// Step 4 (tapEdit) placements
 const double _tapEditBottomFraction = 0.84;
-const double _tapEditLeftFraction = 0.825;
-const double _tapEditWidthFraction = 0.17;
+const double _tapEditRightFraction = 0.01;
+const double _tapEditWidthFraction = 0.15;
 const double _tapEditHeightFraction = 0.08;
 
-// Step 5 (tapSnaplookShortcut) - centered tap area
-const double _tapSnaplookShortcutBottomFraction = 0.48;
-const double _tapSnaplookShortcutLeftFraction = 0.068;
-const double _tapSnaplookShortcutWidthFraction = 0.12;
-const double _tapSnaplookShortcutHeightFraction = 0.06;
+// Step 5 (tapSnaplookShortcut) placements
+const double _tapSnaplookShortcutBottomFraction = 0.47;
+const double _tapSnaplookShortcutLeftFraction = 0.05;
+const double _tapSnaplookShortcutWidthFraction = 0.15;
+const double _tapSnaplookShortcutHeightFraction = 0.08;
 
-// Step 6 (tapDone) - top right
-const double _tapDoneTopFraction = 0.09;
-const double _tapDoneRightFraction = 0.03;
+// Step 6 (tapDone) placements - top positioning
+const double _tapDoneTopPadding = 40.0;
+const double _tapDoneRightFraction = 0.02;
 const double _tapDoneWidthFraction = 0.15;
-const double _tapDoneHeightFraction = 0.07;
+const double _tapDoneHeightFraction = 0.06;
 
-// Step 3 tap area placements
-const double _step3TapAreaTopFraction = 0.70;
-const double _step3TapAreaLeftFraction = 0.45;
-const double _step3TapAreaWidthFraction = 0.25;
-const double _step3TapAreaHeightFraction = 0.12;
+// Step 7 (final selection) placements
+const double _finalSelectBottomFraction = 0.18;
+const double _finalSelectLeftFraction = 0.46;
+const double _finalSelectWidthFraction = 0.24;
+const double _finalSelectHeightFraction = 0.12;
 
-enum SafariTutorialStep {
+enum XTutorialStep {
   step1,
-  step2,
+  tapShareVia,
   tapMore,
   tapEdit,
   tapSnaplookShortcut,
   tapDone,
-  step3,
+  step2,
 }
 
-enum TutorialPhase {
+enum XTutorialPhase {
   showingInstruction,
   waitingForAction,
 }
 
-final safariTutorialStepProvider = StateProvider<SafariTutorialStep>((ref) => SafariTutorialStep.step1);
-final safariTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
-final safariHasUserTappedProvider = StateProvider<bool>((ref) => false);
+final xTutorialStepProvider = StateProvider<XTutorialStep>((ref) => XTutorialStep.step1);
+final xTutorialPhaseProvider = StateProvider<XTutorialPhase>((ref) => XTutorialPhase.showingInstruction);
+final xHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
-class SafariTutorialPage extends ConsumerStatefulWidget {
+class XTutorialPage extends ConsumerStatefulWidget {
   final bool returnToOnboarding;
 
-  const SafariTutorialPage({
+  const XTutorialPage({
     super.key,
     this.returnToOnboarding = true,
   });
 
   @override
-  ConsumerState<SafariTutorialPage> createState() => _SafariTutorialPageState();
+  ConsumerState<XTutorialPage> createState() => _XTutorialPageState();
 }
 
-class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
+class _XTutorialPageState extends ConsumerState<XTutorialPage> {
   @override
   void initState() {
     super.initState();
-    // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(safariTutorialStepProvider.notifier).state = SafariTutorialStep.step1;
-      ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
-      ref.read(safariHasUserTappedProvider.notifier).state = false;
+      ref.read(xTutorialStepProvider.notifier).state = XTutorialStep.step1;
+      ref.read(xTutorialPhaseProvider.notifier).state = XTutorialPhase.showingInstruction;
+      ref.read(xHasUserTappedProvider.notifier).state = false;
     });
   }
 
-  String _getInstructionText(SafariTutorialStep step) {
+  String _getInstructionText(XTutorialStep step) {
     switch (step) {
-      case SafariTutorialStep.step1:
-        return "When you find a clothing item you love on Safari, press and hold the image.";
-      case SafariTutorialStep.step2:
-        return "Now tap \"Share\" to open the sharing options.";
-      case SafariTutorialStep.tapMore:
+      case XTutorialStep.step1:
+        return "When you find a clothing item you love on X, tap the share button.";
+      case XTutorialStep.tapShareVia:
+        return "Now tap 'Share via...' to see additional sharing options.";
+      case XTutorialStep.tapMore:
         return "This is a one-time setup to add Snaplook as a shortcut. Scroll to the right and tap 'More'.";
-      case SafariTutorialStep.tapEdit:
+      case XTutorialStep.tapEdit:
         return "Tap 'Edit'.";
-      case SafariTutorialStep.tapSnaplookShortcut:
+      case XTutorialStep.tapSnaplookShortcut:
         return "Find Snaplook and tap the '+' button to add it.";
-      case SafariTutorialStep.tapDone:
+      case XTutorialStep.tapDone:
         return "Tap 'Done'.";
-      case SafariTutorialStep.step3:
-        return "Finally, tap on Snaplook to share the image with our app.";
+      case XTutorialStep.step2:
+        return "Now tap Snaplook to share the image with our app.";
     }
   }
 
-  bool _isOneTimeSetupStep(SafariTutorialStep step) {
-    return step == SafariTutorialStep.tapMore ||
-           step == SafariTutorialStep.tapEdit ||
-           step == SafariTutorialStep.tapSnaplookShortcut ||
-           step == SafariTutorialStep.tapDone;
+  bool _isOneTimeSetupStep(XTutorialStep step) {
+    return step == XTutorialStep.tapMore ||
+           step == XTutorialStep.tapEdit ||
+           step == XTutorialStep.tapSnaplookShortcut ||
+           step == XTutorialStep.tapDone;
   }
 
   void _onInstructionComplete() {
-    ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.waitingForAction;
-    // Don't reset hasUserTapped here - we want to keep popups visible
+    ref.read(xTutorialPhaseProvider.notifier).state = XTutorialPhase.waitingForAction;
   }
 
-  void _onActionComplete(SafariTutorialStep nextStep) {
-    // Show instruction overlay first
-    ref.read(safariTutorialStepProvider.notifier).state = nextStep;
-    ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+  void _onActionComplete(XTutorialStep nextStep) {
+    ref.read(xTutorialStepProvider.notifier).state = nextStep;
+    ref.read(xTutorialPhaseProvider.notifier).state = XTutorialPhase.showingInstruction;
 
-    // Then show popup image after a brief delay (150ms) so overlay appears first
     Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
-        ref.read(safariHasUserTappedProvider.notifier).state = true;
+        ref.read(xHasUserTappedProvider.notifier).state = true;
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentStep = ref.watch(safariTutorialStepProvider);
-    final currentPhase = ref.watch(safariTutorialPhaseProvider);
-    final hasUserTapped = ref.watch(safariHasUserTappedProvider);
+    final currentStep = ref.watch(xTutorialStepProvider);
+    final currentPhase = ref.watch(xTutorialPhaseProvider);
+    final hasUserTapped = ref.watch(xHasUserTappedProvider);
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
@@ -148,38 +144,43 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Base image - ALWAYS visible (like Instagram tutorial)
+          // Base screenshot (ALWAYS visible)
           Positioned.fill(
             child: Image.asset(
-              'assets/images/safari_step2.png',
+              'assets/images/x-1.png',
               fit: BoxFit.cover,
               gaplessPlayback: true,
             ),
           ),
 
-          // Step 1 overlay - only shows during step1, on top of base image
-          if (currentStep == SafariTutorialStep.step1)
-            Positioned.fill(
-              child: Image.asset(
-                'assets/images/safari_step1.png',
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Dark overlay for new popup steps
-          if (hasUserTapped && (currentStep == SafariTutorialStep.tapMore ||
-              currentStep == SafariTutorialStep.tapEdit ||
-              currentStep == SafariTutorialStep.tapSnaplookShortcut ||
-              currentStep == SafariTutorialStep.tapDone))
+          // Dark overlay when popup appears
+          if (hasUserTapped && (currentStep == XTutorialStep.tapShareVia ||
+              currentStep == XTutorialStep.tapMore ||
+              currentStep == XTutorialStep.tapEdit ||
+              currentStep == XTutorialStep.tapSnaplookShortcut ||
+              currentStep == XTutorialStep.tapDone ||
+              currentStep == XTutorialStep.step2))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.5),
               ),
             ),
 
-          // Tap More overlay
-          if (hasUserTapped && currentStep == SafariTutorialStep.tapMore)
+          // Step 2 overlay - after tapping share button (shows Share via sheet)
+          if (hasUserTapped && currentStep == XTutorialStep.tapShareVia)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/x-step-2.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Step 3 overlay - after tapping Share via (shows More button)
+          if (hasUserTapped && currentStep == XTutorialStep.tapMore)
             Positioned(
               bottom: 0,
               left: 0,
@@ -191,89 +192,71 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               ),
             ),
 
-          // Tap Edit overlay
-          if (hasUserTapped && currentStep == SafariTutorialStep.tapEdit)
+          // Step 4 overlay - after tapping More
+          if (hasUserTapped && currentStep == XTutorialStep.tapEdit)
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/tap_edit.png',
+                'assets/images/tap-edit.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
             ),
 
-          // Tap Snaplook Shortcut overlay
-          if (hasUserTapped && currentStep == SafariTutorialStep.tapSnaplookShortcut)
+          // Step 5 overlay - after tapping Edit
+          if (hasUserTapped && currentStep == XTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/tap_snaplook.png',
+                'assets/images/tap-snaplook.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
             ),
 
-          // Tap Done overlay
-          if (hasUserTapped && currentStep == SafariTutorialStep.tapDone)
+          // Step 6 overlay - after tapping Snaplook shortcut
+          if (hasUserTapped && currentStep == XTutorialStep.tapDone)
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/tap_done.png',
+                'assets/images/tap-done.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
             ),
 
-          // Popup overlay for step 3 (final confirmation)
-          if (hasUserTapped && currentStep == SafariTutorialStep.step3)
-            Positioned.fill(
+          // Step 7 overlay - after tapping Done (final step)
+          if (hasUserTapped && currentStep == XTutorialStep.step2)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
               child: Image.asset(
-                'assets/images/safari-3.png',
-                fit: BoxFit.cover,
+                'assets/images/tap-snaplook-last.png',
+                fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
             ),
 
-          // Step 1 tap area (long press on image)
-          if (currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.step1)
+          // Tap area for step1 - share button
+          if (currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.step1)
             Positioned(
-              top: screenHeight * _step1TapAreaTopFraction,
-              left: screenWidth * _step1TapAreaLeftFraction,
-              child: GestureDetector(
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.step2);
-                },
-                child: Container(
-                  width: screenWidth * _step1TapAreaWidthFraction,
-                  height: screenHeight * _step1TapAreaHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Step 2 tap area (tap Share option) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.step2)
-            Positioned(
-              top: screenHeight * _step2TapAreaTopFraction,
-              left: screenWidth * _step2TapAreaLeftFraction,
+              bottom: screenHeight * _step1BottomFraction,
+              left: screenWidth * _step1LeftFraction,
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.tapMore);
+                  _onActionComplete(XTutorialStep.tapShareVia);
                 },
                 child: Container(
-                  width: screenWidth * _step2TapAreaWidthFraction,
-                  height: screenHeight * _step2TapAreaHeightFraction,
+                  width: screenWidth * _step1WidthFraction,
+                  height: screenHeight * _step1HeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
                     border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
@@ -282,15 +265,36 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               ),
             ),
 
-          // Tap More area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.tapMore)
+          // Tap area for tapShareVia - Share via button
+          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapShareVia)
+            Positioned(
+              bottom: screenHeight * _tapShareViaBottomFraction,
+              left: screenWidth * _tapShareViaLeftFraction,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(XTutorialStep.tapMore);
+                },
+                child: Container(
+                  width: screenWidth * _tapShareViaWidthFraction,
+                  height: screenHeight * _tapShareViaHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Tap area for tapMore - More button (scroll right)
+          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapMore)
             Positioned(
               bottom: screenHeight * _tapMoreBottomFraction,
               left: screenWidth * _tapMoreLeftFraction,
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.tapEdit);
+                  _onActionComplete(XTutorialStep.tapEdit);
                 },
                 child: Container(
                   width: screenWidth * _tapMoreWidthFraction,
@@ -303,15 +307,15 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               ),
             ),
 
-          // Tap Edit area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.tapEdit)
+          // Tap area for tapEdit - Edit button
+          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapEdit)
             Positioned(
               bottom: screenHeight * _tapEditBottomFraction,
-              left: screenWidth * _tapEditLeftFraction,
+              right: screenWidth * _tapEditRightFraction,
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.tapSnaplookShortcut);
+                  _onActionComplete(XTutorialStep.tapSnaplookShortcut);
                 },
                 child: Container(
                   width: screenWidth * _tapEditWidthFraction,
@@ -324,15 +328,15 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               ),
             ),
 
-          // Tap Snaplook Shortcut area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.tapSnaplookShortcut)
+          // Tap area for tapSnaplookShortcut - Snaplook icon
+          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
               left: screenWidth * _tapSnaplookShortcutLeftFraction,
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.tapDone);
+                  _onActionComplete(XTutorialStep.tapDone);
                 },
                 child: Container(
                   width: screenWidth * _tapSnaplookShortcutWidthFraction,
@@ -345,15 +349,15 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               ),
             ),
 
-          // Tap Done area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.tapDone)
+          // Tap area for tapDone - Done button
+          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapDone)
             Positioned(
-              top: screenHeight * _tapDoneTopFraction,
+              top: MediaQuery.of(context).padding.top + _tapDoneTopPadding,
               right: screenWidth * _tapDoneRightFraction,
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.step3);
+                  _onActionComplete(XTutorialStep.step2);
                 },
                 child: Container(
                   width: screenWidth * _tapDoneWidthFraction,
@@ -366,34 +370,32 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               ),
             ),
 
-          // Step 3 tap area (tap Snaplook) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.step3)
+          // Tap area for step2 - final Snaplook selection
+          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.step2)
             Positioned(
-              top: screenHeight * _step3TapAreaTopFraction,
-              left: screenWidth * _step3TapAreaLeftFraction,
+              bottom: screenHeight * _finalSelectBottomFraction,
+              left: screenWidth * _finalSelectLeftFraction,
               child: GestureDetector(
                 onTap: () async {
                   HapticFeedback.mediumImpact();
-                  // Precache the image before navigating
                   await precacheImage(
-                    const AssetImage('assets/images/safari_tutorial.webp'),
+                    const AssetImage('assets/images/x-analysis.webp'),
                     context,
                   );
                   if (!mounted) return;
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => TutorialImageAnalysisPage(
-                        imagePath: 'assets/images/safari_tutorial.webp',
-                        scenario: 'Safari',
                         returnToOnboarding: widget.returnToOnboarding,
+                        imagePath: 'assets/images/x-analysis.webp',
+                        scenario: 'X',
                       ),
-                      allowSnapshotting: false,
                     ),
                   );
                 },
                 child: Container(
-                  width: screenWidth * _step3TapAreaWidthFraction,
-                  height: screenHeight * _step3TapAreaHeightFraction,
+                  width: screenWidth * _finalSelectWidthFraction,
+                  height: screenHeight * _finalSelectHeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
                     border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
@@ -402,14 +404,14 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               ),
             ),
 
-          // Instruction overlay (shows during instruction phase)
-          if (currentPhase == TutorialPhase.showingInstruction)
+          // Instruction overlay
+          if (currentPhase == XTutorialPhase.showingInstruction)
             _InstructionOverlay(
               text: _getInstructionText(currentStep),
               onComplete: _onInstructionComplete,
             ),
 
-          // One-time setup indicator (shows during all 4 setup steps, stays above overlay)
+          // One-time setup indicator
           if (_isOneTimeSetupStep(currentStep))
             Positioned(
               bottom: 60.0,
@@ -640,11 +642,11 @@ class _FadeInWordState extends State<_FadeInWord>
         child: Text(
           widget.word,
           style: const TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            color: Colors.white,
-            fontSize: 22,
+            fontSize: 24,
             fontWeight: FontWeight.w600,
-            height: 1.5,
+            color: Colors.white,
+            fontFamily: 'PlusJakartaSans',
+            letterSpacing: -0.3,
           ),
         ),
       ),

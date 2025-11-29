@@ -270,8 +270,10 @@ class _PreferenceOption extends StatelessWidget {
           color: isSelected ? const Color(0xFFF2003C) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFFF2003C) : const Color(0xFFE5E7EB),
-            width: 2,
+            color: isSelected
+                ? const Color(0xFFF2003C)
+                : const Color(0xFFE5E7EB),
+            width: 1.5,
           ),
         ),
         child: Center(

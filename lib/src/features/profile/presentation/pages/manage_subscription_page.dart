@@ -124,8 +124,8 @@ class ManageSubscriptionPage extends ConsumerWidget {
                     Text(
                       'Current Plan',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                         fontFamily: 'PlusJakartaSans',
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -136,12 +136,13 @@ class ManageSubscriptionPage extends ConsumerWidget {
                         Text(
                           displayStatus,
                           style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
                             fontFamily: 'PlusJakartaSans',
                             color: isSubscribed
                                 ? AppColors.secondary
                                 : colorScheme.onSurface,
+                            letterSpacing: -0.3,
                           ),
                         ),
                         if (isSubscribed) ...[
@@ -178,10 +179,14 @@ class ManageSubscriptionPage extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 height: 56,
-                child: TextButton(
+                child: OutlinedButton(
                   onPressed: () => _openSubscriptionManagement(context),
-                  style: TextButton.styleFrom(
+                  style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.secondary,
+                    side: const BorderSide(
+                      color: AppColors.secondary,
+                      width: 1.5,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
                     ),

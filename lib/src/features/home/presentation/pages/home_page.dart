@@ -25,8 +25,8 @@ import '../../../onboarding/presentation/pages/tiktok_tutorial_page.dart';
 import '../../../onboarding/presentation/pages/safari_tutorial_page.dart';
 import '../../../onboarding/presentation/pages/photos_tutorial_page.dart';
 import '../../../onboarding/presentation/pages/facebook_tutorial_page.dart';
-import '../../../onboarding/presentation/pages/youtube_tutorial_page.dart';
 import '../../../onboarding/presentation/pages/imdb_tutorial_page.dart';
+import '../../../onboarding/presentation/pages/x_tutorial_page.dart';
 import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../detection/presentation/pages/camera_capture_page.dart';
@@ -62,8 +62,8 @@ enum _TutorialSource {
   safari,
   photos,
   facebook,
-  youtube,
   imdb,
+  x,
   otherApps,
 }
 
@@ -854,19 +854,20 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ),
       _TutorialOptionData(
-        label: 'YouTube',
-        source: _TutorialSource.youtube,
-        iconBuilder: () => SvgPicture.asset(
-          'assets/icons/5296521_play_video_vlog_youtube_youtube logo_icon.svg',
-          width: 24,
-          height: 24,
-        ),
-      ),
-      _TutorialOptionData(
         label: 'IMDb',
         source: _TutorialSource.imdb,
         iconBuilder: () => Image.asset(
           'assets/icons/imdb.png',
+          width: 24,
+          height: 24,
+          gaplessPlayback: true,
+        ),
+      ),
+      _TutorialOptionData(
+        label: 'X',
+        source: _TutorialSource.x,
+        iconBuilder: () => Image.asset(
+          'assets/icons/x-logo.png',
           width: 24,
           height: 24,
           gaplessPlayback: true,
@@ -1022,15 +1023,15 @@ class _HomePageState extends ConsumerState<HomePage> {
             FacebookTutorialStep.step1;
         destination = const FacebookTutorialPage(returnToOnboarding: false);
         break;
-      case _TutorialSource.youtube:
-        ref.read(youtubeTutorialStepProvider.notifier).state =
-            YouTubeTutorialStep.step1;
-        destination = const YouTubeTutorialPage(returnToOnboarding: false);
-        break;
       case _TutorialSource.imdb:
         ref.read(imdbTutorialStepProvider.notifier).state =
             ImdbTutorialStep.step1;
         destination = const ImdbTutorialPage(returnToOnboarding: false);
+        break;
+      case _TutorialSource.x:
+        ref.read(xTutorialStepProvider.notifier).state =
+            XTutorialStep.step1;
+        destination = const XTutorialPage(returnToOnboarding: false);
         break;
       case _TutorialSource.otherApps:
         // This case should never be reached due to early return above

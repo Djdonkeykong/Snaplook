@@ -349,7 +349,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                                     itemCount: imagesState.totalImages,
                                     itemBuilder: (context, index) {
                                       final alignment = widget.searchType == 'camera'
-                                          ? const Alignment(-1.0, 0)
+                                          ? const Alignment(-0.5, 0)
                                           : Alignment.center;
                                       return Container(
                                         color: Colors.black,
@@ -368,7 +368,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                                     File(selectedImage!.path),
                                     fit: BoxFit.cover,
                                     alignment: widget.searchType == 'camera'
-                                        ? const Alignment(-1.0, 0)
+                                        ? const Alignment(-0.5, 0)
                                         : Alignment.center,
                                     width: double.infinity,
                                     height: double.infinity,

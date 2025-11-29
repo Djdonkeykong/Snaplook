@@ -190,7 +190,7 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/tap_more.png',
+                'assets/images/tap-more.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
@@ -242,7 +242,7 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/tap_snaplook_last.png',
+                'assets/images/tap-snaplook-last.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),

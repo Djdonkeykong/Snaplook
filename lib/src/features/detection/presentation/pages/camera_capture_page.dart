@@ -7,6 +7,7 @@ import 'package:camerawesome/src/orchestrator/analysis/analysis_to_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -304,7 +305,10 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
 
   Widget _buildCaptureButton(CameraState state) {
     return GestureDetector(
-      onTap: () => _onShutter(state),
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        _onShutter(state);
+      },
       child: Container(
         width: 82,
         height: 82,

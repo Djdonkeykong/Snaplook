@@ -236,10 +236,15 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
   }
 
   Widget _buildTutorialImage() {
+    final alignment = widget.scenario == 'X'
+        ? const Alignment(0.4, 0.0)  // Nudge right for X tutorial
+        : Alignment.center;
+
     if (_isNetworkImage) {
       return CachedNetworkImage(
         imageUrl: _resolvedImagePath,
         fit: BoxFit.cover,
+        alignment: alignment,
         width: double.infinity,
         height: double.infinity,
         fadeInDuration: Duration.zero,
@@ -253,6 +258,7 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
     return Image.asset(
       _resolvedImagePath,
       fit: BoxFit.cover,
+      alignment: alignment,
       gaplessPlayback: true,
     );
   }
