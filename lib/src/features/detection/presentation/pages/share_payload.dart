@@ -1,5 +1,5 @@
-class _SharePayload {
+class SharePayload {
   final String subject;
   final String message;
-  const _SharePayload({required this.subject, required this.message});
+  const SharePayload({required this.subject, required this.message});
 }

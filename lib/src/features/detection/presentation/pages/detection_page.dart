@@ -522,7 +522,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     }
   }
 
-  _SharePayload _buildSharePayload() {
+  SharePayload _buildSharePayload() {
     final buffer = StringBuffer();
     final topResults = _results.take(5).toList();
 
@@ -550,7 +550,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
     final subject = 'Snaplook matches for your photo';
 
-    return _SharePayload(
+    return SharePayload(
       subject: subject,
       message: buffer.toString().trim(),
     );
