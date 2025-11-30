@@ -3293,7 +3293,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Trying to download \(platform) image: \(firstUrl.prefix(80))...")
 
-        let task = session.dataTask(with: url) { [weak self] data, response, error in
+        var request = URLRequest(url: url)
+        // Some CDNs (fbcdn) can be picky without a UA / language
+        if platform == "facebook" {
+          request.setValue(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            forHTTPHeaderField: "User-Agent"
+          )
+          request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        }
+
+        let task = session.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
             // Check if download succeeded
@@ -6756,6 +6766,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Fallback: For non-social-media URLs, we can't analyze directly
             // Just redirect to the app with the URL
             shareLog("Non-social-media URL - redirecting to app for analysis")
+            if pendingPlatformType == nil {
+                pendingPlatformType = inferredPlatformType ?? "photos"
+            }
+            if let platformType = pendingPlatformType {
+                let userDefaults = UserDefaults(suiteName: appGroupId)
+                userDefaults?.set(platformType, forKey: "pending_platform_type")
+                userDefaults?.synchronize()
+                shareLog("Saved pending platform type for redirect: \(platformType)")
+            }
             saveAndRedirect(message: nil)
         } else {
             shareLog("ERROR: No pending URL, image data, or shared media")

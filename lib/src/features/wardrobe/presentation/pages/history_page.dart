@@ -378,10 +378,26 @@ class _HistoryCard extends StatelessWidget {
     final trimmedUsername = sourceUsername?.trim();
     final hasUsername = trimmedUsername != null && trimmedUsername.isNotEmpty;
     final createdLabel = createdDate != null ? timeago.format(createdDate) : null;
+    final hasResults = totalResults > 0;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () async {
+        if (!hasResults) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'No results to show for this search.',
+                style: context.snackTextStyle(
+                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                ),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+
         final searchId = search['id'] as String?;
         if (searchId == null) {
           ScaffoldMessenger.of(context).showSnackBar(
