@@ -195,18 +195,24 @@ void main() async {
 }
 
 class _FetchingOverlay extends StatefulWidget {
-  const _FetchingOverlay({required this.message, this.isInstagram = false});
+  const _FetchingOverlay({required this.message, this.isInstagram = false, this.isX = false});
 
   final String message;
   final bool isInstagram;
+  final bool isX;
 
   @override
   State<_FetchingOverlay> createState() => _FetchingOverlayState();
 }
 
-class _FetchingOverlayState extends State<_FetchingOverlay> with SingleTickerProviderStateMixin {
+class _FetchingOverlayState extends State<_FetchingOverlay> with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _progressAnimation;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+  late List<String> _messages;
+  int _messageIndex = 0;
+  Timer? _messageTimer;
 
   @override
   void initState() {
@@ -218,7 +224,7 @@ class _FetchingOverlayState extends State<_FetchingOverlay> with SingleTickerPro
     // Other downloads are faster (3s)
     final duration = widget.isInstagram
         ? const Duration(seconds: 8)
-        : const Duration(seconds: 3);
+        : (widget.isX ? const Duration(seconds: 10) : const Duration(seconds: 3));
 
     _controller = AnimationController(
       vsync: this,
@@ -234,13 +240,61 @@ class _FetchingOverlayState extends State<_FetchingOverlay> with SingleTickerPro
     ));
 
     _controller.forward();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _pulseAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _pulseController.repeat(reverse: true);
+
+    _messages = _buildMessages();
+    _messageIndex = 0;
+    _startMessageRotation();
   }
 
   @override
   void dispose() {
+    _messageTimer?.cancel();
+    _pulseController.dispose();
     _controller.dispose();
     super.dispose();
   }
+
+  List<String> _buildMessages() {
+    if (widget.isInstagram) {
+      return const [
+        "Getting image...",
+        "Downloading image...",
+        "Fetching image...",
+        "Almost there...",
+      ];
+    }
+    if (widget.isX) {
+      return const [
+        "Downloading image...",
+        "Fetching media...",
+        "Still working...",
+        "Almost there...",
+      ];
+    }
+    return [widget.message];
+  }
+
+  void _startMessageRotation() {
+    _messageTimer?.cancel();
+    if (_messages.length <= 1) return;
+    _messageTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      setState(() {
+        _messageIndex = (_messageIndex + 1) % _messages.length;
+      });
+    });
+  }
+
+  String get _currentMessage =>
+      _messages.isNotEmpty ? _messages[_messageIndex] : widget.message;
 
   @override
   Widget build(BuildContext context) {
@@ -258,13 +312,22 @@ class _FetchingOverlayState extends State<_FetchingOverlay> with SingleTickerPro
                 color: Colors.white,
               ),
               const SizedBox(height: 26),
-              Text(
-                widget.message,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, animation) =>
+                    FadeTransition(opacity: animation, child: child),
+                child: FadeTransition(
+                  key: ValueKey(_currentMessage),
+                  opacity: _pulseAnimation,
+                  child: Text(
+                    _currentMessage,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -313,6 +376,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   bool _isFetchingOverlayVisible = false;
   String _fetchingOverlayMessage = 'Downloading image...';
   bool _isInstagramDownload = false;
+  bool _isXDownload = false;
   AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
   bool _uiReadyForOverlays = false;
   bool _overlaysAllowed = false;
@@ -843,6 +907,12 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       await _downloadTikTokImage(effectiveText);
     } else if (InstagramService.isPinterestUrl(effectiveText)) {
       await _downloadPinterestImage(effectiveText);
+    } else if (InstagramService.isXUrl(effectiveText)) {
+      await _downloadXImage(effectiveText);
+    } else if (InstagramService.isRedditUrl(effectiveText)) {
+      await _downloadRedditImage(effectiveText);
+    } else if (InstagramService.isFacebookUrl(effectiveText)) {
+      await _downloadFacebookImage(effectiveText);
     } else if (InstagramService.isSnapchatUrl(effectiveText)) {
       await _downloadSnapchatImage(effectiveText);
     } else if (hasGoogleImageLink) {
@@ -853,7 +923,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       final parsed = Uri.tryParse(effectiveText.trim());
       if (parsed != null &&
           (parsed.scheme == 'http' || parsed.scheme == 'https')) {
-        await _downloadGenericLink(effectiveText.trim());
+        _showUnsupportedMessage(text);
+        await ShareImportStatus.markComplete();
       } else {
         _showUnsupportedMessage(text);
         await ShareImportStatus.markComplete();
@@ -901,18 +972,20 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     return matchedUrl;
   }
 
-  void _showFetchingOverlay({required String title, bool isInstagram = false}) {
+  void _showFetchingOverlay({required String title, bool isInstagram = false, bool isX = false}) {
     if (!mounted) {
       return;
     }
     if (!_uiReadyForOverlays || !_overlaysAllowed || _appLifecycleState != AppLifecycleState.resumed) {
       _queuedOverlayMessage = title;
       _isInstagramDownload = isInstagram;
+      _isXDownload = isX;
       return;
     }
     setState(() {
       _fetchingOverlayMessage = title;
       _isInstagramDownload = isInstagram;
+      _isXDownload = isX;
       _isFetchingOverlayVisible = true;
     });
   }
@@ -924,6 +997,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     setState(() {
       _isFetchingOverlayVisible = false;
       _isInstagramDownload = false;
+      _isXDownload = false;
       _queuedOverlayMessage = null;
     });
   }
@@ -1054,6 +1128,119 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showPinterestErrorMessage();
+      ref.read(shareNavigationInProgressProvider.notifier).state = false;
+    } finally {
+      _hideFetchingOverlay();
+    }
+  }
+
+  Future<void> _downloadXImage(String xUrl) async {
+    _showFetchingOverlay(title: 'Downloading image...', isX: true);
+    try {
+      ref.read(shareNavigationInProgressProvider.notifier).state = true;
+      final imageFiles = await InstagramService.downloadImageFromXUrl(xUrl);
+
+      if (imageFiles.isNotEmpty) {
+        print('Downloaded ${imageFiles.length} image(s) from X');
+        ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
+        ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
+        if (navigatorKey.currentContext != null) {
+          final fileImage = FileImage(File(imageFiles.first.path));
+          await precacheImage(fileImage, navigatorKey.currentContext!).catchError(
+            (e) => print('[X] Precaching error: $e'),
+          );
+        }
+
+        await ShareImportStatus.markComplete();
+        _navigateToDetection(overrideSearchType: 'twitter', sourceUrl: xUrl);
+      } else {
+        ref.read(pendingSharedImageProvider.notifier).state = null;
+        await ShareImportStatus.markComplete();
+        _showXErrorMessage();
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
+      }
+    } catch (e) {
+      print('Error downloading X image: $e');
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+      await ShareImportStatus.markComplete();
+      _showXErrorMessage();
+      ref.read(shareNavigationInProgressProvider.notifier).state = false;
+    } finally {
+      _hideFetchingOverlay();
+    }
+  }
+
+  Future<void> _downloadFacebookImage(String facebookUrl) async {
+    _showFetchingOverlay(title: 'Downloading image...');
+    try {
+      ref.read(shareNavigationInProgressProvider.notifier).state = true;
+      final imageFiles =
+          await InstagramService.downloadImageFromFacebookUrl(facebookUrl);
+
+      if (imageFiles.isNotEmpty) {
+        print('Downloaded ${imageFiles.length} image(s) from Facebook');
+        ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
+        ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
+        if (navigatorKey.currentContext != null) {
+          final fileImage = FileImage(File(imageFiles.first.path));
+          await precacheImage(fileImage, navigatorKey.currentContext!).catchError(
+            (e) => print('[Facebook] Precaching error: $e'),
+          );
+        }
+
+        await ShareImportStatus.markComplete();
+        _navigateToDetection(overrideSearchType: 'facebook', sourceUrl: facebookUrl);
+      } else {
+        ref.read(pendingSharedImageProvider.notifier).state = null;
+        await ShareImportStatus.markComplete();
+        _showFacebookErrorMessage();
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
+      }
+    } catch (e) {
+      print('Error downloading Facebook image: $e');
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+      await ShareImportStatus.markComplete();
+      _showFacebookErrorMessage();
+      ref.read(shareNavigationInProgressProvider.notifier).state = false;
+    } finally {
+      _hideFetchingOverlay();
+    }
+  }
+
+  Future<void> _downloadRedditImage(String redditUrl) async {
+    _showFetchingOverlay(title: 'Downloading image...');
+    try {
+      ref.read(shareNavigationInProgressProvider.notifier).state = true;
+      final imageFiles =
+          await InstagramService.downloadImageFromRedditUrl(redditUrl);
+
+      if (imageFiles.isNotEmpty) {
+        print('Downloaded ${imageFiles.length} image(s) from Reddit');
+        ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
+        ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
+
+        if (navigatorKey.currentContext != null) {
+          final fileImage = FileImage(File(imageFiles.first.path));
+          await precacheImage(fileImage, navigatorKey.currentContext!).catchError(
+            (e) => print('[Reddit] Precaching error: $e'),
+          );
+        }
+
+        await ShareImportStatus.markComplete();
+        _navigateToDetection(overrideSearchType: 'reddit', sourceUrl: redditUrl);
+      } else {
+        ref.read(pendingSharedImageProvider.notifier).state = null;
+        await ShareImportStatus.markComplete();
+        _showRedditErrorMessage();
+        ref.read(shareNavigationInProgressProvider.notifier).state = false;
+      }
+    } catch (e) {
+      print('Error downloading Reddit image: $e');
+      ref.read(pendingSharedImageProvider.notifier).state = null;
+      await ShareImportStatus.markComplete();
+      _showRedditErrorMessage();
       ref.read(shareNavigationInProgressProvider.notifier).state = false;
     } finally {
       _hideFetchingOverlay();
@@ -1364,6 +1551,84 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     });
   }
 
+  void _showXErrorMessage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigatorKey.currentContext != null) {
+        showDialog(
+          context: navigatorKey.currentContext!,
+          builder: (context) => AlertDialog(
+            title: const Text('X Image Download Failed'),
+            content: const Text(
+              'Unable to download the image from X. This can happen due to:\n\n'
+              '- Privacy/settings on the post\n'
+              '- Network connectivity issues\n'
+              '- Platform anti-scraping measures\n\n'
+              'Try taking a screenshot instead and use the "Upload" button to analyze it.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
+  void _showFacebookErrorMessage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigatorKey.currentContext != null) {
+        showDialog(
+          context: navigatorKey.currentContext!,
+          builder: (context) => AlertDialog(
+            title: const Text('Facebook Image Download Failed'),
+            content: const Text(
+              'Unable to download the image from Facebook. This can happen due to:\n\n'
+              '- Privacy/settings on the post\n'
+              '- Network connectivity issues\n'
+              '- Platform anti-scraping measures\n\n'
+              'Try taking a screenshot instead and use the "Upload" button to analyze it.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
+  void _showRedditErrorMessage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigatorKey.currentContext != null) {
+        showDialog(
+          context: navigatorKey.currentContext!,
+          builder: (context) => AlertDialog(
+            title: const Text('Reddit Image Download Failed'),
+            content: const Text(
+              'Unable to download the image from Reddit. This can happen due to:\n\n'
+              '- Privacy/settings on the post\n'
+              '- Network connectivity issues\n'
+              '- Platform anti-scraping measures\n\n'
+              'Try taking a screenshot instead and use the "Upload" button to analyze it.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
   void _showSnapchatErrorMessage() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (navigatorKey.currentContext != null) {
@@ -1482,6 +1747,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
                 child: _FetchingOverlay(
                   message: _fetchingOverlayMessage,
                   isInstagram: _isInstagramDownload,
+                  isX: _isXDownload,
                 ),
               ),
           ],

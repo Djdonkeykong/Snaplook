@@ -482,6 +482,39 @@ class InstagramService {
         url.contains('instagram.com/reel/');
   }
 
+  /// Checks if a URL is an X/Twitter post URL
+  static bool isXUrl(String url) {
+    final lower = url.toLowerCase();
+    final hasDomain = lower.contains('x.com') || lower.contains('twitter.com');
+    if (!hasDomain) return false;
+    return lower.contains('/status/') ||
+        lower.contains('/statuses/') ||
+        lower.contains('/i/web/status/') ||
+        lower.contains('/i/status/') ||
+        lower.contains('/photo/');
+  }
+
+  /// Checks if a URL is a Facebook share/photo/video URL
+  static bool isFacebookUrl(String url) {
+    final lower = url.toLowerCase();
+    final hasDomain = lower.contains('facebook.com') || lower.contains('fb.watch');
+    if (!hasDomain) return false;
+    return lower.contains('/share/') ||
+        lower.contains('/photo') ||
+        lower.contains('/photos/') ||
+        lower.contains('/permalink.php') ||
+        lower.contains('/watch/') ||
+        lower.contains('fb.watch/');
+  }
+
+  /// Checks if a URL is a Reddit post URL
+  static bool isRedditUrl(String url) {
+    final lower = url.toLowerCase();
+    final hasDomain = lower.contains('reddit.com') || lower.contains('redd.it');
+    if (!hasDomain) return false;
+    return lower.contains('/comments/') || lower.contains('/r/') || lower.contains('redd.it/');
+  }
+
   /// Checks if a URL is a TikTok video URL
   static bool isTikTokUrl(String url) {
     final lowercased = url.toLowerCase();
@@ -894,7 +927,16 @@ class InstagramService {
     String pinterestUrl,
   ) async {
     try {
-      print('Fetching Pinterest pin using ScrapingBee API: $pinterestUrl');
+      print('Attempting Pinterest scrape via Jina: $pinterestUrl');
+
+      final jinaImages = await _scrapePinterestViaJina(pinterestUrl);
+      if (jinaImages.isNotEmpty) {
+        print(
+            'Successfully extracted ${jinaImages.length} image(s) from Pinterest via Jina!');
+        return jinaImages;
+      }
+
+      print('No images from Jina for Pinterest; trying ScrapingBee if available');
 
       final apiKey = AppConstants.scrapingBeeApiKey;
       if (apiKey.isEmpty ||
@@ -1284,6 +1326,322 @@ class InstagramService {
       print('Error parsing YouTube URL $url: $e');
     }
     return null;
+  }
+
+  /// Downloads image(s) from an X/Twitter post using Jina reader (free).
+  static Future<List<XFile>> downloadImageFromXUrl(String url) async {
+    try {
+      // Try main X URL via Jina
+      final images = await _scrapeXViaJina(url);
+      if (images.isNotEmpty) {
+        print('Successfully extracted ${images.length} image(s) from X via Jina');
+        return images;
+      }
+
+      print('No images extracted from X content via primary URL - trying alternate hosts');
+      const altHosts = ['fxtwitter.com', 'vxtwitter.com'];
+      for (final host in altHosts) {
+        final rewritten = _rewriteXHost(url, host);
+        if (rewritten == null) continue;
+        final altImages = await _scrapeXViaJina(rewritten);
+        if (altImages.isNotEmpty) {
+          print('Successfully extracted ${altImages.length} image(s) from X via $host');
+          return altImages;
+        }
+      }
+
+      print('No images extracted from X content after alternate hosts');
+    } catch (e) {
+      print('Error downloading X images: $e');
+    }
+    return [];
+  }
+
+  /// Downloads image(s) from a Facebook post using Jina, with ScrapingBee fallback.
+  static Future<List<XFile>> downloadImageFromFacebookUrl(String url) async {
+    try {
+      final jinaImages = await _scrapeFacebookViaJina(url);
+      if (jinaImages.isNotEmpty) {
+        print('Successfully extracted ${jinaImages.length} image(s) from Facebook via Jina');
+        return jinaImages;
+      }
+
+      final apiKey = AppConstants.scrapingBeeApiKey;
+      if (apiKey.isEmpty || apiKey.startsWith('your_') || apiKey.contains('***')) {
+        print('ScrapingBee API key missing; cannot fallback for Facebook');
+        return [];
+      }
+
+      print('Falling back to ScrapingBee for Facebook');
+      final beeImages = await _scrapingBeeFacebookScraper(url, apiKey);
+      if (beeImages.isNotEmpty) {
+        print('Successfully extracted ${beeImages.length} image(s) from Facebook via ScrapingBee');
+        return beeImages;
+      }
+      print('ScrapingBee failed to extract Facebook images');
+    } catch (e) {
+      print('Error downloading Facebook images: $e');
+    }
+    return [];
+  }
+
+  /// Downloads image(s) from a Reddit post using Jina reader only.
+  static Future<List<XFile>> downloadImageFromRedditUrl(String url) async {
+    try {
+      final images = await _scrapeRedditViaJina(url);
+      if (images.isNotEmpty) {
+        print('Successfully extracted ${images.length} image(s) from Reddit via Jina');
+        return images;
+      }
+      print('No images extracted from Reddit content');
+    } catch (e) {
+      print('Error downloading Reddit images: $e');
+    }
+    return [];
+  }
+
+  static Future<List<XFile>> _scrapePinterestViaJina(String pinterestUrl) async {
+    try {
+      final proxyUri = Uri.parse('$_jinaProxyBase${Uri.encodeFull(pinterestUrl)}');
+      final response = await http
+          .get(proxyUri, headers: {'User-Agent': _userAgent})
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode != 200) {
+        print('Pinterest Jina request failed: ${response.statusCode}');
+        return [];
+      }
+
+      print('Pinterest Jina response length: ${response.body.length}');
+      return _extractImagesFromPinterestHtml(response.body);
+    } catch (e) {
+      print('Pinterest Jina scrape error: $e');
+      return [];
+    }
+  }
+
+  static Future<List<XFile>> _scrapeXViaJina(String xUrl) async {
+    final candidates = await _fetchViaJina(xUrl, _extractXImageUrls);
+    return _downloadCandidateImages(candidates);
+  }
+
+  static Future<List<XFile>> _scrapeFacebookViaJina(String fbUrl) async {
+    final candidates = await _fetchViaJina(fbUrl, _extractFacebookImageUrls);
+    return _downloadCandidateImages(candidates);
+  }
+
+  static Future<List<XFile>> _scrapeRedditViaJina(String redditUrl) async {
+    final candidates = await _fetchViaJina(redditUrl, _extractRedditImageUrls);
+    return _downloadCandidateImages(candidates);
+  }
+
+  static Future<List<String>> _fetchViaJina(
+    String targetUrl,
+    List<String> Function(String) extractor,
+  ) async {
+    try {
+      final proxyUri = Uri.parse('$_jinaProxyBase${Uri.encodeFull(targetUrl)}');
+      final response = await http
+          .get(proxyUri, headers: {'User-Agent': _userAgent})
+          .timeout(const Duration(seconds: 18));
+
+      if (response.statusCode != 200) {
+        print('Jina request failed for $targetUrl with ${response.statusCode}');
+        return [];
+      }
+
+      print('Jina returned ${response.body.length} bytes for $targetUrl');
+      return extractor(response.body);
+    } catch (e) {
+      print('Jina fetch error for $targetUrl: $e');
+      return [];
+    }
+  }
+
+  static String? _rewriteXHost(String originalUrl, String newHost) {
+    try {
+      final uri = Uri.parse(originalUrl);
+      if (uri.host.toLowerCase().contains('twitter.com') ||
+          uri.host.toLowerCase().contains('x.com')) {
+        final rebuilt = uri.replace(host: newHost);
+        return rebuilt.toString();
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<List<XFile>> _scrapingBeeFacebookScraper(
+    String facebookUrl,
+    String apiKey,
+  ) async {
+    try {
+      final encoded = Uri.encodeFull(facebookUrl);
+      final beeUrl =
+          'https://app.scrapingbee.com/api/v1/?api_key=$apiKey&url=$encoded&render_js=true&wait=2500&premium_proxy=true';
+      final response =
+          await http.get(Uri.parse(beeUrl)).timeout(const Duration(seconds: 20));
+
+      if (response.statusCode != 200) {
+        print('ScrapingBee Facebook failed: ${response.statusCode}');
+        return [];
+      }
+
+      final html = response.body;
+      print('ScrapingBee Facebook HTML length: ${html.length}');
+      final candidates = _extractFacebookImageUrls(html);
+      return _downloadCandidateImages(candidates);
+    } catch (e) {
+      print('ScrapingBee Facebook error: $e');
+      return [];
+    }
+  }
+
+  static Future<List<XFile>> _downloadCandidateImages(
+    List<String> urls, {
+    double? cropToAspect,
+  }) async {
+    for (final url in urls) {
+      final file = await _downloadImage(url, cropToAspectRatio: cropToAspect);
+      if (file != null) return [file];
+    }
+    return [];
+  }
+
+  static List<String> _extractXImageUrls(String html) {
+    final results = <String>{};
+    String upgrade(String url) {
+      final uri = Uri.tryParse(url);
+      if (uri == null) return url;
+      if (!(uri.host.contains('twimg.com'))) return url;
+      final query = Map<String, String>.from(uri.queryParameters);
+      query['name'] = 'orig';
+      final updated = uri.replace(queryParameters: query);
+      return updated.toString();
+    }
+
+    void addIfValid(String? candidate) {
+      if (candidate == null || candidate.isEmpty) return;
+      if (!(candidate.contains('twimg.com'))) return;
+      results.add(upgrade(candidate.replaceAll('&amp;', '&')));
+    }
+
+    final ogPattern = RegExp(
+      r'''<meta\s+(?:[^>]*?\s+)?property\s*=\s*["']og:image["']\s+(?:[^>]*?\s+)?content\s*=\s*["']([^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in ogPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    final twPattern = RegExp(
+      r'''<meta\s+(?:[^>]*?\s+)?name\s*=\s*["']twitter:image["']\s+(?:[^>]*?\s+)?content\s*=\s*["']([^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in twPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    final cdnPattern = RegExp(
+      r'''(https?://(?:pbs\.twimg\.com|video\.twimg\.com)/[^\s"'<>]+)''',
+      caseSensitive: false,
+    );
+    for (final match in cdnPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    final imgPattern = RegExp(
+      r'''<img\s+[^>]*?src\s*=\s*["']([^"']+twimg\.com[^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in imgPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    return results.toList();
+  }
+
+  static List<String> _extractFacebookImageUrls(String html) {
+    final results = <String>{};
+
+    void addIfValid(String? candidate) {
+      if (candidate == null || candidate.isEmpty) return;
+      results.add(candidate.replaceAll('&amp;', '&'));
+    }
+
+    final ogPattern = RegExp(
+      r'''<meta\s+(?:[^>]*?\s+)?property\s*=\s*["']og:image["']\s+(?:[^>]*?\s+)?content\s*=\s*["']([^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in ogPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    final cdnPattern = RegExp(
+      r'''(https?://(?:scontent[^/]*\.xx\.fbcdn\.net|external[^/]*\.xx\.fbcdn\.net|scontent-[^/]*\.xx\.fbcdn\.net)/[^\s"'<>]+\.(?:jpg|jpeg|png|webp))''',
+      caseSensitive: false,
+    );
+    for (final match in cdnPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    final imgPattern = RegExp(
+      r'''<img\s+[^>]*?src\s*=\s*["']([^"']+fbcdn\.net[^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in imgPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    return results.toList();
+  }
+
+  static List<String> _extractRedditImageUrls(String html) {
+    final results = <String>{};
+
+    void addIfValid(String? candidate) {
+      if (candidate == null || candidate.isEmpty) return;
+      final cleaned = candidate.replaceAll('&amp;', '&');
+      if (!(cleaned.contains('redd.it') ||
+          cleaned.contains('redditmedia.com') ||
+          cleaned.contains('imgur.com'))) return;
+      results.add(cleaned);
+    }
+
+    final ogPattern = RegExp(
+      r'''<meta\s+(?:[^>]*?\s+)?property\s*=\s*["']og:image["']\s+(?:[^>]*?\s+)?content\s*=\s*["']([^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in ogPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    final previewPattern = RegExp(
+      r'''(https?://preview\.redd\.it/[^\s"'<>]+)''',
+      caseSensitive: false,
+    );
+    for (final match in previewPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    final iRedditPattern = RegExp(
+      r'''(https?://i\.redd\.it/[^\s"'<>]+)''',
+      caseSensitive: false,
+    );
+    for (final match in iRedditPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    final imgPattern = RegExp(
+      r'''<img\s+[^>]*?src\s*=\s*["']([^"']+redd\.it[^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in imgPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    return results.toList();
   }
 }
 

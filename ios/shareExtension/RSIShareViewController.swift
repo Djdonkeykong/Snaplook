@@ -660,6 +660,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var currentStatusIndex: Int = 0
     private var backgroundActivity: NSObjectProtocol?
     private var hasPresentedDetectionFailureAlert = false
+    private var hasPresentedUnsupportedAlert = false
     private var headerContainerView: UIView?
     private var headerLogoImageView: UIImageView?
     private var cancelButtonView: UIButton?
@@ -1381,6 +1382,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             platformName = "Snapchat"
             platformType = "snapchat"
             downloadFunction = downloadSnapchatMedia
+        } else if isXShareCandidate(item) {
+            platformName = "X"
+            platformType = "x"
+            downloadFunction = downloadXMedia
+        } else if isRedditShareCandidate(item) {
+            platformName = "Reddit"
+            platformType = "reddit"
+            downloadFunction = downloadRedditMedia
         } else if isFacebookShareCandidate(item) {
             platformName = "Facebook"
             platformType = "facebook"
@@ -1390,10 +1399,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
             platformType = "google_image"
             downloadFunction = downloadGoogleImageMedia
         } else if item.lowercased().hasPrefix("http://") || item.lowercased().hasPrefix("https://") {
-            // Generic link - try to download images from it
-            platformName = "Generic Link"
-            platformType = "generic"
-            downloadFunction = downloadGenericLinkMedia
+            shareLog("Unsupported URL share - showing not supported alert")
+            presentUnsupportedAlert(for: item)
+            appendLiteralShare(item: item, type: type)
+            completion()
+            return
         } else {
             // Not a URL we can download from
             appendLiteralShare(item: item, type: type)
@@ -1547,6 +1557,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
+    private func presentUnsupportedAlert(for url: String) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if self.hasPresentedUnsupportedAlert { return }
+            self.hasPresentedUnsupportedAlert = true
+
+            let alert = UIAlertController(
+                title: "Not supported",
+                message: "This link isn't supported yet. Try Instagram, TikTok, Pinterest, Reddit, X, Snapchat, Facebook, or Google Images.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .cancel) { [weak self] _ in
+                self?.hasPresentedUnsupportedAlert = false
+            })
+            self.present(alert, animated: true, completion: nil)
+        }
+    }
+
     private func isInstagramShareCandidate(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return trimmed.contains("instagram.com/p/") || trimmed.contains("instagram.com/reel/")
@@ -1625,6 +1653,48 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return hasValidPattern
     }
 
+    private func isRedditShareCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let hasDomain = trimmed.contains("reddit.com") || trimmed.contains("redd.it")
+        if !hasDomain {
+            return false
+        }
+
+        let hasValidPattern = trimmed.contains("/comments/") ||
+                             trimmed.contains("/r/") ||
+                             trimmed.contains("redd.it/")
+
+        if hasValidPattern {
+            shareLog("Reddit URL detected: \(trimmed.prefix(80))")
+        } else {
+            shareLog("Reddit domain found but no valid pattern: \(trimmed.prefix(80))")
+        }
+
+        return hasValidPattern
+    }
+
+    private func isXShareCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let hasDomain = trimmed.contains("x.com") || trimmed.contains("twitter.com")
+        if !hasDomain {
+            return false
+        }
+
+        let hasValidPattern = trimmed.contains("/status/") ||
+                             trimmed.contains("/statuses/") ||
+                             trimmed.contains("/i/web/status/") ||
+                             trimmed.contains("/i/status/") ||
+                             trimmed.contains("/photo/")
+
+        if hasValidPattern {
+            shareLog("X/Twitter URL detected: \(trimmed.prefix(80))")
+        } else {
+            shareLog("X/Twitter domain found but no valid pattern: \(trimmed.prefix(80))")
+        }
+
+        return hasValidPattern
+    }
+
     private func isFacebookShareCandidate(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         // Match Facebook URL formats:
@@ -1672,6 +1742,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                isPinterestShareCandidate(value) ||
                isYouTubeShareCandidate(value) ||
                isSnapchatShareCandidate(value) ||
+               isRedditShareCandidate(value) ||
+               isXShareCandidate(value) ||
                isFacebookShareCandidate(value) ||
                isGoogleImageShareCandidate(value)
     }
@@ -2097,12 +2169,89 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urlString: String,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
-        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
-            shareLog("ScrapingBee API key missing - cannot download Pinterest image")
-            completion(.failure(makeDownloadError("Pinterest", "ScrapingBee API key not configured")))
+        shareLog("Attempting to fetch Pinterest content via Jina AI...")
+
+        // First try Jina (free)
+        fetchPinterestViaJina(urlString: urlString) { [weak self] imageUrls in
+            guard let self = self else { return }
+
+            if !imageUrls.isEmpty {
+                shareLog("Found \(imageUrls.count) image(s) from Pinterest via Jina")
+                self.downloadFirstValidImage(
+                    from: imageUrls,
+                    platform: "pinterest",
+                    session: URLSession.shared,
+                    completion: completion
+                )
+                return
+            }
+
+            shareLog("No images found via Jina for Pinterest URL")
+
+            // Fallback: ScrapingBee if available
+            guard let apiKey = self.scrapingBeeApiKey(), !apiKey.isEmpty else {
+                completion(.failure(self.makeDownloadError("Pinterest", "No images found (Jina) and ScrapingBee key not configured")))
+                return
+            }
+
+            self.shareLog("Falling back to ScrapingBee for Pinterest...")
+            self.fetchPinterestViaScrapingBee(
+                urlString: urlString,
+                apiKey: apiKey,
+                completion: completion
+            )
+        }
+    }
+
+    private func fetchPinterestViaJina(
+        urlString: String,
+        completion: @escaping ([String]) -> Void
+    ) {
+        guard let encoded = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let jinaUrl = URL(string: "https://r.jina.ai/\(encoded)") else {
+            shareLog("Failed to build Jina URL for Pinterest")
+            completion([])
             return
         }
 
+        var request = URLRequest(url: jinaUrl)
+        request.timeoutInterval = 15.0
+        request.httpMethod = "GET"
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+
+        shareLog("Fetching Pinterest via Jina: \(jinaUrl.absoluteString.prefix(80))...")
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("Jina request failed for Pinterest: \(error.localizedDescription)")
+                completion([])
+                return
+            }
+
+            guard let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                shareLog("Could not decode Jina response for Pinterest")
+                completion([])
+                return
+            }
+
+            shareLog("Jina returned \(data.count) bytes for Pinterest")
+            let imageUrls = self.extractPinterestImageUrls(from: html)
+            completion(imageUrls)
+        }
+        task.resume()
+    }
+
+    private func fetchPinterestViaScrapingBee(
+        urlString: String,
+        apiKey: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
         guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
             completion(.failure(makeDownloadError("Pinterest", "Invalid ScrapingBee URL")))
             return
@@ -2500,20 +2649,31 @@ open class RSIShareViewController: SLComposeServiceViewController {
         fetchFacebookViaJina(urlString: urlString) { [weak self] imageUrls in
             guard let self = self else { return }
 
-            if imageUrls.isEmpty {
-                shareLog("No images found via Jina for Facebook URL")
-                completion(.failure(self.makeFacebookError("No images found in Facebook post")))
+            if !imageUrls.isEmpty {
+                shareLog("Found \(imageUrls.count) image(s) from Facebook via Jina")
+
+                self.downloadFirstValidImage(
+                    from: Array(imageUrls.prefix(5)),
+                    platform: "facebook",
+                    session: URLSession.shared,
+                    completion: completion
+                )
                 return
             }
 
-            shareLog("Found \(imageUrls.count) image(s) from Facebook via Jina")
+            shareLog("No images found via Jina for Facebook URL")
 
-            self.downloadFirstValidImage(
-                from: Array(imageUrls.prefix(5)),
-                platform: "facebook",
-                session: URLSession.shared,
-                completion: completion
-            )
+            // Optional fallback: ScrapingBee (requires API key)
+            if let apiKey = self.scrapingBeeApiKey(), !apiKey.isEmpty {
+                self.shareLog("Falling back to ScrapingBee for Facebook...")
+                self.fetchFacebookViaScrapingBee(
+                    urlString: urlString,
+                    apiKey: apiKey,
+                    completion: completion
+                )
+            } else {
+                completion(.failure(self.makeFacebookError("No images found in Facebook post")))
+            }
         }
     }
 
@@ -2558,6 +2718,79 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             let imageUrls = self.extractImagesFromFacebookHtml(html, baseUrl: urlString)
             completion(imageUrls)
+        }
+
+        task.resume()
+    }
+
+    private func fetchFacebookViaScrapingBee(
+        urlString: String,
+        apiKey: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        guard let encodedUrl = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            shareLog("Failed to encode Facebook URL for ScrapingBee")
+            completion(.failure(makeFacebookError("Invalid Facebook URL encoding")))
+            return
+        }
+
+        let scrapingBeeUrlString = "https://app.scrapingbee.com/api/v1/" +
+            "?api_key=\(apiKey)" +
+            "&url=\(encodedUrl)" +
+            "&render_js=true" +
+            "&wait=2500" +
+            "&premium_proxy=true"
+
+        guard let scrapingBeeUrl = URL(string: scrapingBeeUrlString) else {
+            shareLog("Failed to build ScrapingBee URL for Facebook")
+            completion(.failure(makeFacebookError("Invalid ScrapingBee request")))
+            return
+        }
+
+        var request = URLRequest(url: scrapingBeeUrl)
+        request.timeoutInterval = 30.0
+        request.httpMethod = "GET"
+
+        shareLog("Fetching Facebook via ScrapingBee: \(scrapingBeeUrl.absoluteString.prefix(100))")
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("ScrapingBee request failed for Facebook: \(error.localizedDescription)")
+                completion(.failure(self.makeFacebookError("Network error: \(error.localizedDescription)")))
+                return
+            }
+
+            guard let data = data, !data.isEmpty else {
+                shareLog("ScrapingBee returned empty data for Facebook")
+                completion(.failure(self.makeFacebookError("Empty response from ScrapingBee")))
+                return
+            }
+
+            guard let html = String(data: data, encoding: .utf8) else {
+                shareLog("Could not decode HTML from ScrapingBee response for Facebook")
+                completion(.failure(self.makeFacebookError("Invalid HTML response from ScrapingBee")))
+                return
+            }
+
+            shareLog("ScrapingBee returned \(data.count) bytes for Facebook")
+
+            let imageUrls = self.extractImagesFromFacebookHtml(html, baseUrl: urlString)
+            if imageUrls.isEmpty {
+                shareLog("No images extracted from Facebook HTML via ScrapingBee")
+                completion(.failure(self.makeFacebookError("No images found in Facebook content")))
+                return
+            }
+
+            shareLog("Extracted \(imageUrls.count) image URL(s) from Facebook HTML via ScrapingBee")
+
+            self.downloadFirstValidImage(
+                from: Array(imageUrls.prefix(5)),
+                platform: "facebook",
+                session: URLSession.shared,
+                completion: completion
+            )
         }
 
         task.resume()
@@ -2623,6 +2856,374 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func makeFacebookError(_ message: String) -> NSError {
         return NSError(
             domain: "com.snaplook.shareextension.facebook",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
+    }
+
+    // MARK: - Reddit Scraping
+
+    private func downloadRedditMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        shareLog("Attempting to fetch Reddit content via Jina AI...")
+
+        fetchRedditViaJina(urlString: urlString) { [weak self] imageUrls in
+            guard let self = self else { return }
+
+            if !imageUrls.isEmpty {
+                shareLog("Found \(imageUrls.count) image(s) from Reddit via Jina")
+                self.downloadFirstValidImage(
+                    from: Array(imageUrls.prefix(6)),
+                    platform: "reddit",
+                    session: URLSession.shared,
+                    completion: completion
+                )
+                return
+            }
+
+            shareLog("No images found via Jina for Reddit URL")
+            completion(.failure(self.makeRedditError("No images found in Reddit post")))
+        }
+    }
+
+    private func fetchRedditViaJina(
+        urlString: String,
+        completion: @escaping ([String]) -> Void
+    ) {
+        guard let encoded = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let jinaUrl = URL(string: "https://r.jina.ai/\(encoded)") else {
+            shareLog("Failed to build Jina URL for Reddit")
+            completion([])
+            return
+        }
+
+        var request = URLRequest(url: jinaUrl)
+        request.timeoutInterval = 15.0
+        request.httpMethod = "GET"
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+
+        shareLog("Fetching Reddit via Jina: \(jinaUrl.absoluteString.prefix(80))...")
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("Jina request failed for Reddit: \(error.localizedDescription)")
+                completion([])
+                return
+            }
+
+            guard let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                shareLog("Could not decode Jina response for Reddit")
+                completion([])
+                return
+            }
+
+            shareLog("Jina returned \(data.count) bytes for Reddit")
+            let imageUrls = self.extractImagesFromRedditHtml(html, baseUrl: urlString)
+            completion(imageUrls)
+        }
+
+        task.resume()
+    }
+
+    private func extractImagesFromRedditHtml(_ html: String, baseUrl: String) -> [String] {
+        var results: [String] = []
+        let nsHtml = html as NSString
+
+        func appendIfValid(_ candidate: String) {
+            let cleaned = candidate.replacingOccurrences(of: "&amp;", with: "&")
+            let upgraded = preferOriginalRedditVariant(cleaned)
+            guard isAllowedRedditImageUrl(upgraded) else { return }
+            if !results.contains(upgraded) {
+                shareLog("Found Reddit image: \(upgraded.prefix(80))")
+                results.append(upgraded)
+            }
+        }
+
+        // Pattern 1: og:image
+        let ogImagePattern = #"<meta\s+(?:[^>]*?\s+)?property\s*=\s*["\']og:image["\']\s+(?:[^>]*?\s+)?content\s*=\s*["\']([^"\']+)["\']"#
+        if let ogRegex = try? NSRegularExpression(pattern: ogImagePattern, options: [.caseInsensitive]) {
+            let matches = ogRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches where match.numberOfRanges > 1 {
+                let urlRange = match.range(at: 1)
+                let imageUrl = nsHtml.substring(with: urlRange)
+                appendIfValid(imageUrl)
+            }
+        }
+
+        // Pattern 2: preview.redd.it CDN
+        let previewPattern = #"(https?://preview\.redd\.it/[^\s"\'<>]+)"#
+        if let previewRegex = try? NSRegularExpression(pattern: previewPattern, options: [.caseInsensitive]) {
+            let matches = previewRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches where match.numberOfRanges > 0 {
+                let urlRange = match.range(at: 1)
+                let imageUrl = nsHtml.substring(with: urlRange)
+                appendIfValid(imageUrl)
+            }
+        }
+
+        // Pattern 3: i.redd.it direct images
+        let ireddPattern = #"(https?://i\.redd\.it/[^\s"\'<>]+)"#
+        if let ireddRegex = try? NSRegularExpression(pattern: ireddPattern, options: [.caseInsensitive]) {
+            let matches = ireddRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches where match.numberOfRanges > 0 {
+                let urlRange = match.range(at: 1)
+                let imageUrl = nsHtml.substring(with: urlRange)
+                appendIfValid(imageUrl)
+            }
+        }
+
+        // Pattern 4: img src pointing to redd.it hosts
+        let imgPattern = #"<img\s+[^>]*?src\s*=\s*["\']([^"\']+redd\.it[^"\']+)["\']"#
+        if let imgRegex = try? NSRegularExpression(pattern: imgPattern, options: [.caseInsensitive]) {
+            let matches = imgRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches where match.numberOfRanges > 1 {
+                let urlRange = match.range(at: 1)
+                let imageUrl = nsHtml.substring(with: urlRange)
+                appendIfValid(imageUrl)
+            }
+        }
+
+        return results
+    }
+
+    private func isAllowedRedditImageUrl(_ urlString: String) -> Bool {
+        guard let host = URL(string: urlString)?.host?.lowercased() else { return false }
+        return host.contains("redd.it") || host.contains("redditmedia.com") || host.contains("imgur.com")
+    }
+
+    private func preferOriginalRedditVariant(_ url: String) -> String {
+        guard var components = URLComponents(string: url) else { return url }
+
+        // Normalize query params for higher quality
+        var queryItems = components.queryItems ?? []
+        var didMutate = false
+
+        for index in queryItems.indices.reversed() {
+            switch queryItems[index].name {
+            case "width":
+                queryItems[index].value = "2048"
+                didMutate = true
+            case "format":
+                queryItems[index].value = "jpg"
+                didMutate = true
+            case "auto":
+                queryItems[index].value = "webp"
+                didMutate = true
+            case "crop":
+                queryItems.remove(at: index)
+                didMutate = true
+            default:
+                break
+            }
+        }
+
+        if didMutate {
+            components.queryItems = queryItems
+        }
+
+        return components.url?.absoluteString ?? url
+    }
+
+    private func makeRedditError(_ message: String) -> NSError {
+        return NSError(
+            domain: "com.snaplook.shareextension.reddit",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
+    }
+
+    // MARK: - X (Twitter) Scraping
+
+    private func downloadXMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        shareLog("Attempting to fetch X content via Jina AI...")
+
+        fetchXViaJina(urlString: urlString) { [weak self] imageUrls in
+            guard let self = self else { return }
+
+            if imageUrls.isEmpty {
+                shareLog("No images found via Jina for X URL")
+                completion(.failure(self.makeXError("No images found in X post")))
+                return
+            }
+
+            shareLog("Found \(imageUrls.count) image(s) from X via Jina")
+
+            self.downloadFirstValidImage(
+                from: Array(imageUrls.prefix(6)),
+                platform: "x",
+                session: URLSession.shared,
+                completion: completion
+            )
+        }
+    }
+
+    private func fetchXViaJina(
+        urlString: String,
+        completion: @escaping ([String]) -> Void
+    ) {
+        guard let encoded = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let jinaUrl = URL(string: "https://r.jina.ai/\(encoded)") else {
+            shareLog("Failed to build Jina URL for X")
+            completion([])
+            return
+        }
+
+        var request = URLRequest(url: jinaUrl)
+        request.timeoutInterval = 15.0
+        request.httpMethod = "GET"
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+
+        shareLog("Fetching X via Jina: \(jinaUrl.absoluteString.prefix(80))...")
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("Jina request failed for X: \(error.localizedDescription)")
+                completion([])
+                return
+            }
+
+            guard let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                shareLog("Could not decode Jina response for X")
+                completion([])
+                return
+            }
+
+            shareLog("Jina returned \(data.count) bytes for X")
+
+            let imageUrls = self.extractImagesFromXHtml(html, baseUrl: urlString)
+            completion(imageUrls)
+        }
+
+        task.resume()
+    }
+
+    private func extractImagesFromXHtml(_ html: String, baseUrl: String) -> [String] {
+        var results: [String] = []
+
+        func appendIfAllowed(_ candidate: String) {
+            guard !candidate.isEmpty else { return }
+            let cleaned = candidate.replacingOccurrences(of: "&amp;", with: "&")
+            let upgraded = preferOriginalXVariant(cleaned)
+            guard isAllowedXImageUrl(upgraded) else { return }
+            if !results.contains(upgraded) {
+                shareLog("Found X media URL: \(upgraded.prefix(80))")
+                results.append(upgraded)
+            }
+        }
+
+        // Pattern 1: og:image meta tag
+        let ogImagePattern = #"<meta\s+(?:[^>]*?\s+)?property\s*=\s*["\']og:image["\']\s+(?:[^>]*?\s+)?content\s*=\s*["\']([^"\']+)["\']"#
+        if let ogRegex = try? NSRegularExpression(pattern: ogImagePattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = ogRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let urlRange = match.range(at: 1)
+                    let imageUrl = nsHtml.substring(with: urlRange)
+                    appendIfAllowed(imageUrl)
+                }
+            }
+        }
+
+        // Pattern 2: twitter:image meta tag
+        let twitterImagePattern = #"<meta\s+(?:[^>]*?\s+)?name\s*=\s*["\']twitter:image["\']\s+(?:[^>]*?\s+)?content\s*=\s*["\']([^"\']+)["\']"#
+        if let twitterRegex = try? NSRegularExpression(pattern: twitterImagePattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = twitterRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let urlRange = match.range(at: 1)
+                    let imageUrl = nsHtml.substring(with: urlRange)
+                    appendIfAllowed(imageUrl)
+                }
+            }
+        }
+
+        // Pattern 3: Direct twimg CDN URLs (images or video thumbnails)
+        let twimgPattern = #"(https?://(?:pbs\.twimg\.com|video\.twimg\.com)/[^\s"\'<>]+)"#
+        if let cdnRegex = try? NSRegularExpression(pattern: twimgPattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = cdnRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let urlRange = match.range(at: 1)
+                    let imageUrl = nsHtml.substring(with: urlRange)
+                    appendIfAllowed(imageUrl)
+                }
+            }
+        }
+
+        // Pattern 4: img src attributes pointing to twimg hosts
+        let imgSrcPattern = #"<img\s+[^>]*?src\s*=\s*["\']([^"\']+twimg\.com[^"\']+)["\']"#
+        if let imgRegex = try? NSRegularExpression(pattern: imgSrcPattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = imgRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let urlRange = match.range(at: 1)
+                    let imageUrl = nsHtml.substring(with: urlRange)
+                    appendIfAllowed(imageUrl)
+                }
+            }
+        }
+
+        return results
+    }
+
+    private func isAllowedXImageUrl(_ urlString: String) -> Bool {
+        guard let host = URL(string: urlString)?.host?.lowercased() else { return false }
+        return host.contains("pbs.twimg.com") || host.contains("video.twimg.com")
+    }
+
+    private func preferOriginalXVariant(_ url: String) -> String {
+        guard let components = URLComponents(string: url) else { return url }
+
+        var updatedComponents = components
+
+        // Only adjust image CDN URLs; leave others untouched
+        if let host = components.host?.lowercased(), host.contains("pbs.twimg.com") {
+            var queryItems = components.queryItems ?? []
+            var hasName = false
+
+            // Replace any existing name parameter with orig
+            for idx in queryItems.indices {
+                if queryItems[idx].name == "name" {
+                    queryItems[idx].value = "orig"
+                    hasName = true
+                }
+            }
+
+            // If no name parameter, append the highest-quality variant
+            if !hasName {
+                queryItems.append(URLQueryItem(name: "name", value: "orig"))
+            }
+
+            updatedComponents.queryItems = queryItems
+        }
+
+        return updatedComponents.url?.absoluteString ?? url
+    }
+
+    private func makeXError(_ message: String) -> NSError {
+        return NSError(
+            domain: "com.snaplook.shareextension.x",
             code: -1,
             userInfo: [NSLocalizedDescriptionKey: message]
         )
@@ -3037,6 +3638,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return downloadYouTubeMedia
         case "snapchat":
             return downloadSnapchatMedia
+        case "x":
+            return downloadXMedia
+        case "reddit":
+            return downloadRedditMedia
         case "facebook":
             return downloadFacebookMedia
         case "google_image":
@@ -3061,6 +3666,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return "YouTube"
         case "snapchat":
             return "Snapchat"
+        case "x":
+            return "X"
+        case "reddit":
+            return "Reddit"
         case "facebook":
             return "Facebook"
         case "google_image":
