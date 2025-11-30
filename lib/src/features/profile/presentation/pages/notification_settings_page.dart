@@ -16,10 +16,7 @@ class NotificationSettingsPage extends StatefulWidget {
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   final Map<_NotificationToggle, bool> _values = {
     _NotificationToggle.pushEnabled: true,
-    _NotificationToggle.searchMatches: true,
-    _NotificationToggle.priceDrops: false,
-    _NotificationToggle.newArrivals: true,
-    _NotificationToggle.suggestionsDigest: true,
+    _NotificationToggle.uploadReminders: false,
     _NotificationToggle.promotions: false,
   };
 
@@ -83,37 +80,11 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   _Divider(),
                   const SizedBox(height: 8),
                   _SettingsRow.toggle(
-                    label: 'Search Matches',
-                    helper: 'When we find styles similar to your search',
-                    value: _values[_NotificationToggle.searchMatches] ?? true,
-                    onChanged: (val) => _toggle(_NotificationToggle.searchMatches, val),
-                  ),
-                  const SizedBox(height: 8),
-                  _Divider(),
-                  const SizedBox(height: 8),
-                  _SettingsRow.toggle(
-                    label: 'Price Drops',
-                    value: _values[_NotificationToggle.priceDrops] ?? false,
-                    onChanged: (val) => _toggle(_NotificationToggle.priceDrops, val),
-                  ),
-                  const SizedBox(height: 8),
-                  _Divider(),
-                  const SizedBox(height: 8),
-                  _SettingsRow.toggle(
-                    label: 'New Arrivals',
-                    value: _values[_NotificationToggle.newArrivals] ?? true,
-                    onChanged: (val) => _toggle(_NotificationToggle.newArrivals, val),
-                  ),
-                  const SizedBox(height: 8),
-                  _Divider(),
-                  const SizedBox(height: 8),
-                  _SettingsRow.toggle(
-                    label: 'Suggestions Digest',
-                    helper: 'Occasional curated picks based on your favorites',
-                    value:
-                        _values[_NotificationToggle.suggestionsDigest] ?? true,
+                    label: 'Upload Reminders',
+                    helper: 'A nudge if you haven’t shared in a while',
+                    value: _values[_NotificationToggle.uploadReminders] ?? false,
                     onChanged: (val) =>
-                        _toggle(_NotificationToggle.suggestionsDigest, val),
+                        _toggle(_NotificationToggle.uploadReminders, val),
                   ),
                   const SizedBox(height: 8),
                   _Divider(),
@@ -137,10 +108,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
 enum _NotificationToggle {
   pushEnabled,
-  searchMatches,
-  priceDrops,
-  newArrivals,
-  suggestionsDigest,
+  uploadReminders,
   promotions,
 }
 
@@ -230,7 +198,7 @@ class _SettingsRow extends StatelessWidget {
           ),
           CupertinoSwitch(
             value: value,
-            activeColor: const Color(0xFF34C759),
+            activeColor: const Color(0xFFF2003C),
             onChanged: onChanged,
           ),
         ],
