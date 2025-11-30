@@ -2670,6 +2670,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let nsHtml = html as NSString
 
         func appendIfValid(_ candidate: String) {
+            let lowered = candidate.lowercased()
+            if lowered.contains("communityicon") || lowered.contains("styles.redditmedia.com") {
+                return
+            }
             let cleaned = candidate.replacingOccurrences(of: "&amp;", with: "&")
             let upgraded = preferOriginalRedditVariant(cleaned)
             guard isAllowedRedditImageUrl(upgraded) else { return }
