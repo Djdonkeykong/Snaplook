@@ -108,12 +108,14 @@ class ManageSubscriptionPage extends ConsumerWidget {
 
               _SettingsCard(
                 children: [
+                  const SizedBox(height: 12),
                   _SettingsRow.value(
                     label: 'Current Plan',
                     value: displayStatus,
                     valueColor:
                         isSubscribed ? AppColors.secondary : colorScheme.onSurface,
                   ),
+                  const SizedBox(height: 12),
                 ],
               ),
 
@@ -121,17 +123,21 @@ class ManageSubscriptionPage extends ConsumerWidget {
 
               _SettingsCard(
                 children: [
+                  const SizedBox(height: 12),
                   _SettingsRow.disclosure(
                     label: Platform.isIOS
                         ? 'Manage in App Store'
                         : 'Manage in Google Play',
                     onTap: () => _openSubscriptionManagement(context),
                   ),
+                  const SizedBox(height: 12),
                   _Divider(),
+                  const SizedBox(height: 12),
                   _SettingsRow.disclosure(
                     label: 'Restore Purchases',
                     onTap: () => _restorePurchases(context),
                   ),
+                  const SizedBox(height: 12),
                 ],
               ),
 
