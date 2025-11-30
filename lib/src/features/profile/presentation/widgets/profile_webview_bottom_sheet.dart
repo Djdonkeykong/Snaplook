@@ -247,6 +247,8 @@ class _ProfileWebViewBottomSheetState
                 color: Colors.black.withOpacity(0.12),
                 blurRadius: 24,
                 offset: const Offset(0, -6),
+                // Pulls the shadow in so it doesn't tint the bottom edge
+                spreadRadius: -8,
               ),
             ],
           ),
