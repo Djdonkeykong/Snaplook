@@ -574,7 +574,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       final imagesState = ref.read(selectedImagesProvider);
       final selectedImage = imagesState.currentImage;
       if (selectedImage != null) {
-        return XFile(selectedImage.path);
+        return XFile(
+          selectedImage.path,
+          mimeType: _mimeTypeForPath(selectedImage.path),
+        );
       }
     } catch (e) {
       print('Error resolving share image: $e');
@@ -592,11 +595,18 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         '${Directory.systemTemp.path}/snaplook_share_${DateTime.now().millisecondsSinceEpoch}.jpg',
       ).create();
       await temp.writeAsBytes(response.bodyBytes);
-      return XFile(temp.path);
+      return XFile(temp.path, mimeType: 'image/jpeg');
     } catch (e) {
       print('Error downloading share image: $e');
       return null;
     }
+  }
+
+  String? _mimeTypeForPath(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.png')) return 'image/png';
+    return null;
   }
 
   String _buildHistoryShareMessage(Map<String, dynamic> data) {
