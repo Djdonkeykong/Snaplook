@@ -615,11 +615,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         width: canvasSize,
         height: canvasSize,
       );
-      img.fill(canvas, img.getColor(245, 245, 245)); // light padding background
+      // Light padding background
+      img.fill(canvas, color: img.ColorUint8(245, 245, 245));
 
       final dx = ((canvasSize - resized.width) / 2).round();
       final dy = ((canvasSize - resized.height) / 2).round();
-      img.copyInto(canvas, resized, dstX: dx, dstY: dy);
+      img.compositeImage(canvas, resized, dstX: dx, dstY: dy);
 
       final jpg = img.encodeJpg(canvas, quality: 90);
       final tempPath =
