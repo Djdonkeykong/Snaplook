@@ -7,6 +7,7 @@ import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../shared/widgets/share_logs_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import 'package:share_plus/share_plus.dart';
 import 'edit_profile_page.dart';
 import 'feed_preferences_page.dart';
 import 'manage_subscription_page.dart';
@@ -27,6 +28,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _shareApp() {
+    const message =
+        'Check out Snaplook – find similar fashion items by sharing a photo. Download now: https://snaplook.app';
+    Share.share(message, subject: 'Snaplook');
   }
 
   Future<void> _handleLogout() async {
@@ -280,6 +287,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                     );
                   },
+                ),
+                _SimpleSettingItem(
+                  title: 'Invite Friends',
+                  onTap: _shareApp,
                 ),
 
                 SizedBox(height: spacing.l),
