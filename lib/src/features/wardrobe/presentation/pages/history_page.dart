@@ -330,7 +330,16 @@ class _HistoryCard extends StatelessWidget {
         buffer.writeln();
       }
     } else {
-      buffer.writeln('Check out what I found with Snaplook!');
+      final total = (searchData['total_results'] as num?)?.toInt() ?? 0;
+      final sourceUrl = (searchData['source_url'] as String?)?.trim() ?? '';
+      if (total > 0) {
+        buffer.writeln('$total products found with Snaplook.');
+      } else {
+        buffer.writeln('Check out what I found with Snaplook!');
+      }
+      if (sourceUrl.isNotEmpty) {
+        buffer.writeln(sourceUrl);
+      }
     }
 
     return SharePayload(
