@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'share_payload.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/widgets/results_bottom_sheet.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -597,12 +598,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       return null;
     }
   }
-
-class _SharePayload {
-  final String subject;
-  final String message;
-  _SharePayload({required this.subject, required this.message});
-}
 
   String _buildHistoryShareMessage(Map<String, dynamic> data) {
     final rawType = (data['search_type'] as String?)?.trim();
