@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -191,34 +192,34 @@ class _FeedPreferencesPageState
                     _SettingsCard(
                       children: [
                         const SizedBox(height: 8),
-                        _SettingsRow.radio(
+                        _SettingsRow.toggle(
                           label: "Men's Clothing",
-                          selected: _selectedPreference == FeedPreference.men,
-                          onTap: () {
-                            HapticFeedback.mediumImpact();
-                            _savePreference(FeedPreference.men);
+                          value: _selectedPreference == FeedPreference.men,
+                          onChanged: (val) {
+                            HapticFeedback.selectionClick();
+                            if (val) _savePreference(FeedPreference.men);
                           },
                         ),
                         const SizedBox(height: 8),
                         _Divider(),
                         const SizedBox(height: 8),
-                        _SettingsRow.radio(
+                        _SettingsRow.toggle(
                           label: "Women's Clothing",
-                          selected: _selectedPreference == FeedPreference.women,
-                          onTap: () {
-                            HapticFeedback.mediumImpact();
-                            _savePreference(FeedPreference.women);
+                          value: _selectedPreference == FeedPreference.women,
+                          onChanged: (val) {
+                            HapticFeedback.selectionClick();
+                            if (val) _savePreference(FeedPreference.women);
                           },
                         ),
                         const SizedBox(height: 8),
                         _Divider(),
                         const SizedBox(height: 8),
-                        _SettingsRow.radio(
+                        _SettingsRow.toggle(
                           label: 'Both',
-                          selected: _selectedPreference == FeedPreference.both,
-                          onTap: () {
-                            HapticFeedback.mediumImpact();
-                            _savePreference(FeedPreference.both);
+                          value: _selectedPreference == FeedPreference.both,
+                          onChanged: (val) {
+                            HapticFeedback.selectionClick();
+                            if (val) _savePreference(FeedPreference.both);
                           },
                         ),
                         const SizedBox(height: 8),
@@ -286,71 +287,39 @@ class _Divider extends StatelessWidget {
 
 class _SettingsRow extends StatelessWidget {
   final String label;
-  final bool selected;
-  final VoidCallback onTap;
+  final bool value;
+  final ValueChanged<bool> onChanged;
 
-  const _SettingsRow.radio({
+  const _SettingsRow.toggle({
     required this.label,
-    required this.selected,
-    required this.onTap,
+    required this.value,
+    required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     final textColor = Colors.black;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'PlusJakartaSans',
-                  color: textColor,
-                ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'PlusJakartaSans',
+                color: textColor,
               ),
             ),
-            _RadioIcon(selected: selected),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RadioIcon extends StatelessWidget {
-  final bool selected;
-  const _RadioIcon({required this.selected});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: selected ? const Color(0xFFF2003C) : const Color(0xFFD0D0D0),
-          width: 1.5,
-        ),
-      ),
-      child: Center(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: selected ? const Color(0xFFF2003C) : Colors.transparent,
           ),
-        ),
+          CupertinoSwitch(
+            value: value,
+            activeColor: const Color(0xFFF2003C),
+            onChanged: onChanged,
+          ),
+        ],
       ),
     );
   }
