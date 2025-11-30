@@ -616,7 +616,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         height: canvasSize,
       );
       // Light padding background
-      img.fill(canvas, color: img.ColorUint8(245, 245, 245));
+      img.fill(
+        canvas,
+        color: img.ColorUint8.rgb(245, 245, 245),
+      );
 
       final dx = ((canvasSize - resized.width) / 2).round();
       final dy = ((canvasSize - resized.height) / 2).round();
