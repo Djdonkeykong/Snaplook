@@ -297,10 +297,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     );
                   },
                 ),
-                _SimpleSettingItem(
-                  title: 'Invite Friends',
-                  onTap: () => _shareApp(context),
-                ),
 
                 SizedBox(height: spacing.l),
 
