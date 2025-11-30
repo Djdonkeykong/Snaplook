@@ -265,8 +265,14 @@ class _SettingsRow extends StatelessWidget {
               ),
             ),
             if (value != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: (valueColor ?? Colors.black.withOpacity(0.6))
+                      .withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Text(
                   value!,
                   style: valueStyle,

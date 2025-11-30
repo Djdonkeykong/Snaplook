@@ -190,6 +190,7 @@ class _FeedPreferencesPageState
                     SizedBox(height: spacing.l),
                     _SettingsCard(
                       children: [
+                        const SizedBox(height: 12),
                         _SettingsRow.radio(
                           label: "Men's Clothing",
                           selected: _selectedPreference == FeedPreference.men,
@@ -198,8 +199,9 @@ class _FeedPreferencesPageState
                             _savePreference(FeedPreference.men);
                           },
                         ),
+                        const SizedBox(height: 12),
                         _Divider(),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         _SettingsRow.radio(
                           label: "Women's Clothing",
                           selected: _selectedPreference == FeedPreference.women,
@@ -208,8 +210,9 @@ class _FeedPreferencesPageState
                             _savePreference(FeedPreference.women);
                           },
                         ),
+                        const SizedBox(height: 12),
                         _Divider(),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         _SettingsRow.radio(
                           label: 'Both',
                           selected: _selectedPreference == FeedPreference.both,
@@ -218,6 +221,7 @@ class _FeedPreferencesPageState
                             _savePreference(FeedPreference.both);
                           },
                         ),
+                        const SizedBox(height: 12),
                       ],
                     ),
                     if (_isSaving) ...[
