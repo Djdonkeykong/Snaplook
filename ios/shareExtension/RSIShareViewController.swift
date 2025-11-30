@@ -1390,6 +1390,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             platformName = "Reddit"
             platformType = "reddit"
             downloadFunction = downloadRedditMedia
+        } else if isImdbShareCandidate(item) {
+            platformName = "IMDb"
+            platformType = "imdb"
+            downloadFunction = downloadImdbMedia
         } else if isFacebookShareCandidate(item) {
             platformName = "Facebook"
             platformType = "facebook"
@@ -1599,6 +1603,25 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return trimmed.contains("pinterest.com/pin/") || trimmed.contains("pin.it/")
     }
 
+    private func isImdbShareCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let hasDomain = trimmed.contains("imdb.com") || trimmed.contains("imdb.to")
+        if !hasDomain { return false }
+
+        let hasValidPattern = trimmed.contains("/title/tt") ||
+                             trimmed.contains("/video/") ||
+                             trimmed.contains("/name/nm") ||
+                             trimmed.contains("/gallery/")
+
+        if hasValidPattern {
+            shareLog("IMDb URL detected: \(trimmed.prefix(80))")
+        } else {
+            shareLog("IMDb domain found but no valid pattern: \(trimmed.prefix(80))")
+        }
+
+        return hasValidPattern
+    }
+
     private func isYouTubeShareCandidate(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
@@ -1744,6 +1767,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                isSnapchatShareCandidate(value) ||
                isRedditShareCandidate(value) ||
                isXShareCandidate(value) ||
+               isImdbShareCandidate(value) ||
                isFacebookShareCandidate(value) ||
                isGoogleImageShareCandidate(value)
     }
@@ -2900,6 +2924,116 @@ open class RSIShareViewController: SLComposeServiceViewController {
         task.resume()
     }
 
+    // MARK: - IMDb Scraping
+
+    private func downloadImdbMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        shareLog("Attempting to fetch IMDb content via Jina AI...")
+
+        fetchImdbViaJina(urlString: urlString) { [weak self] imageUrls in
+            guard let self = self else { return }
+
+            if imageUrls.isEmpty {
+                shareLog("No images found via Jina for IMDb URL")
+                completion(.failure(self.makeDownloadError("IMDb", "No images found in IMDb content")))
+                return
+            }
+
+            shareLog("Found \(imageUrls.count) image(s) from IMDb via Jina")
+
+            self.downloadFirstValidImage(
+                from: Array(imageUrls.prefix(5)),
+                platform: "imdb",
+                session: URLSession.shared,
+                completion: completion
+            )
+        }
+    }
+
+    private func fetchImdbViaJina(
+        urlString: String,
+        completion: @escaping ([String]) -> Void
+    ) {
+        guard let encoded = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let jinaUrl = URL(string: "https://r.jina.ai/\(encoded)") else {
+            shareLog("Failed to build Jina URL for IMDb")
+            completion([])
+            return
+        }
+
+        var request = URLRequest(url: jinaUrl)
+        request.timeoutInterval = 15.0
+        request.httpMethod = "GET"
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+
+        shareLog("Fetching IMDb via Jina: \(jinaUrl.absoluteString.prefix(80))...")
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("Jina request failed for IMDb: \(error.localizedDescription)")
+                completion([])
+                return
+            }
+
+            guard let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                shareLog("Could not decode Jina response for IMDb")
+                completion([])
+                return
+            }
+
+            shareLog("Jina returned \(data.count) bytes for IMDb")
+
+            let imageUrls = self.extractImagesFromImdbHtml(html, baseUrl: urlString)
+            completion(imageUrls)
+        }
+
+        task.resume()
+    }
+
+    private func extractImagesFromImdbHtml(_ html: String, baseUrl: String) -> [String] {
+        var results: [String] = []
+
+        // Pattern 1: og:image
+        let ogImagePattern = #"<meta\s+(?:[^>]*?\s+)?property\s*=\s*["\']og:image["\']\s+(?:[^>]*?\s+)?content\s*=\s*["\']([^"\']+)["\']"#
+        if let ogRegex = try? NSRegularExpression(pattern: ogImagePattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = ogRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches where match.numberOfRanges > 1 {
+                let urlRange = match.range(at: 1)
+                let imageUrl = nsHtml.substring(with: urlRange).replacingOccurrences(of: "&amp;", with: "&")
+                if !imageUrl.isEmpty {
+                    shareLog("Found IMDb og:image: \(imageUrl.prefix(80))")
+                    results.append(imageUrl)
+                }
+            }
+        }
+
+        // Pattern 2: IMDb/media CDN images (m.media-amazon.com)
+        let cdnPattern = #"(https?://m\.media-amazon\.com/images/[^\s"\'<>]+\.(?:jpg|jpeg|png|webp))"#
+        if let cdnRegex = try? NSRegularExpression(pattern: cdnPattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = cdnRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches where match.numberOfRanges > 1 {
+                let urlRange = match.range(at: 1)
+                let imageUrl = nsHtml.substring(with: urlRange).replacingOccurrences(of: "&amp;", with: "&")
+                if !imageUrl.isEmpty {
+                    shareLog("Found IMDb CDN image: \(imageUrl.prefix(80))")
+                    results.append(imageUrl)
+                }
+            }
+        }
+
+        return results
+    }
+
     private func extractImagesFromRedditHtml(_ html: String, baseUrl: String) -> [String] {
         var results: [String] = []
         let nsHtml = html as NSString
@@ -3609,6 +3743,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return downloadXMedia
         case "reddit":
             return downloadRedditMedia
+        case "imdb":
+            return downloadImdbMedia
         case "facebook":
             return downloadFacebookMedia
         case "google_image":
@@ -3637,6 +3773,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return "X"
         case "reddit":
             return "Reddit"
+        case "imdb":
+            return "IMDb"
         case "facebook":
             return "Facebook"
         case "google_image":
