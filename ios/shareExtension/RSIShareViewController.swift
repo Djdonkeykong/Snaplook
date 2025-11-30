@@ -2861,6 +2861,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return downloadPinterestMedia
         case "youtube":
             return downloadYouTubeMedia
+        case "snapchat":
+            return downloadSnapchatMedia
         case "google_image":
             return downloadGoogleImageMedia
         case "generic":
@@ -2881,6 +2883,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return "Pinterest"
         case "youtube":
             return "YouTube"
+        case "snapchat":
+            return "Snapchat"
         case "google_image":
             return "Google Image"
         case "generic":
