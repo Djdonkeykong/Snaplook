@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
@@ -590,39 +591,32 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       final decoded = img.decodeImage(bytes);
       if (decoded == null) return original;
 
-      final maxDim = decoded.width > decoded.height
-          ? decoded.width
-          : decoded.height;
-      final cap = 1200; // avoid huge share payloads
+      // Scale so the shorter side meets the target size, then center-crop to a square
+      final maxDim = math.max(decoded.width, decoded.height);
+      const cap = 1200; // avoid huge share payloads
       final targetSize = maxDim > cap ? cap : maxDim;
-      final scale =
-          (decoded.width > decoded.height ? targetSize / decoded.width : targetSize / decoded.height)
-              .clamp(0.0, 1.0);
+      final minDim = math.min(decoded.width, decoded.height);
+      final scale = targetSize / minDim;
 
-      final resized = scale < 1.0
-          ? img.copyResize(
-              decoded,
-              width: (decoded.width * scale).round(),
-              height: (decoded.height * scale).round(),
-            )
-          : decoded;
-
-      final canvasSize = targetSize;
-      final canvas = img.Image(
-        width: canvasSize,
-        height: canvasSize,
-      );
-      // Light padding background
-      img.fill(
-        canvas,
-        color: img.ColorUint8.rgb(245, 245, 245),
+      final resized = img.copyResize(
+        decoded,
+        width: (decoded.width * scale).round(),
+        height: (decoded.height * scale).round(),
       );
 
-      final dx = ((canvasSize - resized.width) / 2).round();
-      final dy = ((canvasSize - resized.height) / 2).round();
-      img.compositeImage(canvas, resized, dstX: dx, dstY: dy);
+      final cropX = ((resized.width - targetSize) / 2).round().clamp(0, resized.width - targetSize);
+      final cropY =
+          ((resized.height - targetSize) / 2).round().clamp(0, resized.height - targetSize);
 
-      final jpg = img.encodeJpg(canvas, quality: 90);
+      final square = img.copyCrop(
+        resized,
+        x: cropX,
+        y: cropY,
+        width: targetSize,
+        height: targetSize,
+      );
+
+      final jpg = img.encodeJpg(square, quality: 90);
       final tempPath =
           '${Directory.systemTemp.path}/snaplook_share_square_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final file = await File(tempPath).create();
