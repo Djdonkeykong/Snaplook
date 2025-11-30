@@ -38,7 +38,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
   void initState() {
     super.initState();
 
-    _animationControllers = List.generate(10, (index) {
+    _animationControllers = List.generate(8, (index) {
       return AnimationController(
         duration: const Duration(milliseconds: 400),
         vsync: this,
@@ -240,7 +240,7 @@ class _AppList extends ConsumerWidget {
     return ListView.separated(
       padding: EdgeInsets.only(bottom: spacing.l),
       physics: const BouncingScrollPhysics(),
-      itemCount: 9,
+      itemCount: 8,
       separatorBuilder: (_, __) => SizedBox(height: spacing.l),
       itemBuilder: (context, index) {
         switch (index) {
@@ -407,26 +407,8 @@ class _AppList extends ConsumerWidget {
                 );
               },
             );
-          case 8:
           default:
-            return AnimatedBuilder(
-              animation: animationControllers[8],
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: fadeAnimations[8],
-                  child: ScaleTransition(
-                    scale: scaleAnimations[8],
-                    child: _AppCard(
-                      name: 'Other Apps',
-                      iconWidget: Icon(Icons.apps,
-                          size: 24, color: Colors.grey.shade700),
-                      hasTutorial: false,
-                      accentColor: Colors.grey.shade400,
-                    ),
-                  ),
-                );
-              },
-            );
+            return const SizedBox.shrink();
         }
       },
     );
@@ -532,8 +514,6 @@ class _AppCard extends ConsumerWidget {
             );
           }
         }
-        // Removed navigation to NotificationPermissionPage for "Other Apps"
-        // Now tapping "Other Apps" does nothing
       },
       child: Container(
         width: double.infinity,

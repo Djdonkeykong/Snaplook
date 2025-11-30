@@ -27,7 +27,6 @@ import '../../../onboarding/presentation/pages/photos_tutorial_page.dart';
 import '../../../onboarding/presentation/pages/facebook_tutorial_page.dart';
 import '../../../onboarding/presentation/pages/imdb_tutorial_page.dart';
 import '../../../onboarding/presentation/pages/x_tutorial_page.dart';
-import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../detection/presentation/pages/camera_capture_page.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
@@ -64,7 +63,6 @@ enum _TutorialSource {
   facebook,
   imdb,
   x,
-  otherApps,
 }
 
 class HomePage extends ConsumerStatefulWidget {
@@ -873,15 +871,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           gaplessPlayback: true,
         ),
       ),
-      _TutorialOptionData(
-        label: 'Other apps',
-        source: _TutorialSource.otherApps,
-        iconBuilder: () => Icon(
-          Icons.apps,
-          size: 24,
-          color: Colors.grey.shade700,
-        ),
-      ),
     ];
 
     showModalBottomSheet(
@@ -967,13 +956,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                   Positioned(
                     top: spacing.l,
                     right: spacing.l,
-                child: SnaplookCircularIconButton(
-                  icon: Icons.close,
-                  iconSize: 18,
-                  onPressed: () => Navigator.of(sheetContext).pop(),
-                  tooltip: 'Close',
-                  semanticLabel: 'Close',
-                ),
+                    child: SnaplookCircularIconButton(
+                      icon: Icons.close,
+                      iconSize: 18,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      tooltip: 'Close',
+                      semanticLabel: 'Close',
+                    ),
                   ),
                 ],
               ),
@@ -986,11 +975,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   void _startTutorialFlow(_TutorialSource source) {
     if (!mounted) return;
-
-    // Don't navigate for "Other apps" option
-    if (source == _TutorialSource.otherApps) {
-      return;
-    }
 
     Widget destination;
     switch (source) {
@@ -1029,13 +1013,9 @@ class _HomePageState extends ConsumerState<HomePage> {
         destination = const ImdbTutorialPage(returnToOnboarding: false);
         break;
       case _TutorialSource.x:
-        ref.read(xTutorialStepProvider.notifier).state =
-            XTutorialStep.step1;
+        ref.read(xTutorialStepProvider.notifier).state = XTutorialStep.step1;
         destination = const XTutorialPage(returnToOnboarding: false);
         break;
-      case _TutorialSource.otherApps:
-        // This case should never be reached due to early return above
-        return;
     }
 
     Navigator.of(context, rootNavigator: true).push(
@@ -1876,7 +1856,6 @@ class _FloatingActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final navColors = context.navigation;
 
     return Container(

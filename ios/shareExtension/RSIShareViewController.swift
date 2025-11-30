@@ -2727,6 +2727,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
         }
 
+        // Pattern 5: styles.redditmedia.com URLs that may embed preview images
+        let stylesPattern = #"(https?://styles\.redditmedia\.com/[^\s"\'<>]+)"#
+        if let stylesRegex = try? NSRegularExpression(pattern: stylesPattern, options: [.caseInsensitive]) {
+            let matches = stylesRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches where match.numberOfRanges > 0 {
+                let urlRange = match.range(at: 1)
+                let imageUrl = nsHtml.substring(with: urlRange)
+                appendIfValid(imageUrl)
+            }
+        }
+
         return results
     }
 
@@ -2735,8 +2746,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
               let host = url.host?.lowercased() else { return false }
 
         let lowerPath = url.path.lowercased()
-        // Skip subreddit/community icons and UI assets
-        if host.contains("styles.redditmedia.com") || lowerPath.contains("communityicon") {
+        // Skip obvious UI assets
+        if lowerPath.contains("communityicon") || lowerPath.contains("awards") {
             return false
         }
 
