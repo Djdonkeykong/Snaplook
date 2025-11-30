@@ -2727,8 +2727,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func isAllowedRedditImageUrl(_ urlString: String) -> Bool {
-        guard let host = URL(string: urlString)?.host?.lowercased() else { return false }
-        return host.contains("redd.it") || host.contains("redditmedia.com") || host.contains("imgur.com")
+        guard let url = URL(string: urlString),
+              let host = url.host?.lowercased() else { return false }
+
+        let lowerPath = url.path.lowercased()
+        // Skip subreddit/community icons and UI assets
+        if host.contains("styles.redditmedia.com") || lowerPath.contains("communityicon") {
+            return false
+        }
+
+        return host.contains("preview.redd.it") ||
+               host.contains("i.redd.it") ||
+               host.contains("redd.it") ||
+               host.contains("redditmedia.com") ||
+               host.contains("imgur.com")
     }
 
     private func preferOriginalRedditVariant(_ url: String) -> String {
