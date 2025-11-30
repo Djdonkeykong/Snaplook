@@ -322,7 +322,7 @@ class _HistoryCard extends StatelessWidget {
     final topResults = results.take(5).toList();
 
     final buffer = StringBuffer();
-    buffer.writeln('Snaplook matches for your photo:');
+    buffer.writeln('Top picks based on your Snaplook search:');
     buffer.writeln();
 
     if (topResults.isNotEmpty) {
