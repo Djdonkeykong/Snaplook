@@ -571,7 +571,7 @@ class _BrowserIconStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconSize = size * 0.7;
+    final iconSize = size * 0.62; // slightly smaller to avoid touching edges
     final step = iconSize * 0.6; // overlap ~40%
     final totalWidth = iconSize + (step * 2);
 

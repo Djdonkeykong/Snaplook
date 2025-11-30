@@ -1250,16 +1250,40 @@ class InstagramService {
   static Future<List<XFile>> downloadImageFromFacebookUrl(String url) async {
     try {
       print('Attempting Facebook scrape (direct): $url');
-      final html = await _fetchHtmlDirect(url);
-      if (html != null && html.isNotEmpty) {
-        final candidates = _extractFacebookImageUrls(html);
-        final files = await _downloadCandidateImages(candidates);
-        if (files.isNotEmpty) {
-          print(
-              'Successfully extracted ${files.length} image(s) from Facebook via direct scrape');
-          return files;
+
+      final userAgents = [
+        // Facebook scraper UA
+        'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.html)',
+        // Mobile Safari UA
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        // Desktop Chrome UA
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+      ];
+
+      final candidates = _buildFacebookCandidates(url);
+
+      for (final candidate in candidates) {
+        for (final ua in userAgents) {
+          final html = await _fetchHtmlWithHeaders(
+            candidate,
+            headers: {
+              'User-Agent': ua,
+              'Accept-Language': 'en-US,en;q=0.9',
+            },
+            timeout: const Duration(seconds: 15),
+          );
+          if (html == null || html.isEmpty) continue;
+
+          final urls = _extractFacebookImageUrls(html);
+          final files = await _downloadCandidateImages(urls);
+          if (files.isNotEmpty) {
+            print(
+                'Successfully extracted ${files.length} image(s) from Facebook via direct scrape');
+            return files;
+          }
         }
       }
+
       print('No images extracted from Facebook via direct scrape');
     } catch (e) {
       print('Error downloading Facebook images: $e');
@@ -1323,6 +1347,20 @@ class InstagramService {
     }
   }
 
+  static List<String> _buildFacebookCandidates(String urlString) {
+    final urls = <String>{urlString};
+    try {
+      final uri = Uri.parse(urlString);
+      final host = uri.host.toLowerCase();
+      if (host.contains('facebook.com')) {
+        urls.add(uri.replace(host: 'm.facebook.com').toString());
+        urls.add(uri.replace(host: 'mbasic.facebook.com').toString());
+        urls.add(uri.replace(host: 'touch.facebook.com').toString());
+      }
+    } catch (_) {}
+    return urls.toList();
+  }
+
   static Future<String?> _fetchHtmlDirect(
     String url, {
     Duration timeout = const Duration(seconds: 12),
@@ -1335,6 +1373,31 @@ class InstagramService {
           response.body.isNotEmpty) {
         print('Direct fetch returned ${response.body.length} bytes for $url');
         return response.body;
+      }
+      print('Direct fetch failed for $url with status ${response.statusCode}');
+    } on TimeoutException {
+      print('Direct fetch timed out for $url');
+    } catch (e) {
+      print('Direct fetch error for $url: $e');
+    }
+    return null;
+  }
+
+  static Future<String?> _fetchHtmlWithHeaders(
+    String url, {
+    Map<String, String>? headers,
+    Duration timeout = const Duration(seconds: 12),
+  }) async {
+    try {
+      final response = await http
+          .get(Uri.parse(url), headers: headers)
+          .timeout(timeout);
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          response.bodyBytes.isNotEmpty) {
+        final body = utf8.decode(response.bodyBytes, allowMalformed: true);
+        print('Direct fetch returned ${body.length} bytes for $url');
+        return body;
       }
       print('Direct fetch failed for $url with status ${response.statusCode}');
     } on TimeoutException {
@@ -1595,7 +1658,7 @@ class InstagramService {
     }
 
     final ogPattern = RegExp(
-      r'''<meta\s+(?:[^>]*?\s+)?property\s*=\s*["']og:image["']\s+(?:[^>]*?\s+)?content\s*=\s*["']([^"']+)["']''',
+      r'''<meta\s+(?:[^>]*?\s+)?property\s*=\s*["']og:image(?::secure_url)?["']\s+(?:[^>]*?\s+)?content\s*=\s*["']([^"']+)["']''',
       caseSensitive: false,
     );
     for (final match in ogPattern.allMatches(html)) {
@@ -1603,7 +1666,7 @@ class InstagramService {
     }
 
     final cdnPattern = RegExp(
-      r'''(https?://(?:scontent[^/]*\.xx\.fbcdn\.net|external[^/]*\.xx\.fbcdn\.net|scontent-[^/]*\.xx\.fbcdn\.net)/[^\s"'<>]+\.(?:jpg|jpeg|png|webp))''',
+      r'''(https?://(?:scontent[^/]*\.fbcdn\.net|external[^/]*\.fbcdn\.net)/[^\s"'<>]+\.(?:jpg|jpeg|png|webp))''',
       caseSensitive: false,
     );
     for (final match in cdnPattern.allMatches(html)) {

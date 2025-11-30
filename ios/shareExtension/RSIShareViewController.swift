@@ -2484,6 +2484,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             if let basic = replaceHost("mbasic.facebook.com") {
                 urls.append(basic)
             }
+            if let touch = replaceHost("touch.facebook.com") {
+                urls.append(touch)
+            }
         }
         return Array(NSOrderedSet(array: urls)) as? [String] ?? urls
     }
@@ -2494,6 +2497,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.timeoutInterval = timeout
         request.httpMethod = "GET"
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
 
         let semaphore = DispatchSemaphore(value: 0)
         var resultHtml: String?
@@ -2503,11 +2507,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard error == nil,
                   let http = response as? HTTPURLResponse,
                   (200...299).contains(http.statusCode),
-                  let data = data,
-                  let html = String(data: data, encoding: .utf8) else {
+                  let data = data else {
                 return
             }
-            resultHtml = html
+            if let utf8 = String(data: data, encoding: .utf8) {
+                resultHtml = utf8
+            } else if let iso = String(data: data, encoding: .isoLatin1) {
+                resultHtml = iso
+            }
         }
         task.resume()
         _ = semaphore.wait(timeout: .now() + timeout + 2.0)
@@ -2518,7 +2525,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         var results: [String] = []
 
         // Pattern 1: og:image meta tags (Facebook's Open Graph images)
-        let ogImagePattern = #"<meta\s+(?:[^>]*?\s+)?property\s*=\s*["\']og:image["\']\s+(?:[^>]*?\s+)?content\s*=\s*["\']([^"\']+)["\']"#
+        let ogImagePattern = #"<meta\s+(?:[^>]*?\s+)?property\s*=\s*["\']og:image(?::secure_url)?["\']\s+(?:[^>]*?\s+)?content\s*=\s*["\']([^"\']+)["\']"#
         if let ogRegex = try? NSRegularExpression(pattern: ogImagePattern, options: [.caseInsensitive]) {
             let nsHtml = html as NSString
             let matches = ogRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
@@ -2535,7 +2542,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         // Pattern 2: Facebook CDN images (scontent, fbcdn)
-        let fbCdnPattern = #"(https?://(?:scontent[^/]*\.xx\.fbcdn\.net|external[^/]*\.xx\.fbcdn\.net|scontent-[^/]*\.xx\.fbcdn\.net)/[^\s"\'<>]+\.(?:jpg|jpeg|png|webp))"#
+        let fbCdnPattern = #"(https?://(?:scontent[^/]*\.fbcdn\.net|external[^/]*\.fbcdn\.net)/[^\s"\'<>]+\.(?:jpg|jpeg|png|webp))"#
         if let cdnRegex = try? NSRegularExpression(pattern: fbCdnPattern, options: [.caseInsensitive]) {
             let nsHtml = html as NSString
             let matches = cdnRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
