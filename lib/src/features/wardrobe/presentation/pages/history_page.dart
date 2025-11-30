@@ -441,7 +441,8 @@ class _HistoryCard extends StatelessWidget {
                 child: cloudinaryUrl != null
                     ? CachedNetworkImage(
                         imageUrl: cloudinaryUrl,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.center,
                         placeholder: (context, url) => Container(
                           color: colorScheme.surfaceVariant,
                         ),
