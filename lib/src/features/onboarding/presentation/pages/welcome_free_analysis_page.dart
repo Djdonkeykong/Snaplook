@@ -126,59 +126,69 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: spacing.l),
-          child: Column(
-            children: [
-              const Spacer(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: spacing.l),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(height: 24),
 
-              _CompletionBadge(),
+                      _CompletionBadge(),
 
-              FadeTransition(
-                opacity: _textFadeAnimation,
-                child: Transform.translate(
-                  offset: const Offset(0, -170),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.check_circle, color: Color(0xFF50d05c), size: 16),
-                      SizedBox(width: 6),
-                      Text(
-                        'All done!',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'PlusJakartaSans',
+                      FadeTransition(
+                        opacity: _textFadeAnimation,
+                        child: Transform.translate(
+                          offset: const Offset(0, -170),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.check_circle, color: Color(0xFF50d05c), size: 16),
+                              SizedBox(width: 6),
+                              Text(
+                                'All done!',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'PlusJakartaSans',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
+
+                      FadeTransition(
+                        opacity: _textFadeAnimation,
+                        child: Transform.translate(
+                          offset: const Offset(0, -154),
+                          child: const Text(
+                            'Your fashion search\nstarts now!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.tertiary,
+                              fontFamily: 'PlusJakartaSans',
+                              letterSpacing: -0.5,
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
               ),
-
-              FadeTransition(
-                opacity: _textFadeAnimation,
-                child: Transform.translate(
-                  offset: const Offset(0, -154),
-                  child: const Text(
-                    'Your fashion search\nstarts now!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.tertiary,
-                      fontFamily: 'PlusJakartaSans',
-                      letterSpacing: -0.5,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              ),
-
-              const Spacer(),
-            ],
-          ),
+            );
+          },
         ),
       ),
       bottomNavigationBar: Container(
