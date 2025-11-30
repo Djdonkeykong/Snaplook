@@ -823,11 +823,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ),
       _TutorialOptionData(
-        label: 'Web Browsers',
-        source: _TutorialSource.safari,
-        iconBuilder: () => const _BrowserIconStack(),
-      ),
-      _TutorialOptionData(
         label: 'Photos',
         source: _TutorialSource.photos,
         iconBuilder: () => Image.asset(
@@ -855,6 +850,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           height: 24,
           gaplessPlayback: true,
         ),
+      ),
+      _TutorialOptionData(
+        label: 'Web Browsers',
+        source: _TutorialSource.safari,
+        iconBuilder: () => const _BrowserIconStack(),
       ),
       _TutorialOptionData(
         label: 'X',
