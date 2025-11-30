@@ -492,42 +492,117 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       // Give tactile response when the share action is available (results showing).
       HapticFeedback.mediumImpact();
 
-      // If opened from history and we have the search metadata, share the search entry instead of the image
-      if (widget.searchId != null && _loadedSearchData != null) {
-        final message = _buildHistoryShareMessage(_loadedSearchData!);
-        final renderBox = context.findRenderObject() as RenderBox?;
-        final origin = (renderBox != null && renderBox.hasSize)
-            ? renderBox.localToGlobal(Offset.zero) & renderBox.size
-            : const Rect.fromLTWH(0, 0, 1, 1);
-        await Share.share(
-          message,
-          subject: 'Snaplook search',
+      final renderBox = context.findRenderObject() as RenderBox?;
+      final origin = (renderBox != null && renderBox.hasSize)
+          ? renderBox.localToGlobal(Offset.zero) & renderBox.size
+          : const Rect.fromLTWH(0, 0, 1, 1);
+
+      final sharePayload = _buildSharePayload();
+      final message = sharePayload.message;
+      final subject = sharePayload.subject;
+      final imageFile = await _resolveShareImage();
+
+      if (imageFile != null) {
+        await Share.shareXFiles(
+          [imageFile],
+          text: message,
+          subject: subject,
           sharePositionOrigin: origin,
         );
-        return;
-      }
-
-      if (widget.imageUrl != null) {
-        final uri = Uri.parse(widget.imageUrl!);
-        final response = await http.get(uri);
-        final bytes = response.bodyBytes;
-        final temp =
-            await File('${Directory.systemTemp.path}/share_image.jpg').create();
-        await temp.writeAsBytes(bytes);
-        await Share.shareXFiles([XFile(temp.path)],
-            text: 'Check out what I found with Snaplook!');
       } else {
-        final imagesState = ref.read(selectedImagesProvider);
-        final selectedImage = imagesState.currentImage;
-        if (selectedImage != null) {
-          await Share.shareXFiles([XFile(selectedImage.path)],
-              text: 'Check out what I found with Snaplook!');
-        }
+        await Share.share(
+          message,
+          subject: subject,
+          sharePositionOrigin: origin,
+        );
       }
     } catch (e) {
       print('Error sharing image: $e');
     }
   }
+
+  _SharePayload _buildSharePayload() {
+    final buffer = StringBuffer();
+    final topResults = _results.take(5).toList();
+
+    buffer.writeln('Snaplook matches for your photo:');
+    buffer.writeln();
+
+    if (topResults.isNotEmpty) {
+      for (var i = 0; i < topResults.length; i++) {
+        final r = topResults[i];
+        final name = r.productName.isNotEmpty ? r.productName : 'Item';
+        final brand = r.brand.isNotEmpty ? r.brand : '';
+        final price = r.priceDisplay ?? '';
+        final link = r.purchaseUrl ?? '';
+
+        buffer.write('${i + 1}) ');
+        if (brand.isNotEmpty) buffer.write('$brand — ');
+        buffer.write(name);
+        if (price.isNotEmpty) buffer.write(' • $price');
+        if (link.isNotEmpty) buffer.write('\n$link');
+        buffer.writeln();
+      }
+    } else {
+      buffer.writeln('Check out what I found with Snaplook!');
+    }
+
+    final subject = 'Snaplook matches for your photo';
+
+    return _SharePayload(
+      subject: subject,
+      message: buffer.toString().trim(),
+    );
+  }
+
+  Future<XFile?> _resolveShareImage() async {
+    try {
+      // If we loaded from history, prefer the stored Cloudinary image
+      if (_loadedImageUrl != null && _loadedImageUrl!.isNotEmpty) {
+        final file = await _downloadTempImage(_loadedImageUrl!);
+        if (file != null) return file;
+      }
+
+      // If a direct imageUrl exists on the widget (live detection)
+      if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
+        final file = await _downloadTempImage(widget.imageUrl!);
+        if (file != null) return file;
+      }
+
+      // Fallback to currently selected image in memory
+      final imagesState = ref.read(selectedImagesProvider);
+      final selectedImage = imagesState.currentImage;
+      if (selectedImage != null) {
+        return XFile(selectedImage.path);
+      }
+    } catch (e) {
+      print('Error resolving share image: $e');
+    }
+    return null;
+  }
+
+  Future<XFile?> _downloadTempImage(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+        return null;
+      }
+      final temp = await File(
+        '${Directory.systemTemp.path}/snaplook_share_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      ).create();
+      await temp.writeAsBytes(response.bodyBytes);
+      return XFile(temp.path);
+    } catch (e) {
+      print('Error downloading share image: $e');
+      return null;
+    }
+  }
+
+class _SharePayload {
+  final String subject;
+  final String message;
+  _SharePayload({required this.subject, required this.message});
+}
 
   String _buildHistoryShareMessage(Map<String, dynamic> data) {
     final rawType = (data['search_type'] as String?)?.trim();
