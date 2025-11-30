@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -14,6 +17,7 @@ import '../../../../../shared/navigation/main_navigation.dart'
     show selectedIndexProvider;
 import 'package:timeago/timeago.dart' as timeago;
 import '../../../detection/presentation/pages/detection_page.dart';
+import '../../../detection/presentation/pages/share_payload.dart';
 
 final historyProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
@@ -253,30 +257,149 @@ class _HistoryCard extends StatelessWidget {
     required this.radius,
   });
 
-  void _shareSearch(BuildContext context) {
+  Future<void> _shareSearch(BuildContext context) async {
     HapticFeedback.mediumImpact();
-    final sourceLabel = _getSourceLabel();
-    final totalResults = (search['total_results'] as num?)?.toInt() ?? 0;
-    final resultsLabel =
-        totalResults == 1 ? '1 product' : '$totalResults products';
-    final sourceUrl = (search['source_url'] as String?)?.trim() ?? '';
-
-    final message = sourceUrl.isNotEmpty
-        ? 'Check out this $sourceLabel Snaplook search – $resultsLabel found: $sourceUrl'
-        : 'Check out this $sourceLabel Snaplook search – $resultsLabel found!';
 
     final box = context.findRenderObject() as RenderBox?;
     final origin = (box != null && box.hasSize)
         ? box.localToGlobal(Offset.zero) & box.size
         : const Rect.fromLTWH(0, 0, 1, 1);
 
-    Share.share(
-      message,
-      subject: 'Snaplook $sourceLabel search',
-      sharePositionOrigin: origin,
+    final searchId = search['id'] as String?;
+    if (searchId == null) {
+      _showToast(context, 'Unable to share this search.');
+      return;
+    }
+
+    final supabaseService = SupabaseService();
+    final fullSearch = await supabaseService.getSearchById(searchId);
+    if (fullSearch == null) {
+      _showToast(context, 'Unable to load search details to share.');
+      return;
+    }
+
+    final payload = _buildSharePayload(fullSearch);
+    final cloudinaryUrl =
+        (fullSearch['cloudinary_url'] as String?)?.trim() ?? '';
+    XFile? shareImage;
+    if (cloudinaryUrl.isNotEmpty) {
+      shareImage = await _downloadAndSquare(cloudinaryUrl);
+    }
+
+    if (shareImage != null) {
+      await Share.shareXFiles(
+        [shareImage],
+        text: payload.message,
+        subject: payload.subject,
+        sharePositionOrigin: origin,
+      );
+    } else {
+      await Share.share(
+        payload.message,
+        subject: payload.subject,
+        sharePositionOrigin: origin,
+      );
+    }
+  }
+
+  SharePayload _buildSharePayload(Map<String, dynamic> searchData) {
+    final results = (searchData['search_results'] as List<dynamic>?) ?? [];
+    final topResults = results.take(5).toList();
+
+    final buffer = StringBuffer();
+    buffer.writeln('Snaplook matches for your photo:');
+    buffer.writeln();
+
+    if (topResults.isNotEmpty) {
+      for (var i = 0; i < topResults.length; i++) {
+        final r = topResults[i] as Map<String, dynamic>;
+        final name = (r['product_name'] as String?)?.trim();
+        final brand = (r['brand'] as String?)?.trim();
+        final priceDisplay =
+            (r['price_display'] as String?) ?? (r['price']?.toString() ?? '');
+        final link = (r['purchase_url'] as String?)?.trim() ?? '';
+
+        final safeName = (name != null && name.isNotEmpty) ? name : 'Item';
+        final safeBrand = (brand != null && brand.isNotEmpty) ? brand : '';
+
+        buffer.write('${i + 1}) ');
+        if (safeBrand.isNotEmpty) buffer.write('$safeBrand - ');
+        buffer.write(safeName);
+        if (priceDisplay.isNotEmpty) buffer.write(' - $priceDisplay');
+        if (link.isNotEmpty) buffer.write('\n$link');
+        buffer.writeln();
+      }
+    } else {
+      buffer.writeln('Check out what I found with Snaplook!');
+    }
+
+    return SharePayload(
+      subject: 'Snaplook matches for your photo',
+      message: buffer.toString().trim(),
     );
   }
 
+  Future<XFile?> _downloadAndSquare(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode != 200 || response.bodyBytes.isEmpty) return null;
+
+      final decoded = img.decodeImage(response.bodyBytes);
+      if (decoded == null) return null;
+
+      final maxDim =
+          decoded.width > decoded.height ? decoded.width : decoded.height;
+      const cap = 1200;
+      final targetSize = maxDim > cap ? cap : maxDim;
+      final minDim =
+          decoded.width < decoded.height ? decoded.width : decoded.height;
+      final scale = targetSize / minDim;
+
+      final resized = img.copyResize(
+        decoded,
+        width: (decoded.width * scale).round(),
+        height: (decoded.height * scale).round(),
+      );
+
+      final cropX =
+          ((resized.width - targetSize) / 2).round().clamp(0, resized.width - targetSize);
+      final cropY = ((resized.height - targetSize) / 2)
+          .round()
+          .clamp(0, resized.height - targetSize);
+
+      final square = img.copyCrop(
+        resized,
+        x: cropX,
+        y: cropY,
+        width: targetSize,
+        height: targetSize,
+      );
+
+      final jpg = img.encodeJpg(square, quality: 90);
+      final tempPath =
+          '${Directory.systemTemp.path}/snaplook_history_share_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      await File(tempPath).writeAsBytes(jpg, flush: true);
+      return XFile(tempPath);
+    } catch (e) {
+      debugPrint('Error preparing share image: $e');
+      return null;
+    }
+  }
+
+  void _showToast(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: context.snackTextStyle(
+            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+          ),
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
   void _copyLink(BuildContext context) {
     final messenger = ScaffoldMessenger.of(context);
     final sourceUrl = (search['source_url'] as String?)?.trim() ?? '';
