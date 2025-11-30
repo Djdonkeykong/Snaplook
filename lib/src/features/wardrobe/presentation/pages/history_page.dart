@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -303,7 +304,21 @@ class _HistoryCard extends StatelessWidget {
   }
 
   SharePayload _buildSharePayload(Map<String, dynamic> searchData) {
-    final results = (searchData['search_results'] as List<dynamic>?) ?? [];
+    final rawResults = searchData['search_results'];
+    List<dynamic> results;
+    if (rawResults is List) {
+      results = rawResults;
+    } else if (rawResults is String) {
+      try {
+        final decoded = jsonDecode(rawResults);
+        results = decoded is List ? decoded : <dynamic>[];
+      } catch (_) {
+        results = <dynamic>[];
+      }
+    } else {
+      results = <dynamic>[];
+    }
+
     final topResults = results.take(5).toList();
 
     final buffer = StringBuffer();
