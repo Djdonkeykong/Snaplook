@@ -1479,12 +1479,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let tempPath = containerURL.appendingPathComponent("TempImage.png")
         if writeTempFile(image, to: tempPath) {
             let newPathDecoded = tempPath.absoluteString.removingPercentEncoding ?? tempPath.absoluteString
-            sharedMedia.append(SharedMediaFile(
+            let shared = SharedMediaFile(
                 path: newPathDecoded,
                 mimeType: type == .image ? "image/png" : nil,
                 type: type
-            ))
+            )
+            sharedMedia.append(shared)
             shareLog("Saved UIImage to \(newPathDecoded) - count now \(sharedMedia.count)")
+
+            // Capture pending image data for inline preview if not already set
+            if pendingImageData == nil {
+                if let data = try? Data(contentsOf: tempPath) {
+                    pendingImageData = data
+                    pendingSharedFile = shared
+                    shareLog("Captured pendingImageData from UIImage for inline preview (\(data.count) bytes)")
+                }
+            }
         } else {
             shareLog("ERROR: Failed to write UIImage for index \(index)")
         }
@@ -1522,12 +1532,25 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     shareLog("Stored video at \(newPathDecoded) - count now \(sharedMedia.count)")
                 }
             } else {
-                sharedMedia.append(SharedMediaFile(
+                let shared = SharedMediaFile(
                     path: newPathDecoded,
                     mimeType: url.mimeType(),
                     type: type
-                ))
+                )
+                sharedMedia.append(shared)
                 shareLog("Stored file at \(newPathDecoded) - count now \(sharedMedia.count)")
+
+                // Capture pending image data for inline preview when the file is an image
+                if type == .image && pendingImageData == nil {
+                    do {
+                        let data = try Data(contentsOf: newPath)
+                        pendingImageData = data
+                        pendingSharedFile = shared
+                        shareLog("Captured pendingImageData for inline preview (\(data.count) bytes)")
+                    } catch {
+                        shareLog("WARN: Failed to load image data for inline preview: \(error.localizedDescription)")
+                    }
+                }
             }
         } else {
             shareLog("ERROR: Failed to copy file \(url)")
