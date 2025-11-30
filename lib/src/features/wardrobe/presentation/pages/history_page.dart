@@ -424,10 +424,18 @@ class _HistoryCard extends StatelessWidget {
       ),
     );
   }
-  void _copyLink(BuildContext context) {
+  Future<void> _copyLink(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     // Copy the rich share text (top matches + links) instead of a raw source URL.
-    final payload = _buildSharePayload(search);
+    final supabaseService = SupabaseService();
+    final searchId = search['id'] as String?;
+    Map<String, dynamic>? fullSearch;
+
+    if (searchId != null) {
+      fullSearch = await supabaseService.getSearchById(searchId);
+    }
+
+    final payload = _buildSharePayload(fullSearch ?? search);
     Clipboard.setData(ClipboardData(text: payload.message));
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
