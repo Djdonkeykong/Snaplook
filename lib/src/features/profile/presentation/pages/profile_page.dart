@@ -304,11 +304,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
                 SizedBox(height: spacing.l),
 
-                // Support Section
-                _SectionHeader(title: 'Support'),
+                // Support & Sharing Section
+                _SectionHeader(title: 'Support & Sharing'),
                 _SimpleSettingItem(
                   title: 'Help',
                   onTap: () => _openHelpLink(context),
+                ),
+                _SimpleSettingItem(
+                  title: 'Invite Friends',
+                  onTap: () => _shareApp(context),
                 ),
                 _SimpleSettingItem(
                   title: 'Share Extension Logs',
