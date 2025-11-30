@@ -2194,7 +2194,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 return
             }
 
-            self.shareLog("Falling back to ScrapingBee for Pinterest...")
+            shareLog("Falling back to ScrapingBee for Pinterest...")
             self.fetchPinterestViaScrapingBee(
                 urlString: urlString,
                 apiKey: apiKey,
@@ -2665,7 +2665,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Optional fallback: ScrapingBee (requires API key)
             if let apiKey = self.scrapingBeeApiKey(), !apiKey.isEmpty {
-                self.shareLog("Falling back to ScrapingBee for Facebook...")
+                shareLog("Falling back to ScrapingBee for Facebook...")
                 self.fetchFacebookViaScrapingBee(
                     urlString: urlString,
                     apiKey: apiKey,
