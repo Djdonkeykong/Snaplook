@@ -502,10 +502,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       final message = sharePayload.message;
       final subject = sharePayload.subject;
       final imageFile = await _resolveShareImage();
+      final shareFile =
+          imageFile != null ? await _squareImageForShare(imageFile) : null;
 
-      if (imageFile != null) {
+      if (shareFile != null) {
         await Share.shareXFiles(
-          [imageFile],
+          [shareFile],
           text: message,
           subject: subject,
           sharePositionOrigin: origin,
@@ -583,6 +585,52 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       print('Error resolving share image: $e');
     }
     return null;
+  }
+
+  Future<XFile?> _squareImageForShare(XFile original) async {
+    try {
+      final bytes = await original.readAsBytes();
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return original;
+
+      final maxDim = decoded.width > decoded.height
+          ? decoded.width
+          : decoded.height;
+      final cap = 1200; // avoid huge share payloads
+      final targetSize = maxDim > cap ? cap : maxDim;
+      final scale =
+          (decoded.width > decoded.height ? targetSize / decoded.width : targetSize / decoded.height)
+              .clamp(0.0, 1.0);
+
+      final resized = scale < 1.0
+          ? img.copyResize(
+              decoded,
+              width: (decoded.width * scale).round(),
+              height: (decoded.height * scale).round(),
+            )
+          : decoded;
+
+      final canvasSize = targetSize;
+      final canvas = img.Image(
+        width: canvasSize,
+        height: canvasSize,
+      );
+      img.fill(canvas, img.getColor(245, 245, 245)); // light padding background
+
+      final dx = ((canvasSize - resized.width) / 2).round();
+      final dy = ((canvasSize - resized.height) / 2).round();
+      img.copyInto(canvas, resized, dstX: dx, dstY: dy);
+
+      final jpg = img.encodeJpg(canvas, quality: 90);
+      final tempPath =
+          '${Directory.systemTemp.path}/snaplook_share_square_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = await File(tempPath).create();
+      await file.writeAsBytes(jpg, flush: true);
+      return XFile(file.path, mimeType: 'image/jpeg');
+    } catch (e) {
+      print('Error squaring share image: $e');
+      return original;
+    }
   }
 
   Future<XFile?> _downloadTempImage(String url) async {
