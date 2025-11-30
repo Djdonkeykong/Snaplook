@@ -495,7 +495,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       // If opened from history and we have the search metadata, share the search entry instead of the image
       if (widget.searchId != null && _loadedSearchData != null) {
         final message = _buildHistoryShareMessage(_loadedSearchData!);
-        await Share.share(message, subject: 'Snaplook search');
+        final renderBox = context.findRenderObject() as RenderBox?;
+        final origin = (renderBox != null && renderBox.hasSize)
+            ? renderBox.localToGlobal(Offset.zero) & renderBox.size
+            : const Rect.fromLTWH(0, 0, 1, 1);
+        await Share.share(
+          message,
+          subject: 'Snaplook search',
+          sharePositionOrigin: origin,
+        );
         return;
       }
 

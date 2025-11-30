@@ -265,9 +265,15 @@ class _HistoryCard extends StatelessWidget {
         ? 'Check out this $sourceLabel Snaplook search – $resultsLabel found: $sourceUrl'
         : 'Check out this $sourceLabel Snaplook search – $resultsLabel found!';
 
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = (box != null && box.hasSize)
+        ? box.localToGlobal(Offset.zero) & box.size
+        : const Rect.fromLTWH(0, 0, 1, 1);
+
     Share.share(
       message,
       subject: 'Snaplook $sourceLabel search',
+      sharePositionOrigin: origin,
     );
   }
 
