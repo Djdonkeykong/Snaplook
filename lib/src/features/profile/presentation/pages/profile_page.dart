@@ -10,6 +10,7 @@ import '../../../auth/presentation/pages/login_page.dart';
 import 'edit_profile_page.dart';
 import 'feed_preferences_page.dart';
 import 'manage_subscription_page.dart';
+import 'notification_settings_page.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
@@ -272,7 +273,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
                 _SimpleSettingItem(
                   title: 'Notifications',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationSettingsPage(),
+                      ),
+                    );
+                  },
                 ),
 
                 SizedBox(height: spacing.l),
