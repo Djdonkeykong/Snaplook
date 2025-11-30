@@ -22,8 +22,8 @@ class ManageSubscriptionPage extends ConsumerWidget {
         uri = Uri.parse('https://play.google.com/store/account/subscriptions');
       }
 
-      if (uri != null && await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (uri != null) {
+        await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
       }
     } catch (e) {
       if (context.mounted) {
@@ -106,146 +106,53 @@ class ManageSubscriptionPage extends ConsumerWidget {
             children: [
               SizedBox(height: spacing.l),
 
-              // Subscription Status Card
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(spacing.l),
-                decoration: BoxDecoration(
-                  color: colorScheme.surface,
-                  borderRadius: BorderRadius.circular(context.radius.large),
-                  border: Border.all(
-                    color: colorScheme.outlineVariant,
-                    width: 1.5,
+              _SettingsCard(
+                children: [
+                  _SettingsRow.value(
+                    label: 'Current Plan',
+                    value: displayStatus,
+                    valueColor:
+                        isSubscribed ? AppColors.secondary : colorScheme.onSurface,
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Current Plan',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'PlusJakartaSans',
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    SizedBox(height: spacing.xs),
-                    Row(
-                      children: [
-                        Text(
-                          displayStatus,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'PlusJakartaSans',
-                            color: isSubscribed
-                                ? AppColors.secondary
-                                : colorScheme.onSurface,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        if (isSubscribed) ...[
-                          SizedBox(width: spacing.s),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: spacing.s,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.secondary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Active',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'PlusJakartaSans',
-                                color: AppColors.secondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
+                ],
               ),
 
-              SizedBox(height: spacing.xl),
+              SizedBox(height: spacing.l),
 
-              // Manage Subscription Button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: OutlinedButton(
-                  onPressed: () => _openSubscriptionManagement(context),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.secondary,
-                    side: const BorderSide(
-                      color: AppColors.secondary,
-                      width: 1.5,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                  ),
-                  child: Text(
-                    Platform.isIOS
+              _SettingsCard(
+                children: [
+                  _SettingsRow.disclosure(
+                    label: Platform.isIOS
                         ? 'Manage in App Store'
                         : 'Manage in Google Play',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'PlusJakartaSans',
-                      letterSpacing: -0.2,
-                    ),
+                    onTap: () => _openSubscriptionManagement(context),
                   ),
-                ),
+                  _Divider(),
+                  _SettingsRow.disclosure(
+                    label: 'Restore Purchases',
+                    onTap: () => _restorePurchases(context),
+                  ),
+                ],
               ),
 
-              SizedBox(height: spacing.m),
+              SizedBox(height: spacing.l),
 
-              // Restore Purchases Button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: OutlinedButton(
-                  onPressed: () => _restorePurchases(context),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: colorScheme.onSurface,
-                    side: BorderSide(
-                      color: colorScheme.outlineVariant,
-                      width: 1.5,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                  ),
-                  child: const Text(
-                    'Restore Purchases',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'PlusJakartaSans',
-                      letterSpacing: -0.2,
+              _SettingsCard(
+                children: [
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Text(
+                      'To cancel or modify your subscription, use the ${Platform.isIOS ? 'App Store' : 'Google Play'} subscription management. Changes take effect at the end of your billing period.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.45,
+                        color: colorScheme.onSurfaceVariant,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
                     ),
                   ),
-                ),
-              ),
-
-              SizedBox(height: spacing.xl),
-
-              // Info text
-              Text(
-                'To cancel or modify your subscription, use the ${Platform.isIOS ? 'App Store' : 'Google Play'} subscription management. Changes will take effect at the end of your current billing period.',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontFamily: 'PlusJakartaSans',
-                  color: colorScheme.onSurfaceVariant,
-                  height: 1.5,
-                ),
+                ],
               ),
             ],
           ),
@@ -270,3 +177,115 @@ class ManageSubscriptionPage extends ConsumerWidget {
         .join(' ');
   }
 }
+
+class _SettingsCard extends StatelessWidget {
+  final List<Widget> children;
+  const _SettingsCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE6E6E6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(children: children),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const Divider(
+      height: 1,
+      thickness: 1,
+      color: Color(0xFFECECEC),
+      indent: 16,
+      endIndent: 16,
+    );
+  }
+}
+
+class _SettingsRow extends StatelessWidget {
+  final String label;
+  final String? value;
+  final Color? valueColor;
+  final VoidCallback? onTap;
+  final _RowType type;
+
+  const _SettingsRow.value({
+    required this.label,
+    this.value,
+    this.valueColor,
+  })  : onTap = null,
+        type = _RowType.value;
+
+  const _SettingsRow.disclosure({
+    required this.label,
+    required this.onTap,
+    this.value,
+    this.valueColor,
+  }) : type = _RowType.disclosure;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      fontFamily: 'PlusJakartaSans',
+      color: Colors.black,
+    );
+    final valueStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w500,
+      fontFamily: 'PlusJakartaSans',
+      color: valueColor ?? Colors.black.withOpacity(0.6),
+    );
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: textStyle,
+              ),
+            ),
+            if (value != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  value!,
+                  style: valueStyle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            if (type == _RowType.disclosure)
+              const Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: Color(0xFF8E8E93),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _RowType { value, disclosure }

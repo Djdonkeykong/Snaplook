@@ -145,7 +145,6 @@ class _FeedPreferencesPageState
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -174,58 +173,51 @@ class _FeedPreferencesPageState
             )
           : SafeArea(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.l),
+                padding: EdgeInsets.fromLTRB(spacing.l, spacing.l, spacing.l, spacing.xl),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: spacing.l),
-
-                    // Description
+                    const SizedBox(height: 4),
                     Text(
                       'Choose what you want to see in your feed',
                       style: TextStyle(
                         fontSize: 16,
-                        color: colorScheme.onSurfaceVariant,
+                        color: Colors.black.withOpacity(0.6),
                         fontFamily: 'PlusJakartaSans',
                         height: 1.5,
                       ),
                     ),
-
-                    SizedBox(height: spacing.xl),
-
-                    // Preference Options
-                    _PreferenceOption(
-                      label: "Men's Clothing",
-                      isSelected: _selectedPreference == FeedPreference.men,
-                      onTap: () {
-                        HapticFeedback.mediumImpact();
-                        _savePreference(FeedPreference.men);
-                      },
+                    SizedBox(height: spacing.l),
+                    _SettingsCard(
+                      children: [
+                        _SettingsRow.radio(
+                          label: "Men's Clothing",
+                          selected: _selectedPreference == FeedPreference.men,
+                          onTap: () {
+                            HapticFeedback.mediumImpact();
+                            _savePreference(FeedPreference.men);
+                          },
+                        ),
+                        _Divider(),
+                        _SettingsRow.radio(
+                          label: "Women's Clothing",
+                          selected: _selectedPreference == FeedPreference.women,
+                          onTap: () {
+                            HapticFeedback.mediumImpact();
+                            _savePreference(FeedPreference.women);
+                          },
+                        ),
+                        _Divider(),
+                        _SettingsRow.radio(
+                          label: 'Both',
+                          selected: _selectedPreference == FeedPreference.both,
+                          onTap: () {
+                            HapticFeedback.mediumImpact();
+                            _savePreference(FeedPreference.both);
+                          },
+                        ),
+                      ],
                     ),
-
-                    SizedBox(height: spacing.m),
-
-                    _PreferenceOption(
-                      label: "Women's Clothing",
-                      isSelected:
-                          _selectedPreference == FeedPreference.women,
-                      onTap: () {
-                        HapticFeedback.mediumImpact();
-                        _savePreference(FeedPreference.women);
-                      },
-                    ),
-
-                    SizedBox(height: spacing.m),
-
-                    _PreferenceOption(
-                      label: 'Both',
-                      isSelected: _selectedPreference == FeedPreference.both,
-                      onTap: () {
-                        HapticFeedback.mediumImpact();
-                        _savePreference(FeedPreference.both);
-                      },
-                    ),
-
                     if (_isSaving) ...[
                       SizedBox(height: spacing.l),
                       const Center(
@@ -247,44 +239,111 @@ class _FeedPreferencesPageState
   }
 }
 
-class _PreferenceOption extends StatelessWidget {
+class _SettingsCard extends StatelessWidget {
+  final List<Widget> children;
+
+  const _SettingsCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE6E6E6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(children: children),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const Divider(
+      height: 1,
+      thickness: 1,
+      color: Color(0xFFECECEC),
+      indent: 16,
+      endIndent: 16,
+    );
+  }
+}
+
+class _SettingsRow extends StatelessWidget {
   final String label;
-  final bool isSelected;
+  final bool selected;
   final VoidCallback onTap;
 
-  const _PreferenceOption({
+  const _SettingsRow.radio({
     required this.label,
-    required this.isSelected,
+    required this.selected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final textColor = Colors.black;
+    return InkWell(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        height: 64,
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFF2003C) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFFF2003C)
-                : const Color(0xFFE5E7EB),
-            width: 1.5,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: isSelected ? Colors.white : Colors.black,
-              fontFamily: 'PlusJakartaSans',
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'PlusJakartaSans',
+                  color: textColor,
+                ),
+              ),
             ),
+            _RadioIcon(selected: selected),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RadioIcon extends StatelessWidget {
+  final bool selected;
+  const _RadioIcon({required this.selected});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? const Color(0xFFF2003C) : const Color(0xFFD0D0D0),
+          width: 1.5,
+        ),
+      ),
+      child: Center(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: selected ? const Color(0xFFF2003C) : Colors.transparent,
           ),
         ),
       ),
