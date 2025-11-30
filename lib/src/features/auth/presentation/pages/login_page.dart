@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
@@ -29,6 +30,44 @@ class _LoginPageState extends ConsumerState<LoginPage>
     with WidgetsBindingObserver {
   VideoPlayerController? get _controller =>
       VideoPreloader.instance.loginVideoController;
+
+  Future<void> _openLegalLink({
+    required String url,
+    required String fallbackLabel,
+  }) async {
+    final uri = Uri.parse(url);
+
+    // Prefer in-app browser (SafariViewController/Custom Tab)
+    if (await canLaunchUrl(uri)) {
+      final ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      if (ok) return;
+    }
+
+    // Fallback to in-app WebView
+    if (await canLaunchUrl(uri)) {
+      final ok = await launchUrl(uri, mode: LaunchMode.inAppWebView);
+      if (ok) return;
+    }
+
+    // Last resort: external
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Could not open $fallbackLabel',
+          style: context.snackTextStyle(
+            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+          ),
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -461,10 +500,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               recognizer: TapGestureRecognizer()
                                 ..onTap = () {
                                   HapticFeedback.selectionClick();
-                                  AccountCreationPage.openLegalSheet(
-                                    context: context,
-                                    title: 'Terms of Service',
+                                  _openLegalLink(
                                     url: 'https://truefindr.com/terms-of-service/',
+                                    fallbackLabel: 'Terms of Service',
                                   );
                                 },
                             ),
@@ -490,10 +528,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               recognizer: TapGestureRecognizer()
                                 ..onTap = () {
                                   HapticFeedback.selectionClick();
-                                  AccountCreationPage.openLegalSheet(
-                                    context: context,
-                                    title: 'Privacy Policy',
+                                  _openLegalLink(
                                     url: 'https://truefindr.com/privacy-policy/',
+                                    fallbackLabel: 'Privacy Policy',
                                   );
                                 },
                             ),
