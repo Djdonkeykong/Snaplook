@@ -252,7 +252,6 @@ class _SettingsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE6E6E6)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
