@@ -288,8 +288,15 @@ class _HistoryCard extends StatelessWidget {
     }
 
     if (shareImage != null) {
+      final files = <XFile>[shareImage];
+      // Add a tiny text attachment to force the message to accompany the image on iOS targets.
+      if (payload.message.isNotEmpty) {
+        final textFile = await _createTextAttachment(payload.message);
+        if (textFile != null) files.add(textFile);
+      }
+
       await Share.shareXFiles(
-        [shareImage],
+        files,
         text: payload.message,
         subject: payload.subject,
         sharePositionOrigin: origin,
@@ -340,7 +347,9 @@ class _HistoryCard extends StatelessWidget {
         buffer.write('${i + 1}) ');
         if (safeBrand.isNotEmpty) buffer.write('$safeBrand - ');
         buffer.write(safeName);
-        if (priceDisplay.isNotEmpty) buffer.write(' - $priceDisplay');
+        if (priceDisplay.isNotEmpty && !_isZeroishPrice(priceDisplay)) {
+          buffer.write(' - $priceDisplay');
+        }
         if (link.isNotEmpty) buffer.write('\n$link');
         buffer.writeln();
       }
@@ -361,6 +370,19 @@ class _HistoryCard extends StatelessWidget {
       subject: 'Snaplook matches for your photo',
       message: buffer.toString().trim(),
     );
+  }
+
+  bool _isZeroishPrice(String price) {
+    final trimmed = price.trim();
+    if (trimmed.isEmpty) return true;
+    // Common zero patterns
+    const zeroTokens = {'0', '0.0', '0.00', '\$0', '\$0.0', '\$0.00'};
+    if (zeroTokens.contains(trimmed.toLowerCase())) return true;
+    // If it parses to 0, treat as zero
+    final cleaned = trimmed.replaceAll(RegExp(r'[^0-9\\.-]'), '');
+    if (cleaned.isEmpty) return false;
+    final value = double.tryParse(cleaned);
+    return value != null && value == 0.0;
   }
 
   Future<XFile?> _downloadAndSquare(String url) async {
@@ -406,6 +428,19 @@ class _HistoryCard extends StatelessWidget {
       return XFile(tempPath);
     } catch (e) {
       debugPrint('Error preparing share image: $e');
+      return null;
+    }
+  }
+
+  Future<XFile?> _createTextAttachment(String message) async {
+    try {
+      final tempPath =
+          '${Directory.systemTemp.path}/snaplook_share_${DateTime.now().millisecondsSinceEpoch}.txt';
+      final file = await File(tempPath).create();
+      await file.writeAsString(message, flush: true);
+      return XFile(tempPath, mimeType: 'text/plain');
+    } catch (e) {
+      debugPrint('Error creating text attachment: $e');
       return null;
     }
   }
