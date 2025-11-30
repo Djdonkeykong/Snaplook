@@ -316,11 +316,12 @@ class _AppList extends ConsumerWidget {
                   child: ScaleTransition(
                     scale: scaleAnimations[3],
                     child: _AppCard(
-                      name: 'Web Browsers',
-                      iconWidget: const _BrowserIconStack(),
+                      name: 'IMDb',
+                      iconWidget: Image.asset('assets/icons/imdb.png',
+                          width: 24, height: 24, gaplessPlayback: true),
                       hasTutorial: true,
-                      accentColor: const Color(0xFF0A84FF),
-                      isSafari: true,
+                      accentColor: const Color(0xFFF5C518),
+                      isImdb: true,
                     ),
                   ),
                 );
@@ -335,12 +336,11 @@ class _AppList extends ConsumerWidget {
                   child: ScaleTransition(
                     scale: scaleAnimations[4],
                     child: _AppCard(
-                      name: 'Photos',
-                      iconWidget: Image.asset('assets/icons/photos.png',
-                          width: 24, height: 24, gaplessPlayback: true),
+                      name: 'Web Browsers',
+                      iconWidget: const _BrowserIconStack(),
                       hasTutorial: true,
-                      accentColor: const Color(0xFFFF9500),
-                      isPhotos: true,
+                      accentColor: const Color(0xFF0A84FF),
+                      isSafari: true,
                     ),
                   ),
                 );
@@ -355,14 +355,12 @@ class _AppList extends ConsumerWidget {
                   child: ScaleTransition(
                     scale: scaleAnimations[5],
                     child: _AppCard(
-                      name: 'Facebook',
-                      iconWidget: SvgPicture.asset(
-                          'assets/icons/5296499_fb_facebook_facebook logo_icon.svg',
-                          width: 24,
-                          height: 24),
+                      name: 'Photos',
+                      iconWidget: Image.asset('assets/icons/photos.png',
+                          width: 24, height: 24, gaplessPlayback: true),
                       hasTutorial: true,
-                      accentColor: const Color(0xFF1877F2),
-                      isFacebook: true,
+                      accentColor: const Color(0xFFFF9500),
+                      isPhotos: true,
                     ),
                   ),
                 );
@@ -377,12 +375,14 @@ class _AppList extends ConsumerWidget {
                   child: ScaleTransition(
                     scale: scaleAnimations[6],
                     child: _AppCard(
-                      name: 'IMDb',
-                      iconWidget: Image.asset('assets/icons/imdb.png',
-                          width: 24, height: 24, gaplessPlayback: true),
+                      name: 'Facebook',
+                      iconWidget: SvgPicture.asset(
+                          'assets/icons/5296499_fb_facebook_facebook logo_icon.svg',
+                          width: 24,
+                          height: 24),
                       hasTutorial: true,
-                      accentColor: const Color(0xFFF5C518),
-                      isImdb: true,
+                      accentColor: const Color(0xFF1877F2),
+                      isFacebook: true,
                     ),
                   ),
                 );
