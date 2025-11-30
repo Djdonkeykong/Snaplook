@@ -82,7 +82,6 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
     precacheImage(const AssetImage('assets/icons/safari.png'), context);
     precacheImage(const AssetImage('assets/icons/photos.png'), context);
     precacheImage(const AssetImage('assets/icons/imdb.png'), context);
-    precacheImage(const AssetImage('assets/icons/chrome.png'), context);
     precacheImage(const AssetImage('assets/icons/firefox.png'), context);
     precacheImage(const AssetImage('assets/icons/brave.png'), context);
 
@@ -574,7 +573,7 @@ class _BrowserIconStack extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconSize = size * 0.7;
     final step = iconSize * 0.6; // overlap ~40%
-    final totalWidth = iconSize + (step * 3);
+    final totalWidth = iconSize + (step * 2);
 
     return SizedBox(
       width: totalWidth,
@@ -585,7 +584,7 @@ class _BrowserIconStack extends StatelessWidget {
           Positioned(
             left: 0,
             child: Image.asset(
-              'assets/icons/chrome.png',
+              'assets/icons/firefox.png',
               width: iconSize,
               height: iconSize,
               gaplessPlayback: true,
@@ -594,15 +593,6 @@ class _BrowserIconStack extends StatelessWidget {
           Positioned(
             left: step,
             child: Image.asset(
-              'assets/icons/firefox.png',
-              width: iconSize,
-              height: iconSize,
-              gaplessPlayback: true,
-            ),
-          ),
-          Positioned(
-            left: step * 2,
-            child: Image.asset(
               'assets/icons/brave.png',
               width: iconSize,
               height: iconSize,
@@ -610,7 +600,7 @@ class _BrowserIconStack extends StatelessWidget {
             ),
           ),
           Positioned(
-            left: step * 3,
+            left: step * 2,
             child: Image.asset(
               'assets/icons/safari.png',
               width: iconSize,
