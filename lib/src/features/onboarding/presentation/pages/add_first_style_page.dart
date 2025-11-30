@@ -82,6 +82,9 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
     precacheImage(const AssetImage('assets/icons/safari.png'), context);
     precacheImage(const AssetImage('assets/icons/photos.png'), context);
     precacheImage(const AssetImage('assets/icons/imdb.png'), context);
+    precacheImage(const AssetImage('assets/icons/chrome.png'), context);
+    precacheImage(const AssetImage('assets/icons/firefox.png'), context);
+    precacheImage(const AssetImage('assets/icons/brave.png'), context);
 
     final route = ModalRoute.of(context);
     if (!_isRouteAware && route is PageRoute) {
@@ -314,9 +317,8 @@ class _AppList extends ConsumerWidget {
                   child: ScaleTransition(
                     scale: scaleAnimations[3],
                     child: _AppCard(
-                      name: 'Safari',
-                      iconWidget: Image.asset('assets/icons/safari.png',
-                          width: 24, height: 24, gaplessPlayback: true),
+                      name: 'Web Browsers',
+                      iconWidget: const _BrowserIconStack(),
                       hasTutorial: true,
                       accentColor: const Color(0xFF0A84FF),
                       isSafari: true,
@@ -534,11 +536,7 @@ class _AppCard extends ConsumerWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: iconWidget,
-                  ),
+                  child: iconWidget,
                 ),
               ),
               const SizedBox(width: 16),
@@ -562,6 +560,65 @@ class _AppCard extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BrowserIconStack extends StatelessWidget {
+  final double size;
+
+  const _BrowserIconStack({this.size = 28});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 0,
+            top: size * 0.3,
+            child: Image.asset(
+              'assets/icons/chrome.png',
+              width: size * 0.6,
+              height: size * 0.6,
+              gaplessPlayback: true,
+            ),
+          ),
+          Positioned(
+            left: size * 0.35,
+            top: 0,
+            child: Image.asset(
+              'assets/icons/firefox.png',
+              width: size * 0.6,
+              height: size * 0.6,
+              gaplessPlayback: true,
+            ),
+          ),
+          Positioned(
+            right: 0,
+            top: size * 0.4,
+            child: Image.asset(
+              'assets/icons/brave.png',
+              width: size * 0.6,
+              height: size * 0.6,
+              gaplessPlayback: true,
+            ),
+          ),
+          Positioned(
+            left: size * 0.25,
+            bottom: 0,
+            child: Image.asset(
+              'assets/icons/safari.png',
+              width: size * 0.6,
+              height: size * 0.6,
+              gaplessPlayback: true,
+            ),
+          ),
+        ],
       ),
     );
   }

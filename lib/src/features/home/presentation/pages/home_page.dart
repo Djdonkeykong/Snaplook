@@ -823,14 +823,9 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ),
       _TutorialOptionData(
-        label: 'Safari',
+        label: 'Web Browsers',
         source: _TutorialSource.safari,
-        iconBuilder: () => Image.asset(
-          'assets/icons/safari.png',
-          width: 24,
-          height: 24,
-          gaplessPlayback: true,
-        ),
+        iconBuilder: () => const _BrowserIconStack(),
       ),
       _TutorialOptionData(
         label: 'Photos',
@@ -1968,11 +1963,7 @@ class _TutorialAppCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: iconWidget,
-                  ),
+                  child: iconWidget,
                 ),
               ),
               const SizedBox(width: 16),
@@ -1996,6 +1987,65 @@ class _TutorialAppCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BrowserIconStack extends StatelessWidget {
+  final double size;
+
+  const _BrowserIconStack({this.size = 28});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 0,
+            top: size * 0.3,
+            child: Image.asset(
+              'assets/icons/chrome.png',
+              width: size * 0.6,
+              height: size * 0.6,
+              gaplessPlayback: true,
+            ),
+          ),
+          Positioned(
+            left: size * 0.35,
+            top: 0,
+            child: Image.asset(
+              'assets/icons/firefox.png',
+              width: size * 0.6,
+              height: size * 0.6,
+              gaplessPlayback: true,
+            ),
+          ),
+          Positioned(
+            right: 0,
+            top: size * 0.4,
+            child: Image.asset(
+              'assets/icons/brave.png',
+              width: size * 0.6,
+              height: size * 0.6,
+              gaplessPlayback: true,
+            ),
+          ),
+          Positioned(
+            left: size * 0.25,
+            bottom: 0,
+            child: Image.asset(
+              'assets/icons/safari.png',
+              width: size * 0.6,
+              height: size * 0.6,
+              gaplessPlayback: true,
+            ),
+          ),
+        ],
       ),
     );
   }
