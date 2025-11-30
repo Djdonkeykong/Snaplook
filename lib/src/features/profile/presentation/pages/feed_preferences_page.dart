@@ -225,19 +225,6 @@ class _FeedPreferencesPageState
                         const SizedBox(height: 8),
                       ],
                     ),
-                    if (_isSaving) ...[
-                      SizedBox(height: spacing.l),
-                      const Center(
-                        child: SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: AppColors.secondary,
-                            strokeWidth: 2,
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
