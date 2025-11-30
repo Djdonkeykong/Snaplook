@@ -2199,7 +2199,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard let self = self else { return }
             let targetUrl = resolvedUrl ?? urlString
             if resolvedUrl != nil {
-                self.shareLog("Pinterest short link resolved to \(targetUrl.prefix(120))")
+                shareLog("Pinterest short link resolved to \(targetUrl.prefix(120))")
             }
 
             // First try Jina (free)
@@ -2832,7 +2832,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             guard let self = self else { return }
             let targetUrl = resolvedUrl ?? urlString
             if let resolved = resolvedUrl {
-                self.shareLog("Reddit short link resolved to \(resolved.prefix(120))")
+                shareLog("Reddit short link resolved to \(resolved.prefix(120))")
             }
 
             self.fetchRedditViaJina(urlString: targetUrl) { [weak self] imageUrls in
