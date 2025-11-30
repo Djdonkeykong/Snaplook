@@ -30,10 +30,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     super.dispose();
   }
 
-  void _shareApp() {
+  void _shareApp(BuildContext context) {
     const message =
         'Check out Snaplook – find similar fashion items by sharing a photo. Download now: https://snaplook.app';
-    Share.share(message, subject: 'Snaplook');
+    final renderBox = context.findRenderObject() as RenderBox?;
+    final origin = (renderBox != null && renderBox.hasSize)
+        ? renderBox.localToGlobal(Offset.zero) & renderBox.size
+        : const Rect.fromLTWH(0, 0, 1, 1);
+
+    Share.share(
+      message,
+      subject: 'Snaplook',
+      sharePositionOrigin: origin,
+    );
   }
 
   Future<void> _handleLogout() async {
@@ -290,7 +299,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
                 _SimpleSettingItem(
                   title: 'Invite Friends',
-                  onTap: _shareApp,
+                  onTap: () => _shareApp(context),
                 ),
 
                 SizedBox(height: spacing.l),
