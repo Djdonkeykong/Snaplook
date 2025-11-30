@@ -1381,6 +1381,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             platformName = "Snapchat"
             platformType = "snapchat"
             downloadFunction = downloadSnapchatMedia
+        } else if isFacebookShareCandidate(item) {
+            platformName = "Facebook"
+            platformType = "facebook"
+            downloadFunction = downloadFacebookMedia
         } else if isGoogleImageShareCandidate(item) {
             platformName = "Google Image"
             platformType = "google_image"
@@ -1621,6 +1625,35 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return hasValidPattern
     }
 
+    private func isFacebookShareCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        // Match Facebook URL formats:
+        // - facebook.com/share/ (share links)
+        // - facebook.com/photo/ or facebook.com/photos/ (photo posts)
+        // - facebook.com/permalink.php (permanent links)
+        // - facebook.com/watch/ (videos)
+        // - fb.watch/ (short video links)
+        let hasFacebookDomain = trimmed.contains("facebook.com") || trimmed.contains("fb.watch")
+        if !hasFacebookDomain {
+            return false
+        }
+
+        let hasValidPattern = trimmed.contains("/share/") ||
+                             trimmed.contains("/photo") ||
+                             trimmed.contains("/photos/") ||
+                             trimmed.contains("/permalink.php") ||
+                             trimmed.contains("/watch/") ||
+                             trimmed.contains("fb.watch/")
+
+        if hasValidPattern {
+            shareLog("Facebook URL detected: \(trimmed.prefix(80))")
+        } else {
+            shareLog("Facebook domain found but no valid pattern: \(trimmed.prefix(80))")
+        }
+
+        return hasValidPattern
+    }
+
     private func isGoogleImageShareCandidate(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let hasGoogleHost = trimmed.contains("://www.google.") ||
@@ -1639,6 +1672,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                isPinterestShareCandidate(value) ||
                isYouTubeShareCandidate(value) ||
                isSnapchatShareCandidate(value) ||
+               isFacebookShareCandidate(value) ||
                isGoogleImageShareCandidate(value)
     }
 
@@ -2454,6 +2488,146 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return results
     }
 
+    // MARK: - Facebook Scraping
+
+    private func downloadFacebookMedia(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        shareLog("Attempting to fetch Facebook content via Jina AI...")
+
+        // Try Jina AI free service first (no API credits required)
+        fetchFacebookViaJina(urlString: urlString) { [weak self] imageUrls in
+            guard let self = self else { return }
+
+            if imageUrls.isEmpty {
+                shareLog("No images found via Jina for Facebook URL")
+                completion(.failure(self.makeFacebookError("No images found in Facebook post")))
+                return
+            }
+
+            shareLog("Found \(imageUrls.count) image(s) from Facebook via Jina")
+
+            self.downloadFirstValidImage(
+                from: Array(imageUrls.prefix(5)),
+                platform: "facebook",
+                session: URLSession.shared,
+                completion: completion
+            )
+        }
+    }
+
+    private func fetchFacebookViaJina(
+        urlString: String,
+        completion: @escaping ([String]) -> Void
+    ) {
+        guard let encoded = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let jinaUrl = URL(string: "https://r.jina.ai/\(encoded)") else {
+            shareLog("Failed to build Jina URL for Facebook")
+            completion([])
+            return
+        }
+
+        var request = URLRequest(url: jinaUrl)
+        request.timeoutInterval = 15.0
+        request.httpMethod = "GET"
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+
+        shareLog("Fetching Facebook via Jina: \(jinaUrl.absoluteString.prefix(80))...")
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("Jina request failed: \(error.localizedDescription)")
+                completion([])
+                return
+            }
+
+            guard let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                shareLog("Could not decode Jina response")
+                completion([])
+                return
+            }
+
+            shareLog("Jina returned \(data.count) bytes for Facebook")
+
+            let imageUrls = self.extractImagesFromFacebookHtml(html, baseUrl: urlString)
+            completion(imageUrls)
+        }
+
+        task.resume()
+    }
+
+    private func extractImagesFromFacebookHtml(_ html: String, baseUrl: String) -> [String] {
+        var results: [String] = []
+
+        // Pattern 1: og:image meta tags (Facebook's Open Graph images)
+        let ogImagePattern = #"<meta\s+(?:[^>]*?\s+)?property\s*=\s*["\']og:image["\']\s+(?:[^>]*?\s+)?content\s*=\s*["\']([^"\']+)["\']"#
+        if let ogRegex = try? NSRegularExpression(pattern: ogImagePattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = ogRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let urlRange = match.range(at: 1)
+                    let imageUrl = nsHtml.substring(with: urlRange)
+                    if !imageUrl.isEmpty && !imageUrl.contains("facebook.com/images/") {
+                        shareLog("Found Facebook og:image: \(imageUrl.prefix(80))")
+                        results.append(imageUrl)
+                    }
+                }
+            }
+        }
+
+        // Pattern 2: Facebook CDN images (scontent, fbcdn)
+        let fbCdnPattern = #"(https?://(?:scontent[^/]*\.xx\.fbcdn\.net|external[^/]*\.xx\.fbcdn\.net|scontent-[^/]*\.xx\.fbcdn\.net)/[^\s"\'<>]+\.(?:jpg|jpeg|png|webp))"#
+        if let cdnRegex = try? NSRegularExpression(pattern: fbCdnPattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = cdnRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches {
+                if match.numberOfRanges > 0 {
+                    let urlRange = match.range(at: 1)
+                    let imageUrl = nsHtml.substring(with: urlRange)
+                    if !imageUrl.isEmpty {
+                        shareLog("Found Facebook CDN image: \(imageUrl.prefix(80))")
+                        results.append(imageUrl)
+                    }
+                }
+            }
+        }
+
+        // Pattern 3: img src tags with Facebook CDN URLs
+        let imgSrcPattern = #"<img\s+[^>]*?src\s*=\s*["\']([^"\']+fbcdn\.net[^"\']+)["\']"#
+        if let imgRegex = try? NSRegularExpression(pattern: imgSrcPattern, options: [.caseInsensitive]) {
+            let nsHtml = html as NSString
+            let matches = imgRegex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let urlRange = match.range(at: 1)
+                    let imageUrl = nsHtml.substring(with: urlRange)
+                    if !imageUrl.isEmpty {
+                        shareLog("Found Facebook img src: \(imageUrl.prefix(80))")
+                        results.append(imageUrl)
+                    }
+                }
+            }
+        }
+
+        return results
+    }
+
+    private func makeFacebookError(_ message: String) -> NSError {
+        return NSError(
+            domain: "com.snaplook.shareextension.facebook",
+            code: -1,
+            userInfo: [NSLocalizedDescriptionKey: message]
+        )
+    }
+
     // MARK: - Google Image Download
 
     private func downloadGoogleImageMedia(
@@ -2863,6 +3037,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return downloadYouTubeMedia
         case "snapchat":
             return downloadSnapchatMedia
+        case "facebook":
+            return downloadFacebookMedia
         case "google_image":
             return downloadGoogleImageMedia
         case "generic":
@@ -2885,6 +3061,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return "YouTube"
         case "snapchat":
             return "Snapchat"
+        case "facebook":
+            return "Facebook"
         case "google_image":
             return "Google Image"
         case "generic":
