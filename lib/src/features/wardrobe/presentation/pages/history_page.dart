@@ -402,30 +402,14 @@ class _HistoryCard extends StatelessWidget {
   }
   void _copyLink(BuildContext context) {
     final messenger = ScaffoldMessenger.of(context);
-    final sourceUrl = (search['source_url'] as String?)?.trim() ?? '';
-
-    if (sourceUrl.isEmpty) {
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'No link available for this search.',
-            style: context.snackTextStyle(
-              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-            ),
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    Clipboard.setData(ClipboardData(text: sourceUrl));
+    // Copy the rich share text (top matches + links) instead of a raw source URL.
+    final payload = _buildSharePayload(search);
+    Clipboard.setData(ClipboardData(text: payload.message));
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          'Search link copied to clipboard',
+          'Share text copied to clipboard',
           style: context.snackTextStyle(
             merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
           ),
