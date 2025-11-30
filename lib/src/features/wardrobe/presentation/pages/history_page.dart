@@ -435,29 +435,38 @@ class _HistoryCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(radius.medium),
-              child: Container(
-                width: 100,
-                height: 100,
-                color: colorScheme.surfaceVariant,
-                padding: const EdgeInsets.all(6),
-                child: cloudinaryUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: cloudinaryUrl,
-                        fit: BoxFit.none,
-                        alignment: Alignment.center,
-                        placeholder: (context, url) => const SizedBox.expand(),
-                        errorWidget: (context, url, error) => Icon(
+              child: cloudinaryUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: cloudinaryUrl,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: colorScheme.surfaceVariant,
+                        width: 100,
+                        height: 100,
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: colorScheme.surfaceVariant,
+                        width: 100,
+                        height: 100,
+                        child: Icon(
                           Icons.image,
                           color: colorScheme.onSurfaceVariant,
                           size: 24,
                         ),
-                      )
-                    : Icon(
+                      ),
+                    )
+                  : Container(
+                      width: 100,
+                      height: 100,
+                      color: colorScheme.surfaceVariant,
+                      child: Icon(
                         Icons.image,
                         color: colorScheme.onSurfaceVariant,
                         size: 24,
                       ),
-              ),
+                    ),
             ),
             SizedBox(width: spacing.m),
             Expanded(
