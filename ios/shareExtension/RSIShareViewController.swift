@@ -3323,7 +3323,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 shareLog("Saved \(platform) image to \(fileName) (\(dataToSave.count) bytes)")
 
                 let sharedFile = SharedMediaFile(
-                    path: fileURL.path,
+                    path: fileURL.absoluteString,
                     thumbnail: nil,
                     duration: nil,
                     type: .image
