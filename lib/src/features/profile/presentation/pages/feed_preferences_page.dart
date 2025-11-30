@@ -198,7 +198,7 @@ class _FeedPreferencesPageState
                             _savePreference(FeedPreference.men);
                           },
                         ),
-                        _Divider(),
+                        const SizedBox(height: 2),
                         _SettingsRow.radio(
                           label: "Women's Clothing",
                           selected: _selectedPreference == FeedPreference.women,
@@ -207,7 +207,7 @@ class _FeedPreferencesPageState
                             _savePreference(FeedPreference.women);
                           },
                         ),
-                        _Divider(),
+                        const SizedBox(height: 2),
                         _SettingsRow.radio(
                           label: 'Both',
                           selected: _selectedPreference == FeedPreference.both,
@@ -268,13 +268,7 @@ class _SettingsCard extends StatelessWidget {
 class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Divider(
-      height: 1,
-      thickness: 1,
-      color: Color(0xFFECECEC),
-      indent: 16,
-      endIndent: 16,
-    );
+    return const SizedBox(height: 0);
   }
 }
 
