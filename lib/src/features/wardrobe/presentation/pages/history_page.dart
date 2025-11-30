@@ -443,7 +443,7 @@ class _HistoryCard extends StatelessWidget {
                 child: cloudinaryUrl != null
                     ? CachedNetworkImage(
                         imageUrl: cloudinaryUrl,
-                        fit: BoxFit.contain,
+                        fit: BoxFit.none,
                         alignment: Alignment.center,
                         placeholder: (context, url) => const SizedBox.expand(),
                         errorWidget: (context, url, error) => Icon(
