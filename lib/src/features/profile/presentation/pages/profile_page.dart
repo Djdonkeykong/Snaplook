@@ -105,67 +105,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _openHelpLink(BuildContext context) async {
     final uri = Uri.parse('https://truefindr.com/faq/');
 
-    // Prefer in-app browser (keeps the user inside Snaplook with a SafariViewController/Custom Tab)
-    if (await canLaunchUrl(uri)) {
-      final ok = await launchUrl(
-        uri,
-        mode: LaunchMode.inAppBrowserView,
-      );
-      if (ok) return;
-    }
-
-    // Fallback to in-app webview if custom tab/safari view fails
-    if (await canLaunchUrl(uri)) {
-      final ok = await launchUrl(
-        uri,
-        mode: LaunchMode.inAppWebView,
-      );
-      if (ok) return;
-    }
-
-    // Last resort: external (but warn the user)
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Could not open help link',
-              style: context.snackTextStyle(
-                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-              ),
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
+    // Use in-app browser only; no fallbacks
+    await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
   }
 
   Future<void> _openDocumentSheet({
     required String title,
     required String url,
   }) async {
-    if (!mounted) return;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      enableDrag: false,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return FractionallySizedBox(
-          heightFactor: 0.95,
-          child: ProfileWebViewBottomSheet(
-            title: title,
-            initialUrl: url,
-          ),
-        );
-      },
-    );
+    final uri = Uri.parse(url);
+    await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
   }
 
   void _handleManageSubscription() {

@@ -37,36 +37,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }) async {
     final uri = Uri.parse(url);
 
-    // Prefer in-app browser (SafariViewController/Custom Tab)
-    if (await canLaunchUrl(uri)) {
-      final ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-      if (ok) return;
-    }
-
-    // Fallback to in-app WebView
-    if (await canLaunchUrl(uri)) {
-      final ok = await launchUrl(uri, mode: LaunchMode.inAppWebView);
-      if (ok) return;
-    }
-
-    // Last resort: external
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-      return;
-    }
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Could not open $fallbackLabel',
-          style: context.snackTextStyle(
-            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-          ),
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    // Only use in-app browser; no fallbacks
+    await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
   }
 
   @override
