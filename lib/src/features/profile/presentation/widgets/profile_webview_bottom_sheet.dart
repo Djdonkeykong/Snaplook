@@ -232,11 +232,17 @@ class _ProfileWebViewBottomSheetState
     final colorScheme = Theme.of(context).colorScheme;
     final spacing = context.spacing;
     final radius = context.radius.large;
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
     return SafeArea(
+      top: true,
+      bottom: false,
       child: Transform.translate(
         offset: Offset(0, _handleDragOffset),
         child: Container(
+          padding: EdgeInsets.only(
+            bottom: (bottomInset > 0 ? bottomInset : spacing.l),
+          ),
           decoration: BoxDecoration(
             color: colorScheme.surface,
             borderRadius: BorderRadius.vertical(
