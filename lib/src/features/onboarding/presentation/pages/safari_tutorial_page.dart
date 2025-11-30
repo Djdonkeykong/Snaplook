@@ -94,7 +94,7 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
   String _getInstructionText(SafariTutorialStep step) {
     switch (step) {
       case SafariTutorialStep.step1:
-        return "When you find a clothing item you love on Safari, press and hold the image.";
+        return "When you find a clothing item you love in your browser, press and hold the image.";
       case SafariTutorialStep.step2:
         return "Now tap \"Share\" to open the sharing options.";
       case SafariTutorialStep.tapMore:
@@ -384,7 +384,7 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
                     MaterialPageRoute(
                       builder: (context) => TutorialImageAnalysisPage(
                         imagePath: 'assets/images/safari_tutorial.webp',
-                        scenario: 'Safari',
+                        scenario: 'Web Browser',
                         returnToOnboarding: widget.returnToOnboarding,
                       ),
                       allowSnapshotting: false,
