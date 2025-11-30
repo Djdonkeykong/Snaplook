@@ -74,15 +74,10 @@ class InstagramService {
     print(
         'ScrapingBee Instagram response received, HTML length: ${htmlContent.length} chars');
 
-    final result = await _extractImagesFromInstagramHtml(htmlContent, instagramUrl);
+    final result =
+        await _extractImagesFromInstagramHtml(htmlContent, instagramUrl);
     if (result.isNotEmpty) {
       return result;
-    }
-
-    print('No usable images extracted - trying Jina AI fallback');
-    final jinaImages = await _scrapeInstagramViaJina(instagramUrl);
-    if (jinaImages.isNotEmpty) {
-      return jinaImages;
     }
 
     print('No image URL found in ScrapingBee results');
@@ -120,11 +115,12 @@ class InstagramService {
     final cacheKeyMatch = RegExp(
       r'"src":"(https:\\/\\/scontent[^"]+?ig_cache_key[^"]*)"',
     ).firstMatch(htmlContent);
-    final cacheDownload =
-        await tryDownload(cacheKeyMatch?.group(1), label: 'Found ig_cache_key URL (priority)');
+    final cacheDownload = await tryDownload(cacheKeyMatch?.group(1),
+        label: 'Found ig_cache_key URL (priority)');
     if (cacheDownload != null) {
       if (extractedImageUrl != null) {
-        await _saveToInstagramCache(instagramUrl, extractedImageUrl!, 'scrapingbee_cache_key');
+        await _saveToInstagramCache(
+            instagramUrl, extractedImageUrl!, 'scrapingbee_cache_key');
       }
       return [cacheDownload];
     }
@@ -137,7 +133,8 @@ class InstagramService {
         await tryDownload(displayMatch?.group(1), label: 'Found display_url');
     if (displayDownload != null) {
       if (extractedImageUrl != null) {
-        await _saveToInstagramCache(instagramUrl, extractedImageUrl!, 'scrapingbee_display_url');
+        await _saveToInstagramCache(
+            instagramUrl, extractedImageUrl!, 'scrapingbee_display_url');
       }
       return [displayDownload];
     }
@@ -158,7 +155,8 @@ class InstagramService {
       );
       if (download != null) {
         if (extractedImageUrl != null) {
-          await _saveToInstagramCache(instagramUrl, extractedImageUrl!, 'scrapingbee_img_cache_key');
+          await _saveToInstagramCache(
+              instagramUrl, extractedImageUrl!, 'scrapingbee_img_cache_key');
         }
         return [download];
       }
@@ -176,42 +174,14 @@ class InstagramService {
           await tryDownload(url, label: 'Found og:image (fallback)');
       if (download != null) {
         if (extractedImageUrl != null) {
-          await _saveToInstagramCache(instagramUrl, extractedImageUrl!, 'scrapingbee_og_image');
+          await _saveToInstagramCache(
+              instagramUrl, extractedImageUrl!, 'scrapingbee_og_image');
         }
         return [download];
       }
     }
 
     return [];
-  }
-
-  static Future<List<XFile>> _scrapeInstagramViaJina(
-    String instagramUrl,
-  ) async {
-    try {
-      final proxyUri = Uri.parse('$_jinaProxyBase$instagramUrl');
-      final response = await http.get(proxyUri, headers: {
-        'User-Agent': _userAgent
-      }).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode != 200) {
-        print('Jina fallback failed with status ${response.statusCode}');
-        return [];
-      }
-
-      print('Jina fallback response length: ${response.body.length} chars');
-      final images = await _extractImagesFromInstagramHtml(response.body, instagramUrl);
-      if (images.isNotEmpty) {
-        print('Jina fallback succeeded using ${images.length} image(s)');
-      }
-      return images;
-    } on TimeoutException {
-      print('Jina fallback timed out');
-      return [];
-    } catch (error) {
-      print('Jina fallback error: ${error.toString()}');
-      return [];
-    }
   }
 
   static String _previewUrl(String url) {
@@ -388,8 +358,8 @@ class InstagramService {
         // Update access tracking
         await supabase
             .from('instagram_url_cache')
-            .update({'last_accessed_at': DateTime.now().toIso8601String()})
-            .eq('id', id);
+            .update({'last_accessed_at': DateTime.now().toIso8601String()}).eq(
+                'id', id);
 
         return imageUrl;
       }
@@ -497,7 +467,8 @@ class InstagramService {
   /// Checks if a URL is a Facebook share/photo/video URL
   static bool isFacebookUrl(String url) {
     final lower = url.toLowerCase();
-    final hasDomain = lower.contains('facebook.com') || lower.contains('fb.watch');
+    final hasDomain =
+        lower.contains('facebook.com') || lower.contains('fb.watch');
     if (!hasDomain) return false;
     return lower.contains('/share/') ||
         lower.contains('/photo') ||
@@ -512,7 +483,9 @@ class InstagramService {
     final lower = url.toLowerCase();
     final hasDomain = lower.contains('reddit.com') || lower.contains('redd.it');
     if (!hasDomain) return false;
-    return lower.contains('/comments/') || lower.contains('/r/') || lower.contains('redd.it/');
+    return lower.contains('/comments/') ||
+        lower.contains('/r/') ||
+        lower.contains('redd.it/');
   }
 
   /// Checks if a URL is a TikTok video URL
@@ -537,6 +510,12 @@ class InstagramService {
     return lowercased.contains('snapchat.com/spotlight/') ||
         lowercased.contains('snapchat.com/t/') ||
         lowercased.contains('snapchat.com/add/');
+  }
+
+  /// Checks if a URL is an IMDb link
+  static bool isImdbUrl(String url) {
+    final lowercased = url.toLowerCase();
+    return lowercased.contains('imdb.com');
   }
 
   /// Checks if a URL is a YouTube Shorts/Video URL
@@ -570,15 +549,7 @@ class InstagramService {
       if (oembedImage != null) {
         print('Successfully downloaded TikTok thumbnail via oEmbed');
         return [oembedImage];
-      } else {
-        print('TikTok oEmbed thumbnail download failed, falling back to ScrapingBee');
       }
-    }
-
-    // Free fallback: fetch via Jina proxy and parse HTML.
-    final jinaImages = await _scrapeTikTokViaJina(resolvedUrl);
-    if (jinaImages.isNotEmpty) {
-      return jinaImages;
     }
 
     print('No usable TikTok images extracted');
@@ -594,14 +565,12 @@ class InstagramService {
         '/oembed',
         {'url': resolvedUrl},
       );
-      final response = await http
-          .get(
-            oembedUri,
-            headers: {
-              'User-Agent': _userAgent,
-            },
-          )
-          .timeout(const Duration(seconds: 8));
+      final response = await http.get(
+        oembedUri,
+        headers: {
+          'User-Agent': _userAgent,
+        },
+      ).timeout(const Duration(seconds: 8));
 
       if (response.statusCode != 200) {
         print('TikTok oEmbed request failed with ${response.statusCode}');
@@ -611,9 +580,8 @@ class InstagramService {
       final decoded = jsonDecode(response.body);
       if (decoded is Map<String, dynamic>) {
         final thumb = (decoded['thumbnail_url'] ??
-                decoded['thumbnailUrl'] ??
-                decoded['thumbnailURL'])
-            as String?;
+            decoded['thumbnailUrl'] ??
+            decoded['thumbnailURL']) as String?;
         if (thumb != null && thumb.isNotEmpty) {
           final sanitized = _sanitizeTikTokUrl(thumb);
           print('TikTok oEmbed thumbnail: ${_previewUrl(sanitized)}');
@@ -628,33 +596,6 @@ class InstagramService {
     return null;
   }
 
-  static Future<List<XFile>> _scrapeTikTokViaJina(String tiktokUrl) async {
-    try {
-      final proxyUri = Uri.parse('$_jinaProxyBase$tiktokUrl');
-      final response = await http.get(proxyUri, headers: {
-        'User-Agent': _userAgent,
-      }).timeout(const Duration(seconds: 12));
-
-      if (response.statusCode != 200) {
-        print('TikTok Jina fallback failed with status ${response.statusCode}');
-        return [];
-      }
-
-      print('TikTok Jina fallback response length: ${response.body.length} chars');
-      final images = await _extractImagesFromTikTokHtml(response.body);
-      if (images.isNotEmpty) {
-        print('TikTok Jina fallback succeeded using ${images.length} image(s)');
-      }
-      return images;
-    } on TimeoutException {
-      print('TikTok Jina fallback timed out');
-      return [];
-    } catch (e) {
-      print('TikTok Jina fallback error: $e');
-      return [];
-    }
-  }
-
   static Future<String?> _resolveTikTokRedirect(String url) async {
     try {
       final uri = Uri.parse(url);
@@ -662,7 +603,8 @@ class InstagramService {
       request.followRedirects = true;
       request.maxRedirects = 5;
       final client = http.Client();
-      final response = await client.send(request).timeout(const Duration(seconds: 8));
+      final response =
+          await client.send(request).timeout(const Duration(seconds: 8));
       client.close();
       final finalUrl = response.request?.url.toString();
       if (finalUrl != null && finalUrl.isNotEmpty && finalUrl != url) {
@@ -857,7 +799,7 @@ class InstagramService {
     print(
         'TikTok extraction results: ${priorityResults.length} priority, ${fallbackResults.length} fallback');
 
-    // Pattern 7: Jina markdown/plaintext tiktokcdn URLs (photomode, etc.)
+    // Pattern 7: Markdown/plaintext tiktokcdn URLs (photo mode, etc.)
     // Pattern 7: Markdown/plaintext tiktokcdn URLs (photo mode, may lack file extension)
     // Pattern 7: Markdown/plaintext tiktokcdn URLs (photo mode, may lack extension)
     final markdownCdnPattern = RegExp(
@@ -866,7 +808,8 @@ class InstagramService {
     );
     final markdownMatches = markdownCdnPattern.allMatches(htmlContent).toList();
     if (markdownMatches.isNotEmpty) {
-      print('Markdown/plaintext tiktokcdn URLs found: ${markdownMatches.length}');
+      print(
+          'Markdown/plaintext tiktokcdn URLs found: ${markdownMatches.length}');
     }
     for (final match in markdownMatches) {
       final url = match.group(0);
@@ -890,7 +833,8 @@ class InstagramService {
       r'!\[[^\]]*\]\((https?://[^)]+tiktokcdn[^)]+)\)',
       caseSensitive: false,
     );
-    final mdImageMatches = markdownImagePattern.allMatches(htmlContent).toList();
+    final mdImageMatches =
+        markdownImagePattern.allMatches(htmlContent).toList();
     if (mdImageMatches.isNotEmpty) {
       print('Markdown image tiktokcdn URLs found: ${mdImageMatches.length}');
     }
@@ -927,89 +871,26 @@ class InstagramService {
     String pinterestUrl,
   ) async {
     try {
-      print('Attempting Pinterest scrape via Jina: $pinterestUrl');
+      print('Attempting Pinterest scrape (direct): $pinterestUrl');
 
-      final jinaImages = await _scrapePinterestViaJina(pinterestUrl);
-      if (jinaImages.isNotEmpty) {
-        print(
-            'Successfully extracted ${jinaImages.length} image(s) from Pinterest via Jina!');
-        return jinaImages;
+      final html = await _fetchHtmlDirect(pinterestUrl,
+          timeout: const Duration(seconds: 12));
+      if (html != null && html.isNotEmpty) {
+        final images = await _extractImagesFromPinterestHtml(html);
+        if (images.isNotEmpty) {
+          print(
+            'Successfully extracted ${images.length} image(s) from Pinterest via direct scrape!',
+          );
+          return images;
+        }
       }
 
-      print('No images from Jina for Pinterest; trying ScrapingBee if available');
-
-      final apiKey = AppConstants.scrapingBeeApiKey;
-      if (apiKey.isEmpty ||
-          apiKey.startsWith('your_') ||
-          apiKey.contains('***')) {
-        print('ScrapingBee API key not configured');
-        return [];
-      }
-
-      final result = await _scrapingBeePinterestScraper(pinterestUrl);
-      if (result.isNotEmpty) {
-        print(
-          'Successfully extracted ${result.length} image(s) from Pinterest using ScrapingBee!',
-        );
-        return result;
-      }
-
-      print('ScrapingBee failed to extract Pinterest images');
+      print('No images extracted from Pinterest via direct scrape');
       return [];
     } catch (e) {
       print('Error downloading Pinterest images: $e');
       return [];
     }
-  }
-
-  /// ScrapingBee Pinterest scraper
-  static Future<List<XFile>> _scrapingBeePinterestScraper(
-    String pinterestUrl,
-  ) async {
-    print('Attempting ScrapingBee Pinterest scraper for URL: $pinterestUrl');
-
-    final uri = Uri.parse(_scrapingBeeApiUrl);
-
-    // Standard proxy with wait for Pinterest
-    final queryParams = {
-      'api_key': AppConstants.scrapingBeeApiKey,
-      'url': pinterestUrl,
-      'render_js': 'true',
-      'wait': '2000',
-    };
-
-    final requestUri = uri.replace(queryParameters: queryParams);
-    print('ScrapingBee Pinterest request (wait=2000ms)');
-
-    http.Response response;
-    try {
-      response =
-          await http.get(requestUri).timeout(const Duration(seconds: 15));
-    } on TimeoutException {
-      print('ScrapingBee Pinterest request timed out');
-      return [];
-    } catch (error) {
-      print('ScrapingBee Pinterest request error: ${error.toString()}');
-      return [];
-    }
-
-    if (response.statusCode != 200) {
-      print('ScrapingBee Pinterest failed with status ${response.statusCode}');
-      print('Response: ${response.body}');
-      return [];
-    }
-
-    final htmlContent = response.body;
-    print(
-        'ScrapingBee Pinterest response received, HTML length: ${htmlContent.length} chars');
-
-    final images = await _extractImagesFromPinterestHtml(htmlContent);
-    if (images.isNotEmpty) {
-      return images;
-    }
-
-    print('No usable Pinterest images extracted');
-    return [];
   }
 
   /// Extract images from Pinterest HTML
@@ -1141,7 +1022,9 @@ class InstagramService {
 
       // Use ScrapingBee to scrape Snapchat page
       final apiKey = AppConstants.scrapingBeeApiKey;
-      if (apiKey.isEmpty || apiKey.startsWith('your_') || apiKey.contains('***')) {
+      if (apiKey.isEmpty ||
+          apiKey.startsWith('your_') ||
+          apiKey.contains('***')) {
         print('ScrapingBee API key not configured');
         return [];
       }
@@ -1156,20 +1039,23 @@ class InstagramService {
 
       print('Calling ScrapingBee for Snapchat...');
       final response = await http.get(Uri.parse(scrapingBeeUrl)).timeout(
-        const Duration(seconds: 30),
-      );
+            const Duration(seconds: 30),
+          );
 
       if (response.statusCode != 200) {
         print('ScrapingBee request failed with status ${response.statusCode}');
         return [];
       }
 
-      print('ScrapingBee Snapchat response received, HTML length: ${response.body.length} chars');
+      print(
+          'ScrapingBee Snapchat response received, HTML length: ${response.body.length} chars');
 
       // Extract image/video thumbnail from Snapchat HTML
-      final images = await _extractImagesFromSnapchatHtml(response.body, snapchatUrl);
+      final images =
+          await _extractImagesFromSnapchatHtml(response.body, snapchatUrl);
       if (images.isNotEmpty) {
-        print('Successfully extracted ${images.length} image(s) from Snapchat!');
+        print(
+            'Successfully extracted ${images.length} image(s) from Snapchat!');
       }
       return images;
     } catch (e) {
@@ -1212,7 +1098,8 @@ class InstagramService {
     final posterMatch = posterPattern.firstMatch(htmlContent);
     if (posterMatch != null) {
       final url = posterMatch.group(1);
-      final download = await tryDownload(url, label: 'Found Snapchat og:image (poster)');
+      final download =
+          await tryDownload(url, label: 'Found Snapchat og:image (poster)');
       if (download != null) {
         return [download];
       }
@@ -1226,7 +1113,8 @@ class InstagramService {
     final thumbMatch = videoThumbPattern.firstMatch(htmlContent);
     if (thumbMatch != null) {
       final url = thumbMatch.group(1);
-      final download = await tryDownload(url, label: 'Found Snapchat video poster');
+      final download =
+          await tryDownload(url, label: 'Found Snapchat video poster');
       if (download != null) {
         return [download];
       }
@@ -1240,7 +1128,8 @@ class InstagramService {
     final cdnMatches = cdnPattern.allMatches(htmlContent);
     for (final match in cdnMatches) {
       final url = match.group(0);
-      final download = await tryDownload(url, label: 'Found Snapchat CDN image');
+      final download =
+          await tryDownload(url, label: 'Found Snapchat CDN image');
       if (download != null) {
         return [download];
       }
@@ -1328,134 +1217,96 @@ class InstagramService {
     return null;
   }
 
-  /// Downloads image(s) from an X/Twitter post using Jina reader (free).
+  /// Downloads image(s) from an X/Twitter post using Jina.
   static Future<List<XFile>> downloadImageFromXUrl(String url) async {
     try {
-      // Try main X URL via Jina
-      final images = await _scrapeXViaJina(url);
-      if (images.isNotEmpty) {
-        print('Successfully extracted ${images.length} image(s) from X via Jina');
-        return images;
-      }
-
-      print('No images extracted from X content via primary URL - trying alternate hosts');
+      print('Attempting X scrape via Jina: $url');
+      final urlsToTry = <String>[url];
       const altHosts = ['fxtwitter.com', 'vxtwitter.com'];
       for (final host in altHosts) {
         final rewritten = _rewriteXHost(url, host);
-        if (rewritten == null) continue;
-        final altImages = await _scrapeXViaJina(rewritten);
-        if (altImages.isNotEmpty) {
-          print('Successfully extracted ${altImages.length} image(s) from X via $host');
-          return altImages;
+        if (rewritten != null) {
+          urlsToTry.add(rewritten);
         }
       }
 
-      print('No images extracted from X content after alternate hosts');
+      for (final candidate in urlsToTry) {
+        final files = await _scrapeXViaJina(candidate);
+        if (files.isNotEmpty) {
+          print(
+              'Successfully extracted ${files.length} image(s) from X via Jina');
+          return files;
+        }
+      }
+
+      print('No images extracted from X content via Jina');
     } catch (e) {
       print('Error downloading X images: $e');
     }
     return [];
   }
 
-  /// Downloads image(s) from a Facebook post using Jina, with ScrapingBee fallback.
+  /// Downloads image(s) from a Facebook post using direct HTML scrape.
   static Future<List<XFile>> downloadImageFromFacebookUrl(String url) async {
     try {
-      final jinaImages = await _scrapeFacebookViaJina(url);
-      if (jinaImages.isNotEmpty) {
-        print('Successfully extracted ${jinaImages.length} image(s) from Facebook via Jina');
-        return jinaImages;
+      print('Attempting Facebook scrape (direct): $url');
+      final html = await _fetchHtmlDirect(url);
+      if (html != null && html.isNotEmpty) {
+        final candidates = _extractFacebookImageUrls(html);
+        final files = await _downloadCandidateImages(candidates);
+        if (files.isNotEmpty) {
+          print(
+              'Successfully extracted ${files.length} image(s) from Facebook via direct scrape');
+          return files;
+        }
       }
-
-      final apiKey = AppConstants.scrapingBeeApiKey;
-      if (apiKey.isEmpty || apiKey.startsWith('your_') || apiKey.contains('***')) {
-        print('ScrapingBee API key missing; cannot fallback for Facebook');
-        return [];
-      }
-
-      print('Falling back to ScrapingBee for Facebook');
-      final beeImages = await _scrapingBeeFacebookScraper(url, apiKey);
-      if (beeImages.isNotEmpty) {
-        print('Successfully extracted ${beeImages.length} image(s) from Facebook via ScrapingBee');
-        return beeImages;
-      }
-      print('ScrapingBee failed to extract Facebook images');
+      print('No images extracted from Facebook via direct scrape');
     } catch (e) {
       print('Error downloading Facebook images: $e');
     }
     return [];
   }
 
-  /// Downloads image(s) from a Reddit post using Jina reader only.
+  /// Downloads image(s) from a Reddit post using direct HTML scrape.
   static Future<List<XFile>> downloadImageFromRedditUrl(String url) async {
     try {
-      final images = await _scrapeRedditViaJina(url);
-      if (images.isNotEmpty) {
-        print('Successfully extracted ${images.length} image(s) from Reddit via Jina');
-        return images;
+      print('Attempting Reddit scrape (direct): $url');
+      final html = await _fetchHtmlDirect(url);
+      if (html != null && html.isNotEmpty) {
+        final candidates = _extractRedditImageUrls(html);
+        final files = await _downloadCandidateImages(candidates);
+        if (files.isNotEmpty) {
+          print(
+              'Successfully extracted ${files.length} image(s) from Reddit via direct scrape');
+          return files;
+        }
       }
-      print('No images extracted from Reddit content');
+      print('No images extracted from Reddit content via direct scrape');
     } catch (e) {
       print('Error downloading Reddit images: $e');
     }
     return [];
   }
 
-  static Future<List<XFile>> _scrapePinterestViaJina(String pinterestUrl) async {
+  /// Downloads image(s) from an IMDb page using direct HTML scrape.
+  static Future<List<XFile>> downloadImageFromImdbUrl(String url) async {
     try {
-      final proxyUri = Uri.parse('$_jinaProxyBase${Uri.encodeFull(pinterestUrl)}');
-      final response = await http
-          .get(proxyUri, headers: {'User-Agent': _userAgent})
-          .timeout(const Duration(seconds: 12));
-
-      if (response.statusCode != 200) {
-        print('Pinterest Jina request failed: ${response.statusCode}');
-        return [];
+      print('Attempting IMDb scrape (direct): $url');
+      final html = await _fetchHtmlDirect(url);
+      if (html != null && html.isNotEmpty) {
+        final candidates = _extractImdbImageUrls(html);
+        final files = await _downloadCandidateImages(candidates);
+        if (files.isNotEmpty) {
+          print(
+              'Successfully extracted ${files.length} image(s) from IMDb via direct scrape');
+          return files;
+        }
       }
-
-      print('Pinterest Jina response length: ${response.body.length}');
-      return _extractImagesFromPinterestHtml(response.body);
+      print('No images extracted from IMDb content via direct scrape');
     } catch (e) {
-      print('Pinterest Jina scrape error: $e');
-      return [];
+      print('Error downloading IMDb images: $e');
     }
-  }
-
-  static Future<List<XFile>> _scrapeXViaJina(String xUrl) async {
-    final candidates = await _fetchViaJina(xUrl, _extractXImageUrls);
-    return _downloadCandidateImages(candidates);
-  }
-
-  static Future<List<XFile>> _scrapeFacebookViaJina(String fbUrl) async {
-    final candidates = await _fetchViaJina(fbUrl, _extractFacebookImageUrls);
-    return _downloadCandidateImages(candidates);
-  }
-
-  static Future<List<XFile>> _scrapeRedditViaJina(String redditUrl) async {
-    final candidates = await _fetchViaJina(redditUrl, _extractRedditImageUrls);
-    return _downloadCandidateImages(candidates);
-  }
-
-  static Future<List<String>> _fetchViaJina(
-    String targetUrl,
-    List<String> Function(String) extractor,
-  ) async {
-    try {
-      final proxyUri = Uri.parse('$_jinaProxyBase${Uri.encodeFull(targetUrl)}');
-      final response = await http
-          .get(proxyUri, headers: {'User-Agent': _userAgent})
-          .timeout(const Duration(seconds: 18));
-
-      if (response.statusCode != 200) {
-        print('Jina request failed for $targetUrl with ${response.statusCode}');
-        return [];
-      }
-
-      print('Jina returned ${response.body.length} bytes for $targetUrl');
-      return extractor(response.body);
-    } catch (e) {
-      print('Jina fetch error for $targetUrl: $e');
-      return [];
-    }
+    return [];
   }
 
   static String? _rewriteXHost(String originalUrl, String newHost) {
@@ -1472,30 +1323,54 @@ class InstagramService {
     }
   }
 
-  static Future<List<XFile>> _scrapingBeeFacebookScraper(
-    String facebookUrl,
-    String apiKey,
-  ) async {
+  static Future<String?> _fetchHtmlDirect(
+    String url, {
+    Duration timeout = const Duration(seconds: 12),
+  }) async {
     try {
-      final encoded = Uri.encodeFull(facebookUrl);
-      final beeUrl =
-          'https://app.scrapingbee.com/api/v1/?api_key=$apiKey&url=$encoded&render_js=true&wait=2500&premium_proxy=true';
-      final response =
-          await http.get(Uri.parse(beeUrl)).timeout(const Duration(seconds: 20));
-
-      if (response.statusCode != 200) {
-        print('ScrapingBee Facebook failed: ${response.statusCode}');
-        return [];
+      final response = await http.get(Uri.parse(url),
+          headers: {'User-Agent': _userAgent}).timeout(timeout);
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          response.body.isNotEmpty) {
+        print('Direct fetch returned ${response.body.length} bytes for $url');
+        return response.body;
       }
-
-      final html = response.body;
-      print('ScrapingBee Facebook HTML length: ${html.length}');
-      final candidates = _extractFacebookImageUrls(html);
-      return _downloadCandidateImages(candidates);
+      print('Direct fetch failed for $url with status ${response.statusCode}');
+    } on TimeoutException {
+      print('Direct fetch timed out for $url');
     } catch (e) {
-      print('ScrapingBee Facebook error: $e');
-      return [];
+      print('Direct fetch error for $url: $e');
     }
+    return null;
+  }
+
+  static Future<List<XFile>> _scrapeXViaJina(String url) async {
+    final html = await _fetchViaJinaForX(url);
+    if (html == null || html.isEmpty) return [];
+    final candidates = _extractXImageUrls(html);
+    return _downloadCandidateImages(candidates);
+  }
+
+  static Future<String?> _fetchViaJinaForX(String targetUrl) async {
+    try {
+      final proxyUri =
+          Uri.parse('https://r.jina.ai/${Uri.encodeFull(targetUrl)}');
+      final response = await http.get(proxyUri, headers: {
+        'User-Agent': _userAgent
+      }).timeout(const Duration(seconds: 15));
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          response.body.isNotEmpty) {
+        return response.body;
+      }
+      print('Jina request failed for $targetUrl with ${response.statusCode}');
+    } on TimeoutException {
+      print('Jina request timed out for $targetUrl');
+    } catch (e) {
+      print('Jina request error for $targetUrl: $e');
+    }
+    return null;
   }
 
   static Future<List<XFile>> _downloadCandidateImages(
@@ -1514,7 +1389,13 @@ class InstagramService {
     String upgrade(String url) {
       final uri = Uri.tryParse(url);
       if (uri == null) return url;
-      if (!(uri.host.contains('twimg.com'))) return url;
+      final host = uri.host.toLowerCase();
+      // Only allow media hosts we care about.
+      final isMediaHost =
+          host.contains('pbs.twimg.com') || host.contains('video.twimg.com');
+      if (!isMediaHost) return url;
+      // Reject emoji/svg assets.
+      if (uri.path.contains('/emoji/') || uri.path.endsWith('.svg')) return '';
       final query = Map<String, String>.from(uri.queryParameters);
       query['name'] = 'orig';
       final updated = uri.replace(queryParameters: query);
@@ -1523,8 +1404,15 @@ class InstagramService {
 
     void addIfValid(String? candidate) {
       if (candidate == null || candidate.isEmpty) return;
-      if (!(candidate.contains('twimg.com'))) return;
-      results.add(upgrade(candidate.replaceAll('&amp;', '&')));
+      final cleaned = candidate.replaceAll('&amp;', '&');
+      final lower = cleaned.toLowerCase();
+      if (!lower.contains('twimg.com')) return;
+      if (lower.contains('/emoji/') || lower.endsWith('.svg')) return;
+      // Exclude known emoji assets explicitly
+      if (cleaned.contains('abs-0.twimg.com/emoji')) return;
+      final upgraded = upgrade(cleaned);
+      if (upgraded.isEmpty) return;
+      results.add(upgraded);
     }
 
     final ogPattern = RegExp(
@@ -1559,7 +1447,143 @@ class InstagramService {
       addIfValid(match.group(1));
     }
 
+    // Pattern 5: background-image style URLs that may not appear in attrs
+    final bgPattern = RegExp(
+      r'''background-image:\s*url\((["']?)(https?://[^"')]+twimg\.com[^"')]+)\1\)''',
+      caseSensitive: false,
+    );
+    for (final match in bgPattern.allMatches(html)) {
+      addIfValid(match.group(2));
+    }
+
+    // Pattern 6: bare media IDs without query params
+    final mediaIdPattern = RegExp(
+      r'''https?://pbs\.twimg\.com/media/([A-Za-z0-9_-]+)''',
+      caseSensitive: false,
+    );
+    for (final match in mediaIdPattern.allMatches(html)) {
+      final id = match.group(1);
+      if (id != null && id.isNotEmpty) {
+        addIfValid('https://pbs.twimg.com/media/$id?format=jpg&name=orig');
+      }
+    }
+
     return results.toList();
+  }
+
+  static String? _extractXStatusId(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final segments =
+          uri.pathSegments.where((s) => s.isNotEmpty).toList(growable: false);
+      final statusIndex = segments.indexOf('status');
+      if (statusIndex != -1 && statusIndex + 1 < segments.length) {
+        return segments[statusIndex + 1];
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  static Future<List<XFile>> _fetchXImagesViaSyndication(
+    String statusId,
+  ) async {
+    final endpoints = [
+      'https://cdn.syndication.twimg.com/tweet-result?id=$statusId',
+      'https://cdn.syndication.twimg.com/tweet?id=$statusId',
+    ];
+
+    for (final endpoint in endpoints) {
+      try {
+        final response = await http.get(Uri.parse(endpoint), headers: {
+          'User-Agent': _userAgent
+        }).timeout(const Duration(seconds: 10));
+        if (response.statusCode != 200 || response.body.isEmpty) {
+          continue;
+        }
+
+        final mediaUrls = _extractXMediaFromSyndication(response.body);
+
+        if (mediaUrls.isNotEmpty) {
+          final files = await _downloadCandidateImages(mediaUrls.toList());
+          if (files.isNotEmpty) {
+            return files;
+          }
+        }
+      } on TimeoutException {
+        print('Syndication fetch timed out for tweet $statusId');
+      } catch (e) {
+        print('Syndication fetch error for tweet $statusId: $e');
+      }
+    }
+
+    return [];
+  }
+
+  static String _upgradeXImageUrl(String url) {
+    try {
+      final uri = Uri.parse(url.replaceAll('&amp;', '&'));
+      if (!uri.host.toLowerCase().contains('twimg.com')) return url;
+      final query = Map<String, String>.from(uri.queryParameters);
+      query['name'] = 'orig';
+      final upgraded = uri.replace(queryParameters: query);
+      return upgraded.toString();
+    } catch (_) {
+      return url;
+    }
+  }
+
+  static Set<String> _extractXMediaFromSyndication(String body) {
+    final mediaUrls = <String>{};
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final photos = decoded['photos'];
+        if (photos is List) {
+          for (final p in photos) {
+            if (p is Map && p['url'] is String) {
+              mediaUrls.add(_upgradeXImageUrl(p['url'] as String));
+            }
+          }
+        }
+        final mediaDetails = decoded['mediaDetails'];
+        if (mediaDetails is List) {
+          for (final m in mediaDetails) {
+            if (m is Map && m['media_url_https'] is String) {
+              mediaUrls.add(_upgradeXImageUrl(m['media_url_https'] as String));
+            }
+          }
+        }
+        final entities = decoded['entities'];
+        if (entities is Map && entities['media'] is List) {
+          for (final m in (entities['media'] as List)) {
+            if (m is Map && m['media_url_https'] is String) {
+              mediaUrls.add(_upgradeXImageUrl(m['media_url_https'] as String));
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Syndication JSON parse error: $e');
+    }
+
+    // Fallback: regex for pbs.twimg.com in the body
+    final regex = RegExp(
+      r'''https://pbs\.twimg\.com/[^\s"'<>\)]+''',
+      caseSensitive: false,
+    );
+    for (final match in regex.allMatches(body)) {
+      mediaUrls.add(_upgradeXImageUrl(match.group(0)!));
+    }
+
+    // Filter emoji/svg
+    return mediaUrls.where((u) {
+      final lower = u.toLowerCase();
+      return !(lower.contains('/emoji/') ||
+          lower.endsWith('.svg') ||
+          lower.contains('abs-0.twimg.com/emoji'));
+    }).toSet();
   }
 
   static List<String> _extractFacebookImageUrls(String html) {
@@ -1635,6 +1659,41 @@ class InstagramService {
 
     final imgPattern = RegExp(
       r'''<img\s+[^>]*?src\s*=\s*["']([^"']+redd\.it[^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in imgPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    return results.toList();
+  }
+
+  static List<String> _extractImdbImageUrls(String html) {
+    final results = <String>{};
+
+    void addIfValid(String? candidate) {
+      if (candidate == null || candidate.isEmpty) return;
+      results.add(candidate.replaceAll('&amp;', '&'));
+    }
+
+    final ogPattern = RegExp(
+      r'''<meta\s+(?:[^>]*?\s+)?property\s*=\s*["']og:image["']\s+(?:[^>]*?\s+)?content\s*=\s*["']([^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in ogPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    final twPattern = RegExp(
+      r'''<meta\s+(?:[^>]*?\s+)?name\s*=\s*["']twitter:image["']\s+(?:[^>]*?\s+)?content\s*=\s*["']([^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in twPattern.allMatches(html)) {
+      addIfValid(match.group(1));
+    }
+
+    final imgPattern = RegExp(
+      r'''<img\s+[^>]*?src\s*=\s*["']([^"']+m\.media-amazon\.com[^"']+)["']''',
       caseSensitive: false,
     );
     for (final match in imgPattern.allMatches(html)) {
