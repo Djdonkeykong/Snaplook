@@ -723,6 +723,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         "com.google.chrome": "chrome",
         "org.mozilla.ios.firefox": "firefox",
         "org.mozilla.firefox": "firefox",
+        "com.brave.ios.browser": "brave",
     ]
 
     private func detectPlatformType(from bundleId: String) -> String? {
@@ -738,6 +739,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
         if normalized.contains("firefox") {
             return "firefox"
+        }
+        if normalized.contains("brave") {
+            return "brave"
         }
         return nil
     }
@@ -1403,11 +1407,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             platformType = "google_image"
             downloadFunction = downloadGoogleImageMedia
         } else if item.lowercased().hasPrefix("http://") || item.lowercased().hasPrefix("https://") {
-            shareLog("Unsupported URL share - showing not supported alert")
-            presentUnsupportedAlert(for: item)
-            appendLiteralShare(item: item, type: type)
-            completion()
-            return
+            // Generic web link (e.g., from Safari/Chrome/Firefox/Brave)
+            platformName = "Generic Link"
+            platformType = "generic"
+            downloadFunction = downloadGenericLinkMedia
         } else {
             // Not a URL we can download from
             appendLiteralShare(item: item, type: type)
@@ -1762,6 +1765,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func isDownloadableUrlCandidate(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let isHttp = trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://")
+
         return isInstagramShareCandidate(value) ||
                isTikTokShareCandidate(value) ||
                isPinterestShareCandidate(value) ||
@@ -1771,7 +1777,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                isXShareCandidate(value) ||
                isImdbShareCandidate(value) ||
                isFacebookShareCandidate(value) ||
-               isGoogleImageShareCandidate(value)
+               isGoogleImageShareCandidate(value) ||
+               isHttp // allow generic web links (browsers) to flow through
     }
 
     // Legacy function for backward compatibility
@@ -2419,25 +2426,92 @@ open class RSIShareViewController: SLComposeServiceViewController {
     ) {
         shareLog("Attempting to fetch Facebook content...")
 
-        // Try direct scrape first (free)
-        quickGenericImageScrape(urlString: urlString) { [weak self] quickImages in
+        let candidates = buildFacebookCandidates(from: urlString)
+        let userAgents = [
+            // Facebook scraper UA
+            "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.html)",
+            // Mobile Safari UA
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            // Desktop Chrome UA
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+        ]
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            if !quickImages.isEmpty {
-                shareLog("Found \(quickImages.count) image(s) from Facebook via direct scrape")
+            var foundImages: [String] = []
 
-                self.downloadFirstValidImage(
-                    from: Array(quickImages.prefix(5)),
-                    platform: "facebook",
-                    session: URLSession.shared,
-                    completion: completion
-                )
-                return
+            attemptLoop: for candidateUrl in candidates {
+                for ua in userAgents {
+                    if let html = self.fetchHtml(urlString: candidateUrl, userAgent: ua) {
+                        let images = self.extractImagesFromFacebookHtml(html, baseUrl: candidateUrl)
+                        if !images.isEmpty {
+                            shareLog("Found \(images.count) image(s) from Facebook via direct scrape (\(candidateUrl.prefix(60)))")
+                            foundImages = images
+                            break attemptLoop
+                        }
+                    }
+                }
             }
 
-            shareLog("No images found via direct scrape for Facebook URL")
-            completion(.failure(self.makeFacebookError("No images found in Facebook post")))
+            DispatchQueue.main.async {
+                if !foundImages.isEmpty {
+                    self.downloadFirstValidImage(
+                        from: Array(foundImages.prefix(5)),
+                        platform: "facebook",
+                        session: URLSession.shared,
+                        completion: completion
+                    )
+                } else {
+                    shareLog("No images found via direct scrape for Facebook URL")
+                    completion(.failure(self.makeFacebookError("No images found in Facebook post")))
+                }
+            }
         }
+    }
+
+    private func buildFacebookCandidates(from urlString: String) -> [String] {
+        var urls: [String] = [urlString]
+        if let url = URL(string: urlString), let host = url.host?.lowercased(), host.contains("facebook.com") {
+            func replaceHost(_ newHost: String) -> String? {
+                var comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
+                comps?.host = newHost
+                return comps?.url?.absoluteString
+            }
+            if let mobile = replaceHost("m.facebook.com") {
+                urls.append(mobile)
+            }
+            if let basic = replaceHost("mbasic.facebook.com") {
+                urls.append(basic)
+            }
+        }
+        return Array(NSOrderedSet(array: urls)) as? [String] ?? urls
+    }
+
+    private func fetchHtml(urlString: String, userAgent: String, timeout: TimeInterval = 15.0) -> String? {
+        guard let url = URL(string: urlString) else { return nil }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = timeout
+        request.httpMethod = "GET"
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+
+        let semaphore = DispatchSemaphore(value: 0)
+        var resultHtml: String?
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            defer { semaphore.signal() }
+            guard error == nil,
+                  let http = response as? HTTPURLResponse,
+                  (200...299).contains(http.statusCode),
+                  let data = data,
+                  let html = String(data: data, encoding: .utf8) else {
+                return
+            }
+            resultHtml = html
+        }
+        task.resume()
+        _ = semaphore.wait(timeout: .now() + timeout + 2.0)
+        return resultHtml
     }
 
     private func extractImagesFromFacebookHtml(_ html: String, baseUrl: String) -> [String] {
