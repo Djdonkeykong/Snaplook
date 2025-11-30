@@ -435,33 +435,27 @@ class _HistoryCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(radius.medium),
-              child: SizedBox(
+              child: Container(
                 width: 100,
                 height: 100,
+                color: colorScheme.surfaceVariant,
+                padding: const EdgeInsets.all(6),
                 child: cloudinaryUrl != null
                     ? CachedNetworkImage(
                         imageUrl: cloudinaryUrl,
                         fit: BoxFit.contain,
                         alignment: Alignment.center,
-                        placeholder: (context, url) => Container(
-                          color: colorScheme.surfaceVariant,
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: colorScheme.surfaceVariant,
-                          child: Icon(
-                            Icons.image,
-                            color: colorScheme.onSurfaceVariant,
-                            size: 24,
-                          ),
-                        ),
-                      )
-                    : Container(
-                        color: colorScheme.surfaceVariant,
-                        child: Icon(
+                        placeholder: (context, url) => const SizedBox.expand(),
+                        errorWidget: (context, url, error) => Icon(
                           Icons.image,
                           color: colorScheme.onSurfaceVariant,
                           size: 24,
                         ),
+                      )
+                    : Icon(
+                        Icons.image,
+                        color: colorScheme.onSurfaceVariant,
+                        size: 24,
                       ),
               ),
             ),
