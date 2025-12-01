@@ -1,6 +1,8 @@
 import UIKit
 import Flutter
 import receive_sharing_intent
+import AVKit
+import AVFoundation
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -16,6 +18,8 @@ import receive_sharing_intent
   private let shareLogsKey = "ShareExtensionLogEntries"
   private let authFlagKey = "user_authenticated"
   private let authUserIdKey = "supabase_user_id"
+  private let pipTutorialChannelName = "pip_tutorial"
+  private var pipTutorialManager: PipTutorialManager?
 
   override func application(
     _ application: UIApplication,
@@ -46,6 +50,11 @@ import receive_sharing_intent
 
       let authChannel = FlutterMethodChannel(
         name: authChannelName,
+        binaryMessenger: controller.binaryMessenger
+      )
+
+      let pipTutorialChannel = FlutterMethodChannel(
+        name: pipTutorialChannelName,
         binaryMessenger: controller.binaryMessenger
       )
 
@@ -249,6 +258,54 @@ import receive_sharing_intent
           result(FlutterMethodNotImplemented)
         }
       }
+
+      pipTutorialChannel.setMethodCallHandler { [weak self] call, result in
+        guard let self = self else {
+          result(
+            FlutterError(
+              code: "UNAVAILABLE",
+              message: "AppDelegate released",
+              details: nil
+            )
+          )
+          return
+        }
+
+        switch call.method {
+        case "start":
+          guard let args = call.arguments as? [String: Any],
+                let target = args["target"] as? String else {
+            result(
+              FlutterError(
+                code: "INVALID_ARGS",
+                message: "Missing target",
+                details: nil
+              )
+            )
+            return
+          }
+          let videoName = args["video"] as? String ?? "pip-test.mp4"
+          let assetKey = controller.lookupKey(forAsset: videoName)
+          if self.pipTutorialManager == nil {
+            self.pipTutorialManager = PipTutorialManager()
+          }
+          self.pipTutorialManager?.start(assetKey: assetKey, targetApp: target) { success, errorMsg in
+            if success {
+              result(true)
+            } else {
+              result(
+                FlutterError(
+                  code: "PIP_FAILED",
+                  message: errorMsg ?? "Unable to start PiP tutorial",
+                  details: nil
+                )
+              )
+            }
+          }
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
     }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
@@ -266,6 +323,11 @@ import receive_sharing_intent
     return super.application(app, open: url, options: options)
   }
 
+  override func applicationDidBecomeActive(_ application: UIApplication) {
+    super.applicationDidBecomeActive(application)
+    pipTutorialManager?.stopIfNeededOnReturn()
+  }
+
   private func getAppGroupId() -> String? {
     let defaultGroupId = "group.\(Bundle.main.bundleIdentifier ?? "")"
     if let customGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupId") as? String,
@@ -278,5 +340,87 @@ import receive_sharing_intent
 
   private func sharedUserDefaults() -> UserDefaults? {
     return UserDefaults(suiteName: getAppGroupId())
+  }
+}
+
+class PipTutorialManager {
+  private var player: AVPlayer?
+  private var pipController: AVPictureInPictureController?
+  private var stopOnReturn = false
+
+  func start(assetKey: String, targetApp: String, completion: @escaping (Bool, String?) -> Void) {
+    guard let path = Bundle.main.path(forResource: assetKey, ofType: nil) else {
+      completion(false, "Video not found: \(assetKey)")
+      return
+    }
+    let videoUrl = URL(fileURLWithPath: path)
+
+    do {
+      try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [.mixWithOthers])
+    } catch {
+      NSLog("[PiP] Failed to set audio session: \(error.localizedDescription)")
+    }
+
+    let item = AVPlayerItem(url: videoUrl)
+    let player = AVPlayer(playerItem: item)
+    player.isMuted = true
+    self.player = player
+
+    let layer = AVPlayerLayer(player: player)
+    if AVPictureInPictureController.isPictureInPictureSupported() {
+      pipController = AVPictureInPictureController(playerLayer: layer)
+      pipController?.canStartPictureInPictureAutomaticallyFromInline = true
+    }
+
+    player.play()
+    stopOnReturn = true
+    pipController?.startPictureInPicture()
+
+    openTargetApp(targetApp)
+    completion(true, nil)
+  }
+
+  func stopIfNeededOnReturn() {
+    if stopOnReturn {
+      stop()
+    }
+  }
+
+  private func stop() {
+    pipController?.stopPictureInPicture()
+    pipController = nil
+    player?.pause()
+    player = nil
+    stopOnReturn = false
+  }
+
+  private func openTargetApp(_ target: String) {
+    guard let url = urlForTarget(target) else { return }
+    if UIApplication.shared.canOpenURL(url) {
+      UIApplication.shared.open(url, options: [:], completionHandler: nil)
+    }
+  }
+
+  private func urlForTarget(_ target: String) -> URL? {
+    switch target {
+    case "instagram":
+      return URL(string: "instagram://app")
+    case "pinterest":
+      return URL(string: "pinterest://")
+    case "tiktok":
+      return URL(string: "snssdk1233://")
+    case "photos":
+      return URL(string: "photos-redirect://")
+    case "facebook":
+      return URL(string: "fb://")
+    case "imdb":
+      return URL(string: "imdb://")
+    case "safari":
+      return URL(string: "http://www.google.com")
+    case "x":
+      return URL(string: "twitter://")
+    default:
+      return nil
+    }
   }
 }

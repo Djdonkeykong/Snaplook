@@ -621,7 +621,11 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           '${Directory.systemTemp.path}/snaplook_share_square_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final file = await File(tempPath).create();
       await file.writeAsBytes(jpg, flush: true);
-      return XFile(file.path);
+      return XFile(
+        file.path,
+        mimeType: 'image/jpeg',
+        name: 'snaplook.jpg',
+      );
     } catch (e) {
       print('Error squaring share image: $e');
       return original;
@@ -638,7 +642,11 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         '${Directory.systemTemp.path}/snaplook_share_${DateTime.now().millisecondsSinceEpoch}.jpg',
       ).create();
       await temp.writeAsBytes(response.bodyBytes);
-      return XFile(temp.path);
+      return XFile(
+        temp.path,
+        mimeType: 'image/jpeg',
+        name: 'snaplook.jpg',
+      );
     } catch (e) {
       print('Error downloading share image: $e');
       return null;

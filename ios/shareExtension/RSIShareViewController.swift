@@ -2546,6 +2546,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func extractImagesFromFacebookHtml(_ html: String, baseUrl: String) -> [String] {
         var results: [String] = []
+        func clean(_ url: String) -> String {
+            return url.replacingOccurrences(of: "&amp;", with: "&")
+        }
 
         // Pattern 1: og:image meta tags (Facebook's Open Graph images)
         let ogImagePattern = #"<meta\s+(?:[^>]*?\s+)?property\s*=\s*["\']og:image(?::secure_url)?["\']\s+(?:[^>]*?\s+)?content\s*=\s*["\']([^"\']+)["\']"#
@@ -2555,7 +2558,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             for match in matches {
                 if match.numberOfRanges > 1 {
                     let urlRange = match.range(at: 1)
-                    let imageUrl = nsHtml.substring(with: urlRange)
+                    let imageUrl = clean(nsHtml.substring(with: urlRange))
                     if !imageUrl.isEmpty && !imageUrl.contains("facebook.com/images/") {
                         shareLog("Found Facebook og:image: \(imageUrl.prefix(80))")
                         results.append(imageUrl)
@@ -2572,7 +2575,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             for match in matches {
                 if match.numberOfRanges > 0 {
                     let urlRange = match.range(at: 1)
-                    let imageUrl = nsHtml.substring(with: urlRange)
+                    let imageUrl = clean(nsHtml.substring(with: urlRange))
                     if !imageUrl.isEmpty {
                         shareLog("Found Facebook CDN image: \(imageUrl.prefix(80))")
                         results.append(imageUrl)
@@ -2589,7 +2592,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             for match in matches {
                 if match.numberOfRanges > 1 {
                     let urlRange = match.range(at: 1)
-                    let imageUrl = nsHtml.substring(with: urlRange)
+                    let imageUrl = clean(nsHtml.substring(with: urlRange))
                     if !imageUrl.isEmpty {
                         shareLog("Found Facebook img src: \(imageUrl.prefix(80))")
                         results.append(imageUrl)
@@ -3306,7 +3309,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         var urlsToTry = urls
-        let firstUrl = urlsToTry.removeFirst()
+        let rawUrl = urlsToTry.removeFirst()
+        let firstUrl = rawUrl.replacingOccurrences(of: "&amp;", with: "&")
 
         guard let url = URL(string: firstUrl) else {
             // Try next URL
@@ -3317,13 +3321,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("Trying to download \(platform) image: \(firstUrl.prefix(80))...")
 
         var request = URLRequest(url: url)
-        // Some CDNs (fbcdn) can be picky without a UA / language
+        // Some CDNs (fbcdn) can be picky without a UA / language / referer
         if platform == "facebook" {
-          request.setValue(
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-            forHTTPHeaderField: "User-Agent"
-          )
-          request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+            request.setValue(
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                forHTTPHeaderField: "User-Agent"
+            )
+            request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+            request.setValue("https://www.facebook.com/", forHTTPHeaderField: "Referer")
+            request.setValue("image/avif,image/webp,image/apng,image/*,*/*;q=0.8", forHTTPHeaderField: "Accept")
         }
 
         let task = session.dataTask(with: request) { [weak self] data, response, error in
@@ -3339,7 +3345,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             guard let data = data, !data.isEmpty,
                   let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
+                  (200...299).contains(httpResponse.statusCode) else {
+                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+                shareLog("Failed to download \(platform) image (status \(status)) from \(firstUrl.prefix(80))")
+
+                // If Facebook blocks, try a dl=1 variant once
+                if platform == "facebook",
+                   !firstUrl.contains("dl=1"),
+                   var comps = URLComponents(string: firstUrl) {
+                    var queryItems = comps.queryItems ?? []
+                    queryItems.append(URLQueryItem(name: "dl", value: "1"))
+                    comps.queryItems = queryItems
+                    if let dlUrl = comps.url?.absoluteString {
+                        var next = urlsToTry
+                        next.insert(dlUrl, at: 0)
+                        self.downloadFirstValidImage(from: next, platform: platform, session: session, cropToAspect: cropToAspect, completion: completion)
+                        return
+                    }
+                }
                 // Try next URL
                 self.downloadFirstValidImage(from: urlsToTry, platform: platform, session: session, cropToAspect: cropToAspect, completion: completion)
                 return

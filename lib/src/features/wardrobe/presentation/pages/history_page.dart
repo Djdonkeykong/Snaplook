@@ -288,15 +288,8 @@ class _HistoryCard extends StatelessWidget {
     }
 
     if (shareImage != null) {
-      final files = <XFile>[shareImage];
-      // Add a tiny text attachment to force the message to accompany the image on iOS targets.
-      if (payload.message.isNotEmpty) {
-        final textFile = await _createTextAttachment(payload.message);
-        if (textFile != null) files.add(textFile);
-      }
-
       await Share.shareXFiles(
-        files,
+        [shareImage],
         text: payload.message,
         subject: payload.subject,
         sharePositionOrigin: origin,
@@ -425,25 +418,17 @@ class _HistoryCard extends StatelessWidget {
       final tempPath =
           '${Directory.systemTemp.path}/snaplook_history_share_${DateTime.now().millisecondsSinceEpoch}.jpg';
       await File(tempPath).writeAsBytes(jpg, flush: true);
-      return XFile(tempPath);
+      return XFile(
+        tempPath,
+        mimeType: 'image/jpeg',
+        name: 'snaplook.jpg',
+      );
     } catch (e) {
       debugPrint('Error preparing share image: $e');
       return null;
     }
   }
 
-  Future<XFile?> _createTextAttachment(String message) async {
-    try {
-      final tempPath =
-          '${Directory.systemTemp.path}/snaplook_share_${DateTime.now().millisecondsSinceEpoch}.txt';
-      final file = await File(tempPath).create();
-      await file.writeAsString(message, flush: true);
-      return XFile(tempPath, mimeType: 'text/plain');
-    } catch (e) {
-      debugPrint('Error creating text attachment: $e');
-      return null;
-    }
-  }
 
   void _showToast(BuildContext context, String message) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();

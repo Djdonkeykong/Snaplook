@@ -88,6 +88,11 @@
 	<string>Location is only used if you choose to tag captured photos with where they were taken.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>picture-in-picture</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -108,6 +113,17 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram</string>
+		<string>pinterest</string>
+		<string>tiktok</string>
+		<string>fb</string>
+		<string>facebook</string>
+		<string>twitter</string>
+		<string>imdb</string>
+		<string>photos-redirect</string>
 	</array>
 </dict>
 </plist>

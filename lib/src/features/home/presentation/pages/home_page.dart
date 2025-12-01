@@ -19,14 +19,6 @@ import '../../../product/presentation/pages/detected_products_page.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
-import '../../../onboarding/presentation/pages/instagram_tutorial_page.dart';
-import '../../../onboarding/presentation/pages/pinterest_tutorial_page.dart';
-import '../../../onboarding/presentation/pages/tiktok_tutorial_page.dart';
-import '../../../onboarding/presentation/pages/safari_tutorial_page.dart';
-import '../../../onboarding/presentation/pages/photos_tutorial_page.dart';
-import '../../../onboarding/presentation/pages/facebook_tutorial_page.dart';
-import '../../../onboarding/presentation/pages/imdb_tutorial_page.dart';
-import '../../../onboarding/presentation/pages/x_tutorial_page.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../detection/presentation/pages/camera_capture_page.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
@@ -34,6 +26,7 @@ import '../../../../../shared/navigation/main_navigation.dart'
     show scrollToTopTriggerProvider, isAtHomeRootProvider;
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
+import '../services/pip_tutorial_service.dart';
 
 String? _extractProductUrl(Map<String, dynamic> product) {
   final candidates = [
@@ -78,6 +71,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   final Set<String> _preloadedImages = <String>{};
   ProviderSubscription<XFile?>? _pendingShareListener;
   bool _isProcessingPendingNavigation = false;
+  final PipTutorialService _pipTutorialService = PipTutorialService();
 
   @override
   void initState() {
@@ -971,51 +965,54 @@ class _HomePageState extends ConsumerState<HomePage> {
   void _startTutorialFlow(_TutorialSource source) {
     if (!mounted) return;
 
-    Widget destination;
+    PipTutorialTarget target;
     switch (source) {
       case _TutorialSource.instagram:
-        ref.read(tutorialStepProvider.notifier).state = TutorialStep.tapShare;
-        destination = const InstagramTutorialPage(returnToOnboarding: false);
+        target = PipTutorialTarget.instagram;
         break;
       case _TutorialSource.pinterest:
-        ref.read(pinterestTutorialStepProvider.notifier).state =
-            PinterestTutorialStep.step1;
-        destination = const PinterestTutorialPage(returnToOnboarding: false);
+        target = PipTutorialTarget.pinterest;
         break;
       case _TutorialSource.tiktok:
-        ref.read(tiktokTutorialStepProvider.notifier).state =
-            TikTokTutorialStep.step1;
-        destination = const TikTokTutorialPage(returnToOnboarding: false);
-        break;
-      case _TutorialSource.safari:
-        ref.read(safariTutorialStepProvider.notifier).state =
-            SafariTutorialStep.step1;
-        destination = const SafariTutorialPage(returnToOnboarding: false);
+        target = PipTutorialTarget.tiktok;
         break;
       case _TutorialSource.photos:
-        ref.read(photosTutorialStepProvider.notifier).state =
-            PhotosTutorialStep.step1;
-        destination = const PhotosTutorialPage(returnToOnboarding: false);
+        target = PipTutorialTarget.photos;
         break;
       case _TutorialSource.facebook:
-        ref.read(facebookTutorialStepProvider.notifier).state =
-            FacebookTutorialStep.step1;
-        destination = const FacebookTutorialPage(returnToOnboarding: false);
+        target = PipTutorialTarget.facebook;
         break;
       case _TutorialSource.imdb:
-        ref.read(imdbTutorialStepProvider.notifier).state =
-            ImdbTutorialStep.step1;
-        destination = const ImdbTutorialPage(returnToOnboarding: false);
+        target = PipTutorialTarget.imdb;
+        break;
+      case _TutorialSource.safari:
+        target = PipTutorialTarget.safari;
         break;
       case _TutorialSource.x:
-        ref.read(xTutorialStepProvider.notifier).state = XTutorialStep.step1;
-        destination = const XTutorialPage(returnToOnboarding: false);
+        target = PipTutorialTarget.x;
         break;
     }
 
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(builder: (_) => destination),
-    );
+    _launchPipTutorial(target);
+  }
+
+  Future<void> _launchPipTutorial(PipTutorialTarget target) async {
+    try {
+      await _pipTutorialService.startTutorial(target: target);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Picture-in-Picture tutorial not available right now.',
+            style: context.snackTextStyle(
+              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _showInfoBottomSheet(BuildContext context) {

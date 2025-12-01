@@ -16,6 +16,7 @@ class MainActivity: FlutterActivity() {
     private val shareLogsChannel = "snaplook/share_extension_logs"
     private val shareStatusChannelName = "com.snaplook.snaplook/share_status"
     private val authChannelName = "snaplook/auth"
+    private val pipTutorialChannel = "pip_tutorial"
     private val shareStatusPrefs by lazy {
         getSharedPreferences("snaplook_share_status", MODE_PRIVATE)
     }
@@ -90,6 +91,17 @@ class MainActivity: FlutterActivity() {
                         }
                         Log.d("SnaplookAuth", "setAuthFlag -> authenticated=$isAuthenticated userId=${userId ?: "null"}")
                         result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, pipTutorialChannel)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> {
+                        // PiP tutorial not yet implemented on Android in this build.
+                        result.error("UNAVAILABLE", "PiP tutorial not implemented on Android yet", null)
                     }
                     else -> result.notImplemented()
                 }
