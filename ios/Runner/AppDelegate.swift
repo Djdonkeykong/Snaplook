@@ -369,7 +369,9 @@ class PipTutorialManager {
     let layer = AVPlayerLayer(player: player)
     if AVPictureInPictureController.isPictureInPictureSupported() {
       pipController = AVPictureInPictureController(playerLayer: layer)
-      pipController?.canStartPictureInPictureAutomaticallyFromInline = true
+      if #available(iOS 14.2, *) {
+        pipController?.canStartPictureInPictureAutomaticallyFromInline = true
+      }
     }
 
     player.play()

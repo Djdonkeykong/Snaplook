@@ -116,6 +116,7 @@ flutter:
     - assets/icons/
     - assets/animations/
     - assets/videos/
+    - assets/videos/pip-test.mp4
     - .env
 
   fonts:
