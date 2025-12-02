@@ -1,12 +1,8 @@
 import 'dart:io';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-
 import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:camerawesome/src/orchestrator/analysis/analysis_to_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,9 +23,6 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
   final ImagePicker _picker = ImagePicker();
   bool _isProcessingCapture = false;
   bool _mirrorConfigured = false;
-  final GlobalKey _previewKey = GlobalKey();
-  Uint8List? _frozenFrameBytes;
-  bool _hasSeededFreeze = false;
   bool _showFlashOverlay = false;
 
   Future<CaptureRequest> _buildCaptureRequest(List<Sensor> sensors) async {
@@ -132,23 +125,7 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
   }
 
   Future<void> _captureFrozenFrame({double pixelRatio = 1.0}) async {
-    try {
-      final boundary =
-          _previewKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) return;
-
-      final ui.Image image = await boundary.toImage(
-        pixelRatio: pixelRatio,
-      );
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) return;
-      if (!mounted) return;
-      setState(() {
-        _frozenFrameBytes = byteData.buffer.asUint8List();
-      });
-    } catch (_) {
-      // Best-effort; if capture fails, we simply won't show the frozen frame.
-    }
+    // Frozen-frame preview removed for faster handoff.
   }
 
   void _triggerFlash() {
@@ -167,8 +144,6 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
       onPhotoMode: (photoState) async {
         setState(() => _isProcessingCapture = true);
         _triggerFlash();
-        // Capture a sharper frozen frame for overlay while the file is written.
-        _captureFrozenFrame(pixelRatio: 2.0);
         // Attempt to avoid mirrored preview glitches on first capture
         if (!_mirrorConfigured) {
           CamerawesomePlugin.setMirrorFrontCamera(false);
@@ -392,14 +367,6 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
           Positioned.fill(
             child: Container(
               color: Colors.transparent,
-              child: _frozenFrameBytes != null
-                  ? Image.memory(
-                      _frozenFrameBytes!,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                    )
-                  : null,
             ),
           ),
         if (_showFlashOverlay)
@@ -419,7 +386,6 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: RepaintBoundary(
-        key: _previewKey,
         child: CameraAwesomeBuilder.custom(
           saveConfig: SaveConfig.photo(
             pathBuilder: _buildCaptureRequest,
@@ -441,14 +407,6 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
           if (!_mirrorConfigured) {
             CamerawesomePlugin.setMirrorFrontCamera(false);
             _mirrorConfigured = true;
-          }
-          if (!_hasSeededFreeze) {
-            _hasSeededFreeze = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _captureFrozenFrame(pixelRatio: 1.0);
-              }
-            });
           }
           return _buildCameraOverlay(cameraState, preview);
         },
