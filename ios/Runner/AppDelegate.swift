@@ -433,7 +433,12 @@ class PipTutorialManager: NSObject {
       hostView = host
     }
 
-    let controller = AVPictureInPictureController(playerLayer: layer)
+    guard let controller = AVPictureInPictureController(playerLayer: layer) else {
+      logHandler?("[PiP] Could not create AVPictureInPictureController (nil)")
+      completion(false, "Unable to create PiP controller")
+      cleanup()
+      return
+    }
     controller.delegate = self
     if #available(iOS 14.2, *) {
       controller.canStartPictureInPictureAutomaticallyFromInline = true
