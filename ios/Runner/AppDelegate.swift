@@ -273,8 +273,10 @@ import AVFoundation
 
         switch call.method {
         case "start":
+          self.appendShareLog("[PiP] Flutter requested tutorial start")
           guard let args = call.arguments as? [String: Any],
                 let target = args["target"] as? String else {
+            self.appendShareLog("[PiP] ERROR missing target argument")
             result(
               FlutterError(
                 code: "INVALID_ARGS",
@@ -295,11 +297,16 @@ import AVFoundation
           let assetKey = controller.lookupKey(forAsset: videoName)
           if self.pipTutorialManager == nil {
             self.pipTutorialManager = PipTutorialManager()
+            self.pipTutorialManager?.logHandler = { [weak self] msg in
+              self?.appendShareLog(msg)
+            }
           }
           self.pipTutorialManager?.start(assetKey: assetKey, targetApp: target) { success, errorMsg in
             if success {
+              self.appendShareLog("[PiP] Started successfully for target \(target)")
               result(true)
             } else {
+              self.appendShareLog("[PiP] FAILED for target \(target): \(errorMsg ?? "unknown error")")
               result(
                 FlutterError(
                   code: "PIP_FAILED",
@@ -348,24 +355,53 @@ import AVFoundation
   private func sharedUserDefaults() -> UserDefaults? {
     return UserDefaults(suiteName: getAppGroupId())
   }
+
+  private func appendShareLog(_ message: String) {
+    guard let defaults = sharedUserDefaults() else {
+      NSLog("[ShareLogs] Unable to append, missing app group defaults")
+      return
+    }
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let timestamp = formatter.string(from: Date())
+    var entries = defaults.stringArray(forKey: shareLogsKey) ?? []
+    entries.append("[\(timestamp)] \(message)")
+    if entries.count > 200 {
+      entries.removeFirst(entries.count - 200)
+    }
+    defaults.set(entries, forKey: shareLogsKey)
+  }
 }
 
-class PipTutorialManager {
+class PipTutorialManager: NSObject {
   private var player: AVPlayer?
+  private var playerLayer: AVPlayerLayer?
   private var pipController: AVPictureInPictureController?
   private var stopOnReturn = false
+  private var pendingCompletion: ((Bool, String?) -> Void)?
+  private var pendingTargetApp: String?
+  private weak var hostView: UIView?
+  var logHandler: ((String) -> Void)?
 
   func start(assetKey: String, targetApp: String, completion: @escaping (Bool, String?) -> Void) {
+    // Clean up any previous PiP attempt before starting a new one
+    cleanup()
+
     guard let path = Bundle.main.path(forResource: assetKey, ofType: nil) else {
+      logHandler?("[PiP] Video not found at key \(assetKey)")
       completion(false, "Video not found: \(assetKey)")
       return
     }
     let videoUrl = URL(fileURLWithPath: path)
+    logHandler?("[PiP] Prepared asset \(assetKey) for target \(targetApp)")
 
     do {
-      try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [.mixWithOthers])
+      let session = AVAudioSession.sharedInstance()
+      try session.setCategory(.playback, mode: .moviePlayback, options: [.mixWithOthers])
+      try session.setActive(true)
     } catch {
       NSLog("[PiP] Failed to set audio session: \(error.localizedDescription)")
+      logHandler?("[PiP] Audio session setup failed: \(error.localizedDescription)")
     }
 
     let item = AVPlayerItem(url: videoUrl)
@@ -373,23 +409,48 @@ class PipTutorialManager {
     player.isMuted = true
     self.player = player
 
-    let layer = AVPlayerLayer(player: player)
     guard AVPictureInPictureController.isPictureInPictureSupported() else {
+      logHandler?("[PiP] Device does not support Picture in Picture")
       completion(false, "Picture in Picture is not supported on this device/simulator.")
+      cleanup()
       return
     }
 
-    pipController = AVPictureInPictureController(playerLayer: layer)
-    if #available(iOS 14.2, *) {
-      pipController?.canStartPictureInPictureAutomaticallyFromInline = true
+    let layer = AVPlayerLayer(player: player)
+    layer.videoGravity = .resizeAspect
+    playerLayer = layer
+
+    // Attach the layer to a tiny hosting view so PiP can start reliably
+    if let rootView = UIApplication.shared.connectedScenes
+      .compactMap({ $0 as? UIWindowScene })
+      .flatMap({ $0.windows })
+      .first(where: { $0.isKeyWindow })?.rootViewController?.view {
+      let host = UIView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+      host.isHidden = true
+      rootView.addSubview(host)
+      layer.frame = host.bounds
+      host.layer.addSublayer(layer)
+      hostView = host
     }
 
-    player.play()
-    stopOnReturn = true
-    pipController?.startPictureInPicture()
+    let controller = AVPictureInPictureController(playerLayer: layer)
+    controller.delegate = self
+    if #available(iOS 14.2, *) {
+      controller.canStartPictureInPictureAutomaticallyFromInline = true
+    }
+    pipController = controller
 
-    openTargetApp(targetApp)
-    completion(true, nil)
+    // Hold onto the completion and target; execute once PiP actually starts
+    pendingCompletion = { success, error in
+      DispatchQueue.main.async {
+        completion(success, error)
+      }
+    }
+    pendingTargetApp = targetApp
+
+    logHandler?("[PiP] Starting PiP for target \(targetApp)")
+    player.play()
+    controller.startPictureInPicture()
   }
 
   func stopIfNeededOnReturn() {
@@ -400,10 +461,25 @@ class PipTutorialManager {
 
   private func stop() {
     pipController?.stopPictureInPicture()
-    pipController = nil
+    cleanup()
+    stopOnReturn = false
+  }
+
+  private func cleanup() {
     player?.pause()
     player = nil
-    stopOnReturn = false
+    playerLayer = nil
+    pipController = nil
+    pendingCompletion = nil
+    pendingTargetApp = nil
+    hostView?.removeFromSuperview()
+    hostView = nil
+  }
+
+  private func complete(_ success: Bool, error: String? = nil) {
+    guard let completion = pendingCompletion else { return }
+    pendingCompletion = nil
+    completion(success, error)
   }
 
   private func openTargetApp(_ target: String) {
@@ -434,5 +510,29 @@ class PipTutorialManager {
     default:
       return nil
     }
+  }
+}
+
+extension PipTutorialManager: AVPictureInPictureControllerDelegate {
+  func pictureInPictureControllerDidStartPictureInPicture(_ controller: AVPictureInPictureController) {
+    stopOnReturn = true
+    if let target = pendingTargetApp {
+      openTargetApp(target)
+    }
+    pendingTargetApp = nil
+    logHandler?("[PiP] PiP started by system")
+    complete(true, error: nil)
+  }
+
+  func pictureInPictureController(_ controller: AVPictureInPictureController, failedToStartPictureInPictureWithError error: Error) {
+    logHandler?("[PiP] PiP failed to start: \(error.localizedDescription)")
+    complete(false, error: error.localizedDescription)
+    cleanup()
+  }
+
+  func pictureInPictureControllerDidStopPictureInPicture(_ controller: AVPictureInPictureController) {
+    stopOnReturn = false
+    logHandler?("[PiP] PiP stopped by system")
+    cleanup()
   }
 }
