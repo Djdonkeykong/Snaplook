@@ -50,7 +50,7 @@ cloudinary.config(
 )
 
 # SearchAPI.io credentials and configuration
-SERPAPI_KEY = os.getenv("SERPAPI_KEY", "LFS5xEY14pxzyzo39G6b83kg")
+SERPAPI_KEY = os.getenv("SERPAPI_KEY", "UexwcLYH6kTnBnXnyMNZqQth")
 SERPAPI_LOCATION = os.getenv("SERPAPI_LOCATION", "United States")  # Location for results
 SERPAPI_DEVICE = os.getenv("SERPAPI_DEVICE", "mobile")  # mobile or desktop
 
@@ -1543,7 +1543,9 @@ def run_full_detection_pipeline(
     expand_ratio: Optional[float] = None,
     max_crops: Optional[int] = None,
     max_results_per_garment: Optional[int] = 10,
-    location: Optional[str] = None
+    location: Optional[str] = None,
+    country: Optional[str] = None,
+    language: Optional[str] = None,
 ) -> dict:
     """
     Reusable detection pipeline function that can be called by caching API.
@@ -1690,8 +1692,8 @@ def run_full_detection_pipeline(
             crop_url,
             max_results_per_garment,
             location=location,
-            country=None,  # TODO: Add country/language params to run_full_detection_pipeline
-            language='en',
+            country=country,
+            language=language,
         )
         print(f"{label} search took {time.time() - t_search:.2f}s ({len(search_results)} results)")
 
