@@ -993,8 +993,17 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     StateSetter sheetSetState,
   ) async {
     if (!mounted) return;
-    if (source != _TutorialSource.instagram) {
-      return; // Only Instagram is active for now
+
+    PipTutorialTarget? target;
+    switch (source) {
+      case _TutorialSource.instagram:
+        target = PipTutorialTarget.instagram;
+        break;
+      case _TutorialSource.safari:
+        target = PipTutorialTarget.safari;
+        break;
+      default:
+        return; // Other apps still disabled for now
     }
 
     if (_loadingTutorialSource != null) {
@@ -1020,7 +1029,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       await Future.delayed(const Duration(milliseconds: 150));
 
       if (!mounted) return;
-      await _launchPipTutorial(PipTutorialTarget.instagram);
+      await _launchPipTutorial(target);
     } finally {
       if (mounted) {
         setState(() {
