@@ -710,7 +710,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         if (mounted) {
           final fileImage = FileImage(File(image.path));
           print("[IMAGE PICKER] Precaching selected image for instant render");
-          precacheImage(fileImage, context).catchError((e) {
+          await precacheImage(fileImage, context).catchError((e) {
             print("[IMAGE PICKER] Precaching error: $e");
           });
         }
@@ -718,7 +718,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         if (mounted) {
           print(
               "[IMAGE PICKER] Widget is mounted - navigating to DetectionPage");
-          Navigator.of(context, rootNavigator: true).push(
+          await Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) {
                 print("[IMAGE PICKER] DetectionPage builder called");
@@ -727,9 +727,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                 );
               },
             ),
-          ).then((value) {
-            print("[IMAGE PICKER] Returned from DetectionPage");
-          });
+          );
+          print("[IMAGE PICKER] Returned from DetectionPage");
         } else {
           print("[IMAGE PICKER ERROR] Widget not mounted - cannot navigate");
         }
