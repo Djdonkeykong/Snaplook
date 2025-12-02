@@ -999,9 +999,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       case _TutorialSource.instagram:
         target = PipTutorialTarget.instagram;
         break;
-      case _TutorialSource.safari:
-        target = PipTutorialTarget.safari;
-        break;
       default:
         return; // Other apps still disabled for now
     }
@@ -1025,8 +1022,10 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         await Navigator.of(sheetContext).maybePop();
       }
 
-      // Small buffer to let the sheet close cleanly before PiP starts
-      await Future.delayed(const Duration(milliseconds: 150));
+      // Let the sheet animation fully settle before starting PiP
+      await Future.microtask(() {});
+      await WidgetsBinding.instance.endOfFrame;
+      await Future.delayed(const Duration(milliseconds: 120));
 
       if (!mounted) return;
       await _launchPipTutorial(target);

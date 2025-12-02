@@ -153,7 +153,7 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
 
   void _triggerFlash() {
     setState(() => _showFlashOverlay = true);
-    Future.delayed(const Duration(milliseconds: 80), () {
+    Future.delayed(const Duration(milliseconds: 40), () {
       if (mounted) {
         setState(() => _showFlashOverlay = false);
       }
@@ -167,8 +167,8 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
       onPhotoMode: (photoState) async {
         setState(() => _isProcessingCapture = true);
         _triggerFlash();
-        // Kick off a quick snapshot of the preview; overlay will use last known frame immediately.
-        _captureFrozenFrame(pixelRatio: 1.0);
+        // Capture a sharper frozen frame for overlay while the file is written.
+        _captureFrozenFrame(pixelRatio: 2.0);
         // Attempt to avoid mirrored preview glitches on first capture
         if (!_mirrorConfigured) {
           CamerawesomePlugin.setMirrorFrontCamera(false);
@@ -407,9 +407,7 @@ class _CameraCapturePageState extends ConsumerState<CameraCapturePage> {
             child: AnimatedOpacity(
               opacity: _showFlashOverlay ? 1 : 0,
               duration: const Duration(milliseconds: 60),
-              child: Container(
-                color: Colors.black.withOpacity(0.2),
-              ),
+              child: Container(color: Colors.white.withOpacity(0.22)),
             ),
           ),
       ],
