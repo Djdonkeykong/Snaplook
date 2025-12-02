@@ -399,7 +399,8 @@ class PipTutorialManager: NSObject {
 
     do {
       let session = AVAudioSession.sharedInstance()
-      try session.setCategory(.playback, mode: .moviePlayback, options: [.mixWithOthers])
+      // Use ambient + mix so other audio keeps playing and we stay silent.
+      try session.setCategory(.ambient, mode: .moviePlayback, options: [.mixWithOthers])
       try session.setActive(true)
     } catch {
       NSLog("[PiP] Failed to set audio session: \(error.localizedDescription)")

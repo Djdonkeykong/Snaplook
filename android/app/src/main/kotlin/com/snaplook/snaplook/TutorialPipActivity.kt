@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import io.flutter.FlutterInjector
 import java.io.File
 import java.lang.ref.WeakReference
+import android.media.AudioAttributes
 
 class TutorialPipActivity : AppCompatActivity() {
   private var videoView: VideoView? = null
@@ -78,6 +79,12 @@ class TutorialPipActivity : AppCompatActivity() {
 
         videoView?.setVideoURI(Uri.fromFile(videoFile))
         videoView?.setOnPreparedListener { mp: MediaPlayer ->
+            mp.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                    .build()
+            )
             mp.isLooping = true
             mp.setVolume(0f, 0f)
             videoView?.start()
