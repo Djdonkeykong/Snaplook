@@ -16,7 +16,7 @@ class PipTutorialService {
 
   Future<void> startTutorial({
     required PipTutorialTarget target,
-    String videoAsset = 'pip-test.mp4',
+    String videoAsset = 'assets/videos/pip-test.mp4',
   }) async {
     final targetKey = target.name;
     try {

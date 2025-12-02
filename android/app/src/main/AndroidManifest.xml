@@ -80,6 +80,12 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".TutorialPipActivity"
+            android:supportsPictureInPicture="true"
+            android:resizeableActivity="true"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
         <!-- UCrop Activity for image cropping -->
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"

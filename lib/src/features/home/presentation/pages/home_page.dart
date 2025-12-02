@@ -56,6 +56,7 @@ enum _TutorialSource {
   facebook,
   imdb,
   x,
+  other,
 }
 
 class HomePage extends ConsumerStatefulWidget {
@@ -860,6 +861,15 @@ class _HomePageState extends ConsumerState<HomePage> {
           gaplessPlayback: true,
         ),
       ),
+      _TutorialOptionData(
+        label: 'Other',
+        source: _TutorialSource.other,
+        iconBuilder: () => const Icon(
+          Icons.more_horiz,
+          size: 24,
+          color: Colors.black,
+        ),
+      ),
     ];
 
     showModalBottomSheet(
@@ -965,7 +975,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   void _startTutorialFlow(_TutorialSource source) {
     if (!mounted) return;
 
-    PipTutorialTarget target;
+    PipTutorialTarget? target;
     switch (source) {
       case _TutorialSource.instagram:
         target = PipTutorialTarget.instagram;
@@ -991,14 +1001,23 @@ class _HomePageState extends ConsumerState<HomePage> {
       case _TutorialSource.x:
         target = PipTutorialTarget.x;
         break;
+      case _TutorialSource.other:
+        return; // No action for now
     }
 
+    if (target == null) return;
     _launchPipTutorial(target);
   }
 
   Future<void> _launchPipTutorial(PipTutorialTarget target) async {
+    final videoAsset = target == PipTutorialTarget.instagram
+        ? 'assets/videos/instagram-tutorial.mp4'
+        : 'assets/videos/pip-test.mp4';
     try {
-      await _pipTutorialService.startTutorial(target: target);
+      await _pipTutorialService.startTutorial(
+        target: target,
+        videoAsset: videoAsset,
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

@@ -284,7 +284,7 @@ import AVFoundation
             )
             return
           }
-          let videoName = args["video"] as? String ?? "pip-test.mp4"
+          let videoName = args["video"] as? String ?? "assets/videos/pip-test.mp4"
           let assetKey = controller.lookupKey(forAsset: videoName)
           if self.pipTutorialManager == nil {
             self.pipTutorialManager = PipTutorialManager()

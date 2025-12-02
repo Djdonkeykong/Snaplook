@@ -10,6 +10,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import androidx.core.content.res.ResourcesCompat
 import android.graphics.BitmapFactory
+import android.app.PictureInPictureParams
 
 class MainActivity: FlutterActivity() {
     private val launchLogTag = "SnaplookLaunch"
@@ -100,8 +101,20 @@ class MainActivity: FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "start" -> {
-                        // PiP tutorial not yet implemented on Android in this build.
-                        result.error("UNAVAILABLE", "PiP tutorial not implemented on Android yet", null)
+                        val args = call.arguments as? Map<*, *>
+                        val target = args?.get("target") as? String
+                        val video = args?.get("video") as? String ?: "assets/videos/pip-test.mp4"
+                        if (target == null) {
+                            result.error("INVALID_ARGS", "Missing target", null)
+                            return@setMethodCallHandler
+                        }
+                        val intent = Intent(this, TutorialPipActivity::class.java).apply {
+                            putExtra("assetKey", video)
+                            putExtra("target", target)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
                     }
                     else -> result.notImplemented()
                 }
