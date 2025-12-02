@@ -381,6 +381,8 @@ class PipTutorialManager: NSObject {
   private var pendingCompletion: ((Bool, String?) -> Void)?
   private var pendingTargetApp: String?
   private weak var hostView: UIView?
+  private var pipHasStarted = false
+  private var hasOpenedTarget = false
   var logHandler: ((String) -> Void)?
 
   func start(assetKey: String, targetApp: String, completion: @escaping (Bool, String?) -> Void) {
@@ -456,6 +458,11 @@ class PipTutorialManager: NSObject {
     logHandler?("[PiP] Starting PiP for target \(targetApp)")
     player.play()
     controller.startPictureInPicture()
+
+    // Fallback: if the delegate doesn't fire quickly, still open the target app
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+      self?.openTargetIfNeeded(reason: "fallback-after-start")
+    }
   }
 
   func stopIfNeededOnReturn() {
@@ -479,6 +486,8 @@ class PipTutorialManager: NSObject {
     pendingTargetApp = nil
     hostView?.removeFromSuperview()
     hostView = nil
+    pipHasStarted = false
+    hasOpenedTarget = false
   }
 
   private func complete(_ success: Bool, error: String? = nil) {
@@ -487,10 +496,18 @@ class PipTutorialManager: NSObject {
     completion(success, error)
   }
 
-  private func openTargetApp(_ target: String) {
-    guard let url = urlForTarget(target) else { return }
+  private func openTargetIfNeeded(reason: String) {
+    guard !hasOpenedTarget, let target = pendingTargetApp else { return }
+    hasOpenedTarget = true
+    guard let url = urlForTarget(target) else {
+      logHandler?("[PiP] No URL scheme for target \(target) (\(reason))")
+      return
+    }
     if UIApplication.shared.canOpenURL(url) {
+      logHandler?("[PiP] Opening target app \(target) (\(reason))")
       UIApplication.shared.open(url, options: [:], completionHandler: nil)
+    } else {
+      logHandler?("[PiP] Cannot open target app \(target) - scheme unavailable (\(reason))")
     }
   }
 
@@ -521,11 +538,10 @@ class PipTutorialManager: NSObject {
 extension PipTutorialManager: AVPictureInPictureControllerDelegate {
   func pictureInPictureControllerDidStartPictureInPicture(_ controller: AVPictureInPictureController) {
     stopOnReturn = true
-    if let target = pendingTargetApp {
-      openTargetApp(target)
-    }
-    pendingTargetApp = nil
+    pipHasStarted = true
     logHandler?("[PiP] PiP started by system")
+    openTargetIfNeeded(reason: "delegate-didStart")
+    pendingTargetApp = nil
     complete(true, error: nil)
   }
 
