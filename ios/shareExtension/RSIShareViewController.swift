@@ -746,6 +746,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return nil
     }
 
+    /// Get device locale for localized search results
+    /// Returns (countryCode, languageCode) tuple, e.g. ("US", "en") or ("NO", "nb")
+    private func getDeviceLocale() -> (country: String, language: String) {
+        let locale = Locale.current
+
+        // Get country code (e.g., "US", "NO", "GB")
+        let countryCode = locale.regionCode?.uppercased() ?? "US"
+
+        // Get language code (e.g., "en", "nb", "fr")
+        let languageCode = locale.languageCode?.lowercased() ?? "en"
+
+        shareLog("Device locale detected: \(countryCode) (\(languageCode))")
+
+        return (country: countryCode, language: languageCode)
+    }
+
     private func hideDefaultUI() {
         // Hide and disable the default text view
         textView?.isHidden = true
@@ -3699,10 +3715,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         var requestBody: [String: Any] = [
             "user_id": getUserId(),
             "image_base64": imageBase64,
-            "search_type": searchType,
-            "country": "NO",
-            "language": "nb"
+            "search_type": searchType
         ]
+
+        // Add device locale for localized search results
+        let deviceLocale = getDeviceLocale()
+        requestBody["country"] = deviceLocale.country
+        requestBody["language"] = deviceLocale.language
 
         if let imageUrl = imageUrl, !imageUrl.isEmpty {
             requestBody["image_url"] = imageUrl

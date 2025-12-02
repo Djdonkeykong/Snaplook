@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_profile.dart';
@@ -117,6 +118,66 @@ class UserProfileRepository {
         location: 'United States',
         isManual: false,
       );
+    }
+  }
+
+  /// Detect and save user's location from device locale settings
+  /// This is the RECOMMENDED method - uses device's system locale (Settings > General > Language & Region)
+  Future<bool> setDeviceLocale() async {
+    try {
+      // Get device locale from platform
+      final locale = ui.PlatformDispatcher.instance.locale;
+
+      // Extract country code (e.g., 'US', 'NO', 'GB')
+      final countryCode = locale.countryCode?.toUpperCase() ?? 'US';
+
+      // Extract language code (e.g., 'en', 'nb', 'fr')
+      final languageCode = locale.languageCode.toLowerCase();
+
+      debugPrint('[UserProfile] Device locale detected: $countryCode ($languageCode)');
+
+      // Map to full country name
+      final countryName = SearchLocations.countryToLocation[countryCode] ?? 'United States';
+      final location = SearchLocations.getLocation(countryCode);
+
+      // Update profile with device locale
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) {
+        debugPrint('[UserProfile] No authenticated user');
+        return false;
+      }
+
+      final currency = SearchLocations.getCurrency(countryCode);
+
+      await _client.from('user_profiles').upsert({
+        'id': userId,
+        'country_code': countryCode,
+        'country_name': countryName,
+        'location': location,
+        'detected_location': location,
+        'manual_location': false,
+        'preferred_currency': currency,
+        'preferred_language': languageCode, // Store language code
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+
+      debugPrint('[UserProfile] Device locale saved: $location ($countryCode) - Language: $languageCode');
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('[UserProfile] Error setting device locale: $error');
+      debugPrint('[UserProfile] Stack trace: $stackTrace');
+
+      // Fallback to US
+      try {
+        return await updateLocation(
+          countryCode: 'US',
+          countryName: 'United States',
+          location: 'United States',
+          isManual: false,
+        );
+      } catch (e) {
+        return false;
+      }
     }
   }
 

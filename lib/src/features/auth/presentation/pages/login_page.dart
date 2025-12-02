@@ -15,6 +15,7 @@ import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../onboarding/presentation/pages/gender_selection_page.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart' show AccountCreationPage;
 import '../../domain/providers/auth_provider.dart';
+import '../../../user/repositories/user_profile_repository.dart';
 import 'email_sign_in_page.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../domain/services/auth_service.dart';
@@ -302,6 +303,15 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                         userResponse['onboarding_state'] == 'completed';
 
                                 if (hasCompletedOnboarding) {
+                                  // Update device locale for existing users
+                                  try {
+                                    final profileRepo = UserProfileRepository();
+                                    await profileRepo.setDeviceLocale();
+                                    print('[LoginPage] Device locale updated for existing user');
+                                  } catch (e) {
+                                    print('[LoginPage] Error updating device locale: $e');
+                                  }
+
                                   ref
                                       .read(selectedIndexProvider.notifier)
                                       .state = 0;
@@ -385,6 +395,15 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                       userResponse['onboarding_state'] == 'completed';
 
                               if (hasCompletedOnboarding) {
+                                // Update device locale for existing users
+                                try {
+                                  final profileRepo = UserProfileRepository();
+                                  await profileRepo.setDeviceLocale();
+                                  print('[LoginPage] Device locale updated for existing user');
+                                } catch (e) {
+                                  print('[LoginPage] Error updating device locale: $e');
+                                }
+
                                 ref.read(selectedIndexProvider.notifier).state =
                                     0;
                                 ref.invalidate(inspirationProvider);
