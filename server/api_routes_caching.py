@@ -32,6 +32,8 @@ class AnalyzeRequest(BaseModel):
     source_url: Optional[str] = None
     source_username: Optional[str] = None
     skip_detection: bool = False
+    country: Optional[str] = None  # ISO 3166-1 alpha-2 country code (e.g., 'US', 'NO', 'GB')
+    language: Optional[str] = None  # Language code for interface (e.g., 'en', 'nb', 'fr')
 
 
 class AnalyzeResponse(BaseModel):
@@ -104,6 +106,9 @@ async def analyze_with_caching(
     """
 
     try:
+        # Log locale parameters for debugging
+        print(f"[ANALYZE] Request country: '{request.country}', language: '{request.language}', search_type: '{request.search_type}'")
+
         # Prepare image and compute hash
         image_url = None
         image_hash = None
@@ -184,7 +189,9 @@ async def analyze_with_caching(
             image_base64=request.image_base64,
             image_url=request.image_url,
             cloudinary_url=request.cloudinary_url,
-            skip_detection=request.skip_detection
+            skip_detection=request.skip_detection,
+            country=request.country,
+            language=request.language
         )
 
         if not detection_result['success']:
