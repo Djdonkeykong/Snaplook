@@ -14,18 +14,43 @@ import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
 import io.flutter.FlutterInjector
 import java.io.File
+import java.lang.ref.WeakReference
 
 class TutorialPipActivity : AppCompatActivity() {
-    private var videoView: VideoView? = null
-    private var hasStartedPip = false
+  private var videoView: VideoView? = null
+  private var hasStartedPip = false
+  private fun stopAndFinish() {
+    hasStartedPip = false
+    try {
+      videoView?.stopPlayback()
+    } catch (_: Exception) {
+      // ignore stop errors
+    }
+    if (!isFinishing) {
+      finishAndRemoveTask()
+    }
+  }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+  companion object {
+    private var currentInstance: WeakReference<TutorialPipActivity>? = null
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            finish()
-            return
+    fun stopActive() {
+      currentInstance?.get()?.let { activity ->
+        activity.runOnUiThread {
+          activity.stopAndFinish()
         }
+      }
+    }
+  }
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    currentInstance = WeakReference(this)
+
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+      finish()
+      return
+    }
 
         val container = FrameLayout(this)
         videoView = VideoView(this)
@@ -124,20 +149,27 @@ class TutorialPipActivity : AppCompatActivity() {
         }
     }
 
-    override fun onPictureInPictureModeChanged(
-        isInPictureInPictureMode: Boolean,
-        newConfig: Configuration
-    ) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-        if (!isInPictureInPictureMode && hasStartedPip) {
-            finish()
-        }
+  override fun onPictureInPictureModeChanged(
+    isInPictureInPictureMode: Boolean,
+    newConfig: Configuration
+  ) {
+    super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+    if (!isInPictureInPictureMode && hasStartedPip) {
+      stopAndFinish()
     }
+  }
 
-    override fun onResume() {
-        super.onResume()
-        if (hasStartedPip && !isInPictureInPictureMode) {
-            finish()
-        }
+  override fun onResume() {
+    super.onResume()
+    if (hasStartedPip && !isInPictureInPictureMode) {
+      stopAndFinish()
     }
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    if (currentInstance?.get() === this) {
+      currentInstance = null
+    }
+  }
 }

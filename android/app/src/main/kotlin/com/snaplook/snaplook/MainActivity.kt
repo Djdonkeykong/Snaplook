@@ -10,7 +10,6 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import androidx.core.content.res.ResourcesCompat
 import android.graphics.BitmapFactory
-import android.app.PictureInPictureParams
 
 class MainActivity: FlutterActivity() {
     private val launchLogTag = "SnaplookLaunch"
@@ -120,6 +119,10 @@ class MainActivity: FlutterActivity() {
                         }
                         startActivity(intent)
                         result.success(true)
+                    }
+                    "stop" -> {
+                        TutorialPipActivity.stopActive()
+                        result.success(null)
                     }
                     else -> result.notImplemented()
                 }

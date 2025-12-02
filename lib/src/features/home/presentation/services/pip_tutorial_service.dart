@@ -33,6 +33,14 @@ class PipTutorialService {
     }
   }
 
+  Future<void> stopTutorial() async {
+    try {
+      await _channel.invokeMethod('stop');
+    } catch (_) {
+      // best effort; ignore stop failures
+    }
+  }
+
   String _defaultAssetForTarget(PipTutorialTarget target) {
     if (target == PipTutorialTarget.instagram) {
       return 'assets/videos/instagram-tutorial.mp4';

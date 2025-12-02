@@ -66,17 +66,19 @@ class HomePage extends ConsumerStatefulWidget {
   ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends ConsumerState<HomePage> {
+class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver {
   final ImagePicker _picker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
   final Set<String> _preloadedImages = <String>{};
   ProviderSubscription<XFile?>? _pendingShareListener;
   bool _isProcessingPendingNavigation = false;
   final PipTutorialService _pipTutorialService = PipTutorialService();
+  _TutorialSource? _loadingTutorialSource;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     print("[HOME PAGE] initState called");
 
@@ -176,7 +178,16 @@ class _HomePageState extends ConsumerState<HomePage> {
   void dispose() {
     _pendingShareListener?.close();
     _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _pipTutorialService.stopTutorial();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _pipTutorialService.stopTutorial();
+    }
   }
 
   void _onScroll() {
@@ -879,134 +890,145 @@ class _HomePageState extends ConsumerState<HomePage> {
       useRootNavigator: true,
       builder: (sheetContext) {
         final spacing = sheetContext.spacing;
-        return FractionallySizedBox(
-          heightFactor: 0.9,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(sheetContext).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: spacing.l,
-                      vertical: spacing.l,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        BottomSheetHandle(
-                          margin: EdgeInsets.only(bottom: spacing.m),
+        return StatefulBuilder(
+          builder: (context, sheetSetState) {
+            return FractionallySizedBox(
+              heightFactor: 0.9,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(sheetContext).colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Stack(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: spacing.l,
+                          vertical: spacing.l,
                         ),
-                        const Text(
-                          'Add your first style',
-                          style: TextStyle(
-                            fontSize: 34,
-                            fontFamily: 'PlusJakartaSans',
-                            letterSpacing: -1.0,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            height: 1.3,
-                          ),
-                        ),
-                        SizedBox(height: spacing.m),
-                        const Text(
-                          'Learn to share from your favorite apps',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.black,
-                            fontWeight: FontWeight.w500,
-                            fontFamily: 'PlusJakartaSans',
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        SizedBox(height: spacing.l),
-                        Expanded(
-                          child: ListView.separated(
-                            physics: const BouncingScrollPhysics(),
-                            padding: EdgeInsets.only(bottom: spacing.l),
-                            itemCount: options.length,
-                            separatorBuilder: (_, __) =>
-                                SizedBox(height: spacing.l),
-                            itemBuilder: (_, index) {
-                              final option = options[index];
-                              return _TutorialAppCard(
-                                label: option.label,
-                                iconWidget: option.iconBuilder(),
-                                onTap: () {
-                                  Navigator.of(sheetContext).pop();
-                                  Future.delayed(
-                                    const Duration(milliseconds: 120),
-                                    () => _startTutorialFlow(option.source),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            BottomSheetHandle(
+                              margin: EdgeInsets.only(bottom: spacing.m),
+                            ),
+                            const Text(
+                              'Add your first style',
+                              style: TextStyle(
+                                fontSize: 34,
+                                fontFamily: 'PlusJakartaSans',
+                                letterSpacing: -1.0,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                                height: 1.3,
+                              ),
+                            ),
+                            SizedBox(height: spacing.m),
+                            const Text(
+                              'Learn to share from your favorite apps',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'PlusJakartaSans',
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            SizedBox(height: spacing.l),
+                            Expanded(
+                              child: ListView.separated(
+                                physics: const BouncingScrollPhysics(),
+                                padding: EdgeInsets.only(bottom: spacing.l),
+                                itemCount: options.length,
+                                separatorBuilder: (_, __) =>
+                                    SizedBox(height: spacing.l),
+                                itemBuilder: (_, index) {
+                                  final option = options[index];
+                                  return _TutorialAppCard(
+                                    label: option.label,
+                                    iconWidget: option.iconBuilder(),
+                                    isLoading:
+                                        _loadingTutorialSource == option.source,
+                                    onTap: () => _onTutorialOptionSelected(
+                                      option.source,
+                                      sheetContext,
+                                      sheetSetState,
+                                    ),
                                   );
                                 },
-                              );
-                            },
-                          ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Positioned(
+                        top: spacing.l,
+                        right: spacing.l,
+                        child: SnaplookCircularIconButton(
+                          icon: Icons.close,
+                          iconSize: 18,
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          tooltip: 'Close',
+                          semanticLabel: 'Close',
+                        ),
+                      ),
+                    ],
                   ),
-                  Positioned(
-                    top: spacing.l,
-                    right: spacing.l,
-                    child: SnaplookCircularIconButton(
-                      icon: Icons.close,
-                      iconSize: 18,
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                      tooltip: 'Close',
-                      semanticLabel: 'Close',
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  void _startTutorialFlow(_TutorialSource source) {
+  Future<void> _onTutorialOptionSelected(
+    _TutorialSource source,
+    BuildContext sheetContext,
+    StateSetter sheetSetState,
+  ) async {
     if (!mounted) return;
-
-    PipTutorialTarget? target;
-    switch (source) {
-      case _TutorialSource.instagram:
-        target = PipTutorialTarget.instagram;
-        break;
-      case _TutorialSource.pinterest:
-        target = PipTutorialTarget.pinterest;
-        break;
-      case _TutorialSource.tiktok:
-        target = PipTutorialTarget.tiktok;
-        break;
-      case _TutorialSource.photos:
-        target = PipTutorialTarget.photos;
-        break;
-      case _TutorialSource.facebook:
-        target = PipTutorialTarget.facebook;
-        break;
-      case _TutorialSource.imdb:
-        target = PipTutorialTarget.imdb;
-        break;
-      case _TutorialSource.safari:
-        target = PipTutorialTarget.safari;
-        break;
-      case _TutorialSource.x:
-        target = PipTutorialTarget.x;
-        break;
-      case _TutorialSource.other:
-        return; // No action for now
+    if (source != _TutorialSource.instagram) {
+      return; // Only Instagram is active for now
     }
 
-    if (target == null) return;
-    _launchPipTutorial(target);
+    if (_loadingTutorialSource != null) {
+      return;
+    }
+
+    setState(() {
+      _loadingTutorialSource = source;
+    });
+    sheetSetState(() {});
+
+    try {
+      HapticFeedback.mediumImpact();
+
+      // Keep spinner visible on the row while we stage things
+      await Future.delayed(const Duration(seconds: 2));
+
+      if (sheetContext.mounted) {
+        await Navigator.of(sheetContext).maybePop();
+      }
+
+      // Small buffer to let the sheet close cleanly before PiP starts
+      await Future.delayed(const Duration(milliseconds: 150));
+
+      if (!mounted) return;
+      await _launchPipTutorial(PipTutorialTarget.instagram);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingTutorialSource = null;
+        });
+      }
+      sheetSetState(() {});
+    }
   }
 
   Future<void> _launchPipTutorial(PipTutorialTarget target) async {
@@ -1946,17 +1968,20 @@ class _TutorialAppCard extends StatelessWidget {
   final String label;
   final Widget iconWidget;
   final VoidCallback onTap;
+  final bool isLoading;
 
   const _TutorialAppCard({
     required this.label,
     required this.iconWidget,
     required this.onTap,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        if (isLoading) return;
         HapticFeedback.mediumImpact();
         onTap();
       },
@@ -1979,7 +2004,16 @@ class _TutorialAppCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: iconWidget,
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                          ),
+                        )
+                      : iconWidget,
                 ),
               ),
               const SizedBox(width: 16),
