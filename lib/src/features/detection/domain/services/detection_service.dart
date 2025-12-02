@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -162,11 +163,15 @@ class DetectionService {
       }
       _lastKnownCurrencyCode = SearchLocations.getCurrency(userProfile.countryCode);
     } else if (_countryOverride.isEmpty) {
-      // No profile - use Norway defaults
-      payload['country'] = 'NO';
-      payload['language'] = 'nb';
-      debugPrint('🌎 No user profile - using defaults (NO, nb)');
-      _lastKnownCurrencyCode = SearchLocations.getCurrency('NO');
+      // No profile - use device locale as fallback
+      final deviceLocale = ui.PlatformDispatcher.instance.locale;
+      final countryCode = deviceLocale.countryCode?.toUpperCase() ?? 'US';
+      final languageCode = deviceLocale.languageCode.toLowerCase();
+
+      payload['country'] = countryCode;
+      payload['language'] = languageCode;
+      debugPrint('🌎 No user profile - using device locale ($countryCode, $languageCode)');
+      _lastKnownCurrencyCode = SearchLocations.getCurrency(countryCode);
     }
 
     debugPrint('🜕 Using language: ${payload['language'] ?? 'unknown'}');
