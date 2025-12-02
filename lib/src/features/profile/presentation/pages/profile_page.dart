@@ -313,6 +313,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _SimpleSettingItem(
                   title: 'Share Extension Logs',
                   onTap: () {
+                    debugPrint('[Profile] Opening Share Extension Logs page');
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const ShareLogsPage(),

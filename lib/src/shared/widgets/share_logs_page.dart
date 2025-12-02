@@ -16,6 +16,7 @@ class _ShareLogsPageState extends State<ShareLogsPage> {
   List<String> _logs = const [];
   List<String> _reviewLogs = const [];
   bool _loading = true;
+  DateTime? _lastLoadedAt;
 
   @override
   void initState() {
@@ -24,6 +25,7 @@ class _ShareLogsPageState extends State<ShareLogsPage> {
   }
 
   Future<void> _loadLogs() async {
+    debugPrint('[ShareLogs] Loading logs...');
     setState(() => _loading = true);
     final entries = await ShareExtensionLogsService.fetchLogs();
     final reviewEntries = await ReviewPromptLogsService.fetchLogs();
@@ -31,10 +33,15 @@ class _ShareLogsPageState extends State<ShareLogsPage> {
       _logs = entries.reversed.toList();
       _reviewLogs = reviewEntries.reversed.toList();
       _loading = false;
+      _lastLoadedAt = DateTime.now();
     });
+    debugPrint(
+      '[ShareLogs] Loaded share=${_logs.length} review=${_reviewLogs.length} at $_lastLoadedAt',
+    );
   }
 
   Future<void> _clearLogs() async {
+    debugPrint('[ShareLogs] Clearing logs...');
     await ShareExtensionLogsService.clearLogs();
     await ReviewPromptLogsService.clearLogs();
     await _loadLogs();
@@ -47,6 +54,10 @@ class _ShareLogsPageState extends State<ShareLogsPage> {
       );
       return;
     }
+
+    debugPrint(
+      '[ShareLogs] Sharing logs share=${_logs.length} review=${_reviewLogs.length}',
+    );
 
     final logsText = [
       if (_logs.isNotEmpty)
@@ -106,6 +117,17 @@ class _ShareLogsPageState extends State<ShareLogsPage> {
               ? const Center(child: Text('No logs recorded yet.'))
               : ListView(
                   children: [
+                    if (_lastLoadedAt != null)
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          'Last refreshed: ${_lastLoadedAt!.toLocal()}  |  Share: ${_logs.length}, Review: ${_reviewLogs.length}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: Colors.grey[700]),
+                        ),
+                      ),
                     _LogSection(
                       title: 'Share Extension Logs',
                       logs: _logs,
