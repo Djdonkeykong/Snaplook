@@ -20,7 +20,6 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../detection/domain/models/detection_result.dart';
-import '../../../detection/presentation/pages/camera_capture_page.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show scrollToTopTriggerProvider, isAtHomeRootProvider;
@@ -688,40 +687,15 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    if (source == ImageSource.camera) {
-      print("[IMAGE PICKER] Redirecting to custom camera experience");
-      if (!mounted) return;
-      Navigator.of(context, rootNavigator: true).push(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const CameraCapturePage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final offsetTween =
-                Tween(begin: const Offset(0, 1), end: Offset.zero).chain(
-              CurveTween(curve: Curves.easeOutCubic),
-            );
-            final fadeTween =
-                Tween<double>(begin: 0.85, end: 1).chain(CurveTween(curve: Curves.easeOut));
-            return SlideTransition(
-              position: animation.drive(offsetTween),
-              child: FadeTransition(
-                opacity: animation.drive(fadeTween),
-                child: child,
-              ),
-            );
-          },
-        ),
-      );
-      return;
-    }
-
-    print("[IMAGE PICKER] Starting image picker - source: GALLERY");
+    final isCamera = source == ImageSource.camera;
+    print("[IMAGE PICKER] Starting image picker - source: ${isCamera ? 'CAMERA' : 'GALLERY'}");
     try {
       print("[IMAGE PICKER] Calling ImagePicker.pickImage...");
       final XFile? image = await _picker.pickImage(
         source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
+        maxWidth: isCamera ? 1600 : 1024,
+        maxHeight: isCamera ? 1600 : 1024,
+        imageQuality: isCamera ? 95 : 85,
       );
 
       print(
@@ -748,8 +722,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
             MaterialPageRoute(
               builder: (context) {
                 print("[IMAGE PICKER] DetectionPage builder called");
-                return const DetectionPage(
-                  searchType: 'photos',
+                return DetectionPage(
+                  searchType: isCamera ? 'camera' : 'photos',
                 );
               },
             ),
@@ -1018,14 +992,13 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       // Keep spinner visible on the row while we stage things
       await Future.delayed(const Duration(seconds: 2));
 
+      // Close sheet and wait for animation to FULLY complete
       if (sheetContext.mounted) {
         await Navigator.of(sheetContext).maybePop();
+        // Standard Material bottom sheet animation is 300ms
+        // Wait for it to completely finish before doing anything else
+        await Future.delayed(const Duration(milliseconds: 350));
       }
-
-      // Let the sheet animation fully settle before starting PiP
-      await Future.microtask(() {});
-      await WidgetsBinding.instance.endOfFrame;
-      await Future.delayed(const Duration(milliseconds: 120));
 
       if (!mounted) return;
       await _launchPipTutorial(target);
@@ -2018,7 +1991,7 @@ class _TutorialAppCard extends StatelessWidget {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
                           ),
                         )
                       : iconWidget,

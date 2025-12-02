@@ -607,9 +607,9 @@ class _AuthButtonState extends State<_AuthButton> {
               SizedBox(
                 width: widget.iconSize,
                 height: widget.iconSize,
-                child: CircularProgressIndicator(
+                child: const CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(widget.textColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
                 ),
               )
             else
@@ -710,9 +710,9 @@ class _AuthButtonWithSvgState extends State<_AuthButtonWithSvg> {
               SizedBox(
                 width: widget.iconSize,
                 height: widget.iconSize,
-                child: CircularProgressIndicator(
+                child: const CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(widget.textColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
                 ),
               )
             else

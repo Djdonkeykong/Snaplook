@@ -107,6 +107,7 @@ class ManageSubscriptionPage extends ConsumerWidget {
               SizedBox(height: spacing.l),
 
               _SettingsCard(
+                showShadow: true,
                 children: [
                   const SizedBox(height: 8),
                   _SettingsRow.value(
@@ -186,7 +187,12 @@ class ManageSubscriptionPage extends ConsumerWidget {
 
 class _SettingsCard extends StatelessWidget {
   final List<Widget> children;
-  const _SettingsCard({required this.children});
+  final bool showShadow;
+
+  const _SettingsCard({
+    required this.children,
+    this.showShadow = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -195,13 +201,13 @@ class _SettingsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
+        boxShadow: showShadow ? [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
-        ],
+        ] : null,
       ),
       child: Column(children: children),
     );
