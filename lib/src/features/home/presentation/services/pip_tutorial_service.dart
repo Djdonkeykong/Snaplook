@@ -16,18 +16,27 @@ class PipTutorialService {
 
   Future<void> startTutorial({
     required PipTutorialTarget target,
-    String videoAsset = 'assets/videos/pip-test.mp4',
+    String? videoAsset,
   }) async {
+    final asset =
+        videoAsset ?? _defaultAssetForTarget(target);
     final targetKey = target.name;
     try {
       await _channel.invokeMethod('start', {
         'target': targetKey,
-        'video': videoAsset,
+        'video': asset,
       });
     } on PlatformException {
       rethrow;
     } catch (_) {
       rethrow;
     }
+  }
+
+  String _defaultAssetForTarget(PipTutorialTarget target) {
+    if (target == PipTutorialTarget.instagram) {
+      return 'assets/videos/instagram-tutorial.mp4';
+    }
+    return 'assets/videos/pip-test.mp4';
   }
 }

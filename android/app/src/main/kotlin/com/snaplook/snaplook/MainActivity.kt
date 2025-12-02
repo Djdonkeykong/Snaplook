@@ -103,7 +103,12 @@ class MainActivity: FlutterActivity() {
                     "start" -> {
                         val args = call.arguments as? Map<*, *>
                         val target = args?.get("target") as? String
-                        val video = args?.get("video") as? String ?: "assets/videos/pip-test.mp4"
+                        val video = args?.get("video") as? String
+                            ?: if (target == "instagram") {
+                                "assets/videos/instagram-tutorial.mp4"
+                            } else {
+                                "assets/videos/pip-test.mp4"
+                            }
                         if (target == null) {
                             result.error("INVALID_ARGS", "Missing target", null)
                             return@setMethodCallHandler

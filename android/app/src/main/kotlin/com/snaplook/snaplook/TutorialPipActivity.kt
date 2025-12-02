@@ -42,6 +42,7 @@ class TutorialPipActivity : AppCompatActivity() {
             finish()
             return
         }
+        Log.d("TutorialPip", "assetKey=$assetKey")
         val target = intent.getStringExtra("target") ?: ""
 
         val videoFile = copyAssetToCache(assetKey)
