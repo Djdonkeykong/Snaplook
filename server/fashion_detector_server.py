@@ -425,8 +425,8 @@ class DetectAndSearchRequest(BaseModel):
     max_crops: Optional[int] = Field(default=MAX_GARMENTS)
     max_results_per_garment: Optional[int] = Field(default=10)
     location: Optional[str] = Field(default=None)  # Legacy: SearchAPI location string (e.g., 'United States')
-    country: Optional[str] = Field(default='NO')  # PREFERRED: ISO 3166-1 alpha-2 country code (e.g., 'US', 'NO', 'GB') - TESTING: Defaulting to Norway
-    language: Optional[str] = Field(default='nb')  # Language code for interface (e.g., 'en', 'nb', 'fr') - TESTING: Defaulting to Norwegian
+    country: Optional[str] = Field(default=None)  # ISO 3166-1 alpha-2 country code (e.g., 'US', 'NO', 'GB') - Defaults to device locale
+    language: Optional[str] = Field(default=None)  # Language code for interface (e.g., 'en', 'nb', 'fr') - Defaults to device locale
     skip_detection: Optional[bool] = Field(default=False)  # Skip YOLO detection for user-cropped images
     user_id: Optional[str] = Field(default=None)  # User ID for saving to Supabase
     search_type: Optional[str] = Field(default='unknown')  # Source of analysis: camera, photos, home, share
