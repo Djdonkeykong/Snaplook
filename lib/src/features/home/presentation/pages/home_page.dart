@@ -845,15 +845,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
           gaplessPlayback: true,
         ),
       ),
-      _TutorialOptionData(
-        label: 'Other',
-        source: _TutorialSource.other,
-        iconBuilder: () => const Icon(
-          Icons.more_horiz,
-          size: 24,
-          color: Colors.black,
-        ),
-      ),
     ];
 
     showModalBottomSheet(
@@ -890,7 +881,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                               margin: EdgeInsets.only(bottom: spacing.m),
                             ),
                             const Text(
-                              'Add your first style',
+                              'Analyze your first look',
                               style: TextStyle(
                                 fontSize: 34,
                                 fontFamily: 'PlusJakartaSans',
@@ -1044,8 +1035,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
 
     // TODO: Replace with actual user data from provider
     final membershipType = 'Trial';
-    final creditsRemaining = 42;
-    final maxCredits = 50;
+    final creditsRemaining = 100;
+    final maxCredits = 100;
     final creditsPercentage = creditsRemaining / maxCredits;
 
     showModalBottomSheet(

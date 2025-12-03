@@ -4,7 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
-import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 
 class ManageSubscriptionPage extends ConsumerWidget {
@@ -63,17 +62,8 @@ class ManageSubscriptionPage extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final spacing = context.spacing;
 
-    final user = ref.watch(currentUserProvider);
-    final metadata = user?.userMetadata ?? <String, dynamic>{};
-    final membershipValue = metadata['membership'];
-    final membership = (membershipValue is String
-            ? membershipValue
-            : membershipValue?.toString() ?? 'free')
-        .trim()
-        .toLowerCase();
-
-    final isSubscribed = membership != 'free' && membership.isNotEmpty;
-    final displayStatus = isSubscribed ? _formatMembership(membership) : 'Free';
+    const isSubscribed = true;
+    const displayStatus = 'Premium';
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -258,7 +248,7 @@ class _SettingsRow extends StatelessWidget {
     );
     final valueStyle = TextStyle(
       fontSize: 15,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w600,
       fontFamily: 'PlusJakartaSans',
       color: valueColor ?? Colors.black.withOpacity(0.6),
     );
@@ -281,8 +271,7 @@ class _SettingsRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
-                  color: (valueColor ?? Colors.black.withOpacity(0.6))
-                      .withOpacity(0.08),
+                  color: AppColors.outlineVariant,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
