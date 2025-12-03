@@ -50,12 +50,12 @@ class InstagramService {
     };
 
     final requestUri = uri.replace(queryParameters: queryParams);
-    print('ScrapingBee Instagram request (wait=1500ms, timeout=12s)');
+    print('ScrapingBee Instagram request (wait=1500ms, timeout=20s)');
 
     http.Response response;
     try {
       response =
-          await http.get(requestUri).timeout(const Duration(seconds: 12));
+          await http.get(requestUri).timeout(const Duration(seconds: 20));
     } on TimeoutException {
       print('ScrapingBee Instagram request timed out');
       return [];
