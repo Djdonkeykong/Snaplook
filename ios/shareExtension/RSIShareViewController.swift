@@ -5616,8 +5616,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 let sharedFile = SharedMediaFile(
                     path: fileURL.absoluteString,
                     mimeType: "image/jpeg",
-                    message: urlString,
-                    data: data
+                    type: .image
                 )
 
                 completion(.success([sharedFile]))
