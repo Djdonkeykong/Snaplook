@@ -3604,17 +3604,47 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                             // Download the cached image URL directly
                             DispatchQueue.main.async {
+                                // Update progress to completion
+                                self.targetProgress = 1.0
+                                self.updateProgress(1.0, status: "Loading preview...")
+
                                 self.downloadImageFromUrl(imageUrl) { result in
                                     switch result {
                                     case .success(let mediaFiles):
-                                        shareLog("Successfully downloaded cached Instagram image")
-                                        completion(true)
-                                        // Continue with normal flow using the downloaded image
-                                        if let imageData = try? Data(contentsOf: URL(fileURLWithPath: mediaFiles[0].path)) {
-                                            self.pendingImageData = imageData
+                                        guard let firstFile = mediaFiles.first else {
+                                            shareLog("ERROR: Downloaded cached image but got no files")
+                                            self.dismissWithError()
+                                            completion(false)
+                                            return
                                         }
+
+                                        let fileURL: URL
+                                        if let url = URL(string: firstFile.path), url.scheme != nil {
+                                            fileURL = url
+                                        } else {
+                                            fileURL = URL(fileURLWithPath: firstFile.path)
+                                        }
+
+                                        if let imageData = try? Data(contentsOf: fileURL) {
+                                            shareLog("Successfully downloaded cached Instagram image (\(imageData.count) bytes) - showing preview")
+
+                                            // Delay to allow progress bar to complete fully before showing preview
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                // Stop smooth progress to lock at 100%
+                                                self.stopSmoothProgress()
+                                                self.showImagePreview(imageData: imageData)
+                                            }
+
+                                            completion(true)
+                                        } else {
+                                            shareLog("ERROR: Could not read downloaded cached image file")
+                                            self.dismissWithError()
+                                            completion(false)
+                                        }
+
                                     case .failure(let error):
                                         shareLog("Failed to download cached image: \(error.localizedDescription)")
+                                        self.dismissWithError()
                                         completion(false)
                                     }
                                 }
