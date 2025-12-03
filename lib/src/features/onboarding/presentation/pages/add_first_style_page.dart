@@ -149,7 +149,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
 
             // Title
             const Text(
-              'Analyze your first look',
+              'Analyze and discover',
               style: TextStyle(
                 fontSize: 34,
                 fontFamily: 'PlusJakartaSans',

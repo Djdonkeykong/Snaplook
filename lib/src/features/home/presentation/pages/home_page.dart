@@ -881,7 +881,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                               margin: EdgeInsets.only(bottom: spacing.m),
                             ),
                             const Text(
-                              'Analyze your first look',
+                              'Analyze and discover',
                               style: TextStyle(
                                 fontSize: 34,
                                 fontFamily: 'PlusJakartaSans',
@@ -1993,7 +1993,7 @@ class _TutorialAppCard extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
-                  label,
+                  isLoading ? 'Preparing your tutorial...' : label,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
