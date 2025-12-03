@@ -639,6 +639,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var pendingInstagramUrl: String?
     private var pendingInstagramCompletion: (() -> Void)?
     private var pendingPlatformType: String?
+    private var isInstagramUrlCacheHit: Bool = false
     private var sourceApplicationBundleId: String?
     private var inferredPlatformType: String?
     private var currentSearchId: String?
@@ -3602,6 +3603,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         if cacheType == "instagram_url", let imageUrl = json["image_url"] as? String {
                             shareLog("Instagram URL cache HIT - downloading cached image (saves 5 ScrapingBee credits!)")
 
+                            // Mark this as an instagram_url cache hit so we don't clear pendingInstagramUrl later
+                            self.isInstagramUrlCacheHit = true
+
                             // Download the cached image URL directly
                             DispatchQueue.main.async {
                                 // Update progress to completion
@@ -3716,6 +3720,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func runDetectionAnalysis(imageUrl: String?, imageBase64: String) {
         let urlForLog = imageUrl ?? "<nil>"
         shareLog("START runDetectionAnalysis - imageUrl: \(urlForLog), base64 length: \(imageBase64.count)")
+
+        // Reset the instagram_url cache flag after using it
+        defer {
+            isInstagramUrlCacheHit = false
+        }
 
         guard let serverBaseUrl = getServerBaseUrl() else {
             shareLog("ERROR: Could not determine server base URL")
@@ -6903,7 +6912,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         shareLog("Cache HIT - skipping \(platformName) download")
                         // Results already displayed by checkCacheForInstagram
                         self.pendingInstagramCompletion = nil
-                        self.pendingInstagramUrl = nil
+
+                        // Only clear pendingInstagramUrl for full_analysis cache hits
+                        // For instagram_url cache hits, we need to keep it for the analyze request
+                        if !self.isInstagramUrlCacheHit {
+                            self.pendingInstagramUrl = nil
+                        } else {
+                            shareLog("Preserving pendingInstagramUrl for instagram_url cache hit")
+                        }
                     } else {
                         shareLog("Cache MISS - proceeding with \(platformName) download")
                         proceedToDownload()
