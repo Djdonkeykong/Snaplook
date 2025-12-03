@@ -881,7 +881,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                               margin: EdgeInsets.only(bottom: spacing.m),
                             ),
                             const Text(
-                              'Analyze and discover',
+                              'Share your look',
                               style: TextStyle(
                                 fontSize: 34,
                                 fontFamily: 'PlusJakartaSans',
