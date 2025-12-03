@@ -989,14 +989,14 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       HapticFeedback.mediumImpact();
 
       // Keep spinner visible on the row while we stage things
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(const Duration(milliseconds: 1500));
 
       // Close sheet and wait for animation to FULLY complete
       if (sheetContext.mounted) {
         await Navigator.of(sheetContext).maybePop();
-        // Standard Material bottom sheet animation is 300ms
+        // Standard Material bottom sheet animation is ~300ms
         // Wait for it to completely finish before doing anything else
-        await Future.delayed(const Duration(milliseconds: 350));
+        await Future.delayed(const Duration(milliseconds: 300));
       }
 
       if (!mounted) return;
@@ -1012,6 +1012,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   }
 
   Future<void> _launchPipTutorial(PipTutorialTarget target) async {
+    const instagramDeepLink =
+        'https://www.instagram.com/p/DQSaR_FEsU8/?igsh=MTEyNzJuaXF6cDlmNA==';
     final videoAsset = target == PipTutorialTarget.instagram
         ? 'assets/videos/instagram-tutorial.mp4'
         : 'assets/videos/pip-test.mp4';
@@ -1019,6 +1021,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       await _pipTutorialService.startTutorial(
         target: target,
         videoAsset: videoAsset,
+        deepLink: target == PipTutorialTarget.instagram ? instagramDeepLink : null,
       );
     } catch (e) {
       if (!mounted) return;

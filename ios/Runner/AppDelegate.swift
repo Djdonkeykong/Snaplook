@@ -286,6 +286,7 @@ import AVFoundation
             )
             return
           }
+          let deepLink = (args["deepLink"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
           let videoName: String
           if let provided = args["video"] as? String {
             videoName = provided
@@ -301,7 +302,11 @@ import AVFoundation
               self?.appendShareLog(msg)
             }
           }
-          self.pipTutorialManager?.start(assetKey: assetKey, targetApp: target) { success, errorMsg in
+          self.pipTutorialManager?.start(
+            assetKey: assetKey,
+            targetApp: target,
+            deepLink: deepLink
+          ) { success, errorMsg in
             if success {
               self.appendShareLog("[PiP] Started successfully for target \(target)")
               result(true)
@@ -380,12 +385,18 @@ class PipTutorialManager: NSObject {
   private var stopOnReturn = false
   private var pendingCompletion: ((Bool, String?) -> Void)?
   private var pendingTargetApp: String?
+  private var pendingDeepLink: String?
   private weak var hostView: UIView?
   private var pipHasStarted = false
   private var hasOpenedTarget = false
   var logHandler: ((String) -> Void)?
 
-  func start(assetKey: String, targetApp: String, completion: @escaping (Bool, String?) -> Void) {
+  func start(
+    assetKey: String,
+    targetApp: String,
+    deepLink: String?,
+    completion: @escaping (Bool, String?) -> Void
+  ) {
     // Clean up any previous PiP attempt before starting a new one
     cleanup()
 
@@ -455,6 +466,7 @@ class PipTutorialManager: NSObject {
       }
     }
     pendingTargetApp = targetApp
+    pendingDeepLink = deepLink?.isEmpty == true ? nil : deepLink
 
     logHandler?("[PiP] Starting PiP for target \(targetApp)")
     player.play()
@@ -500,7 +512,7 @@ class PipTutorialManager: NSObject {
   private func openTargetIfNeeded(reason: String) {
     guard !hasOpenedTarget, let target = pendingTargetApp else { return }
     hasOpenedTarget = true
-    guard let url = urlForTarget(target) else {
+    guard let url = urlForTarget(target, deepLink: pendingDeepLink) else {
       logHandler?("[PiP] No URL scheme for target \(target) (\(reason))")
       return
     }
@@ -512,7 +524,10 @@ class PipTutorialManager: NSObject {
     }
   }
 
-  private func urlForTarget(_ target: String) -> URL? {
+  private func urlForTarget(_ target: String, deepLink: String?) -> URL? {
+    if let deepLink = deepLink, let url = URL(string: deepLink.trimmingCharacters(in: .whitespacesAndNewlines)), !deepLink.isEmpty {
+      return url
+    }
     switch target {
     case "instagram":
       return URL(string: "instagram://app")

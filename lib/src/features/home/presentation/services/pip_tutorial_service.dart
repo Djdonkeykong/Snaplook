@@ -17,6 +17,7 @@ class PipTutorialService {
   Future<void> startTutorial({
     required PipTutorialTarget target,
     String? videoAsset,
+    String? deepLink,
   }) async {
     final asset =
         videoAsset ?? _defaultAssetForTarget(target);
@@ -25,6 +26,7 @@ class PipTutorialService {
       await _channel.invokeMethod('start', {
         'target': targetKey,
         'video': asset,
+        'deepLink': deepLink,
       });
     } on PlatformException {
       rethrow;

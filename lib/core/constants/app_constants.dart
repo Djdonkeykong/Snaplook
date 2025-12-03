@@ -153,7 +153,7 @@ class AppConstants {
     );
     return isLocal
         ? 'http://10.0.0.25:8000/detect'
-        : 'https://2e8122eb65ab.ngrok-free.app/detect';
+        : 'https://4c188f2e6c12.ngrok-free.app/detect';
   }
 
   static String _defaultDetectAndSearchEndpoint() {
@@ -163,12 +163,12 @@ class AppConstants {
     );
     return isLocal
         ? 'http://10.0.0.25:8000/detect-and-search'
-        : 'https://2e8122eb65ab.ngrok-free.app/detect-and-search';
+        : 'https://4c188f2e6c12.ngrok-free.app/detect-and-search';
   }
 
   // === 🐝 ScrapingBee Keys ===
   static const List<String> _scrapingBeeKeyPriority = [
-    'N7RYF85TNH33F3S0ENA9MU68EN34296134Y6H4URMDG2ZJR16H2RS9AH37IRQLBT8AQ9PDHO8KPFJXVP',
+    'JZ123377KP6AIVDKOSDZOXYCY5VGAPNFJRFAJR0PA7DNOCO2VQ2MYARURP80689586DKWMXG9SJJDRCH',
   ];
 
   static List<String> _parseScrapingBeeEnv(String? raw) {

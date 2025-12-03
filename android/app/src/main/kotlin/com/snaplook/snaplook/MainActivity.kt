@@ -102,6 +102,7 @@ class MainActivity: FlutterActivity() {
                     "start" -> {
                         val args = call.arguments as? Map<*, *>
                         val target = args?.get("target") as? String
+                        val deepLink = (args?.get("deepLink") as? String)?.trim()
                         val video = args?.get("video") as? String
                             ?: if (target == "instagram") {
                                 "assets/videos/instagram-tutorial.mp4"
@@ -115,6 +116,7 @@ class MainActivity: FlutterActivity() {
                         val intent = Intent(this, TutorialPipActivity::class.java).apply {
                             putExtra("assetKey", video)
                             putExtra("target", target)
+                            putExtra("deepLink", deepLink)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
                         startActivity(intent)

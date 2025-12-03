@@ -70,6 +70,7 @@ class TutorialPipActivity : AppCompatActivity() {
         }
         Log.d("TutorialPip", "assetKey=$assetKey")
         val target = intent.getStringExtra("target") ?: ""
+        val deepLink = intent.getStringExtra("deepLink")
 
         val videoFile = copyAssetToCache(assetKey)
         if (videoFile == null) {
@@ -88,7 +89,7 @@ class TutorialPipActivity : AppCompatActivity() {
             mp.isLooping = true
             mp.setVolume(0f, 0f)
             videoView?.start()
-            enterPipAndLaunch(target, mp.videoWidth, mp.videoHeight)
+            enterPipAndLaunch(target, deepLink, mp.videoWidth, mp.videoHeight)
         }
         videoView?.setOnErrorListener { _, _, _ ->
             finish()
@@ -111,7 +112,7 @@ class TutorialPipActivity : AppCompatActivity() {
         }
     }
 
-    private fun enterPipAndLaunch(target: String, videoWidth: Int?, videoHeight: Int?) {
+    private fun enterPipAndLaunch(target: String, deepLink: String?, videoWidth: Int?, videoHeight: Int?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val builder = PictureInPictureParams.Builder()
             val width = videoWidth ?: 9
@@ -123,20 +124,29 @@ class TutorialPipActivity : AppCompatActivity() {
             enterPictureInPictureMode(params)
             hasStartedPip = true
         }
-        openTarget(target)
+        openTarget(target, deepLink)
     }
 
-    private fun openTarget(target: String) {
-        val intent = when (target) {
-            "instagram" -> packageIntent("com.instagram.android", "https://instagram.com")
-            "pinterest" -> packageIntent("com.pinterest", "https://www.pinterest.com")
-            "tiktok" -> packageIntent("com.zhiliaoapp.musically", "https://www.tiktok.com")
-            "photos" -> packageIntent("com.google.android.apps.photos", "https://photos.google.com")
-            "facebook" -> packageIntent("com.facebook.katana", "https://www.facebook.com")
-            "imdb" -> packageIntent("com.imdb.mobile", "https://www.imdb.com")
-            "safari" -> packageIntent(null, "https://www.google.com")
-            "x" -> packageIntent("com.twitter.android", "https://twitter.com")
-            else -> null
+    private fun openTarget(target: String, deepLink: String?) {
+        val cleanedDeepLink = deepLink?.trim()
+        val intent = if (!cleanedDeepLink.isNullOrEmpty()) {
+            Intent(Intent.ACTION_VIEW, Uri.parse(cleanedDeepLink)).apply {
+                if (target == "instagram") {
+                    setPackage("com.instagram.android")
+                }
+            }
+        } else {
+            when (target) {
+                "instagram" -> packageIntent("com.instagram.android", "https://instagram.com")
+                "pinterest" -> packageIntent("com.pinterest", "https://www.pinterest.com")
+                "tiktok" -> packageIntent("com.zhiliaoapp.musically", "https://www.tiktok.com")
+                "photos" -> packageIntent("com.google.android.apps.photos", "https://photos.google.com")
+                "facebook" -> packageIntent("com.facebook.katana", "https://www.facebook.com")
+                "imdb" -> packageIntent("com.imdb.mobile", "https://www.imdb.com")
+                "safari" -> packageIntent(null, "https://www.google.com")
+                "x" -> packageIntent("com.twitter.android", "https://twitter.com")
+                else -> null
+            }
         }
         if (intent != null) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
