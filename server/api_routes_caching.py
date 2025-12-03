@@ -67,15 +67,31 @@ async def check_cache(source_url: str):
     """
     Check if we have cached results for an Instagram/source URL.
     Returns cache status and results if found.
+
+    First checks instagram_url_cache for quick image URL lookup (saves scraping credits).
+    Then checks full analysis cache for complete results.
     """
     if not supabase_manager.enabled:
         return {"cached": False}
 
+    # First check if we have the Instagram URL -> image URL mapping
+    # This saves ScrapingBee credits by avoiding re-scraping
+    instagram_image_url = supabase_manager.check_instagram_url_cache(source_url)
+    if instagram_image_url:
+        print(f"Instagram URL cache HIT - returning image URL to save scraping credits")
+        return {
+            "cached": True,
+            "cache_type": "instagram_url",
+            "image_url": instagram_image_url
+        }
+
+    # Check for full analysis cache (complete detection results)
     cache_entry = supabase_manager.check_cache_by_source(source_url)
 
     if cache_entry:
         return {
             "cached": True,
+            "cache_type": "full_analysis",
             "cache_id": cache_entry.get('id'),
             "total_results": cache_entry.get('total_results', 0),
             "detected_garments": cache_entry.get('detected_garments', []),
@@ -214,6 +230,16 @@ async def analyze_with_caching(
                 detected_garments=detection_result.get('detected_garments', []),
                 search_results=detection_result.get('results', [])
             )
+
+            # Also save to Instagram URL cache if this is an Instagram share
+            # This allows future requests for the same Instagram URL to skip scraping
+            if request.search_type == "instagram" and request.source_url:
+                supabase_manager.save_instagram_url_cache(
+                    instagram_url=request.source_url,
+                    image_url=detection_result['cloudinary_url'],
+                    extraction_method='server_upload'
+                )
+                print(f"Saved Instagram URL mapping to cache: {request.source_url} -> Cloudinary")
 
         # Create user search entry
         search_id = None

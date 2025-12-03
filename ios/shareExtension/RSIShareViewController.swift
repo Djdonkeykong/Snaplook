@@ -3595,7 +3595,35 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     let cached = json["cached"] as? Bool ?? false
 
                     if cached {
-                        shareLog("Cache HIT - processing cached results")
+                        let cacheType = json["cache_type"] as? String ?? "full_analysis"
+                        shareLog("Cache HIT - type: \(cacheType)")
+
+                        // Handle Instagram URL cache (image URL only, saves scraping credits)
+                        if cacheType == "instagram_url", let imageUrl = json["image_url"] as? String {
+                            shareLog("Instagram URL cache HIT - downloading cached image (saves 5 ScrapingBee credits!)")
+
+                            // Download the cached image URL directly
+                            DispatchQueue.main.async {
+                                self.downloadImageFromUrl(imageUrl) { result in
+                                    switch result {
+                                    case .success(let mediaFiles):
+                                        shareLog("Successfully downloaded cached Instagram image")
+                                        completion(true)
+                                        // Continue with normal flow using the downloaded image
+                                        if let imageData = try? Data(contentsOf: URL(fileURLWithPath: mediaFiles[0].path)) {
+                                            self.pendingImageData = imageData
+                                        }
+                                    case .failure(let error):
+                                        shareLog("Failed to download cached image: \(error.localizedDescription)")
+                                        completion(false)
+                                    }
+                                }
+                            }
+                            return
+                        }
+
+                        // Handle full analysis cache (complete results)
+                        shareLog("Full analysis cache HIT - processing cached results")
 
                         // Extract cached data
                         let totalResults = json["total_results"] as? Int ?? 0
@@ -5537,6 +5565,62 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 )
 
                 completion(.success(sharedFile))
+            } catch {
+                completion(.failure(error))
+            }
+        }.resume()
+    }
+
+    private func downloadImageFromUrl(_ urlString: String, completion: @escaping (Result<[SharedMediaFile], Error>) -> Void) {
+        guard let url = URL(string: urlString) else {
+            completion(.failure(NSError(domain: "com.snaplook.shareExtension", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid image URL"])))
+            return
+        }
+
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
+            completion(.failure(NSError(domain: "com.snaplook.shareExtension", code: -1, userInfo: [NSLocalizedDescriptionKey: "Cannot access app group container"])))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 20.0
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148", forHTTPHeaderField: "User-Agent")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+                completion(.failure(NSError(domain: "com.snaplook.shareExtension", code: status, userInfo: [NSLocalizedDescriptionKey: "Download failed with status \(status)"])))
+                return
+            }
+
+            guard let data = data else {
+                completion(.failure(NSError(domain: "com.snaplook.shareExtension", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                return
+            }
+
+            let timestamp = Int(Date().timeIntervalSince1970 * 1000)
+            let fileName = "cached_instagram_image_\(timestamp).jpg"
+            let fileURL = containerURL.appendingPathComponent(fileName)
+
+            do {
+                if FileManager.default.fileExists(atPath: fileURL.path) {
+                    try FileManager.default.removeItem(at: fileURL)
+                }
+                try data.write(to: fileURL, options: .atomic)
+
+                let sharedFile = SharedMediaFile(
+                    path: fileURL.absoluteString,
+                    mimeType: "image/jpeg",
+                    message: urlString,
+                    data: data
+                )
+
+                completion(.success([sharedFile]))
             } catch {
                 completion(.failure(error))
             }

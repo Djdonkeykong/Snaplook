@@ -182,6 +182,115 @@ class SupabaseManager:
             print(f"Cache hit increment error: {e}")
 
     # ============================================
+    # INSTAGRAM URL CACHE OPERATIONS
+    # ============================================
+
+    def check_instagram_url_cache(self, instagram_url: str) -> Optional[str]:
+        """
+        Check if we've already scraped this Instagram URL.
+        Returns cached image URL if found, None otherwise.
+        """
+        if not self.enabled:
+            return None
+
+        try:
+            # Normalize the URL (remove query params like ?igsh=...)
+            normalized_url = self._normalize_instagram_url(instagram_url)
+
+            # Check both original and normalized URLs
+            response = self.client.table('instagram_url_cache')\
+                .select('image_url, id')\
+                .or_(f'instagram_url.eq.{instagram_url},normalized_url.eq.{normalized_url}')\
+                .limit(1)\
+                .execute()
+
+            if response.data and len(response.data) > 0:
+                image_url = response.data[0]['image_url']
+                cache_id = response.data[0]['id']
+                print(f"Instagram cache HIT for URL: {normalized_url}")
+
+                # Update access tracking
+                self._update_instagram_cache_access(cache_id)
+
+                return image_url
+
+            print(f"Instagram cache MISS for URL: {normalized_url}")
+            return None
+
+        except Exception as e:
+            print(f"Instagram cache check error: {e}")
+            return None
+
+    def save_instagram_url_cache(
+        self,
+        instagram_url: str,
+        image_url: str,
+        extraction_method: str = 'scrapingbee'
+    ) -> Optional[int]:
+        """
+        Save Instagram URL and extracted image URL to cache.
+        Returns cache ID if successful, None otherwise.
+        """
+        if not self.enabled:
+            return None
+
+        try:
+            normalized_url = self._normalize_instagram_url(instagram_url)
+
+            cache_entry = {
+                'instagram_url': instagram_url,
+                'normalized_url': normalized_url,
+                'image_url': image_url,
+                'extraction_method': extraction_method,
+                'access_count': 1
+            }
+
+            response = self.client.table('instagram_url_cache')\
+                .upsert(cache_entry, on_conflict='instagram_url')\
+                .execute()
+
+            if response.data and len(response.data) > 0:
+                cache_id = response.data[0]['id']
+                print(f"Saved Instagram URL to cache: {normalized_url} -> {image_url[:50]}...")
+                return cache_id
+
+            return None
+
+        except Exception as e:
+            print(f"Instagram cache save error: {e}")
+            return None
+
+    def _normalize_instagram_url(self, url: str) -> str:
+        """Normalize Instagram URL by removing query parameters"""
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            # Keep only scheme, netloc, and path
+            return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        except Exception:
+            return url
+
+    def _update_instagram_cache_access(self, cache_id: int):
+        """Update last_accessed_at timestamp for Instagram cache entry"""
+        if not self.enabled:
+            return
+
+        try:
+            # Use PostgreSQL function to increment atomically
+            self.client.rpc('increment_instagram_cache_access', {
+                'cache_entry_id': cache_id
+            }).execute()
+        except Exception as e:
+            # Fallback to manual update if function doesn't exist
+            try:
+                self.client.table('instagram_url_cache')\
+                    .update({'last_accessed_at': datetime.now().isoformat()})\
+                    .eq('id', cache_id)\
+                    .execute()
+            except Exception as fallback_error:
+                print(f"Instagram cache access update error: {e}, fallback error: {fallback_error}")
+
+    # ============================================
     # USER SEARCH HISTORY
     # ============================================
 
