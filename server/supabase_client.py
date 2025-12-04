@@ -256,7 +256,7 @@ class SupabaseManager:
             }
 
             response = self.client.table('instagram_url_cache')\
-                .upsert(cache_entry, on_conflict='instagram_url')\
+                .upsert(cache_entry, on_conflict='normalized_url')\
                 .execute()
 
             if response.data and len(response.data) > 0:
