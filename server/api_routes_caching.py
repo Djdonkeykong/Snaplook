@@ -65,40 +65,12 @@ class SaveSearchRequest(BaseModel):
 @router.get("/cache/check")
 async def check_cache(source_url: str):
     """
-    Check if we have cached results for an Instagram/source URL.
-    Returns cache status and results if found.
-
-    First checks instagram_url_cache for quick image URL lookup (saves scraping credits).
-    Then checks full analysis cache for complete results.
+    Cache checking temporarily disabled.
+    Always returns cache miss to ensure location-specific results.
     """
-    if not supabase_manager.enabled:
-        return {"cached": False}
-
-    # First check if we have the Instagram URL -> image URL mapping
-    # This saves ScrapingBee credits by avoiding re-scraping
-    instagram_image_url = supabase_manager.check_instagram_url_cache(source_url)
-    if instagram_image_url:
-        print(f"Instagram URL cache HIT - returning image URL to save scraping credits")
-        return {
-            "cached": True,
-            "cache_type": "instagram_url",
-            "image_url": instagram_image_url
-        }
-
-    # Check for full analysis cache (complete detection results)
-    cache_entry = supabase_manager.check_cache_by_source(source_url)
-
-    if cache_entry:
-        return {
-            "cached": True,
-            "cache_type": "full_analysis",
-            "cache_id": cache_entry.get('id'),
-            "total_results": cache_entry.get('total_results', 0),
-            "detected_garments": cache_entry.get('detected_garments', []),
-            "search_results": cache_entry.get('search_results', [])
-        }
-    else:
-        return {"cached": False}
+    # Cache checking disabled - always return miss
+    # This ensures users always get fresh, location-appropriate results
+    return {"cached": False}
 
 
 # ============================================
