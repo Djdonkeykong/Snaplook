@@ -523,34 +523,28 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   SharePayload _buildSharePayload() {
     final buffer = StringBuffer();
     final topResults = _results.take(5).toList();
+    final totalResults = _results.length;
 
-    buffer.writeln('Snaplook matches for your photo:');
-    buffer.writeln();
+    buffer.writeln('I analyzed this look on Snaplook and found $totalResults matches!\n');
 
     if (topResults.isNotEmpty) {
+      buffer.writeln('Top finds:');
       for (var i = 0; i < topResults.length; i++) {
         final r = topResults[i];
         final name = r.productName.isNotEmpty ? r.productName : 'Item';
-        final brand = r.brand.isNotEmpty ? r.brand : '';
-        final price = r.priceDisplay ?? '';
-        final link = r.purchaseUrl ?? '';
+        final brand = r.brand.isNotEmpty ? r.brand : 'Unknown brand';
+        final link = r.purchaseUrl ?? 'URL not available';
 
-        buffer.write('${i + 1}) ');
-        if (brand.isNotEmpty) buffer.write('$brand — ');
-        buffer.write(name);
-        if (price.isNotEmpty) buffer.write(' • $price');
-        if (link.isNotEmpty) buffer.write('\n$link');
-        buffer.writeln();
+        buffer.writeln('${i + 1}. $brand - $name - $link');
       }
-    } else {
-      buffer.writeln('Check out what I found with Snaplook!');
+      buffer.writeln();
     }
 
-    final subject = 'Snaplook matches for your photo';
+    buffer.write('Get Snaplook to find your fashion matches: https://snaplook.app');
 
     return SharePayload(
-      subject: subject,
-      message: buffer.toString().trim(),
+      subject: 'Snaplook Fashion Matches',
+      message: buffer.toString(),
     );
   }
 

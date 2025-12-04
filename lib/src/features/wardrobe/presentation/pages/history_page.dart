@@ -320,48 +320,33 @@ class _HistoryCard extends StatelessWidget {
     }
 
     final topResults = results.take(5).toList();
+    final totalResults = (searchData['total_results'] as num?)?.toInt() ?? 0;
 
     final buffer = StringBuffer();
-    buffer.writeln('Top picks based on your Snaplook search:');
-    buffer.writeln();
+    buffer.writeln('I analyzed this look on Snaplook and found $totalResults matches!\n');
 
     if (topResults.isNotEmpty) {
+      buffer.writeln('Top finds:');
       for (var i = 0; i < topResults.length; i++) {
         final r = topResults[i] as Map<String, dynamic>;
         final name = (r['product_name'] as String?)?.trim();
         final brand = (r['brand'] as String?)?.trim();
-        final priceDisplay =
-            (r['price_display'] as String?) ?? (r['price']?.toString() ?? '');
         final link = (r['purchase_url'] as String?)?.trim() ?? '';
 
         final safeName = (name != null && name.isNotEmpty) ? name : 'Item';
-        final safeBrand = (brand != null && brand.isNotEmpty) ? brand : '';
+        final safeBrand = (brand != null && brand.isNotEmpty) ? brand : 'Unknown brand';
+        final safeLink = link.isNotEmpty ? link : 'URL not available';
 
-        buffer.write('${i + 1}) ');
-        if (safeBrand.isNotEmpty) buffer.write('$safeBrand - ');
-        buffer.write(safeName);
-        if (priceDisplay.isNotEmpty && !_isZeroishPrice(priceDisplay)) {
-          buffer.write(' - $priceDisplay');
-        }
-        if (link.isNotEmpty) buffer.write('\n$link');
-        buffer.writeln();
+        buffer.writeln('${i + 1}. $safeBrand - $safeName - $safeLink');
       }
-    } else {
-      final total = (searchData['total_results'] as num?)?.toInt() ?? 0;
-      final sourceUrl = (searchData['source_url'] as String?)?.trim() ?? '';
-      if (total > 0) {
-        buffer.writeln('$total products found with Snaplook.');
-      } else {
-        buffer.writeln('Check out what I found with Snaplook!');
-      }
-      if (sourceUrl.isNotEmpty) {
-        buffer.writeln(sourceUrl);
-      }
+      buffer.writeln();
     }
 
+    buffer.write('Get Snaplook to find your fashion matches: https://snaplook.app');
+
     return SharePayload(
-      subject: 'Snaplook matches for your photo',
-      message: buffer.toString().trim(),
+      subject: 'Snaplook Fashion Matches',
+      message: buffer.toString(),
     );
   }
 

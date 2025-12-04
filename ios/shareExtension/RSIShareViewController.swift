@@ -3677,6 +3677,100 @@ open class RSIShareViewController: SLComposeServiceViewController {
         task.resume()
     }
 
+    enum CacheCheckResult {
+        case fullAnalysisHit(cacheId: String)
+        case instagramUrlHit(imageUrl: String)
+        case miss
+    }
+
+    private func checkCacheForInstagramInApp(url: String, completion: @escaping (CacheCheckResult) -> Void) {
+        shareLog("Checking cache for Analyze in app - URL: \(url)")
+
+        guard let serverBaseUrl = getServerBaseUrl() else {
+            shareLog("ERROR: Could not determine server base URL for cache check")
+            completion(.miss)
+            return
+        }
+
+        guard var components = URLComponents(string: serverBaseUrl + "/api/v1/cache/check") else {
+            shareLog("ERROR: Failed to create URL components for cache check")
+            completion(.miss)
+            return
+        }
+
+        components.queryItems = [URLQueryItem(name: "source_url", value: url)]
+
+        guard let checkUrl = components.url else {
+            shareLog("ERROR: Failed to build cache check URL")
+            completion(.miss)
+            return
+        }
+
+        var request = URLRequest(url: checkUrl)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 10.0
+
+        shareLog("Sending cache check request for Analyze in app to: \(checkUrl)")
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else {
+                completion(.miss)
+                return
+            }
+
+            if let error = error {
+                shareLog("Cache check network error: \(error.localizedDescription)")
+                completion(.miss)
+                return
+            }
+
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            shareLog("Cache check response - status code: \(statusCode)")
+
+            guard statusCode == 200, let data = data else {
+                shareLog("Cache check failed or returned non-200 status")
+                completion(.miss)
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let cached = json["cached"] as? Bool ?? false
+
+                    if cached {
+                        let cacheType = json["cache_type"] as? String ?? "full_analysis"
+                        shareLog("Cache HIT for Analyze in app - type: \(cacheType)")
+
+                        // Handle Instagram URL cache (image URL only)
+                        if cacheType == "instagram_url", let imageUrl = json["image_url"] as? String {
+                            shareLog("Instagram URL cache HIT - will download cached image (saves 5 ScrapingBee credits!)")
+                            completion(.instagramUrlHit(imageUrl: imageUrl))
+                            return
+                        }
+
+                        // Handle full analysis cache
+                        if let cacheId = json["cache_id"] as? String {
+                            shareLog("Full analysis cache HIT - will redirect with cache_id")
+                            completion(.fullAnalysisHit(cacheId: cacheId))
+                            return
+                        }
+
+                        shareLog("Cache HIT but missing expected data - treating as miss")
+                        completion(.miss)
+                    } else {
+                        shareLog("Cache MISS")
+                        completion(.miss)
+                    }
+                }
+            } catch {
+                shareLog("ERROR: Failed to parse cache check response: \(error.localizedDescription)")
+                completion(.miss)
+            }
+        }
+
+        task.resume()
+    }
+
     private func runDetectionAnalysis(imageUrl: String?, imageBase64: String) {
         let urlForLog = imageUrl ?? "<nil>"
         shareLog("START runDetectionAnalysis - imageUrl: \(urlForLog), base64 length: \(imageBase64.count)")
@@ -5091,14 +5185,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let totalResults = detectionResults.count
 
         // Create share text
-        var shareText = "I analyzed this look on Snaplook and found \(totalResults) matches! 🔥\n\n"
+        var shareText = "I analyzed this look on Snaplook and found \(totalResults) matches!\n\n"
 
         if !topProducts.isEmpty {
             shareText += "Top finds:\n"
             for (index, product) in topProducts.enumerated() {
                 let productName = product.product_name
                 let brand = product.brand ?? "Unknown brand"
-                shareText += "\(index + 1). \(brand) - \(productName)\n"
+                let url = product.purchase_url ?? "URL not available"
+                shareText += "\(index + 1). \(brand) - \(productName) - \(url)\n"
             }
             shareText += "\n"
         }
@@ -6040,27 +6135,77 @@ open class RSIShareViewController: SLComposeServiceViewController {
         updateProcessingStatus("processing")
         setupLoadingUI()
 
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.stopStatusPolling()
-            self.startSmoothProgress()
+        // Check if this is an Instagram URL that might be cached
+        let shouldCheckCache = (pendingPlatformType == "instagram") && (pendingInstagramUrl != nil)
 
-            // Unified progress profile for all platforms (steady crawl toward 100% until detection completes)
-            self.progressRateMultiplier = 0.25
-            self.targetProgress = 1.0
+        if shouldCheckCache, let instagramUrl = pendingInstagramUrl {
+            shareLog("Checking cache before analysis for Instagram URL")
 
-            let rotatingMessages = [
-                "Analyzing look...",
-                "Finding similar items...",
-                "Checking retailers...",
-                "Finalizing results..."
-            ]
-            self.startStatusRotation(messages: rotatingMessages, interval: 2.0, stopAtLast: false)
+            // Start progress UI
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.stopStatusPolling()
+                self.startSmoothProgress()
+                self.progressRateMultiplier = 0.35
+                self.targetProgress = 0.92
+                self.updateProgress(0.0, status: "Checking cache...")
+            }
+
+            checkCacheForInstagram(url: instagramUrl) { [weak self] isCached in
+                guard let self = self else { return }
+
+                if isCached {
+                    shareLog("Cache HIT from Analyze button - results already displayed")
+                    // Results were already shown by checkCacheForInstagram, we're done
+                    return
+                } else {
+                    shareLog("Cache MISS from Analyze button - proceeding with detection")
+                    // Continue with normal detection flow
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+
+                        // Reset progress for detection
+                        self.progressRateMultiplier = 0.25
+                        self.targetProgress = 1.0
+
+                        let rotatingMessages = [
+                            "Analyzing look...",
+                            "Finding similar items...",
+                            "Checking retailers...",
+                            "Finalizing results..."
+                        ]
+                        self.startStatusRotation(messages: rotatingMessages, interval: 2.0, stopAtLast: false)
+
+                        // Start detection
+                        shareLog("Starting detection from preview with \(imageData.count) bytes")
+                        self.uploadAndDetect(imageData: imageData)
+                    }
+                }
+            }
+        } else {
+            // Not Instagram or no URL - proceed directly with detection
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.stopStatusPolling()
+                self.startSmoothProgress()
+
+                // Unified progress profile for all platforms (steady crawl toward 100% until detection completes)
+                self.progressRateMultiplier = 0.25
+                self.targetProgress = 1.0
+
+                let rotatingMessages = [
+                    "Analyzing look...",
+                    "Finding similar items...",
+                    "Checking retailers...",
+                    "Finalizing results..."
+                ]
+                self.startStatusRotation(messages: rotatingMessages, interval: 2.0, stopAtLast: false)
+            }
+
+            // Start detection
+            shareLog("Starting detection from preview with \(imageData.count) bytes")
+            uploadAndDetect(imageData: imageData)
         }
-
-        // Start detection
-        shareLog("Starting detection from preview with \(imageData.count) bytes")
-        uploadAndDetect(imageData: imageData)
     }
 
     private func fadeInCropToolbarButtons(_ cropViewController: TOCropViewController) {
@@ -6656,25 +6801,145 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Check if this is a URL (before download) or direct image (after download)
         if let socialUrl = pendingInstagramUrl {
             let platformName = getPlatformDisplayName(pendingPlatformType)
-            shareLog("Downloading \(platformName) media and saving to app")
+            let shouldCheckCache = (pendingPlatformType == "instagram")
 
-            // Start download process
-            updateProcessingStatus("processing")
-            setupLoadingUI()
+            if shouldCheckCache {
+                shareLog("Checking cache before downloading for Analyze in app")
 
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                self.startSmoothProgress()
-                self.targetProgress = 0.92
-                self.updateProgress(0.0, status: "Opening Snaplook...")
-            }
+                // Start download process
+                updateProcessingStatus("processing")
+                setupLoadingUI()
 
-            let downloadFunction = getDownloadFunction(for: pendingPlatformType)
-            downloadFunction(socialUrl) { [weak self] result in
-                guard let self = self else { return }
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    self.startSmoothProgress()
+                    self.targetProgress = 0.92
+                    self.updateProgress(0.0, status: "Checking cache...")
+                }
 
-                switch result {
-                case .success(let downloaded):
+                checkCacheForInstagramInApp(url: socialUrl) { [weak self] cacheResult in
+                    guard let self = self else { return }
+
+                    switch cacheResult {
+                    case .fullAnalysisHit(let cacheId):
+                        // Full analysis cached - redirect to app with cache info
+                        shareLog("Full analysis cache HIT for Analyze in app - redirecting with cache_id")
+
+                        DispatchQueue.main.async {
+                            self.completeProgressQuickly()
+                            self.updateProgress(1.0, status: "Opening Snaplook...")
+
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                // Save cache_id to UserDefaults so app can load cached results
+                                let userDefaults = UserDefaults(suiteName: self.appGroupId)
+                                userDefaults?.set(cacheId, forKey: "cache_id")
+                                userDefaults?.set(socialUrl, forKey: "source_url")
+                                userDefaults?.set(self.pendingPlatformType ?? "instagram", forKey: "pending_platform_type")
+                                userDefaults?.synchronize()
+
+                                self.stopSmoothProgress()
+                                self.saveAndRedirect(message: nil)
+                                self.pendingInstagramUrl = nil
+                            }
+                        }
+
+                    case .instagramUrlHit(let imageUrl):
+                        // Image URL cached - download using cached URL (saves scraping credits)
+                        shareLog("Instagram URL cache HIT for Analyze in app - downloading cached image")
+
+                        DispatchQueue.main.async {
+                            self.completeProgressQuickly()
+                            self.updateProgress(1.0, status: "Opening Snaplook...")
+
+                            self.downloadImageFromUrl(imageUrl) { result in
+                                switch result {
+                                case .success(let downloaded):
+                                    if downloaded.isEmpty {
+                                        shareLog("Downloaded cached image but got no files")
+                                        self.dismissWithError()
+                                    } else {
+                                        self.sharedMedia.append(contentsOf: downloaded)
+                                        shareLog("Downloaded cached image - redirecting to app")
+
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                            self.stopSmoothProgress()
+                                            self.saveAndRedirect(message: socialUrl)
+                                            self.pendingInstagramUrl = nil
+                                        }
+                                    }
+
+                                case .failure(let error):
+                                    shareLog("Failed to download cached image: \(error.localizedDescription)")
+                                    self.dismissWithError()
+                                }
+                            }
+                        }
+
+                    case .miss:
+                        // Cache miss - proceed with normal download
+                        shareLog("Cache MISS for Analyze in app - proceeding with download")
+
+                        DispatchQueue.main.async {
+                            self.updateProgress(0.0, status: "Opening Snaplook...")
+                        }
+
+                        let downloadFunction = self.getDownloadFunction(for: self.pendingPlatformType)
+                        downloadFunction(socialUrl) { [weak self] result in
+                            guard let self = self else { return }
+
+                            switch result {
+                            case .success(let downloaded):
+                                if downloaded.isEmpty {
+                                    shareLog("\(platformName) download succeeded but returned no files")
+                                    self.dismissWithError()
+                                } else {
+                                    self.sharedMedia.append(contentsOf: downloaded)
+                                    shareLog("Downloaded and saved \(downloaded.count) \(platformName) file(s)")
+
+                                    // Update progress to completion
+                                    self.targetProgress = 1.0
+                                    self.updateProgress(1.0, status: "Opening Snaplook...")
+
+                                    // Delay to allow progress bar to complete fully before redirecting
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+                                        // Stop smooth progress to lock at 100%
+                                        self.stopSmoothProgress()
+                                        self.saveAndRedirect(message: self.pendingInstagramUrl)
+                                    }
+                                }
+
+                                // DON'T call pendingInstagramCompletion - we're handling redirect ourselves
+                                self.pendingInstagramCompletion = nil
+                                self.pendingInstagramUrl = nil
+
+                            case .failure(let error):
+                                shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
+                                self.dismissWithError()
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Non-Instagram URL - proceed with normal download
+                shareLog("Downloading \(platformName) media and saving to app")
+
+                // Start download process
+                updateProcessingStatus("processing")
+                setupLoadingUI()
+
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    self.startSmoothProgress()
+                    self.targetProgress = 0.92
+                    self.updateProgress(0.0, status: "Opening Snaplook...")
+                }
+
+                let downloadFunction = getDownloadFunction(for: pendingPlatformType)
+                downloadFunction(socialUrl) { [weak self] result in
+                    guard let self = self else { return }
+
+                    switch result {
+                    case .success(let downloaded):
                         if downloaded.isEmpty {
                             shareLog("\(platformName) download succeeded but returned no files")
                             self.dismissWithError()
@@ -6686,22 +6951,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
                             self.targetProgress = 1.0
                             self.updateProgress(1.0, status: "Opening Snaplook...")
 
-                        // Delay to allow progress bar to complete fully before redirecting
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
-                            // Stop smooth progress to lock at 100%
-                            self.stopSmoothProgress()
-                            self.saveAndRedirect(message: self.pendingInstagramUrl)
+                            // Delay to allow progress bar to complete fully before redirecting
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+                                // Stop smooth progress to lock at 100%
+                                self.stopSmoothProgress()
+                                self.saveAndRedirect(message: self.pendingInstagramUrl)
+                            }
                         }
+
+                        // DON'T call pendingInstagramCompletion - we're handling redirect ourselves
+                        self.pendingInstagramCompletion = nil
+                        self.pendingInstagramUrl = nil
+
+                    case .failure(let error):
+                        shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
+                        self.dismissWithError()
                     }
-
-                    // DON'T call pendingInstagramCompletion - we're handling redirect ourselves
-                    // Calling it would trigger maybeFinalizeShare() and cause a double redirect
-                    self.pendingInstagramCompletion = nil
-                    self.pendingInstagramUrl = nil
-
-                case .failure(let error):
-                    shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
-                    self.dismissWithError()
                 }
             }
         } else if let imageData = pendingImageData,
