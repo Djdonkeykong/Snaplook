@@ -194,8 +194,12 @@ void main() async {
 }
 
 class _FetchingOverlay extends StatefulWidget {
-  const _FetchingOverlay(
-      {required this.message, this.isInstagram = false, this.isX = false});
+  const _FetchingOverlay({
+    super.key,
+    required this.message,
+    this.isInstagram = false,
+    this.isX = false,
+  });
 
   final String message;
   final bool isInstagram;
@@ -300,6 +304,15 @@ class _FetchingOverlayState extends State<_FetchingOverlay>
   String get _currentMessage =>
       _messages.isNotEmpty ? _messages[_messageIndex] : widget.message;
 
+  void completeQuickly() {
+    _controller.stop();
+    _controller.animateTo(
+      1.0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -371,6 +384,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     with WidgetsBindingObserver {
   late StreamSubscription _intentSub;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  final GlobalKey<_FetchingOverlayState> _fetchingOverlayKey = GlobalKey<_FetchingOverlayState>();
 
   bool _isNavigatingToDetection = false;
   bool _hasHandledInitialShare = false;
@@ -1024,9 +1038,16 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     _showFetchingOverlay(title: 'Downloading image...', isInstagram: true);
     try {
       ref.read(shareNavigationInProgressProvider.notifier).state = true;
+
       final imageFiles = await InstagramService.downloadImageFromInstagramUrl(
         instagramUrl,
       );
+
+      if (InstagramService.lastDownloadWasCacheHit) {
+        print('[CACHE HIT] Instagram URL was cached - triggering fast progress');
+        _fetchingOverlayKey.currentState?.completeQuickly();
+        await Future.delayed(const Duration(milliseconds: 600));
+      }
 
       if (imageFiles.isNotEmpty) {
         print('Downloaded ${imageFiles.length} image(s) from Instagram');
@@ -1819,6 +1840,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
             if (_isFetchingOverlayVisible)
               Positioned.fill(
                 child: _FetchingOverlay(
+                  key: _fetchingOverlayKey,
                   message: _fetchingOverlayMessage,
                   isInstagram: _isInstagramDownload,
                   isX: _isXDownload,

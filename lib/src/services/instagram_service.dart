@@ -10,6 +10,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/constants/app_constants.dart';
 
 class InstagramService {
+  static bool lastDownloadWasCacheHit = false;
+
   static const String _userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -404,6 +406,7 @@ class InstagramService {
   ) async {
     try {
       print('Fetching Instagram post: $instagramUrl');
+      lastDownloadWasCacheHit = false;
 
       final apiKey = AppConstants.scrapingBeeApiKey;
       if (apiKey.isEmpty ||
@@ -417,11 +420,13 @@ class InstagramService {
       final cachedImageUrl = await _checkInstagramCache(instagramUrl);
       if (cachedImageUrl != null) {
         print('📦 Using cached image URL - saving 5 credits!');
+        lastDownloadWasCacheHit = true;
         final cachedImage = await _downloadImage(cachedImageUrl);
         if (cachedImage != null) {
           return [cachedImage];
         }
         print('⚠️ Cached image download failed, falling back to scraping');
+        lastDownloadWasCacheHit = false;
       }
 
       // Cache miss or failed - scrape Instagram
