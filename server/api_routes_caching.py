@@ -113,61 +113,8 @@ async def analyze_with_caching(
             image_obj = Image.open(io.BytesIO(image_data))
             image_hash = hash_image(image_obj)
 
-        # Step 1: Check cache
-        # For Instagram posts, check by source_url first (avoids re-downloading)
-        cache_entry = None
-        if supabase_manager.enabled:
-            if request.search_type == "instagram" and request.source_url:
-                cache_entry = supabase_manager.check_cache_by_source(request.source_url)
-
-            # If no cache hit by source, try by image URL/hash
-            if not cache_entry:
-                cache_entry = supabase_manager.check_cache(
-                    image_url=image_url,
-                    image_hash=image_hash
-                )
-
-        # Step 2: Cache HIT - Return instant results
-        if cache_entry:
-            print(f"CACHE HIT - Returning instant results")
-
-            # Calculate cache age
-            cache_age = None
-            if cache_entry.get('created_at'):
-                created = datetime.fromisoformat(cache_entry['created_at'].replace('Z', '+00:00'))
-                cache_age = int((datetime.now(created.tzinfo) - created).total_seconds())
-
-            # Increment hit counter in background
-            if supabase_manager.enabled:
-                background_tasks.add_task(
-                    supabase_manager.increment_cache_hit,
-                    cache_entry['id']
-                )
-
-            # Create user search entry
-            search_id = None
-            if supabase_manager.enabled:
-                search_id = supabase_manager.create_user_search(
-                    user_id=request.user_id,
-                    image_cache_id=cache_entry['id'],
-                    search_type=request.search_type,
-                    source_url=request.source_url,
-                    source_username=request.source_username
-                )
-
-            return AnalyzeResponse(
-                success=True,
-                cached=True,
-                cache_age_seconds=cache_age,
-                search_id=search_id,
-                image_cache_id=cache_entry['id'],
-                total_results=cache_entry.get('total_results', 0),
-                detected_garments=cache_entry.get('detected_garments', []),
-                search_results=cache_entry.get('search_results', [])
-            )
-
-        # Step 3: Cache MISS - Run full analysis
-        print(f"CACHE MISS - Running full analysis")
+        # Cache checking disabled - always run full analysis for location-specific results
+        print(f"Running full analysis (cache disabled for location-aware results)")
 
         # Import the existing detection function
         from fashion_detector_server import run_full_detection_pipeline
