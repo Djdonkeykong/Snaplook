@@ -6135,11 +6135,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         updateProcessingStatus("processing")
         setupLoadingUI()
 
-        // Check if this is an Instagram URL that might be cached
+        // Check if this is an Instagram URL that might have FULL ANALYSIS cached
+        // Note: We ignore instagram_url cache (image only) since we already have the image in preview
         let shouldCheckCache = (pendingPlatformType == "instagram") && (pendingInstagramUrl != nil)
 
         if shouldCheckCache, let instagramUrl = pendingInstagramUrl {
-            shareLog("Checking cache before analysis for Instagram URL")
+            shareLog("Checking cache before analysis for Instagram URL (looking for full analysis only)")
 
             // Start progress UI
             DispatchQueue.main.async { [weak self] in
@@ -6151,61 +6152,136 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 self.updateProgress(0.0, status: "Checking cache...")
             }
 
-            checkCacheForInstagram(url: instagramUrl) { [weak self] isCached in
+            checkCacheForInstagramInApp(url: instagramUrl) { [weak self] cacheResult in
                 guard let self = self else { return }
 
-                if isCached {
-                    shareLog("Cache HIT from Analyze button - results already displayed")
-                    // Results were already shown by checkCacheForInstagram, we're done
-                    return
-                } else {
+                switch cacheResult {
+                case .fullAnalysisHit(let cacheId):
+                    // Full analysis cached - load and display results
+                    shareLog("Full analysis cache HIT from Analyze button - fetching cached results")
+
+                    // Store cache_id for later use
+                    self.currentImageCacheId = cacheId
+                    self.currentSearchId = nil
+
+                    // Fetch the full cached results to display
+                    self.fetchCachedResults(cacheId: cacheId)
+
+                case .instagramUrlHit:
+                    // Instagram URL cache only (image URL) - ignore and analyze since we already have the image
+                    shareLog("Instagram URL cache HIT from Analyze button - ignoring and proceeding with analysis (we already have image)")
+                    self.proceedWithDetection(imageData: imageData)
+
+                case .miss:
                     shareLog("Cache MISS from Analyze button - proceeding with detection")
-                    // Continue with normal detection flow
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
-
-                        // Reset progress for detection
-                        self.progressRateMultiplier = 0.25
-                        self.targetProgress = 1.0
-
-                        let rotatingMessages = [
-                            "Analyzing look...",
-                            "Finding similar items...",
-                            "Checking retailers...",
-                            "Finalizing results..."
-                        ]
-                        self.startStatusRotation(messages: rotatingMessages, interval: 2.0, stopAtLast: false)
-
-                        // Start detection
-                        shareLog("Starting detection from preview with \(imageData.count) bytes")
-                        self.uploadAndDetect(imageData: imageData)
-                    }
+                    self.proceedWithDetection(imageData: imageData)
                 }
             }
         } else {
             // Not Instagram or no URL - proceed directly with detection
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                self.stopStatusPolling()
-                self.startSmoothProgress()
+            proceedWithDetection(imageData: imageData)
+        }
+    }
 
-                // Unified progress profile for all platforms (steady crawl toward 100% until detection completes)
-                self.progressRateMultiplier = 0.25
-                self.targetProgress = 1.0
+    private func proceedWithDetection(imageData: Data) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.stopStatusPolling()
+            self.startSmoothProgress()
 
-                let rotatingMessages = [
-                    "Analyzing look...",
-                    "Finding similar items...",
-                    "Checking retailers...",
-                    "Finalizing results..."
-                ]
-                self.startStatusRotation(messages: rotatingMessages, interval: 2.0, stopAtLast: false)
+            // Unified progress profile for all platforms
+            self.progressRateMultiplier = 0.25
+            self.targetProgress = 1.0
+
+            let rotatingMessages = [
+                "Analyzing look...",
+                "Finding similar items...",
+                "Checking retailers...",
+                "Finalizing results..."
+            ]
+            self.startStatusRotation(messages: rotatingMessages, interval: 2.0, stopAtLast: false)
+        }
+
+        // Start detection
+        shareLog("Starting detection from preview with \(imageData.count) bytes")
+        uploadAndDetect(imageData: imageData)
+    }
+
+    private func fetchCachedResults(cacheId: String) {
+        shareLog("Fetching cached results for cache_id: \(cacheId)")
+
+        guard let serverBaseUrl = getServerBaseUrl() else {
+            shareLog("ERROR: Could not determine server base URL")
+            dismissWithError()
+            return
+        }
+
+        let endpoint = serverBaseUrl + "/api/v1/cache/\(cacheId)"
+        guard let url = URL(string: endpoint) else {
+            shareLog("ERROR: Failed to build cache fetch URL")
+            dismissWithError()
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 10.0
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("Failed to fetch cached results: \(error.localizedDescription)")
+                self.dismissWithError()
+                return
             }
 
-            // Start detection
-            shareLog("Starting detection from preview with \(imageData.count) bytes")
-            uploadAndDetect(imageData: imageData)
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            guard statusCode == 200, let data = data else {
+                shareLog("Cache fetch failed with status: \(statusCode)")
+                self.dismissWithError()
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let searchResultsArray = json["search_results"] as? [[String: Any]] {
+
+                    var results: [DetectionResultItem] = []
+                    for resultDict in searchResultsArray {
+                        if let jsonData = try? JSONSerialization.data(withJSONObject: resultDict),
+                           let item = try? JSONDecoder().decode(DetectionResultItem.self, from: jsonData) {
+                            results.append(item)
+                        }
+                    }
+
+                    shareLog("Fetched \(results.count) cached results")
+
+                    DispatchQueue.main.async {
+                        self.completeProgressQuickly()
+                        self.updateProgress(1.0, status: "Loading results...")
+
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            self.stopSmoothProgress()
+
+                            let sanitized = self.sanitize(results: results)
+                            self.detectionResults = sanitized
+                            self.isShowingDetectionResults = true
+
+                            let generator = UIImpactFeedbackGenerator(style: .medium)
+                            generator.impactOccurred()
+
+                            self.showDetectionResults()
+                        }
+                    }
+                }
+            } catch {
+                shareLog("ERROR: Failed to parse cached results: \(error.localizedDescription)")
+                self.dismissWithError()
+            }
         }
+
+        task.resume()
     }
 
     private func fadeInCropToolbarButtons(_ cropViewController: TOCropViewController) {

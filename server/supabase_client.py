@@ -57,10 +57,19 @@ class SupabaseManager:
             return None
 
         try:
+            # Normalize Instagram URLs to handle query parameters like ?igsh=
+            normalized_url = self._normalize_instagram_url(source_url)
+
             # Find a user_search with this source_url
+            # Check both original and normalized URLs for Instagram
+            query_filter = f'source_url.eq.{source_url}'
+            if normalized_url != source_url:
+                # If URL was normalized (has query params), check both versions
+                query_filter = f'source_url.eq.{source_url},source_url.eq.{normalized_url}'
+
             response = self.client.table('user_searches')\
                 .select('image_cache_id, image_cache(*)')\
-                .eq('source_url', source_url)\
+                .or_(query_filter)\
                 .order('created_at', desc=True)\
                 .limit(1)\
                 .execute()
@@ -75,9 +84,10 @@ class SupabaseManager:
                     if expires_at_str:
                         expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '+00:00'))
                         if expires_at > datetime.now(expires_at.tzinfo):
-                            print(f"Cache HIT for Instagram URL: {source_url[:50]}...")
+                            print(f"Cache HIT for Instagram URL: {source_url[:50]}... (normalized: {normalized_url[:50]}...)")
                             return cache_data
 
+            print(f"Instagram cache MISS for URL: {source_url} (normalized: {normalized_url})")
             return None
 
         except Exception as e:
@@ -311,11 +321,14 @@ class SupabaseManager:
             return None
 
         try:
+            # Normalize Instagram URLs to remove query parameters
+            normalized_source_url = self._normalize_instagram_url(source_url) if source_url else None
+
             search_entry = {
                 'user_id': user_id,
                 'image_cache_id': image_cache_id,
                 'search_type': search_type,
-                'source_url': source_url,
+                'source_url': normalized_source_url,
                 'source_username': source_username
             }
 
