@@ -52,7 +52,6 @@ enum _TutorialSource {
   tiktok,
   safari,
   photos,
-  facebook,
   imdb,
   x,
   other,
@@ -809,15 +808,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
           width: 24,
           height: 24,
           gaplessPlayback: true,
-        ),
-      ),
-      _TutorialOptionData(
-        label: 'Facebook',
-        source: _TutorialSource.facebook,
-        iconBuilder: () => SvgPicture.asset(
-          'assets/icons/5296499_fb_facebook_facebook logo_icon.svg',
-          width: 24,
-          height: 24,
         ),
       ),
       _TutorialOptionData(

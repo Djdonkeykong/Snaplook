@@ -14,7 +14,6 @@ import 'awesome_intro_page.dart';
 
 enum DiscoverySource {
   instagram,
-  facebook,
   tiktok,
   youtube,
   google,
@@ -45,7 +44,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
   void initState() {
     super.initState();
 
-    _animationControllers = List.generate(7, (index) {
+    _animationControllers = List.generate(6, (index) {
       return AnimationController(
         duration: const Duration(milliseconds: 400),
         vsync: this,
@@ -161,7 +160,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
               child: ListView.separated(
                 padding: EdgeInsets.only(bottom: spacing.l),
                 physics: const BouncingScrollPhysics(),
-                itemCount: 7,
+                itemCount: 6,
                 separatorBuilder: (_, __) => SizedBox(height: spacing.l),
                 itemBuilder: (context, index) {
                   switch (index) {
@@ -198,32 +197,6 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                             child: ScaleTransition(
                               scale: _scaleAnimations[1],
                               child: _DiscoverySourceOption(
-                                source: DiscoverySource.facebook,
-                                label: 'Facebook',
-                                icon: SvgPicture.asset(
-                                    'assets/icons/5296499_fb_facebook_facebook logo_icon.svg',
-                                    width: 24,
-                                    height: 24),
-                                isSelected:
-                                    selectedSource == DiscoverySource.facebook,
-                                onTap: () => ref
-                                    .read(selectedDiscoverySourceProvider
-                                        .notifier)
-                                    .state = DiscoverySource.facebook,
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    case 2:
-                      return AnimatedBuilder(
-                        animation: _animationControllers[2],
-                        builder: (context, child) {
-                          return FadeTransition(
-                            opacity: _fadeAnimations[2],
-                            child: ScaleTransition(
-                              scale: _scaleAnimations[2],
-                              child: _DiscoverySourceOption(
                                 source: DiscoverySource.tiktok,
                                 label: 'TikTok',
                                 icon: SvgPicture.asset(
@@ -241,14 +214,14 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                           );
                         },
                       );
-                    case 3:
+                    case 2:
                       return AnimatedBuilder(
-                        animation: _animationControllers[3],
+                        animation: _animationControllers[2],
                         builder: (context, child) {
                           return FadeTransition(
-                            opacity: _fadeAnimations[3],
+                            opacity: _fadeAnimations[2],
                             child: ScaleTransition(
-                              scale: _scaleAnimations[3],
+                              scale: _scaleAnimations[2],
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.youtube,
                                 label: 'YouTube',
@@ -267,14 +240,14 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                           );
                         },
                       );
-                    case 4:
+                    case 3:
                       return AnimatedBuilder(
-                        animation: _animationControllers[4],
+                        animation: _animationControllers[3],
                         builder: (context, child) {
                           return FadeTransition(
-                            opacity: _fadeAnimations[4],
+                            opacity: _fadeAnimations[3],
                             child: ScaleTransition(
-                              scale: _scaleAnimations[4],
+                              scale: _scaleAnimations[3],
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.google,
                                 label: 'Google',
@@ -293,14 +266,14 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                           );
                         },
                       );
-                    case 5:
+                    case 4:
                       return AnimatedBuilder(
-                        animation: _animationControllers[5],
+                        animation: _animationControllers[4],
                         builder: (context, child) {
                           return FadeTransition(
-                            opacity: _fadeAnimations[5],
+                            opacity: _fadeAnimations[4],
                             child: ScaleTransition(
-                              scale: _scaleAnimations[5],
+                              scale: _scaleAnimations[4],
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.friendOrFamily,
                                 label: 'Friend or family',
@@ -317,15 +290,15 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                           );
                         },
                       );
-                    case 6:
+                    case 5:
                     default:
                       return AnimatedBuilder(
-                        animation: _animationControllers[6],
+                        animation: _animationControllers[5],
                         builder: (context, child) {
                           return FadeTransition(
-                            opacity: _fadeAnimations[6],
+                            opacity: _fadeAnimations[5],
                             child: ScaleTransition(
-                              scale: _scaleAnimations[6],
+                              scale: _scaleAnimations[5],
                               child: _DiscoverySourceOption(
                                 source: DiscoverySource.other,
                                 label: 'Other',
