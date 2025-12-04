@@ -6673,7 +6673,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                         // DON'T call completion - we're showing preview, not redirecting
                         self.pendingInstagramCompletion = nil
-                        self.pendingInstagramUrl = nil
+                        // Keep pendingInstagramUrl so it can be sent to backend for Instagram cache storage
 
                     case .failure(let error):
                         shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
