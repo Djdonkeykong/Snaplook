@@ -153,12 +153,17 @@ void main() async {
   }
 
   // TODO: Re-enable Superwall before launch
-  // Initialize Superwall for subscriptions (allows .env override but falls back to bundled key)
+  // Initialize Superwall for subscriptions via environment variable
   // Temporarily disabled to avoid Apple ID prompt during development
+  // SECURITY: API key must come from SUPERWALL_API_KEY environment variable
   // try {
-  //   final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'] ?? 'pk_JerHRerDi63JoAtFh1MtT';
-  //   await SuperwallService().initialize(apiKey: superwallApiKey);
-  //   debugPrint('[Superwall] Initialized successfully');
+  //   final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'];
+  //   if (superwallApiKey != null && superwallApiKey.isNotEmpty) {
+  //     await SuperwallService().initialize(apiKey: superwallApiKey);
+  //     debugPrint('[Superwall] Initialized successfully');
+  //   } else {
+  //     debugPrint('[Superwall] SUPERWALL_API_KEY not configured');
+  //   }
   // } catch (e) {
   //   debugPrint('[Superwall] Initialization failed: $e');
   // }

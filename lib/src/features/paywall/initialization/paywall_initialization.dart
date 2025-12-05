@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../services/superwall_service.dart';
 import '../../../services/credit_service.dart';
 
@@ -8,9 +9,18 @@ Future<void> initializePaywallSystem({String? userId}) async {
   try {
     debugPrint('Initializing paywall system...');
 
+    // SECURITY: API key must be provided via environment variable
+    final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'];
+    if (superwallApiKey == null || superwallApiKey.isEmpty) {
+      throw Exception(
+        'SUPERWALL_API_KEY not found in environment variables. '
+        'Please ensure .env file is properly configured.',
+      );
+    }
+
     // Initialize Superwall
     await SuperwallService().initialize(
-      apiKey: 'pk_JerHRerDi63JoAtFh1MtT',
+      apiKey: superwallApiKey,
       userId: userId,
     );
 

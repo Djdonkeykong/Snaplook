@@ -31,14 +31,29 @@ class AppConstants {
   ];
 
   // === 🔐 Supabase Configuration ===
-  static String get supabaseUrl =>
-      dotenv.env['SUPABASE_URL'] ?? 'https://tlqpkoknwfptfzejpchy.supabase.co';
+  // SECURITY: Never use hardcoded fallback values for sensitive credentials
+  // All credentials MUST be provided via environment variables
+  static String get supabaseUrl {
+    final url = dotenv.env['SUPABASE_URL'];
+    if (url == null || url.isEmpty) {
+      throw Exception(
+        'SUPABASE_URL not found in environment variables. '
+        'Please ensure .env file is properly configured.',
+      );
+    }
+    return url;
+  }
 
-  static String get supabaseAnonKey =>
-      dotenv.env['SUPABASE_ANON_KEY'] ??
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
-          'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscXBrb2tud2ZwdGZ6ZWpwY2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwMzMzNzEsImV4cCI6MjA2OTYwOTM3MX0.'
-          'oHT9O_Aak8sUiAKX7P1J036ZSYIBDNveZqS1EMCLcJA';
+  static String get supabaseAnonKey {
+    final key = dotenv.env['SUPABASE_ANON_KEY'];
+    if (key == null || key.isEmpty) {
+      throw Exception(
+        'SUPABASE_ANON_KEY not found in environment variables. '
+        'Please ensure .env file is properly configured.',
+      );
+    }
+    return key;
+  }
 
   // === 🎨 UI constants ===
   static const double defaultPadding = 16.0;
@@ -52,9 +67,17 @@ class AppConstants {
   static const Duration mediumAnimation = Duration(milliseconds: 300);
 
   // === 🌐 API Keys ===
-  static String get serpApiKey =>
-      dotenv.env['SERPAPI_API_KEY'] ??
-      'UexwcLYH6kTnBnXnyMNZqQth';
+  // SECURITY: API keys must be provided via environment variables only
+  static String get serpApiKey {
+    final key = dotenv.env['SERPAPI_API_KEY'];
+    if (key == null || key.isEmpty) {
+      throw Exception(
+        'SERPAPI_API_KEY not found in environment variables. '
+        'Please ensure .env file is properly configured.',
+      );
+    }
+    return key;
+  }
 
   static String? get searchApiLocation {
     final value = dotenv.env['SEARCHAPI_LOCATION'];
@@ -151,9 +174,21 @@ class AppConstants {
       'USE_LOCAL_API',
       defaultValue: false,
     );
-    return isLocal
-        ? 'http://10.0.0.25:8000/detect'
-        : 'https://224b4db17f5f.ngrok-free.app/detect';
+    if (isLocal) {
+      // Development mode - use local server
+      return 'http://10.0.0.25:8000/detect';
+    }
+
+    // SECURITY: Production endpoint should be configured via environment variable
+    // This is a temporary fallback - replace with your production endpoint
+    final endpoint = dotenv.env['DETECT_ENDPOINT'];
+    if (endpoint != null && endpoint.isNotEmpty) {
+      return endpoint;
+    }
+
+    throw Exception(
+      'DETECT_ENDPOINT not configured. Please set DETECT_ENDPOINT in .env file.',
+    );
   }
 
   static String _defaultDetectAndSearchEndpoint() {
@@ -161,38 +196,32 @@ class AppConstants {
       'USE_LOCAL_API',
       defaultValue: false,
     );
-    return isLocal
-        ? 'http://10.0.0.25:8000/detect-and-search'
-        : 'https://224b4db17f5f.ngrok-free.app/detect-and-search';
+    if (isLocal) {
+      // Development mode - use local server
+      return 'http://10.0.0.25:8000/detect-and-search';
+    }
+
+    // SECURITY: Production endpoint should be configured via environment variable
+    final endpoint = dotenv.env['DETECT_AND_SEARCH_ENDPOINT'];
+    if (endpoint != null && endpoint.isNotEmpty) {
+      return endpoint;
+    }
+
+    throw Exception(
+      'DETECT_AND_SEARCH_ENDPOINT not configured. Please set in .env file.',
+    );
   }
 
   // === 🐝 ScrapingBee Keys ===
-  static const List<String> _scrapingBeeKeyPriority = [
-    'JZ123377KP6AIVDKOSDZOXYCY5VGAPNFJRFAJR0PA7DNOCO2VQ2MYARURP80689586DKWMXG9SJJDRCH',
-  ];
-
-  static List<String> _parseScrapingBeeEnv(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return const [];
-    return raw
-        .split(RegExp(r'[,\s;]+'))
-        .map((v) => v.trim())
-        .where((v) => v.isNotEmpty)
-        .toList(growable: false);
-  }
-
+  // SECURITY: ScrapingBee API key must be provided via environment variable
   static String get scrapingBeeApiKey {
-    final envValue = dotenv.env['SCRAPINGBEE_API_KEY'];
-    final envCandidates = _parseScrapingBeeEnv(envValue);
-
-    for (final preferred in _scrapingBeeKeyPriority) {
-      if (envCandidates.contains(preferred)) return preferred;
+    final key = dotenv.env['SCRAPINGBEE_API_KEY'];
+    if (key == null || key.isEmpty) {
+      throw Exception(
+        'SCRAPINGBEE_API_KEY not found in environment variables. '
+        'Please ensure .env file is properly configured.',
+      );
     }
-
-    if (envCandidates.isNotEmpty) return envCandidates.first;
-    for (final preferred in _scrapingBeeKeyPriority) {
-      if (preferred.isNotEmpty) return preferred;
-    }
-
-    return '';
+    return key;
   }
 }

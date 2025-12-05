@@ -47,7 +47,7 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.share-services</string>
 	</dict>
-    <key>ScrapingBeeApiKey</key>
-    <string>MBVJU10S1A0YUDAMPSUBIVSPGPA6MIJ5R1HNXZBSRQSDD06JH6K8UK74XZF9N8AISFWXTOLQH3U37NZF</string>
+    <!-- SECURITY: API keys should NEVER be hardcoded in Info.plist -->
+    <!-- ScrapingBee API key removed - must be provided via secure storage or method channel -->
   </dict>
 </plist>

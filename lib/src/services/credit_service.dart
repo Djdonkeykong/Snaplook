@@ -261,4 +261,20 @@ class CreditService {
   void clearCache() {
     _cachedBalance = null;
   }
+
+  /// Clear all credit data on logout (SECURITY)
+  /// This ensures sensitive financial data is removed when user logs out
+  Future<void> clearOnLogout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // SECURITY: Clear all sensitive credit-related data
+      await prefs.remove(_creditBalanceKey);
+      await prefs.remove(_lastRefillDateKey);
+      await prefs.remove(_freeTrialUsedKey);
+      _cachedBalance = null;
+      debugPrint('[Security] Credit data cleared on logout');
+    } catch (e) {
+      debugPrint('[Security] Error clearing credit data on logout: $e');
+    }
+  }
 }
