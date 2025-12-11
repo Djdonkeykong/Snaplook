@@ -37,9 +37,7 @@ import 'src/services/superwall_service.dart';
 import 'src/services/notification_service.dart';
 import 'dart:io';
 
-// Top-level background message handler
-// TEMPORARILY DISABLED - Re-enable after adding GoogleService-Info.plist to Xcode project
-/*
+// Top-level background message handler for push notifications
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -47,7 +45,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('[FCM Background] Title: ${message.notification?.title}');
   debugPrint('[FCM Background] Body: ${message.notification?.body}');
 }
-*/
 
 Future<void> _precacheSplashLogo() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
@@ -111,6 +108,20 @@ class SharedPreferencesLocalStorage extends LocalStorage {
   }
 }
 
+Future<bool> _initializeFirebase() async {
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    debugPrint('[Firebase] Initialized successfully');
+    return true;
+  } catch (e, stackTrace) {
+    debugPrint('[Firebase] Initialization failed: $e');
+    debugPrint('[Firebase] Stack trace: $stackTrace');
+    debugPrint('[Firebase] Push notifications will be disabled');
+    return false;
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -159,22 +170,7 @@ void main() async {
     ),
   );
 
-  // Initialize Firebase for push notifications
-  // TEMPORARILY DISABLED - Re-enable after adding GoogleService-Info.plist to Xcode project
-  // The file must be added via Xcode, not just copied to ios/Runner/
-  // See: https://firebase.google.com/docs/ios/setup#add-config-file
-  /*
-  try {
-    await Firebase.initializeApp();
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-    debugPrint('[Firebase] Initialized successfully');
-  } catch (e, stackTrace) {
-    debugPrint('[Firebase] Initialization failed: $e');
-    debugPrint('[Firebase] Stack trace: $stackTrace');
-    debugPrint('[Firebase] Push notifications will be disabled');
-  }
-  */
-  debugPrint('[Firebase] DISABLED - Add GoogleService-Info.plist to Xcode project first');
+  final firebaseInitialized = await _initializeFirebase();
 
   // Sync auth state to share extension
   try {
@@ -222,7 +218,7 @@ void main() async {
   // Precache splash logo so the splash displays without a flicker
   await _precacheSplashLogo();
 
-  runApp(const ProviderScope(child: SnaplookApp()));
+  runApp(ProviderScope(child: SnaplookApp(isFirebaseReady: firebaseInitialized)));
 }
 
 class _FetchingOverlay extends StatefulWidget {
@@ -406,7 +402,9 @@ class _FetchingOverlayState extends State<_FetchingOverlay>
 }
 
 class SnaplookApp extends ConsumerStatefulWidget {
-  const SnaplookApp({super.key});
+  const SnaplookApp({super.key, required this.isFirebaseReady});
+
+  final bool isFirebaseReady;
 
   @override
   ConsumerState<SnaplookApp> createState() => _SnaplookAppState();
@@ -544,6 +542,43 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
     });
 
+    if (widget.isFirebaseReady) {
+      _setupFirebaseMessaging();
+    } else {
+      debugPrint(
+        '[Firebase] Skipping Firebase Messaging setup because initialization failed',
+      );
+    }
+
+    // Ensure we catch any pending share when the app is already running.
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appLifecycleState = state;
+    if (state == AppLifecycleState.resumed) {
+      _checkForPendingSharedMediaOnResume();
+      // Also sync auth state when app resumes
+      _syncAuthState();
+      _refreshFavoritesOnResume();
+
+      // Show queued overlay message if UI is ready and we have one waiting
+      if (_uiReadyForOverlays &&
+          _overlaysAllowed &&
+          _queuedOverlayMessage != null &&
+          !_isFetchingOverlayVisible &&
+          mounted) {
+        setState(() {
+          _fetchingOverlayMessage = _queuedOverlayMessage!;
+          _isFetchingOverlayVisible = true;
+          _queuedOverlayMessage = null;
+        });
+      }
+    }
+    super.didChangeAppLifecycleState(state);
+  }
+
+  void _setupFirebaseMessaging() {
     // Setup FCM foreground message handler
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('[FCM Foreground] Message received: ${message.messageId}');
@@ -595,33 +630,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         }
       }
     });
-
-    // Ensure we catch any pending share when the app is already running.
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    _appLifecycleState = state;
-    if (state == AppLifecycleState.resumed) {
-      _checkForPendingSharedMediaOnResume();
-      // Also sync auth state when app resumes
-      _syncAuthState();
-      _refreshFavoritesOnResume();
-
-      // Show queued overlay message if UI is ready and we have one waiting
-      if (_uiReadyForOverlays &&
-          _overlaysAllowed &&
-          _queuedOverlayMessage != null &&
-          !_isFetchingOverlayVisible &&
-          mounted) {
-        setState(() {
-          _fetchingOverlayMessage = _queuedOverlayMessage!;
-          _isFetchingOverlayVisible = true;
-          _queuedOverlayMessage = null;
-        });
-      }
-    }
-    super.didChangeAppLifecycleState(state);
   }
 
   void _syncAuthState() async {
