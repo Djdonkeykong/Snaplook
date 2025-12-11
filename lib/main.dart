@@ -38,6 +38,8 @@ import 'src/services/notification_service.dart';
 import 'dart:io';
 
 // Top-level background message handler
+// TEMPORARILY DISABLED - Re-enable after adding GoogleService-Info.plist to Xcode project
+/*
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -45,6 +47,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('[FCM Background] Title: ${message.notification?.title}');
   debugPrint('[FCM Background] Body: ${message.notification?.body}');
 }
+*/
 
 Future<void> _precacheSplashLogo() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
@@ -157,13 +160,21 @@ void main() async {
   );
 
   // Initialize Firebase for push notifications
+  // TEMPORARILY DISABLED - Re-enable after adding GoogleService-Info.plist to Xcode project
+  // The file must be added via Xcode, not just copied to ios/Runner/
+  // See: https://firebase.google.com/docs/ios/setup#add-config-file
+  /*
   try {
     await Firebase.initializeApp();
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     debugPrint('[Firebase] Initialized successfully');
-  } catch (e) {
+  } catch (e, stackTrace) {
     debugPrint('[Firebase] Initialization failed: $e');
+    debugPrint('[Firebase] Stack trace: $stackTrace');
+    debugPrint('[Firebase] Push notifications will be disabled');
   }
+  */
+  debugPrint('[Firebase] DISABLED - Add GoogleService-Info.plist to Xcode project first');
 
   // Sync auth state to share extension
   try {

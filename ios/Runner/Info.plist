@@ -86,12 +86,17 @@
 	<string>This app needs access to photo library to analyze fashion images.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Location is only used if you choose to tag captured photos with where they were taken.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Get reminders to discover new fashion items and updates on your saved looks.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
+		<string>remote-notification</string>
 	</array>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
