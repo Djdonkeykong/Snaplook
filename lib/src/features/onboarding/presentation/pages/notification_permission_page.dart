@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -68,11 +69,34 @@ class _NotificationPermissionPageState
     HapticFeedback.mediumImpact();
 
     try {
-      // Request notification permission and capture result
-      final status = await Permission.notification.request();
-      final granted = status.isGranted;
+      // Check if Firebase is initialized
+      bool firebaseReady = false;
+      try {
+        Firebase.app();
+        firebaseReady = true;
+      } catch (e) {
+        debugPrint('[NotificationPermission] Firebase not initialized: $e');
+      }
 
-      print('[NotificationPermission] Permission requested, granted: $granted');
+      bool granted = false;
+
+      if (firebaseReady) {
+        // Request notification permission using Firebase Messaging (shows native iOS dialog)
+        final settings = await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: false,
+        );
+
+        granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
+            settings.authorizationStatus == AuthorizationStatus.provisional;
+
+        debugPrint('[NotificationPermission] Permission requested, granted: $granted');
+        debugPrint('[NotificationPermission] Authorization status: ${settings.authorizationStatus}');
+      } else {
+        debugPrint('[NotificationPermission] Skipping permission request - Firebase not ready');
+      }
 
       // Store permission result in provider
       ref.read(notificationPermissionGrantedProvider.notifier).state = granted;
@@ -81,7 +105,7 @@ class _NotificationPermissionPageState
       await _saveNotificationPreference(granted);
 
       // Initialize FCM and register token if permission granted
-      if (granted) {
+      if (granted && firebaseReady) {
         try {
           await NotificationService().initialize();
           debugPrint('[NotificationPermission] FCM initialized and token registered');
@@ -91,8 +115,9 @@ class _NotificationPermissionPageState
       }
 
       _navigateToNextStep();
-    } catch (e) {
-      print('[NotificationPermission] Error requesting permission: $e');
+    } catch (e, stackTrace) {
+      debugPrint('[NotificationPermission] Error requesting permission: $e');
+      debugPrint('[NotificationPermission] Stack trace: $stackTrace');
       // Default to false on error
       ref.read(notificationPermissionGrantedProvider.notifier).state = false;
 
