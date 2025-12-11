@@ -24,12 +24,17 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
     with SingleTickerProviderStateMixin {
   Future<void>? _initializationFuture;
   bool _isInitialized = false;
+  bool _animationLoaded = false;
   late AnimationController _textAnimationController;
   late Animation<double> _textFadeAnimation;
 
   @override
   void initState() {
     super.initState();
+
+    // Precache Lottie animation to prevent jitter
+    _precacheLottieAnimation();
+
     // Initialize user's free analysis
     _initializationFuture = _initializeFreeAnalysis();
 
@@ -49,6 +54,26 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
         _textAnimationController.forward();
       }
     });
+  }
+
+  Future<void> _precacheLottieAnimation() async {
+    try {
+      // Load the Lottie animation into cache
+      await rootBundle.load('assets/animations/success_animation.json');
+      if (mounted) {
+        setState(() {
+          _animationLoaded = true;
+        });
+      }
+    } catch (e) {
+      print('[WelcomePage] Error precaching animation: $e');
+      // Still show the page even if animation fails to load
+      if (mounted) {
+        setState(() {
+          _animationLoaded = true;
+        });
+      }
+    }
   }
 
   @override
@@ -150,7 +175,15 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
                     children: [
                       const SizedBox(height: 24),
 
-                      _CompletionBadge(),
+                      // Only show content after animation is loaded to prevent jitter
+                      if (_animationLoaded) ...[
+                        _CompletionBadge(),
+                      ] else ...[
+                        SizedBox(
+                          width: 600,
+                          height: 600,
+                        ),
+                      ],
 
                       FadeTransition(
                         opacity: _textFadeAnimation,
@@ -286,9 +319,14 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
   }
 }
 
-class _CompletionBadge extends StatelessWidget {
+class _CompletionBadge extends StatefulWidget {
   const _CompletionBadge();
 
+  @override
+  State<_CompletionBadge> createState() => _CompletionBadgeState();
+}
+
+class _CompletionBadgeState extends State<_CompletionBadge> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -298,6 +336,7 @@ class _CompletionBadge extends StatelessWidget {
         'assets/animations/success_animation.json',
         repeat: false,
         fit: BoxFit.contain,
+        frameRate: FrameRate.max, // Ensure smooth animation
       ),
     );
   }
