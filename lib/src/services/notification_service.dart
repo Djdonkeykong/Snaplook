@@ -1,4 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,15 +8,30 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging? _messaging;
   String? _currentToken;
 
   Future<void> initialize() async {
     try {
       debugPrint('[NotificationService] Initializing...');
 
+      // Check if Firebase is initialized
+      try {
+        await Firebase.initializeApp();
+      } catch (e) {
+        // Already initialized or failed - check if we can access it
+        try {
+          Firebase.app();
+        } catch (e) {
+          debugPrint('[NotificationService] Firebase not initialized: $e');
+          return;
+        }
+      }
+
+      _messaging = FirebaseMessaging.instance;
+
       // Request permission
-      final settings = await _messaging.requestPermission(
+      final settings = await _messaging!.requestPermission(
         alert: true,
         badge: true,
         sound: true,
@@ -30,7 +46,7 @@ class NotificationService {
         await _registerToken();
 
         // Listen for token refresh
-        _messaging.onTokenRefresh.listen(_onTokenRefresh);
+        _messaging!.onTokenRefresh.listen(_onTokenRefresh);
 
         debugPrint('[NotificationService] Initialized successfully');
       } else {
@@ -44,7 +60,8 @@ class NotificationService {
 
   Future<void> _registerToken() async {
     try {
-      final token = await _messaging.getToken();
+      if (_messaging == null) return;
+      final token = await _messaging!.getToken();
       if (token != null) {
         _currentToken = token;
         debugPrint('[NotificationService] FCM Token: $token');
@@ -89,6 +106,8 @@ class NotificationService {
 
   Future<void> deleteToken() async {
     try {
+      if (_messaging == null) return;
+
       final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId == null) return;
 
@@ -100,7 +119,7 @@ class NotificationService {
           .eq('user_id', userId)
           .eq('token', _currentToken ?? '');
 
-      await _messaging.deleteToken();
+      await _messaging!.deleteToken();
       _currentToken = null;
 
       debugPrint('[NotificationService] Token deleted successfully');
