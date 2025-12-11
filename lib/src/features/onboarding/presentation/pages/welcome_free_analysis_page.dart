@@ -12,6 +12,7 @@ import '../../../user/repositories/user_profile_repository.dart';
 import 'gender_selection_page.dart';
 import 'notification_permission_page.dart';
 import '../../../../services/onboarding_state_service.dart';
+import '../../../../services/notification_service.dart';
 
 class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
   const WelcomeFreeAnalysisPage({super.key});
@@ -94,10 +95,65 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
         return;
       }
 
-      // Note: Preferences are already saved in previous onboarding steps:
-      // - Gender/preferred_gender_filter saved in gender_selection_page.dart
-      // - Notification preference saved in notification_permission_page.dart
-      print('[WelcomePage] Preferences already saved in previous steps');
+      // IMPORTANT: If user went through onboarding BEFORE account creation,
+      // preferences are stored in providers but NOT saved to database yet.
+      // We need to save them now that we have a user ID.
+
+      // Read preferences from providers
+      final selectedGender = ref.read(selectedGenderProvider);
+      final notificationGranted = ref.read(notificationPermissionGrantedProvider);
+
+      print('[WelcomePage] Gender from provider: ${selectedGender?.name}');
+      print('[WelcomePage] Notification permission from provider: $notificationGranted');
+
+      // Map Gender enum to preferred_gender_filter
+      String? preferredGenderFilter;
+      if (selectedGender != null) {
+        switch (selectedGender) {
+          case Gender.male:
+            preferredGenderFilter = 'men';
+            break;
+          case Gender.female:
+            preferredGenderFilter = 'women';
+            break;
+          case Gender.other:
+            preferredGenderFilter = 'all';
+            break;
+        }
+      }
+
+      // Save preferences to database
+      if (preferredGenderFilter != null || notificationGranted != null) {
+        print('[WelcomePage] Saving preferences to database...');
+        try {
+          await OnboardingStateService().saveUserPreferences(
+            userId: userId,
+            preferredGenderFilter: preferredGenderFilter,
+            notificationEnabled: notificationGranted,
+          );
+          print('[WelcomePage] SUCCESS: Preferences saved to database');
+        } catch (saveError) {
+          print('[WelcomePage] ERROR saving preferences: $saveError');
+          // Non-critical - allow user to continue
+        }
+      } else {
+        print('[WelcomePage] No preferences to save (user may have already had preferences set)');
+      }
+
+      // If notification permission was granted, initialize FCM and register token
+      // This needs to happen AFTER account creation so we have a user ID
+      if (notificationGranted == true) {
+        print('[WelcomePage] Notification permission was granted, initializing FCM...');
+        try {
+          await NotificationService().initialize();
+          // Also explicitly register token for the new user
+          await NotificationService().registerTokenForUser();
+          print('[WelcomePage] SUCCESS: FCM initialized and token registered');
+        } catch (fcmError) {
+          print('[WelcomePage] ERROR initializing FCM: $fcmError');
+          // Non-critical - allow user to continue
+        }
+      }
 
       // Mark onboarding as completed
       print('[WelcomePage] Marking onboarding as completed...');
