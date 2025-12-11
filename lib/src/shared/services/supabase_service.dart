@@ -132,6 +132,26 @@ class SupabaseService {
     }
   }
 
+  Future<bool> deleteSearch(String searchId) async {
+    try {
+      print('[SupabaseService] deleteSearch attempting to delete searchId=$searchId');
+
+      final response = await client
+          .from('user_searches')
+          .delete()
+          .eq('id', searchId)
+          .select();
+
+      print('[SupabaseService] deleteSearch response: $response');
+      print('[SupabaseService] deleteSearch successful');
+      return true;
+    } catch (e, stackTrace) {
+      print('[SupabaseService] Error deleting search: $e');
+      print('[SupabaseService] Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> getSearchById(String searchId) async {
     try {
       print('[SupabaseService] getSearchById searchId=$searchId');

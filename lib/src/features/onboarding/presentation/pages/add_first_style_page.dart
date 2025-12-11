@@ -13,7 +13,6 @@ import 'pinterest_tutorial_page.dart';
 import 'tiktok_tutorial_page.dart';
 import 'safari_tutorial_page.dart';
 import 'photos_tutorial_page.dart';
-import 'facebook_tutorial_page.dart';
 import 'imdb_tutorial_page.dart';
 import 'x_tutorial_page.dart';
 import 'notification_permission_page.dart';
@@ -38,7 +37,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
   void initState() {
     super.initState();
 
-    _animationControllers = List.generate(8, (index) {
+    _animationControllers = List.generate(7, (index) {
       return AnimationController(
         duration: const Duration(milliseconds: 400),
         vsync: this,
@@ -242,7 +241,7 @@ class _AppList extends ConsumerWidget {
     return ListView.separated(
       padding: EdgeInsets.only(bottom: spacing.l),
       physics: const BouncingScrollPhysics(),
-      itemCount: 8,
+      itemCount: 7,
       separatorBuilder: (_, __) => SizedBox(height: spacing.l),
       itemBuilder: (context, index) {
         switch (index) {
@@ -356,14 +355,11 @@ class _AppList extends ConsumerWidget {
                   child: ScaleTransition(
                     scale: scaleAnimations[5],
                     child: _AppCard(
-                      name: 'Facebook',
-                      iconWidget: SvgPicture.asset(
-                          'assets/icons/5296499_fb_facebook_facebook logo_icon.svg',
-                          width: 24,
-                          height: 24),
+                      name: 'Web Browsers',
+                      iconWidget: const _BrowserIconStack(),
                       hasTutorial: true,
-                      accentColor: const Color(0xFF1877F2),
-                      isFacebook: true,
+                      accentColor: const Color(0xFF0A84FF),
+                      isSafari: true,
                     ),
                   ),
                 );
@@ -377,25 +373,6 @@ class _AppList extends ConsumerWidget {
                   opacity: fadeAnimations[6],
                   child: ScaleTransition(
                     scale: scaleAnimations[6],
-                    child: _AppCard(
-                      name: 'Web Browsers',
-                      iconWidget: const _BrowserIconStack(),
-                      hasTutorial: true,
-                      accentColor: const Color(0xFF0A84FF),
-                      isSafari: true,
-                    ),
-                  ),
-                );
-              },
-            );
-          case 7:
-            return AnimatedBuilder(
-              animation: animationControllers[7],
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: fadeAnimations[7],
-                  child: ScaleTransition(
-                    scale: scaleAnimations[7],
                     child: _AppCard(
                       name: 'X',
                       iconWidget: Image.asset('assets/icons/x-logo.png',
@@ -425,7 +402,6 @@ class _AppCard extends ConsumerWidget {
   final bool isTikTok;
   final bool isSafari;
   final bool isPhotos;
-  final bool isFacebook;
   final bool isImdb;
   final bool isX;
 
@@ -438,7 +414,6 @@ class _AppCard extends ConsumerWidget {
     this.isTikTok = false,
     this.isSafari = false,
     this.isPhotos = false,
-    this.isFacebook = false,
     this.isImdb = false,
     this.isX = false,
   });
@@ -479,14 +454,6 @@ class _AppCard extends ConsumerWidget {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => const PhotosTutorialPage(),
-              ),
-            );
-          } else if (isFacebook) {
-            ref.read(facebookTutorialStepProvider.notifier).state =
-                FacebookTutorialStep.step1;
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const FacebookTutorialPage(),
               ),
             );
           } else if (isImdb) {

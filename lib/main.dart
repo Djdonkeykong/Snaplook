@@ -11,6 +11,8 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:async';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
@@ -32,7 +34,17 @@ import 'src/features/auth/domain/providers/auth_provider.dart';
 import 'src/features/auth/presentation/pages/login_page.dart';
 import 'src/features/favorites/domain/providers/favorites_provider.dart';
 import 'src/services/superwall_service.dart';
+import 'src/services/notification_service.dart';
 import 'dart:io';
+
+// Top-level background message handler
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint('[FCM Background] Message received: ${message.messageId}');
+  debugPrint('[FCM Background] Title: ${message.notification?.title}');
+  debugPrint('[FCM Background] Body: ${message.notification?.body}');
+}
 
 Future<void> _precacheSplashLogo() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
@@ -143,6 +155,15 @@ void main() async {
       localStorage: SharedPreferencesLocalStorage(),
     ),
   );
+
+  // Initialize Firebase for push notifications
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    debugPrint('[Firebase] Initialized successfully');
+  } catch (e) {
+    debugPrint('[Firebase] Initialization failed: $e');
+  }
 
   // Sync auth state to share extension
   try {
@@ -510,6 +531,58 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       }
     }).catchError((error) {
       print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
+    });
+
+    // Setup FCM foreground message handler
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('[FCM Foreground] Message received: ${message.messageId}');
+      debugPrint('[FCM Foreground] Title: ${message.notification?.title}');
+      debugPrint('[FCM Foreground] Body: ${message.notification?.body}');
+      debugPrint('[FCM Foreground] Data: ${message.data}');
+
+      // Show notification banner when app is in foreground
+      if (message.notification != null && mounted) {
+        ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+          SnackBar(
+            content: Text(
+              message.notification!.body ?? 'New notification',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+
+    // Handle notification tap when app was in background/terminated
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint('[FCM] Notification tapped: ${message.messageId}');
+      debugPrint('[FCM] Data: ${message.data}');
+
+      // Handle navigation based on notification data
+      // For re-engagement: navigate to home
+      if (message.data['type'] == 're_engagement') {
+        // Navigate to home tab
+        if (mounted && navigatorKey.currentContext != null) {
+          ref.read(selectedIndexProvider.notifier).state = 0;
+        }
+      }
+    });
+
+    // Check if app was opened from a terminated state via notification
+    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        debugPrint('[FCM] App opened from terminated state: ${message.messageId}');
+        debugPrint('[FCM] Data: ${message.data}');
+
+        // Handle the notification when app starts
+        if (message.data['type'] == 're_engagement') {
+          if (mounted) {
+            ref.read(selectedIndexProvider.notifier).state = 0;
+          }
+        }
+      }
     });
 
     // Ensure we catch any pending share when the app is already running.
@@ -927,6 +1000,24 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         LinkScraperService.isGoogleImageResultUrl(effectiveText) ||
             (decodedText != null &&
                 LinkScraperService.isGoogleImageResultUrl(decodedText));
+
+    // Check if URL is from a specific platform but not supported in tutorial
+    final isFromKnownPlatform = InstagramService.isInstagramUrl(effectiveText) ||
+        InstagramService.isTikTokUrl(effectiveText) ||
+        InstagramService.isPinterestUrl(effectiveText) ||
+        InstagramService.isXUrl(effectiveText) ||
+        InstagramService.isRedditUrl(effectiveText) ||
+        InstagramService.isFacebookUrl(effectiveText) ||
+        InstagramService.isImdbUrl(effectiveText) ||
+        InstagramService.isSnapchatUrl(effectiveText) ||
+        InstagramService.isYouTubeUrl(effectiveText);
+
+    if (isFromKnownPlatform && !_isTutorialSupportedUrl(effectiveText)) {
+      // Known platform but not in tutorial - show unsupported message
+      _showUnsupportedPlatformMessage();
+      await ShareImportStatus.markComplete();
+      return;
+    }
 
     if (InstagramService.isInstagramUrl(effectiveText)) {
       await _downloadInstagramImage(effectiveText);
@@ -1792,6 +1883,56 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
                 child: const Text('OK'),
               ),
             ],
+          ),
+        );
+      }
+    });
+  }
+
+  bool _isTutorialSupportedUrl(String url) {
+    // Apps shown in "Add your first style" tutorial page + YouTube and Google Images which work
+    return InstagramService.isInstagramUrl(url) ||
+        InstagramService.isPinterestUrl(url) ||
+        InstagramService.isTikTokUrl(url) ||
+        InstagramService.isImdbUrl(url) ||
+        InstagramService.isYouTubeUrl(url) ||
+        InstagramService.isXUrl(url) ||
+        LinkScraperService.isGoogleImageResultUrl(url);
+  }
+
+  void _showUnsupportedPlatformMessage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (navigatorKey.currentContext != null) {
+        showDialog(
+          context: navigatorKey.currentContext!,
+          builder: (context) => AlertDialog(
+            titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+            contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+            actionsPadding: const EdgeInsets.only(bottom: 16),
+            title: const Text(
+              'Not supported',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            content: const Text(
+              'This link isn\'t supported yet. Try Instagram, TikTok, Pinterest, IMDb, YouTube, X, or any website.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+              ),
+            ),
+            actions: [
+              Center(
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ),
+            ],
+            insetPadding: const EdgeInsets.symmetric(horizontal: 40),
           ),
         );
       }

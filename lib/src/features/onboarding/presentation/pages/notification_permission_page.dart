@@ -11,6 +11,7 @@ import 'welcome_free_analysis_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import 'trial_intro_page.dart';
 import '../../../../services/onboarding_state_service.dart';
+import '../../../../services/notification_service.dart';
 
 // Provider to store notification permission choice
 final notificationPermissionGrantedProvider =
@@ -78,6 +79,16 @@ class _NotificationPermissionPageState
 
       // Save preference to database if user is authenticated
       await _saveNotificationPreference(granted);
+
+      // Initialize FCM and register token if permission granted
+      if (granted) {
+        try {
+          await NotificationService().initialize();
+          debugPrint('[NotificationPermission] FCM initialized and token registered');
+        } catch (e) {
+          debugPrint('[NotificationPermission] Error initializing FCM: $e');
+        }
+      }
 
       _navigateToNextStep();
     } catch (e) {

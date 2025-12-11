@@ -11,6 +11,7 @@ import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../shared/services/supabase_service.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
@@ -242,7 +243,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
   }
 }
 
-class _HistoryCard extends StatelessWidget {
+class _HistoryCard extends ConsumerWidget {
   final Map<String, dynamic> search;
   final dynamic spacing;
   final dynamic radius;
@@ -429,31 +430,74 @@ class _HistoryCard extends StatelessWidget {
       ),
     );
   }
-  Future<void> _copyLink(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    // Copy the rich share text (top matches + links) instead of a raw source URL.
-    final supabaseService = SupabaseService();
-    final searchId = search['id'] as String?;
-    Map<String, dynamic>? fullSearch;
 
-    if (searchId != null) {
-      fullSearch = await supabaseService.getSearchById(searchId);
+  Future<void> _deleteSearch(BuildContext context, WidgetRef ref) async {
+    final searchId = search['id'] as String?;
+    if (searchId == null) {
+      _showToast(context, 'Unable to delete this search.');
+      return;
     }
 
-    final payload = _buildSharePayload(fullSearch ?? search);
-    Clipboard.setData(ClipboardData(text: payload.message));
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          'Share text copied to clipboard',
-          style: context.snackTextStyle(
-            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: const Text(
+          'Delete Search',
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontWeight: FontWeight.bold,
           ),
         ),
-        duration: const Duration(seconds: 2),
+        content: const Text(
+          'Are you sure you want to remove this search from your history?',
+          style: TextStyle(fontFamily: 'PlusJakartaSans'),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+              textStyle: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+              textStyle: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    HapticFeedback.mediumImpact();
+
+    final supabaseService = SupabaseService();
+    final success = await supabaseService.deleteSearch(searchId);
+
+    if (success) {
+      ref.invalidate(historyProvider);
+      if (context.mounted) {
+        _showToast(context, 'Search deleted from history');
+      }
+    } else {
+      if (context.mounted) {
+        _showToast(context, 'Failed to delete search');
+      }
+    }
   }
 
   String _getSourceLabel() {
@@ -507,7 +551,7 @@ class _HistoryCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final cloudinaryUrl = search['cloudinary_url'] as String?;
@@ -685,7 +729,7 @@ class _HistoryCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   GestureDetector(
-                    onTap: () => _shareSearch(context),
+                    onTap: () => _deleteSearch(context, ref),
                     child: Container(
                       width: 38,
                       height: 38,
@@ -694,7 +738,7 @@ class _HistoryCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        Icons.share_outlined,
+                        SnaplookIcons.trashBin,
                         color: colorScheme.onSecondary,
                         size: 14,
                       ),
@@ -702,7 +746,7 @@ class _HistoryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: () => _copyLink(context),
+                    onTap: () => _shareSearch(context),
                     child: Container(
                       width: 38,
                       height: 38,
@@ -715,9 +759,9 @@ class _HistoryCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        Icons.link,
+                        Icons.share_outlined,
                         color: colorScheme.secondary,
-                        size: 16,
+                        size: 14,
                       ),
                     ),
                   ),

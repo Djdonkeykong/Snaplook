@@ -274,11 +274,13 @@ class _SettingsRow extends StatelessWidget {
                   color: AppColors.outlineVariant,
                   borderRadius: BorderRadius.circular(12),
                 ),
+                alignment: Alignment.center,
                 child: Text(
                   value!,
-                  style: valueStyle,
+                  style: valueStyle.copyWith(height: 1.0),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ),
             if (type == _RowType.disclosure)

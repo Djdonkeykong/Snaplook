@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../favorites/domain/providers/favorites_provider.dart';
 import '../../../favorites/domain/models/favorite_item.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../../core/constants/history_icon.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
@@ -107,6 +108,53 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
   }
 
   Future<void> _removeItem(String productId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: const Text(
+          'Delete Favorite',
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to remove this item from your favorites?',
+          style: TextStyle(fontFamily: 'PlusJakartaSans'),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+              textStyle: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+              textStyle: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    HapticFeedback.mediumImpact();
+
     final controller = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -240,7 +288,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
             favorite: favorite,
             spacing: spacing,
             onDelete: () {
-              HapticFeedback.mediumImpact();
               _removeItem(favorite.productId);
             },
           );

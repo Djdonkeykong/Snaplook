@@ -1434,6 +1434,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
+        // Check if this is a supported tutorial platform
+        // If it's from a specific app/platform but NOT in our tutorial list, show unsupported alert
+        let isFromSpecificPlatform = platformType != "generic"
+        let isGenericWebLink = platformType == "generic"
+
+        if isFromSpecificPlatform && !isGenericWebLink && !isTutorialSupportedUrl(item) {
+            shareLog("URL from \(platformName) is not in tutorial - showing unsupported alert")
+            presentUnsupportedAlert(for: item)
+            completion()
+            return
+        }
+
         shareLog("Detected \(platformName) URL share - showing choice UI before download")
 
         // Check if detection is configured
@@ -1611,14 +1623,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             let alert = UIAlertController(
                 title: "Not supported",
-                message: "This link isn't supported yet. Try Instagram, TikTok, Pinterest, Reddit, X, Snapchat, Facebook, or Google Images.",
+                message: "This link isn't supported yet. Try Instagram, TikTok, Pinterest, IMDb, YouTube, X, or any website.",
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "OK", style: .cancel) { [weak self] _ in
                 self?.hasPresentedUnsupportedAlert = false
+                self?.extensionContext?.cancelRequest(withError: NSError(domain: "com.snaplook.snaplook", code: -1, userInfo: nil))
             })
             self.present(alert, animated: true, completion: nil)
         }
+    }
+
+    private func isTutorialSupportedUrl(_ value: String) -> Bool {
+        // Apps shown in "Add your first style" tutorial page + YouTube and Google Images which work
+        return isInstagramShareCandidate(value) ||
+               isPinterestShareCandidate(value) ||
+               isTikTokShareCandidate(value) ||
+               isImdbShareCandidate(value) ||
+               isYouTubeShareCandidate(value) ||
+               isXShareCandidate(value) ||
+               isGoogleImageShareCandidate(value)
     }
 
     private func isInstagramShareCandidate(_ value: String) -> Bool {
