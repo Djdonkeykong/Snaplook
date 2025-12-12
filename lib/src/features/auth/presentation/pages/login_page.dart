@@ -303,14 +303,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                         userResponse['onboarding_state'] == 'completed';
 
                                 if (hasCompletedOnboarding) {
-                                  // Update device locale for existing users
-                                  try {
-                                    final profileRepo = UserProfileRepository();
-                                    await profileRepo.setDeviceLocale();
-                                    print('[LoginPage] Device locale updated for existing user');
-                                  } catch (e) {
-                                    print('[LoginPage] Error updating device locale: $e');
-                                  }
+                                  // NOTE: Device locale/location tracking disabled
+                                  // The user_profiles table doesn't exist in database
+                                  debugPrint('[LoginPage] Skipping device locale setup (user_profiles table not configured)');
 
                                   ref
                                       .read(selectedIndexProvider.notifier)
@@ -395,14 +390,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                       userResponse['onboarding_state'] == 'completed';
 
                               if (hasCompletedOnboarding) {
-                                // Update device locale for existing users
-                                try {
-                                  final profileRepo = UserProfileRepository();
-                                  await profileRepo.setDeviceLocale();
-                                  print('[LoginPage] Device locale updated for existing user');
-                                } catch (e) {
-                                  print('[LoginPage] Error updating device locale: $e');
-                                }
+                                // NOTE: Device locale/location tracking disabled
+                                // The user_profiles table doesn't exist in database
+                                debugPrint('[LoginPage] Skipping device locale setup (user_profiles table not configured)');
 
                                 ref.read(selectedIndexProvider.notifier).state =
                                     0;

@@ -189,16 +189,10 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
         // Non-critical - allow user to continue
       }
 
-      // Set device locale for personalized search results
-      print('[WelcomePage] Setting device locale...');
-      try {
-        final profileRepo = UserProfileRepository();
-        await profileRepo.setDeviceLocale();
-        print('[WelcomePage] SUCCESS: Device locale configured');
-      } catch (localeError) {
-        print('[WelcomePage] ERROR setting device locale: $localeError');
-        // Non-critical - will fallback to US
-      }
+      // NOTE: Device locale/location tracking disabled
+      // The user_profiles table doesn't exist in database
+      // Location detection can be added later if needed
+      debugPrint('[WelcomePage] Skipping device locale setup (user_profiles table not configured)');
 
       // Initialize credits (auto-initialized when first accessed)
       print('[WelcomePage] Initializing credits...');
