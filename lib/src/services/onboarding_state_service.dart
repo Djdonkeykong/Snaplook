@@ -146,18 +146,37 @@ class OnboardingStateService {
     bool? notificationEnabled,
   }) async {
     try {
+      debugPrint('');
+      debugPrint('[OnboardingState] ===== SAVING USER PREFERENCES =====');
+      debugPrint('[OnboardingState] User ID: $userId');
+      debugPrint('[OnboardingState] Gender filter: $preferredGenderFilter');
+      debugPrint('[OnboardingState] Notification enabled: $notificationEnabled');
+
       final updates = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      if (preferredGenderFilter != null) updates['preferred_gender_filter'] = preferredGenderFilter;
-      if (notificationEnabled != null) updates['notification_enabled'] = notificationEnabled;
+      if (preferredGenderFilter != null) {
+        updates['preferred_gender_filter'] = preferredGenderFilter;
+        debugPrint('[OnboardingState] Adding preferred_gender_filter to updates');
+      }
+      if (notificationEnabled != null) {
+        updates['notification_enabled'] = notificationEnabled;
+        debugPrint('[OnboardingState] Adding notification_enabled to updates');
+      }
+
+      debugPrint('[OnboardingState] Final updates object: $updates');
+      debugPrint('[OnboardingState] Executing update query...');
 
       await _supabase.from('users').update(updates).eq('id', userId);
 
-      debugPrint('[OnboardingState] Saved preferences for user $userId: $updates');
-    } catch (e) {
-      debugPrint('[OnboardingState] Error saving preferences: $e');
+      debugPrint('[OnboardingState] SUCCESS: Saved preferences for user $userId');
+      debugPrint('[OnboardingState] =======================================');
+    } catch (e, stackTrace) {
+      debugPrint('[OnboardingState] ERROR saving preferences: $e');
+      debugPrint('[OnboardingState] Stack trace: $stackTrace');
+      debugPrint('[OnboardingState] =======================================');
+      rethrow;
     }
   }
 

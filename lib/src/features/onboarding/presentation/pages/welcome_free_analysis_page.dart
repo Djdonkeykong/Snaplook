@@ -86,11 +86,14 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
   Future<void> _initializeFreeAnalysis() async {
     try {
       final userId = ref.read(authServiceProvider).currentUser?.id;
-      print('[WelcomePage] ==> Starting initialization');
-      print('[WelcomePage] User ID: $userId');
+      debugPrint('');
+      debugPrint('=====================================================');
+      debugPrint('[WelcomePage] ==> Starting initialization');
+      debugPrint('[WelcomePage] User ID: $userId');
+      debugPrint('=====================================================');
 
       if (userId == null) {
-        print('[WelcomePage] ERROR: No user ID found!');
+        debugPrint('[WelcomePage] ERROR: No user ID found!');
         if (mounted) setState(() => _isInitialized = true);
         return;
       }
@@ -103,8 +106,11 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
       final selectedGender = ref.read(selectedGenderProvider);
       final notificationGranted = ref.read(notificationPermissionGrantedProvider);
 
-      print('[WelcomePage] Gender from provider: ${selectedGender?.name}');
-      print('[WelcomePage] Notification permission from provider: $notificationGranted');
+      debugPrint('');
+      debugPrint('[WelcomePage] ===== CHECKING PROVIDERS =====');
+      debugPrint('[WelcomePage] Gender from provider: ${selectedGender?.name}');
+      debugPrint('[WelcomePage] Notification permission from provider: $notificationGranted');
+      debugPrint('[WelcomePage] ================================');
 
       // Map Gender enum to preferred_gender_filter
       String? preferredGenderFilter;
@@ -120,39 +126,57 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
             preferredGenderFilter = 'all';
             break;
         }
+        debugPrint('[WelcomePage] Mapped gender ${selectedGender.name} to filter: $preferredGenderFilter');
       }
 
       // Save preferences to database
       if (preferredGenderFilter != null || notificationGranted != null) {
-        print('[WelcomePage] Saving preferences to database...');
+        debugPrint('');
+        debugPrint('[WelcomePage] ===== SAVING PREFERENCES TO DATABASE =====');
+        debugPrint('[WelcomePage] User ID: $userId');
+        debugPrint('[WelcomePage] Gender filter: $preferredGenderFilter');
+        debugPrint('[WelcomePage] Notification enabled: $notificationGranted');
         try {
           await OnboardingStateService().saveUserPreferences(
             userId: userId,
             preferredGenderFilter: preferredGenderFilter,
             notificationEnabled: notificationGranted,
           );
-          print('[WelcomePage] SUCCESS: Preferences saved to database');
-        } catch (saveError) {
-          print('[WelcomePage] ERROR saving preferences: $saveError');
+          debugPrint('[WelcomePage] SUCCESS: Preferences saved to database');
+          debugPrint('[WelcomePage] ==========================================');
+        } catch (saveError, stackTrace) {
+          debugPrint('[WelcomePage] ERROR saving preferences: $saveError');
+          debugPrint('[WelcomePage] Stack trace: $stackTrace');
+          debugPrint('[WelcomePage] ==========================================');
           // Non-critical - allow user to continue
         }
       } else {
-        print('[WelcomePage] No preferences to save (user may have already had preferences set)');
+        debugPrint('[WelcomePage] WARNING: No preferences to save!');
+        debugPrint('[WelcomePage] - preferredGenderFilter: $preferredGenderFilter');
+        debugPrint('[WelcomePage] - notificationGranted: $notificationGranted');
       }
 
       // If notification permission was granted, initialize FCM and register token
       // This needs to happen AFTER account creation so we have a user ID
       if (notificationGranted == true) {
-        print('[WelcomePage] Notification permission was granted, initializing FCM...');
+        debugPrint('');
+        debugPrint('[WelcomePage] ===== INITIALIZING FCM =====');
+        debugPrint('[WelcomePage] Notification permission was granted, initializing FCM...');
         try {
           await NotificationService().initialize();
+          debugPrint('[WelcomePage] FCM initialized, now registering token for user...');
           // Also explicitly register token for the new user
           await NotificationService().registerTokenForUser();
-          print('[WelcomePage] SUCCESS: FCM initialized and token registered');
-        } catch (fcmError) {
-          print('[WelcomePage] ERROR initializing FCM: $fcmError');
+          debugPrint('[WelcomePage] SUCCESS: FCM initialized and token registered');
+          debugPrint('[WelcomePage] ==============================');
+        } catch (fcmError, stackTrace) {
+          debugPrint('[WelcomePage] ERROR initializing FCM: $fcmError');
+          debugPrint('[WelcomePage] Stack trace: $stackTrace');
+          debugPrint('[WelcomePage] ==============================');
           // Non-critical - allow user to continue
         }
+      } else {
+        debugPrint('[WelcomePage] Skipping FCM initialization (notification permission not granted or null)');
       }
 
       // Mark onboarding as completed

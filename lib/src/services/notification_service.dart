@@ -83,24 +83,35 @@ class NotificationService {
   Future<void> _saveTokenToDatabase(String token) async {
     try {
       final userId = Supabase.instance.client.auth.currentUser?.id;
+      debugPrint('');
+      debugPrint('[NotificationService] ===== SAVING TOKEN TO DATABASE =====');
+      debugPrint('[NotificationService] User ID: $userId');
+      debugPrint('[NotificationService] Token: $token');
+      debugPrint('[NotificationService] Platform: ${defaultTargetPlatform.name}');
+
       if (userId == null) {
-        debugPrint('[NotificationService] No authenticated user - token will be saved after login');
+        debugPrint('[NotificationService] ERROR: No authenticated user - token will be saved after login');
+        debugPrint('[NotificationService] ======================================');
         return;
       }
 
-      debugPrint('[NotificationService] Saving token to database for user: $userId');
-
-      await Supabase.instance.client.from('fcm_tokens').upsert({
+      final data = {
         'user_id': userId,
         'token': token,
         'platform': defaultTargetPlatform.name,
         'updated_at': DateTime.now().toIso8601String(),
-      });
+      };
 
-      debugPrint('[NotificationService] Token saved successfully');
+      debugPrint('[NotificationService] Upserting data: $data');
+
+      await Supabase.instance.client.from('fcm_tokens').upsert(data);
+
+      debugPrint('[NotificationService] SUCCESS: Token saved to database');
+      debugPrint('[NotificationService] ======================================');
     } catch (e, stackTrace) {
-      debugPrint('[NotificationService] Error saving token: $e');
+      debugPrint('[NotificationService] ERROR saving token: $e');
       debugPrint('[NotificationService] Stack trace: $stackTrace');
+      debugPrint('[NotificationService] ======================================');
     }
   }
 
@@ -129,17 +140,26 @@ class NotificationService {
   }
 
   Future<void> registerTokenForUser() async {
+    debugPrint('');
+    debugPrint('[NotificationService] ===== REGISTER TOKEN FOR USER =====');
     final userId = Supabase.instance.client.auth.currentUser?.id;
+    debugPrint('[NotificationService] User ID: $userId');
+    debugPrint('[NotificationService] Current token: $_currentToken');
+
     if (userId == null) {
-      debugPrint('[NotificationService] No user to register token for');
+      debugPrint('[NotificationService] ERROR: No user to register token for');
+      debugPrint('[NotificationService] ====================================');
       return;
     }
 
     if (_currentToken != null) {
+      debugPrint('[NotificationService] Using existing token: $_currentToken');
       await _saveTokenToDatabase(_currentToken!);
     } else {
+      debugPrint('[NotificationService] No existing token, registering new one...');
       await _registerToken();
     }
+    debugPrint('[NotificationService] ====================================');
   }
 
   String? get currentToken => _currentToken;
