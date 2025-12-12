@@ -189,6 +189,14 @@ void main() async {
   try {
     final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'] ?? 'pk_JerHRerDi63JoAtFh1MtT';
     await SuperwallService().initialize(apiKey: superwallApiKey);
+
+    // TEMPORARY: Reset Superwall on each launch to clear paywall cache during development
+    // TODO: Remove before production
+    if (kDebugMode) {
+      await SuperwallService().reset();
+      debugPrint('[Superwall] Cache cleared for development');
+    }
+
     debugPrint('[Superwall] Initialized successfully');
   } catch (e) {
     debugPrint('[Superwall] Initialization failed: $e');
