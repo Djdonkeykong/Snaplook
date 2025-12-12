@@ -1,31 +1,110 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 
-class NotificationSettingsPage extends StatefulWidget {
+class NotificationSettingsPage extends ConsumerStatefulWidget {
   const NotificationSettingsPage({super.key});
 
   @override
-  State<NotificationSettingsPage> createState() =>
+  ConsumerState<NotificationSettingsPage> createState() =>
       _NotificationSettingsPageState();
 }
 
-class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
-  final Map<_NotificationToggle, bool> _values = {
-    _NotificationToggle.pushEnabled: true,
-    _NotificationToggle.uploadReminders: false,
-    _NotificationToggle.promotions: false,
-  };
+class _NotificationSettingsPageState
+    extends ConsumerState<NotificationSettingsPage> {
+  bool _isLoading = true;
+  bool _pushEnabled = true;
+  bool _uploadReminders = false;
+  bool _promotions = false;
 
-  void _toggle(_NotificationToggle key, bool value) {
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        debugPrint('[NotificationSettings] No authenticated user');
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final response = await Supabase.instance.client
+          .from('users')
+          .select('notification_enabled, upload_reminders_enabled, promotions_enabled')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (response != null && mounted) {
+        setState(() {
+          _pushEnabled = response['notification_enabled'] as bool? ?? true;
+          _uploadReminders = response['upload_reminders_enabled'] as bool? ?? false;
+          _promotions = response['promotions_enabled'] as bool? ?? false;
+          _isLoading = false;
+        });
+        debugPrint('[NotificationSettings] Loaded preferences: push=$_pushEnabled, reminders=$_uploadReminders, promos=$_promotions');
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      debugPrint('[NotificationSettings] Error loading preferences: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _updatePreference(String column, bool value) async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        debugPrint('[NotificationSettings] No authenticated user');
+        return;
+      }
+
+      debugPrint('[NotificationSettings] Updating $column to $value');
+
+      await Supabase.instance.client.from('users').update({
+        column: value,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+
+      debugPrint('[NotificationSettings] Successfully updated $column');
+    } catch (e) {
+      debugPrint('[NotificationSettings] Error updating $column: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update notification settings'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _togglePush(bool value) {
     HapticFeedback.selectionClick();
-    setState(() {
-      _values[key] = value;
-    });
-    // TODO: persist preferences to backend/settings service
+    setState(() => _pushEnabled = value);
+    _updatePreference('notification_enabled', value);
+  }
+
+  void _toggleUploadReminders(bool value) {
+    HapticFeedback.selectionClick();
+    setState(() => _uploadReminders = value);
+    _updatePreference('upload_reminders_enabled', value);
+  }
+
+  void _togglePromotions(bool value) {
+    HapticFeedback.selectionClick();
+    setState(() => _promotions = value);
+    _updatePreference('promotions_enabled', value);
   }
 
   @override
@@ -51,65 +130,59 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           ),
         ),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(spacing.l, spacing.l, spacing.l, spacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 4),
-              Text(
-                'Choose the updates you want to receive',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black.withOpacity(0.6),
-                  fontFamily: 'PlusJakartaSans',
-                  height: 1.5,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFF2003C)))
+          : SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(spacing.l, spacing.l, spacing.l, spacing.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text(
+                      'Choose the updates you want to receive',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black.withOpacity(0.6),
+                        fontFamily: 'PlusJakartaSans',
+                        height: 1.5,
+                      ),
+                    ),
+                    SizedBox(height: spacing.l),
+                    _SettingsCard(
+                      children: [
+                        const SizedBox(height: 8),
+                        _SettingsRow.toggle(
+                          label: 'Push Notifications',
+                          value: _pushEnabled,
+                          onChanged: _togglePush,
+                        ),
+                        const SizedBox(height: 8),
+                        _Divider(),
+                        const SizedBox(height: 8),
+                        _SettingsRow.toggle(
+                          label: 'Upload Reminders',
+                          helper: 'A nudge if you haven\'t shared in a while',
+                          value: _uploadReminders,
+                          onChanged: _toggleUploadReminders,
+                        ),
+                        const SizedBox(height: 8),
+                        _Divider(),
+                        const SizedBox(height: 8),
+                        _SettingsRow.toggle(
+                          label: 'Promotions',
+                          value: _promotions,
+                          onChanged: _togglePromotions,
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: spacing.l),
-              _SettingsCard(
-                children: [
-                  const SizedBox(height: 8),
-                  _SettingsRow.toggle(
-                    label: 'Push Notifications',
-                    value: _values[_NotificationToggle.pushEnabled] ?? true,
-                    onChanged: (val) => _toggle(_NotificationToggle.pushEnabled, val),
-                  ),
-                  const SizedBox(height: 8),
-                  _Divider(),
-                  const SizedBox(height: 8),
-                  _SettingsRow.toggle(
-                    label: 'Upload Reminders',
-                    helper: 'A nudge if you haven’t shared in a while',
-                    value: _values[_NotificationToggle.uploadReminders] ?? false,
-                    onChanged: (val) =>
-                        _toggle(_NotificationToggle.uploadReminders, val),
-                  ),
-                  const SizedBox(height: 8),
-                  _Divider(),
-                  const SizedBox(height: 8),
-                  _SettingsRow.toggle(
-                    label: 'Promotions',
-                    value: _values[_NotificationToggle.promotions] ?? false,
-                    onChanged: (val) =>
-                        _toggle(_NotificationToggle.promotions, val),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
-}
-
-enum _NotificationToggle {
-  pushEnabled,
-  uploadReminders,
-  promotions,
 }
 
 class _SettingsCard extends StatelessWidget {

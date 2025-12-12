@@ -4,6 +4,8 @@ class UserModel {
   final String? fullName;
   final String? avatarUrl;
   final bool notificationEnabled;
+  final bool uploadRemindersEnabled;
+  final bool promotionsEnabled;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -13,6 +15,8 @@ class UserModel {
     this.fullName,
     this.avatarUrl,
     this.notificationEnabled = false,
+    this.uploadRemindersEnabled = false,
+    this.promotionsEnabled = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -24,6 +28,8 @@ class UserModel {
       fullName: json['full_name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       notificationEnabled: json['notification_enabled'] as bool? ?? false,
+      uploadRemindersEnabled: json['upload_reminders_enabled'] as bool? ?? false,
+      promotionsEnabled: json['promotions_enabled'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -36,6 +42,8 @@ class UserModel {
       'full_name': fullName,
       'avatar_url': avatarUrl,
       'notification_enabled': notificationEnabled,
+      'upload_reminders_enabled': uploadRemindersEnabled,
+      'promotions_enabled': promotionsEnabled,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -47,6 +55,8 @@ class UserModel {
     String? fullName,
     String? avatarUrl,
     bool? notificationEnabled,
+    bool? uploadRemindersEnabled,
+    bool? promotionsEnabled,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -56,6 +66,8 @@ class UserModel {
       fullName: fullName ?? this.fullName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       notificationEnabled: notificationEnabled ?? this.notificationEnabled,
+      uploadRemindersEnabled: uploadRemindersEnabled ?? this.uploadRemindersEnabled,
+      promotionsEnabled: promotionsEnabled ?? this.promotionsEnabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
