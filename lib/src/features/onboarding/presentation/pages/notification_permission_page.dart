@@ -11,9 +11,10 @@ import '../widgets/progress_indicator.dart';
 import 'account_creation_page.dart';
 import 'welcome_free_analysis_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
-import 'trial_intro_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
+import '../../../../services/superwall_service.dart';
+import '../../../../services/subscription_sync_service.dart';
 
 // Provider to store notification permission choice
 final notificationPermissionGrantedProvider =
@@ -170,18 +171,72 @@ class _NotificationPermissionPageState
     _navigateToNextStep();
   }
 
-  void _navigateToNextStep() {
+  Future<void> _navigateToNextStep() async {
     if (!mounted) return;
+
     if (widget.continueToTrialFlow) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const TrialIntroPage(),
-        ),
-      );
+      // Present Superwall paywall
+      debugPrint('[NotificationPermission] Presenting Superwall paywall...');
+
+      try {
+        final superwallService = SuperwallService();
+        final didPurchase = await superwallService.presentPaywall(
+          placement: 'onboarding_paywall',
+          timeout: const Duration(seconds: 60),
+        );
+
+        if (!mounted) return;
+
+        debugPrint('[NotificationPermission] Paywall result - purchased: $didPurchase');
+
+        // Check if user is authenticated
+        final authService = ref.read(authServiceProvider);
+        final isAuthenticated = authService.currentUser != null;
+
+        // If user purchased and has account, sync subscription to Supabase
+        if (didPurchase && isAuthenticated) {
+          try {
+            debugPrint('[NotificationPermission] Syncing subscription to Supabase...');
+            await SubscriptionSyncService().syncSubscriptionToSupabase();
+            await OnboardingStateService().markPaymentComplete(authService.currentUser!.id);
+            debugPrint('[NotificationPermission] Subscription synced successfully');
+          } catch (e) {
+            debugPrint('[NotificationPermission] Error syncing subscription: $e');
+            // Non-critical - continue
+          }
+        }
+
+        // Navigate to next step regardless of purchase result
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => isAuthenticated
+                  ? const WelcomeFreeAnalysisPage()
+                  : const AccountCreationPage(),
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('[NotificationPermission] Error presenting paywall: $e');
+
+        // On error, navigate to next step anyway
+        if (!mounted) return;
+
+        final authService = ref.read(authServiceProvider);
+        final isAuthenticated = authService.currentUser != null;
+
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => isAuthenticated
+                ? const WelcomeFreeAnalysisPage()
+                : const AccountCreationPage(),
+          ),
+        );
+      }
       return;
     }
 
-    // Check if user is already authenticated
+    // Not in trial flow - go directly to account creation or welcome
     final authService = ref.read(authServiceProvider);
     final isAuthenticated = authService.currentUser != null;
 

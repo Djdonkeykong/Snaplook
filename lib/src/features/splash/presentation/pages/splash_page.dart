@@ -9,7 +9,6 @@ import '../../../../services/subscription_sync_service.dart';
 import '../../../onboarding/presentation/pages/gender_selection_page.dart';
 import '../../../onboarding/presentation/pages/discovery_source_page.dart';
 import '../../../onboarding/presentation/pages/awesome_intro_page.dart';
-import '../../../onboarding/presentation/pages/trial_intro_page.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 
@@ -137,17 +136,6 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                       );
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (context) => const AwesomeIntroPage()),
-                      );
-                      break;
-                    case 'paywall':
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const DiscoverySourcePage()),
-                      );
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const AwesomeIntroPage()),
-                      );
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const TrialIntroPage()),
                       );
                       break;
                     case 'account':
