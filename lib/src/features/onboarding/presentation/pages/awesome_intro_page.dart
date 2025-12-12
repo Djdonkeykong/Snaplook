@@ -7,6 +7,8 @@ import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../services/onboarding_state_service.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
 
 class AwesomeIntroPage extends ConsumerStatefulWidget {
   const AwesomeIntroPage({super.key});
@@ -145,8 +147,18 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               HapticFeedback.mediumImpact();
+
+              final user = ref.read(authServiceProvider).currentUser;
+              if (user != null) {
+                await OnboardingStateService().updateCheckpoint(
+                  user.id,
+                  OnboardingCheckpoint.tutorial,
+                );
+              }
+
+              if (!context.mounted) return;
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const AddFirstStylePage(),

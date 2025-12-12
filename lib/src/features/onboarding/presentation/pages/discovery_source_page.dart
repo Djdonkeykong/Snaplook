@@ -11,6 +11,8 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'awesome_intro_page.dart';
+import '../../../../services/onboarding_state_service.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
 
 enum DiscoverySource {
   instagram,
@@ -360,8 +362,18 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
           height: 56,
           child: ElevatedButton(
             onPressed: selectedSource != null
-                ? () {
+                ? () async {
                     HapticFeedback.mediumImpact();
+
+                    final user = ref.read(authServiceProvider).currentUser;
+                    if (user != null) {
+                      await OnboardingStateService().updateCheckpoint(
+                        user.id,
+                        OnboardingCheckpoint.discovery,
+                      );
+                    }
+
+                    if (!context.mounted) return;
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => const AwesomeIntroPage(),

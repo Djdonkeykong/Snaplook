@@ -7,6 +7,10 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../onboarding/presentation/pages/gender_selection_page.dart';
+import '../../../onboarding/presentation/pages/discovery_source_page.dart';
+import '../../../onboarding/presentation/pages/awesome_intro_page.dart';
+import '../../../onboarding/presentation/pages/trial_intro_page.dart';
+import '../../../onboarding/presentation/pages/account_creation_page.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
@@ -100,14 +104,39 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                 nextPage = const LoginPage();
               }
             } else {
-              // Onboarding not completed - check state
+              // Onboarding not completed - check state and checkpoint
               if (onboardingStateValue == 'payment_complete') {
                 // Paid but haven't completed onboarding - go to welcome
                 nextPage = const WelcomeFreeAnalysisPage();
               } else if (onboardingStateValue == 'in_progress') {
-                // Onboarding in progress - reset and start over (per user requirement)
-                await onboardingService.resetOnboarding(user.id);
-                nextPage = const GenderSelectionPage();
+                // Onboarding in progress - resume from last checkpoint
+                final checkpoint = onboardingState['onboarding_checkpoint'] ?? 'gender';
+                debugPrint('[Splash] Resuming onboarding from checkpoint: $checkpoint');
+
+                switch (checkpoint) {
+                  case 'gender':
+                    nextPage = const GenderSelectionPage();
+                    break;
+                  case 'discovery':
+                    nextPage = const DiscoverySourcePage();
+                    break;
+                  case 'tutorial':
+                    nextPage = const AwesomeIntroPage();
+                    break;
+                  case 'paywall':
+                    nextPage = const TrialIntroPage();
+                    break;
+                  case 'account':
+                    nextPage = const AccountCreationPage();
+                    break;
+                  case 'welcome':
+                    nextPage = const WelcomeFreeAnalysisPage();
+                    break;
+                  default:
+                    // Unknown checkpoint - start from beginning
+                    debugPrint('[Splash] Unknown checkpoint: $checkpoint, starting from beginning');
+                    nextPage = const GenderSelectionPage();
+                }
               } else {
                 // Not started - go to gender selection
                 nextPage = const GenderSelectionPage();

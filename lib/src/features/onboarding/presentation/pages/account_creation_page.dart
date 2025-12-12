@@ -260,6 +260,19 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                   print(
                                       '[AccountCreation] Apple - User ID after sign in: $userId');
                                   if (userId != null) {
+                                    // Update checkpoint to 'account' to mark account creation
+                                    print('[AccountCreation] Apple - Updating checkpoint to account...');
+                                    try {
+                                      await OnboardingStateService().updateCheckpoint(
+                                        userId,
+                                        OnboardingCheckpoint.account,
+                                      );
+                                      print('[AccountCreation] Apple - Checkpoint updated to account');
+                                    } catch (checkpointError) {
+                                      print('[AccountCreation] Apple - Error updating checkpoint: $checkpointError');
+                                      // Non-critical - continue
+                                    }
+
                                     // CRITICAL: Link subscription to new account
                                     // This transfers any anonymous purchases to the identified user
                                     final linkSuccess =
@@ -411,6 +424,19 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                 print(
                                     '[AccountCreation] Google - User ID after sign in: $userId');
                                 if (userId != null) {
+                                  // Update checkpoint to 'account' to mark account creation
+                                  print('[AccountCreation] Google - Updating checkpoint to account...');
+                                  try {
+                                    await OnboardingStateService().updateCheckpoint(
+                                      userId,
+                                      OnboardingCheckpoint.account,
+                                    );
+                                    print('[AccountCreation] Google - Checkpoint updated to account');
+                                  } catch (checkpointError) {
+                                    print('[AccountCreation] Google - Error updating checkpoint: $checkpointError');
+                                    // Non-critical - continue
+                                  }
+
                                   // CRITICAL: Link subscription to new account
                                   // This transfers any anonymous purchases to the identified user
                                   final linkSuccess =

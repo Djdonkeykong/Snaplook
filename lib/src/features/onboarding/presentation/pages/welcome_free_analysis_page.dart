@@ -98,6 +98,19 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
         return;
       }
 
+      // Update checkpoint to 'welcome' to mark this stage of onboarding
+      debugPrint('[WelcomePage] Updating checkpoint to welcome...');
+      try {
+        await OnboardingStateService().updateCheckpoint(
+          userId,
+          OnboardingCheckpoint.welcome,
+        );
+        debugPrint('[WelcomePage] Checkpoint updated to welcome');
+      } catch (checkpointError) {
+        debugPrint('[WelcomePage] Error updating checkpoint: $checkpointError');
+        // Non-critical - continue
+      }
+
       // IMPORTANT: If user went through onboarding BEFORE account creation,
       // preferences are stored in providers but NOT saved to database yet.
       // We need to save them now that we have a user ID.

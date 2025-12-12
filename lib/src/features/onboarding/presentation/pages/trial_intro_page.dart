@@ -9,6 +9,8 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_reminder_page.dart';
+import '../../../../services/onboarding_state_service.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
 
 class TrialIntroPage extends ConsumerStatefulWidget {
   const TrialIntroPage({super.key});
@@ -164,8 +166,18 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   HapticFeedback.mediumImpact();
+
+                  final user = ref.read(authServiceProvider).currentUser;
+                  if (user != null) {
+                    await OnboardingStateService().updateCheckpoint(
+                      user.id,
+                      OnboardingCheckpoint.paywall,
+                    );
+                  }
+
+                  if (!context.mounted) return;
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const TrialReminderPage(),
