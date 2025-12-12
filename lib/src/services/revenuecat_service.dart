@@ -11,6 +11,7 @@ class RevenueCatService {
 
   bool _configured = false;
   CustomerInfo? _customerInfo;
+  Offerings? _cachedOfferings;
 
   /// Initialize RevenueCat with API key
   Future<void> initialize({required String apiKey, String? userId}) async {
@@ -33,12 +34,30 @@ class RevenueCatService {
         debugPrint('[RevenueCat] User: ${userId ?? 'anonymous'}');
         debugPrint('[RevenueCat] Has active entitlement: ${_customerInfo?.entitlements.active.isNotEmpty}');
       }
+
+      // Preload offerings for faster paywall display
+      preloadOfferings();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('[RevenueCat] Configuration failed: $e');
       }
       rethrow;
     }
+  }
+
+  /// Preload offerings in the background
+  void preloadOfferings() {
+    if (!_configured) return;
+
+    getOfferings().then((offerings) {
+      if (kDebugMode && offerings != null) {
+        debugPrint('[RevenueCat] Offerings preloaded successfully');
+      }
+    }).catchError((e) {
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Preload offerings error: $e');
+      }
+    });
   }
 
   /// Identify a user
@@ -86,7 +105,7 @@ class RevenueCatService {
     }
   }
 
-  /// Get available offerings
+  /// Get available offerings (uses cache if available)
   Future<Offerings?> getOfferings() async {
     if (!_configured) {
       if (kDebugMode) {
@@ -95,8 +114,17 @@ class RevenueCatService {
       return null;
     }
 
+    // Return cached offerings if available
+    if (_cachedOfferings != null) {
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Returning cached offerings: ${_cachedOfferings!.current?.identifier}');
+      }
+      return _cachedOfferings;
+    }
+
     try {
       final offerings = await Purchases.getOfferings();
+      _cachedOfferings = offerings;
 
       if (kDebugMode) {
         debugPrint('[RevenueCat] Fetched offerings: ${offerings.current?.identifier}');
