@@ -42,11 +42,13 @@ class NotificationService {
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
-        // Get FCM token
-        await _registerToken();
-
-        // Listen for token refresh
+        // Set up token refresh listener FIRST
+        // This will save the token whenever it becomes available
         _messaging!.onTokenRefresh.listen(_onTokenRefresh);
+        debugPrint('[NotificationService] Token refresh listener set up');
+
+        // Try to get FCM token
+        await _registerToken();
 
         debugPrint('[NotificationService] Initialized successfully');
       } else {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'dart:io' show Platform;
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -94,6 +95,29 @@ class _NotificationPermissionPageState
 
         debugPrint('[NotificationPermission] Permission requested, granted: $granted');
         debugPrint('[NotificationPermission] Authorization status: ${settings.authorizationStatus}');
+
+        // CRITICAL: Trigger APNS token registration
+        // When FirebaseAppDelegateProxyEnabled is false, calling getToken() will:
+        // 1. Call UIApplication.shared.registerForRemoteNotifications()
+        // 2. iOS generates APNS token
+        // 3. AppDelegate.didRegisterForRemoteNotificationsWithDeviceToken is called
+        // 4. We forward APNS token to Firebase
+        // 5. Firebase generates FCM token
+        if (granted) {
+          debugPrint('[NotificationPermission] Triggering APNS registration via getToken()...');
+          try {
+            final token = await FirebaseMessaging.instance.getToken();
+            if (token != null) {
+              debugPrint('[NotificationPermission] Got FCM token: $token');
+            } else {
+              debugPrint('[NotificationPermission] FCM token is null - APNS token may not be available yet');
+            }
+          } catch (e) {
+            debugPrint('[NotificationPermission] Error getting FCM token: $e');
+            // This is expected if APNS token isn't ready yet
+            // Token will be registered later when APNS token becomes available
+          }
+        }
       } else {
         debugPrint('[NotificationPermission] Skipping permission request - Firebase not ready');
       }
