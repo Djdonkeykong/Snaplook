@@ -135,7 +135,10 @@ class NotificationService {
 
       debugPrint('[NotificationService] Upserting data: $data');
 
-      await Supabase.instance.client.from('fcm_tokens').upsert(data);
+      await Supabase.instance.client.from('fcm_tokens').upsert(
+        data,
+        onConflict: 'user_id,token',
+      );
 
       debugPrint('[NotificationService] SUCCESS: Token saved to database');
       debugPrint('[NotificationService] ======================================');
