@@ -209,7 +209,7 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                         child: _PlanOption(
                           plan: OnboardingPaywallPlanType.monthly,
                           title: 'Monthly',
-                          price: '\$7.99/mo',
+                          price: '\$8.99/mo',
                           subtitle: '',
                           isSelected:
                               selectedPlan == OnboardingPaywallPlanType.monthly,
@@ -223,7 +223,7 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
                         child: _PlanOption(
                           plan: OnboardingPaywallPlanType.yearly,
                           title: 'Yearly',
-                          price: '\$4.99/mo',
+                          price: '\$3.49/mo',
                           subtitle: null,
                           isSelected:
                               selectedPlan == OnboardingPaywallPlanType.yearly,
@@ -297,12 +297,14 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
             ),
           ],
         ),
-        secondaryButton: const Align(
+        secondaryButton: Align(
           alignment: Alignment.center,
           child: Text(
-            '3 days free, then \$59.99 per year (\$4.99/mo)',
+            selectedPlan == OnboardingPaywallPlanType.monthly
+                ? 'Only \$8.99/month'
+                : '3 days free, then \$41.99 per year (\$3.49/mo)',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
               fontSize: 14,
               color: Color(0xFF6B7280),
