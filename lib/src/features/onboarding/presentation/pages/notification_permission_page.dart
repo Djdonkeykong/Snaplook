@@ -96,16 +96,18 @@ class _NotificationPermissionPageState
         debugPrint('[NotificationPermission] Permission requested, granted: $granted');
         debugPrint('[NotificationPermission] Authorization status: ${settings.authorizationStatus}');
 
-        // CRITICAL: Trigger APNS token registration
-        // When FirebaseAppDelegateProxyEnabled is false, calling getToken() will:
-        // 1. Call UIApplication.shared.registerForRemoteNotifications()
-        // 2. iOS generates APNS token
-        // 3. AppDelegate.didRegisterForRemoteNotificationsWithDeviceToken is called
-        // 4. We forward APNS token to Firebase
-        // 5. Firebase generates FCM token
-        if (granted) {
-          debugPrint('[NotificationPermission] Triggering APNS registration via getToken()...');
+        // CRITICAL: Explicitly register for remote notifications with iOS
+        // When FirebaseAppDelegateProxyEnabled is false, we must manually trigger this
+        if (granted && Platform.isIOS) {
+          debugPrint('[NotificationPermission] Explicitly registering for remote notifications on iOS...');
           try {
+            const platform = MethodChannel('snaplook/notifications');
+            await platform.invokeMethod('registerForRemoteNotifications');
+            debugPrint('[NotificationPermission] Remote notification registration triggered');
+
+            // Give iOS a moment to generate APNS token, then try to get FCM token
+            await Future.delayed(const Duration(milliseconds: 500));
+
             final token = await FirebaseMessaging.instance.getToken();
             if (token != null) {
               debugPrint('[NotificationPermission] Got FCM token: $token');
@@ -113,8 +115,7 @@ class _NotificationPermissionPageState
               debugPrint('[NotificationPermission] FCM token is null - APNS token may not be available yet');
             }
           } catch (e) {
-            debugPrint('[NotificationPermission] Error getting FCM token: $e');
-            // This is expected if APNS token isn't ready yet
+            debugPrint('[NotificationPermission] Error during notification registration: $e');
             // Token will be registered later when APNS token becomes available
           }
         }

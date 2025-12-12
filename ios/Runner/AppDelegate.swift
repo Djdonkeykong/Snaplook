@@ -60,6 +60,31 @@ import FirebaseMessaging
         binaryMessenger: controller.binaryMessenger
       )
 
+      // Notification channel for triggering APNS registration
+      let notificationChannel = FlutterMethodChannel(
+        name: "snaplook/notifications",
+        binaryMessenger: controller.binaryMessenger
+      )
+
+      notificationChannel.setMethodCallHandler { [weak self] call, result in
+        guard let self = self else {
+          result(FlutterError(code: "UNAVAILABLE", message: "AppDelegate released", details: nil))
+          return
+        }
+
+        switch call.method {
+        case "registerForRemoteNotifications":
+          NSLog("[APNS] Flutter requested remote notification registration")
+          DispatchQueue.main.async {
+            UIApplication.shared.registerForRemoteNotifications()
+            NSLog("[APNS] Called UIApplication.shared.registerForRemoteNotifications()")
+          }
+          result(nil)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
+
       // Handle auth method calls
       authChannel.setMethodCallHandler { [weak self] call, result in
         guard let self = self else {
