@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,7 +79,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    print("[HOME PAGE] initState called");
 
     // Load initial inspiration images
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,8 +94,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       pendingSharedImageProvider,
       (previous, next) {
         if (next != null && mounted) {
-          print(
-              '[HOME PAGE] pendingSharedImageProvider changed -> navigating to detection');
           _handlePendingSharedImage(next);
         }
       },
@@ -106,36 +104,26 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   }
 
   void _checkPendingSharedImage() {
-    print('[HOME PAGE] Checking for pending shared image');
     final pendingImage = ref.read(pendingSharedImageProvider);
-    print('[HOME PAGE] Pending image: ${pendingImage?.path ?? 'null'}');
 
     if (pendingImage != null && mounted) {
       _handlePendingSharedImage(pendingImage);
-    } else {
-      print('[HOME PAGE] No pending shared image found');
     }
   }
 
   void _handlePendingSharedImage(XFile image) {
     if (_isProcessingPendingNavigation || !mounted) {
-      print(
-          '[HOME PAGE] Ignoring pending share navigation because a navigation is already in progress');
       return;
     }
 
     if (ref.read(shareNavigationInProgressProvider)) {
-      print(
-          '[HOME PAGE] Share navigation already handled by native flow - skipping duplicate push');
       return;
     }
 
-    print('[HOME PAGE] Navigating to DetectionPage for shared image');
     _isProcessingPendingNavigation = true;
 
     // Get source URL for cache matching
     final sourceUrl = ref.read(pendingShareSourceUrlProvider);
-    print('[HOME PAGE] Source URL for shared image: $sourceUrl');
 
     ref.read(pendingSharedImageProvider.notifier).state = null;
     ref.read(pendingShareSourceUrlProvider.notifier).state = null;
@@ -154,7 +142,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         await Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (context) {
-              print('[HOME PAGE] DetectionPage builder called for shared image');
               return DetectionPage(
                 searchType: 'share',
                 sourceUrl: sourceUrl,
@@ -163,9 +150,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
           ),
         );
 
-        print('[HOME PAGE] Returned from DetectionPage (shared image)');
       } catch (e) {
-        print('[HOME PAGE] Error handling pending shared image: $e');
+        debugPrint('Error handling pending shared image: $e');
       } finally {
         _isProcessingPendingNavigation = false;
       }
@@ -687,9 +673,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
 
   Future<void> _pickImage(ImageSource source) async {
     final isCamera = source == ImageSource.camera;
-    print("[IMAGE PICKER] Starting image picker - source: ${isCamera ? 'CAMERA' : 'GALLERY'}");
     try {
-      print("[IMAGE PICKER] Calling ImagePicker.pickImage...");
       final XFile? image = await _picker.pickImage(
         source: source,
         maxWidth: isCamera ? 1600 : 1024,
@@ -697,46 +681,31 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         imageQuality: isCamera ? 95 : 85,
       );
 
-      print(
-          "[IMAGE PICKER] pickImage returned - image: ${image?.path ?? 'null'}");
-
       if (image != null) {
-        print("[IMAGE PICKER] Image selected: ${image.path}");
-        print("[IMAGE PICKER] Setting image in provider...");
         ref.read(selectedImagesProvider.notifier).setImage(image);
-        print("[IMAGE PICKER] Image set in provider");
 
         if (mounted) {
           final fileImage = FileImage(File(image.path));
-          print("[IMAGE PICKER] Precaching selected image for instant render");
-          await precacheImage(fileImage, context).catchError((e) {
-            print("[IMAGE PICKER] Precaching error: $e");
-          });
+          await precacheImage(fileImage, context).catchError((_) {});
         }
 
         if (mounted) {
-          print(
-              "[IMAGE PICKER] Widget is mounted - navigating to DetectionPage");
           await Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) {
-                print("[IMAGE PICKER] DetectionPage builder called");
                 return DetectionPage(
                   searchType: isCamera ? 'camera' : 'photos',
                 );
               },
             ),
           );
-          print("[IMAGE PICKER] Returned from DetectionPage");
         } else {
-          print("[IMAGE PICKER ERROR] Widget not mounted - cannot navigate");
+          debugPrint("[IMAGE PICKER ERROR] Widget not mounted - cannot navigate");
         }
-      } else {
-        print("[IMAGE PICKER] No image selected (user cancelled)");
       }
     } catch (e) {
-      print("[IMAGE PICKER ERROR] Error picking image: $e");
-      print("[IMAGE PICKER ERROR] Error type: ${e.runtimeType}");
+      debugPrint("[IMAGE PICKER ERROR] Error picking image: $e");
+      debugPrint("[IMAGE PICKER ERROR] Error type: ${e.runtimeType}");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

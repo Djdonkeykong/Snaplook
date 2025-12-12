@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/favorite_item.dart';
 import '../../../detection/domain/models/detection_result.dart';
@@ -26,7 +27,7 @@ class FavoritesService {
           .map((json) => FavoriteItem.fromJson(json))
           .toList();
     } catch (e) {
-      print('Error fetching favorites: $e');
+      debugPrint('Error fetching favorites: $e');
       rethrow;
     }
   }
@@ -38,7 +39,6 @@ class FavoritesService {
     }
 
     try {
-      print('DEBUG: Adding favorite for user: $_currentUserId, product: ${product.id}');
       final favoriteData = {
         'user_id': _currentUserId!,
         'product_id': product.id,
@@ -50,17 +50,15 @@ class FavoritesService {
         'category': product.category,
       };
 
-      print('DEBUG: Inserting data: $favoriteData');
       final response = await _supabase
           .from('user_favorites')
           .insert(favoriteData)
           .select()
           .single();
 
-      print('DEBUG: Favorite added successfully: $response');
       return FavoriteItem.fromJson(response);
     } catch (e) {
-      print('DEBUG: Error adding favorite: $e');
+      debugPrint('Error adding favorite: $e');
       rethrow;
     }
   }
@@ -78,7 +76,7 @@ class FavoritesService {
           .eq('user_id', _currentUserId!)
           .eq('product_id', productId);
     } catch (e) {
-      print('Error removing favorite: $e');
+      debugPrint('Error removing favorite: $e');
       rethrow;
     }
   }
@@ -99,7 +97,7 @@ class FavoritesService {
 
       return response != null;
     } catch (e) {
-      print('Error checking favorite status: $e');
+      debugPrint('Error checking favorite status: $e');
       return false;
     }
   }
@@ -118,7 +116,7 @@ class FavoritesService {
 
       return (response as List).length;
     } catch (e) {
-      print('Error getting favorites count: $e');
+      debugPrint('Error getting favorites count: $e');
       return 0;
     }
   }
@@ -141,7 +139,7 @@ class FavoritesService {
           .map((json) => FavoriteItem.fromJson(json))
           .toList();
     } catch (e) {
-      print('Error fetching favorites by category: $e');
+      debugPrint('Error fetching favorites by category: $e');
       rethrow;
     }
   }

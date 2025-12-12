@@ -2,6 +2,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path_provider_foundation/path_provider_foundation.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -148,7 +149,7 @@ void main() async {
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    print(
+    debugPrint(
       'Warning: .env file not found. Using environment variables from build.',
     );
   }
@@ -200,14 +201,14 @@ void main() async {
 
   final scrapingBeeKey = AppConstants.scrapingBeeApiKey;
   if (scrapingBeeKey.isEmpty) {
-    print(
+    debugPrint(
       "[CONFIG WARNING] SCRAPINGBEE_API_KEY is empty - Instagram downloads will fail until configured.",
     );
   } else {
     final visible = scrapingBeeKey.length <= 6
         ? scrapingBeeKey
         : "${scrapingBeeKey.substring(0, 4)}…${scrapingBeeKey.substring(scrapingBeeKey.length - 2)}";
-    print("[CONFIG] Loaded ScrapingBee API key ($visible)");
+    debugPrint("[CONFIG] Loaded ScrapingBee API key ($visible)");
   }
 
   unawaited(
@@ -222,7 +223,20 @@ void main() async {
   // Precache splash logo so the splash displays without a flicker
   await _precacheSplashLogo();
 
-  runApp(ProviderScope(child: SnaplookApp(isFirebaseReady: firebaseInitialized)));
+  final app = ProviderScope(child: SnaplookApp(isFirebaseReady: firebaseInitialized));
+
+  runZonedGuarded(
+    () => runApp(app),
+    (error, stackTrace) =>
+        debugPrint('Uncaught zone error: $error\n$stackTrace'),
+    zoneSpecification: ZoneSpecification(
+      print: (self, parent, zone, line) {
+        if (kDebugMode) {
+          parent.print(zone, line);
+        }
+      },
+    ),
+  );
 }
 
 class _FetchingOverlay extends StatefulWidget {
@@ -434,6 +448,12 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   bool _uiReadyForOverlays = false;
   bool _overlaysAllowed = false;
   String? _queuedOverlayMessage;
+  static const bool _enableShareLogs = false;
+
+  void _logShare(String message) {
+    if (!_enableShareLogs) return;
+    debugPrint(message);
+  }
 
   @override
   void initState() {
@@ -475,75 +495,41 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final shouldSkip = _lastInitialSharePaths != null &&
               _arePathListsEqual(currentPaths, _lastInitialSharePaths!);
           if (shouldSkip) {
-            print(
-              "[SHARE EXTENSION] Ignoring duplicate stream emission for initial share",
-            );
             _lastInitialSharePaths = null;
             _shouldIgnoreNextStreamEmission = false;
             return;
           }
-          print(
-            "[SHARE EXTENSION] Stream emission differs from initial share; processing normally",
-          );
           _shouldIgnoreNextStreamEmission = false;
         }
-        print("===== MEDIA STREAM (App in Memory) =====");
-        print("[SHARE EXTENSION] Received shared media: ${value.length} files");
-        for (var file in value) {
-          print("[SHARE EXTENSION] Shared file: ${file.path}");
-          print("[SHARE EXTENSION]   - type: ${file.type}");
-          print("[SHARE EXTENSION]   - mimeType: ${file.mimeType}");
-          print("[SHARE EXTENSION]   - thumbnail: ${file.thumbnail}");
-          print("[SHARE EXTENSION]   - duration: ${file.duration}");
-        }
         if (value.isNotEmpty) {
-          print(
-            "[SHARE EXTENSION] Handling shared media immediately (app is open)",
+          debugPrint(
+            "[Share] Processing ${value.length} shared file(s) while app is active",
           );
           unawaited(_handleSharedMedia(value));
-        } else {
-          print("[SHARE EXTENSION] No media files received in stream");
         }
       },
       onError: (err) {
-        print("[SHARE EXTENSION ERROR] getIntentDataStream error: $err");
+        debugPrint("[Share] getIntentDataStream error: $err");
       },
     );
 
     // Get the media sharing coming from outside the app while the app is closed.
     ReceiveSharingIntent.instance.getInitialMedia().then((value) {
       if (_hasHandledInitialShare) {
-        print("[SHARE EXTENSION] Initial media already handled; skipping");
         return;
       }
-      print("===== INITIAL MEDIA (App was Closed) =====");
-      print(
-        "[SHARE EXTENSION] Initial shared media: ${value.length} files",
-      );
-      for (var file in value) {
-        print("[SHARE EXTENSION] Initial shared file: ${file.path}");
-        print("[SHARE EXTENSION]   - type: ${file.type}");
-        print("[SHARE EXTENSION]   - mimeType: ${file.mimeType}");
-        print("[SHARE EXTENSION]   - thumbnail: ${file.thumbnail}");
-        print("[SHARE EXTENSION]   - duration: ${file.duration}");
-      }
       if (value.isNotEmpty) {
-        print(
-          "[SHARE EXTENSION] Handling initial shared media immediately",
-        );
         _hasHandledInitialShare = true;
         _skipNextResumePendingCheck = true;
         _shouldIgnoreNextStreamEmission = true;
         _lastInitialSharePaths =
             value.map((f) => f.path).toList(growable: false);
         ReceiveSharingIntent.instance.reset();
-        print("[SHARE EXTENSION] Reset sharing intent");
+        debugPrint("[Share] Processing ${value.length} initial shared file(s)");
         unawaited(_handleSharedMedia(value, isInitial: true));
-      } else {
-        print("[SHARE EXTENSION] No initial media files received");
       }
     }).catchError((error) {
-      print("[SHARE EXTENSION ERROR] Error getting initial media: $error");
+      debugPrint("[Share] Error getting initial media: $error");
     });
 
     if (widget.isFirebaseReady) {
@@ -695,7 +681,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       final needsSignin =
           prefs.getBool('needs_signin_from_share_extension') ?? false;
       if (needsSignin) {
-        print(
+        _logShare(
             "[SHARE EXTENSION] User needs to sign in - navigating to login page");
         prefs.remove('needs_signin_from_share_extension');
 
@@ -707,8 +693,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       // Check if there's a pending search_id from "Analyze now" + "Analyze in app" flow
       final searchId = await ShareImportStatus.getPendingSearchId();
       if (searchId != null && searchId.isNotEmpty) {
-        print("[SHARE EXTENSION] Found pending search_id: $searchId");
-        print(
+        _logShare("[SHARE EXTENSION] Found pending search_id: $searchId");
+        _logShare(
             "[SHARE EXTENSION] Navigating to detection page with existing results");
 
         // Navigate to detection page with this search_id to load existing results
@@ -719,14 +705,14 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       final pendingMedia =
           await ReceiveSharingIntent.instance.getInitialMedia();
       if (pendingMedia.isNotEmpty) {
-        print(
+        _logShare(
           "[SHARE EXTENSION] Found pending media after resume: ${pendingMedia.length} files",
         );
         ReceiveSharingIntent.instance.reset();
         await _handleSharedMedia(pendingMedia);
       }
     } catch (e) {
-      print(
+      debugPrint(
         "[SHARE EXTENSION ERROR] Error checking pending media on resume: $e",
       );
     }
@@ -734,7 +720,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   void _navigateToDetectionWithSearchId(String searchId) {
     if (_isNavigatingToDetection) {
-      print("[SHARE EXTENSION] Navigation already in progress");
+      _logShare("[SHARE EXTENSION] Navigation already in progress");
       return;
     }
     _isNavigatingToDetection = true;
@@ -749,7 +735,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         return;
       }
 
-      print(
+      _logShare(
           "[SHARE EXTENSION] Navigating to detection page with searchId: $searchId");
 
       // Navigate to detection page with searchId to load existing results
@@ -762,7 +748,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       )
           .then((_) {
         _isNavigatingToDetection = false;
-        print("[SHARE EXTENSION] Detection page dismissed");
+        _logShare("[SHARE EXTENSION] Detection page dismissed");
       });
     }
 
@@ -771,7 +757,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   void _navigateToLoginPage() {
     if (_isNavigatingToDetection) {
-      print("[SHARE EXTENSION] Navigation already in progress");
+      _logShare("[SHARE EXTENSION] Navigation already in progress");
       return;
     }
     _isNavigatingToDetection = true;
@@ -783,7 +769,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         return;
       }
 
-      print("[SHARE EXTENSION] Navigating to login page");
+      _logShare("[SHARE EXTENSION] Navigating to login page");
 
       // Navigate to login page with root navigator
       Navigator.of(navigator.context, rootNavigator: true)
@@ -794,7 +780,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       )
           .then((_) {
         _isNavigatingToDetection = false;
-        print("[SHARE EXTENSION] Login page dismissed");
+        _logShare("[SHARE EXTENSION] Login page dismissed");
       });
     }
 
@@ -804,7 +790,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   SharedMediaFile _selectSharedFile(List<SharedMediaFile> sharedFiles) {
     if (sharedFiles.length == 1) {
       final file = sharedFiles.first;
-      print(
+      _logShare(
         "[SHARE EXTENSION] Single shared file received - using ${file.path} (${file.type})",
       );
       return file;
@@ -848,7 +834,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         firstTextOrUrl ??
         firstFallback!;
 
-    print(
+    _logShare(
       "[SHARE EXTENSION] Selected shared file: ${selected.path} (type: ${selected.type})",
     );
 
@@ -870,46 +856,46 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     List<SharedMediaFile> sharedFiles, {
     bool isInitial = false,
   }) async {
-    print(
+    _logShare(
       "[SHARE EXTENSION] _handleSharedMedia called - isInitial: $isInitial, files: ${sharedFiles.length}",
     );
     if (sharedFiles.isEmpty) {
-      print("[SHARE EXTENSION] No files to handle - returning");
+      _logShare("[SHARE EXTENSION] No files to handle - returning");
       return;
     }
 
     unawaited(ShareImportStatus.markProcessing());
 
     final sharedFile = _selectSharedFile(sharedFiles);
-    print("[SHARE EXTENSION] Processing first file: ${sharedFile.path}");
-    print("[SHARE EXTENSION] File type: ${sharedFile.type}");
+    _logShare("[SHARE EXTENSION] Processing first file: ${sharedFile.path}");
+    _logShare("[SHARE EXTENSION] File type: ${sharedFile.type}");
 
     if (sharedFile.type == SharedMediaType.image) {
-      print("[SHARE EXTENSION] Handling image file");
+      _logShare("[SHARE EXTENSION] Handling image file");
       // Handle actual image files
       final String normalizedPath = sharedFile.path.startsWith('file://')
           ? Uri.parse(sharedFile.path).toFilePath()
           : sharedFile.path;
       final imageFile = XFile(normalizedPath);
       final fileExists = File(imageFile.path).existsSync();
-      print("[SHARE EXTENSION] Normalized path: ${imageFile.path}");
-      print("[SHARE EXTENSION] File exists: $fileExists");
+      _logShare("[SHARE EXTENSION] Normalized path: ${imageFile.path}");
+      _logShare("[SHARE EXTENSION] File exists: $fileExists");
       ref.read(selectedImagesProvider.notifier).setImage(imageFile);
 
       // Pre-cache the shared image so DetectionPage shows it instantly (avoids black flash)
       if (navigatorKey.currentContext != null) {
         final fileImage = FileImage(File(imageFile.path));
         await precacheImage(fileImage, navigatorKey.currentContext!).catchError(
-          (e) => print('[ShareExtension] Precaching error: $e'),
+          (e) => debugPrint('[ShareExtension] Precaching error: $e'),
         );
       }
 
       // Also set in pending share provider so HomePage can handle navigation
       if (isInitial) {
-        print(
+        _logShare(
           "[SHARE EXTENSION] Setting pending shared image for HomePage (initial share)",
         );
-        print(
+        _logShare(
             "[SHARE EXTENSION] Source URL for initial share: ${sharedFile.message}");
         _skipNextResumePendingCheck = true;
         ref.read(pendingSharedImageProvider.notifier).state = imageFile;
@@ -918,7 +904,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         _hasHandledInitialShare = true;
         _shouldIgnoreNextStreamEmission = true;
         unawaited(ShareImportStatus.markComplete());
-        print("[SHARE EXTENSION] Deferring navigation to home init");
+        _logShare("[SHARE EXTENSION] Deferring navigation to home init");
         return;
       }
 
@@ -926,23 +912,23 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       unawaited(ShareImportStatus.markComplete());
       ref.read(pendingSharedImageProvider.notifier).state = null;
       FocusManager.instance.primaryFocus?.unfocus();
-      print("[SHARE EXTENSION] Navigating to DetectionPage immediately");
-      print(
+      _logShare("[SHARE EXTENSION] Navigating to DetectionPage immediately");
+      _logShare(
           "[SHARE EXTENSION] Source URL from share extension: ${sharedFile.message}");
       _navigateToDetection(sourceUrl: sharedFile.message);
     } else if (sharedFile.type == SharedMediaType.text ||
         sharedFile.type == SharedMediaType.url) {
-      print("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
+      _logShare("[SHARE EXTENSION] Handling text/URL: ${sharedFile.path}");
       await _handleSharedText(sharedFile.path, fromShareExtension: true);
     } else {
-      print("[SHARE EXTENSION] Unknown file type: ${sharedFile.type}");
+      _logShare("[SHARE EXTENSION] Unknown file type: ${sharedFile.type}");
     }
   }
 
   Future<void> _navigateToDetection(
       {String? overrideSearchType, String? sourceUrl}) async {
     if (_isNavigatingToDetection) {
-      print("[SHARE EXTENSION] Navigation already in progress");
+      _logShare("[SHARE EXTENSION] Navigation already in progress");
       return;
     }
     _isNavigatingToDetection = true;
@@ -955,8 +941,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       final platformType = await ShareImportStatus.getPendingPlatformType();
       searchType = platformType ?? 'share';
     }
-    print("[SHARE EXTENSION] Using searchType: $searchType");
-    print("[SHARE EXTENSION] Using sourceUrl: $sourceUrl");
+    _logShare("[SHARE EXTENSION] Using searchType: $searchType");
+    _logShare("[SHARE EXTENSION] Using sourceUrl: $sourceUrl");
 
     // Ensure the main navigation is showing the home tab before pushing detection.
     ref.read(selectedIndexProvider.notifier).state = 0;
@@ -999,19 +985,19 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     String text, {
     bool fromShareExtension = false,
   }) async {
-    print("Handling shared text: $text");
+    _logShare("Handling shared text: $text");
 
     final extractedUrl = _extractFirstUrl(text);
     final effectiveText = extractedUrl ?? text.trim();
 
     if (extractedUrl != null) {
-      print("Extracted URL from text: $extractedUrl");
+      _logShare("Extracted URL from text: $extractedUrl");
     }
 
     // Check if user is authenticated before downloading
     final isAuthenticated = ref.read(isAuthenticatedProvider);
     if (!isAuthenticated) {
-      print(
+      _logShare(
           "[SHARE EXTENSION] User not authenticated - showing login required");
       await ShareImportStatus.markComplete();
       _showLoginRequiredMessage();
@@ -1085,7 +1071,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   String? _extractFirstUrl(String text) {
     if (text.isEmpty) {
-      print("[SHARE EXTENSION] No text provided for URL extraction");
+      _logShare("[SHARE EXTENSION] No text provided for URL extraction");
       return null;
     }
 
@@ -1096,13 +1082,13 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     final match = urlRegex.firstMatch(text);
 
     if (match == null) {
-      print("[SHARE EXTENSION] No URL detected in shared text");
+      _logShare("[SHARE EXTENSION] No URL detected in shared text");
       return null;
     }
 
     var matchedUrl = match.group(0);
     if (matchedUrl == null || matchedUrl.isEmpty) {
-      print("[SHARE EXTENSION] URL match found but empty");
+      _logShare("[SHARE EXTENSION] URL match found but empty");
       return null;
     }
 
@@ -1111,7 +1097,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       matchedUrl = 'https://$matchedUrl';
     }
 
-    print("[SHARE EXTENSION] Extracted URL: $matchedUrl");
+    _logShare("[SHARE EXTENSION] Extracted URL: $matchedUrl");
     return matchedUrl;
   }
 
@@ -1158,17 +1144,11 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       );
 
       if (InstagramService.lastDownloadWasCacheHit) {
-        print('[CACHE HIT] Instagram URL was cached - triggering fast progress');
         _fetchingOverlayKey.currentState?.completeQuickly();
         await Future.delayed(const Duration(milliseconds: 600));
       }
 
       if (imageFiles.isNotEmpty) {
-        print('Downloaded ${imageFiles.length} image(s) from Instagram');
-        if (imageFiles.length > 1) {
-          print('Carousel post detected - setting up image slider');
-        }
-
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
@@ -1177,7 +1157,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError((e) {
-            print('[Instagram] Precaching error: $e');
+            debugPrint('[Instagram] Precaching error: $e');
           });
         }
 
@@ -1192,7 +1172,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading Instagram image: $e');
+      debugPrint('Error downloading Instagram image: $e');
 
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
@@ -1212,8 +1192,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       );
 
       if (imageFiles.isNotEmpty) {
-        print('Downloaded ${imageFiles.length} image(s) from TikTok');
-
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
@@ -1222,7 +1200,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError((e) {
-            print('[TikTok] Precaching error: $e');
+            debugPrint('[TikTok] Precaching error: $e');
           });
         }
 
@@ -1237,7 +1215,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading TikTok image: $e');
+      debugPrint('Error downloading TikTok image: $e');
 
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
@@ -1257,8 +1235,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       );
 
       if (imageFiles.isNotEmpty) {
-        print('Downloaded ${imageFiles.length} image(s) from Pinterest');
-
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
@@ -1267,7 +1243,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError((e) {
-            print('[Pinterest] Precaching error: $e');
+            debugPrint('[Pinterest] Precaching error: $e');
           });
         }
 
@@ -1282,7 +1258,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading Pinterest image: $e');
+      debugPrint('Error downloading Pinterest image: $e');
 
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
@@ -1300,7 +1276,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       final imageFiles = await InstagramService.downloadImageFromXUrl(xUrl);
 
       if (imageFiles.isNotEmpty) {
-        print('Downloaded ${imageFiles.length} image(s) from X');
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
@@ -1308,7 +1283,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError(
-            (e) => print('[X] Precaching error: $e'),
+            (e) => debugPrint('[X] Precaching error: $e'),
           );
         }
 
@@ -1321,7 +1296,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading X image: $e');
+      debugPrint('Error downloading X image: $e');
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showXErrorMessage();
@@ -1339,7 +1314,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           await InstagramService.downloadImageFromFacebookUrl(facebookUrl);
 
       if (imageFiles.isNotEmpty) {
-        print('Downloaded ${imageFiles.length} image(s) from Facebook');
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
@@ -1347,7 +1321,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError(
-            (e) => print('[Facebook] Precaching error: $e'),
+            (e) => debugPrint('[Facebook] Precaching error: $e'),
           );
         }
 
@@ -1361,7 +1335,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading Facebook image: $e');
+      debugPrint('Error downloading Facebook image: $e');
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showFacebookErrorMessage();
@@ -1379,7 +1353,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           await InstagramService.downloadImageFromImdbUrl(imdbUrl);
 
       if (imageFiles.isNotEmpty) {
-        print('Downloaded ${imageFiles.length} image(s) from IMDb');
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
@@ -1387,7 +1360,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError(
-            (e) => print('[IMDb] Precaching error: $e'),
+            (e) => debugPrint('[IMDb] Precaching error: $e'),
           );
         }
 
@@ -1400,7 +1373,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading IMDb image: $e');
+      debugPrint('Error downloading IMDb image: $e');
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showUnsupportedMessage(imdbUrl);
@@ -1418,7 +1391,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           await InstagramService.downloadImageFromRedditUrl(redditUrl);
 
       if (imageFiles.isNotEmpty) {
-        print('Downloaded ${imageFiles.length} image(s) from Reddit');
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
@@ -1426,7 +1398,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError(
-            (e) => print('[Reddit] Precaching error: $e'),
+            (e) => debugPrint('[Reddit] Precaching error: $e'),
           );
         }
 
@@ -1440,7 +1412,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading Reddit image: $e');
+      debugPrint('Error downloading Reddit image: $e');
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showRedditErrorMessage();
@@ -1459,8 +1431,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       );
 
       if (imageFiles.isNotEmpty) {
-        print('Downloaded ${imageFiles.length} image(s) from Snapchat');
-
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
@@ -1469,7 +1439,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError((e) {
-            print('[Snapchat] Precaching error: $e');
+            debugPrint('[Snapchat] Precaching error: $e');
           });
         }
 
@@ -1484,7 +1454,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading Snapchat image: $e');
+      debugPrint('Error downloading Snapchat image: $e');
 
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
@@ -1504,8 +1474,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       );
 
       if (imageFiles.isNotEmpty) {
-        print('Downloaded ${imageFiles.length} image(s) from YouTube');
-
         ref.read(selectedImagesProvider.notifier).setImages(imageFiles);
         ref.read(pendingSharedImageProvider.notifier).state = imageFiles.first;
 
@@ -1514,7 +1482,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError((e) {
-            print('[YouTube] Precaching error: $e');
+            debugPrint('[YouTube] Precaching error: $e');
           });
         }
 
@@ -1529,7 +1497,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading YouTube thumbnail: $e');
+      debugPrint('Error downloading YouTube thumbnail: $e');
 
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
@@ -1555,7 +1523,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError((e) {
-            print('[Google Image] Precaching error: $e');
+            debugPrint('[Google Image] Precaching error: $e');
           });
         }
 
@@ -1569,7 +1537,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading Google image result: $e');
+      debugPrint('Error downloading Google image result: $e');
 
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
@@ -1595,7 +1563,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
           final fileImage = FileImage(File(imageFiles.first.path));
           await precacheImage(fileImage, navigatorKey.currentContext!)
               .catchError((e) {
-            print('[Generic Link] Precaching error: $e');
+            debugPrint('[Generic Link] Precaching error: $e');
           });
         }
 
@@ -1609,7 +1577,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
         ref.read(shareNavigationInProgressProvider.notifier).state = false;
       }
     } catch (e) {
-      print('Error downloading images from shared link: $e');
+      debugPrint('Error downloading images from shared link: $e');
       ref.read(pendingSharedImageProvider.notifier).state = null;
       await ShareImportStatus.markComplete();
       _showGenericLinkErrorMessage(url);

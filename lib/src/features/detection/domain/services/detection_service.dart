@@ -97,19 +97,19 @@ class DetectionService {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId != null) {
       payload['user_id'] = userId;
-      print('[SAVE] Adding user_id to request: $userId');
+      debugPrint('[SAVE] Adding user_id to request: $userId');
     } else {
-      print('[SAVE] WARNING: No user_id - user not logged in!');
+      debugPrint('[SAVE] WARNING: No user_id - user not logged in!');
     }
 
     // Add search_type to identify the source of analysis
     payload['search_type'] = searchType;
-    print('[SAVE] Search type: $searchType');
+    debugPrint('[SAVE] Search type: $searchType');
 
     // Add source_url for cache lookup (original URL before downloading)
     if (sourceUrl != null) {
       payload['source_url'] = sourceUrl;
-      print('[SAVE] Source URL for cache: $sourceUrl');
+      debugPrint('[SAVE] Source URL for cache: $sourceUrl');
     }
 
     // Add skip_detection flag for user-cropped images
