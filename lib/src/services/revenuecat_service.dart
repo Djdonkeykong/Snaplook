@@ -230,6 +230,50 @@ class RevenueCatService {
     }
   }
 
+  /// Check if user is eligible for intro offer (free trial)
+  /// Returns true if user has never used a trial before
+  Future<bool> isEligibleForTrial() async {
+    if (!_configured) return true; // Default to eligible if not configured
+
+    try {
+      final offerings = await getOfferings();
+      if (offerings?.current?.annual == null) return true;
+
+      final yearlyPackage = offerings!.current!.annual!;
+
+      // Check if product has an intro offer and user is eligible
+      final product = yearlyPackage.storeProduct;
+
+      // If there's an introductory price and the product has eligibility info
+      if (product.introductoryPrice != null) {
+        // Check customer info for past subscriptions
+        final customerInfo = _customerInfo ?? await Purchases.getCustomerInfo();
+
+        // User is NOT eligible if they have any non-subscription purchases for this product
+        // or if they've already subscribed to this product in the past
+        final allPurchasedProductIds = customerInfo.allPurchasedProductIdentifiers;
+
+        // If user has purchased the yearly product before, they're not eligible for trial
+        if (allPurchasedProductIds.contains(product.identifier)) {
+          if (kDebugMode) {
+            debugPrint('[RevenueCat] User NOT eligible for trial - already purchased ${product.identifier}');
+          }
+          return false;
+        }
+      }
+
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] User IS eligible for trial');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Error checking trial eligibility: $e');
+      }
+      return true; // Default to eligible on error
+    }
+  }
+
   /// Get current customer info
   CustomerInfo? get currentCustomerInfo => _customerInfo;
 

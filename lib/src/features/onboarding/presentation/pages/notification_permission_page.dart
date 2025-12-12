@@ -10,7 +10,7 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import 'account_creation_page.dart';
 import 'welcome_free_analysis_page.dart';
-import 'revenuecat_paywall_page.dart';
+import 'trial_intro_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
@@ -174,10 +174,10 @@ class _NotificationPermissionPageState
     if (!mounted) return;
 
     if (widget.continueToTrialFlow) {
-      // Navigate to RevenueCat paywall
+      // Navigate to trial intro page (which leads to reminder, then paywall)
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => const RevenueCatPaywallPage(),
+          builder: (context) => const TrialIntroPage(),
         ),
       );
       return;

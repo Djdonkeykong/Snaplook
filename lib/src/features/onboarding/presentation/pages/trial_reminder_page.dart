@@ -8,9 +8,8 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import 'account_creation_page.dart';
-import 'welcome_free_analysis_page.dart';
-import '../../../auth/domain/providers/auth_provider.dart';
+import 'revenuecat_paywall_page.dart';
+import '../../../../services/revenuecat_service.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
   const TrialReminderPage({super.key});
@@ -24,6 +23,9 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
   VideoPlayerController? get _controller =>
       VideoPreloader.instance.bellVideoController;
 
+  bool _isEligibleForTrial = true;
+  bool _isCheckingEligibility = true;
+
   @override
   void initState() {
     super.initState();
@@ -31,10 +33,33 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Ensure video plays when page loads
       VideoPreloader.instance.playBellVideo();
+
+      // Check trial eligibility
+      _checkTrialEligibility();
+
       if (mounted) {
         setState(() {});
       }
     });
+  }
+
+  Future<void> _checkTrialEligibility() async {
+    try {
+      final isEligible = await RevenueCatService().isEligibleForTrial();
+      if (mounted) {
+        setState(() {
+          _isEligibleForTrial = isEligible;
+          _isCheckingEligibility = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isEligibleForTrial = true;
+          _isCheckingEligibility = false;
+        });
+      }
+    }
   }
 
   @override
@@ -78,11 +103,13 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
           children: [
             SizedBox(height: spacing.l),
 
-            // Main heading
-            const Text(
-              'We\'ll send you a reminder before your free trial ends',
+            // Main heading - conditional based on trial eligibility
+            Text(
+              _isEligibleForTrial
+                  ? 'We\'ll send you a reminder before your free trial ends'
+                  : 'Get notified about new styles and deals',
               textAlign: TextAlign.start,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 34,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -1.0,
@@ -120,30 +147,32 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
         primaryButton: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // No Payment Due Now
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.check,
-                  color: Colors.green,
-                  size: 16,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  'No Payment Due Now',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    color: Colors.black,
-                    letterSpacing: -0.2,
+            // No Payment Due Now - only show for new users eligible for trial
+            if (_isEligibleForTrial) ...[
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.check,
+                    color: Colors.green,
+                    size: 16,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Continue for FREE button
+                  SizedBox(width: 8),
+                  Text(
+                    'No Payment Due Now',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'PlusJakartaSans',
+                      color: Colors.black,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+            // Button with conditional text
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -151,15 +180,10 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
                 onPressed: () {
                   HapticFeedback.mediumImpact();
 
-                  // Check if user is signed in
-                  final authService = ref.read(authServiceProvider);
-                  final isSignedIn = authService.currentUser != null;
-
+                  // Navigate to RevenueCat paywall
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => isSignedIn
-                          ? WelcomeFreeAnalysisPage()
-                          : const AccountCreationPage(),
+                      builder: (context) => const RevenueCatPaywallPage(),
                     ),
                   );
                 },
@@ -171,9 +195,9 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                child: const Text(
-                  'Continue for FREE',
-                  style: TextStyle(
+                child: Text(
+                  _isEligibleForTrial ? 'Continue for FREE' : 'See Plans',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'PlusJakartaSans',
@@ -184,12 +208,14 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
             ),
           ],
         ),
-        secondaryButton: const Align(
+        secondaryButton: Align(
           alignment: Alignment.center,
           child: Text(
-            'Just \$59.99 per year (\$4.99/mo)',
+            _isEligibleForTrial
+                ? 'Just \$41.99 per year (\$3.49/mo)'
+                : 'Choose your perfect plan',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF6B7280),
               fontFamily: 'PlusJakartaSans',

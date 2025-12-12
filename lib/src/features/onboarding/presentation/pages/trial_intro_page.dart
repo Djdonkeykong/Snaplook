@@ -9,6 +9,7 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_reminder_page.dart';
+import '../../../../services/revenuecat_service.dart';
 
 class TrialIntroPage extends ConsumerStatefulWidget {
   const TrialIntroPage({super.key});
@@ -22,6 +23,9 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
   VideoPlayerController? get _controller =>
       VideoPreloader.instance.trialVideoController;
 
+  bool _isEligibleForTrial = true;
+  bool _isCheckingEligibility = true;
+
   @override
   void initState() {
     super.initState();
@@ -30,12 +34,35 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
       await VideoPreloader.instance.preloadTrialVideo();
       // Preload bell video for next page
       VideoPreloader.instance.preloadBellVideo();
+
+      // Check trial eligibility
+      _checkTrialEligibility();
+
       if (mounted) {
         setState(() {});
         // Ensure video plays when returning to this page
         VideoPreloader.instance.playTrialVideo();
       }
     });
+  }
+
+  Future<void> _checkTrialEligibility() async {
+    try {
+      final isEligible = await RevenueCatService().isEligibleForTrial();
+      if (mounted) {
+        setState(() {
+          _isEligibleForTrial = isEligible;
+          _isCheckingEligibility = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isEligibleForTrial = true; // Default to eligible on error
+          _isCheckingEligibility = false;
+        });
+      }
+    }
   }
 
   @override
@@ -81,11 +108,13 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
           children: [
             SizedBox(height: spacing.l),
 
-            // Main heading
-            const Text(
-              'We want you to\ntry Snaplook for free.',
+            // Main heading - conditional based on trial eligibility
+            Text(
+              _isEligibleForTrial
+                  ? 'We want you to\ntry Snaplook for free.'
+                  : 'Welcome back to\nSnaplook',
               textAlign: TextAlign.start,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 34,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -1.0,
@@ -136,30 +165,32 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         primaryButton: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // No Payment Due Now
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.check,
-                  color: Colors.green,
-                  size: 16,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  'No Payment Due Now',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    color: Colors.black,
-                    letterSpacing: -0.2,
+            // No Payment Due Now - only show for new users eligible for trial
+            if (_isEligibleForTrial) ...[
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.check,
+                    color: Colors.green,
+                    size: 16,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Try For $0.00 button
+                  SizedBox(width: 8),
+                  Text(
+                    'No Payment Due Now',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'PlusJakartaSans',
+                      color: Colors.black,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+            // Button with conditional text
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -180,9 +211,9 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                child: const Text(
-                  'Try for \$0.00',
-                  style: TextStyle(
+                child: Text(
+                  _isEligibleForTrial ? 'Try for \$0.00' : 'Continue',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'PlusJakartaSans',
@@ -193,12 +224,14 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
             ),
           ],
         ),
-        secondaryButton: const Align(
+        secondaryButton: Align(
           alignment: Alignment.center,
           child: Text(
-            'Just \$42.99 per year (\$3.49/mo)',
+            _isEligibleForTrial
+                ? 'Just \$41.99 per year (\$3.49/mo)'
+                : 'Unlock unlimited fashion searches',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF6B7280),
               fontFamily: 'PlusJakartaSans',
