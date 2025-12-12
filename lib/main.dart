@@ -35,6 +35,7 @@ import 'src/features/auth/domain/providers/auth_provider.dart';
 import 'src/features/auth/presentation/pages/login_page.dart';
 import 'src/features/favorites/domain/providers/favorites_provider.dart';
 import 'src/services/superwall_service.dart';
+import 'src/services/revenuecat_service.dart';
 import 'src/services/notification_service.dart';
 import 'src/shared/services/debug_log_service.dart';
 import 'dart:io';
@@ -185,7 +186,17 @@ void main() async {
     debugPrint('[Auth] Failed to sync auth state: $e');
   }
 
-  // Initialize Superwall for subscriptions (allows .env override but falls back to bundled key)
+  // Initialize RevenueCat for subscriptions
+  try {
+    final revenueCatApiKey = dotenv.env['REVENUECAT_API_KEY'] ?? 'appl_uohzNateNMeOXeZppfARhFngkQr';
+    await RevenueCatService().initialize(apiKey: revenueCatApiKey);
+    debugPrint('[RevenueCat] Initialized successfully');
+  } catch (e) {
+    debugPrint('[RevenueCat] Initialization failed: $e');
+  }
+
+  // Initialize Superwall for subscriptions (DEPRECATED - migrating to RevenueCat)
+  // TODO: Remove after full migration to RevenueCat
   try {
     final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'] ?? 'pk_JerHRerDi63JoAtFh1MtT';
     await SuperwallService().initialize(apiKey: superwallApiKey);
