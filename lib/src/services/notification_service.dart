@@ -61,6 +61,35 @@ class NotificationService {
   Future<void> _registerToken() async {
     try {
       if (_messaging == null) return;
+
+      // On iOS, we need to ensure APNS token is available first
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        debugPrint('[NotificationService] iOS detected - checking for APNS token...');
+
+        // Try to get APNS token first
+        String? apnsToken;
+        try {
+          apnsToken = await _messaging!.getAPNSToken();
+          debugPrint('[NotificationService] APNS token available: ${apnsToken != null}');
+        } catch (e) {
+          debugPrint('[NotificationService] APNS token not available yet: $e');
+        }
+
+        // If APNS token not available, wait a bit and retry
+        if (apnsToken == null) {
+          debugPrint('[NotificationService] Waiting for APNS token...');
+          await Future.delayed(const Duration(seconds: 2));
+
+          try {
+            apnsToken = await _messaging!.getAPNSToken();
+            debugPrint('[NotificationService] APNS token after wait: ${apnsToken != null}');
+          } catch (e) {
+            debugPrint('[NotificationService] Still no APNS token: $e');
+            // Continue anyway - FCM token might still work
+          }
+        }
+      }
+
       final token = await _messaging!.getToken();
       if (token != null) {
         _currentToken = token;

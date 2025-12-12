@@ -3,6 +3,8 @@ import Flutter
 import receive_sharing_intent
 import AVKit
 import AVFoundation
+import FirebaseCore
+import FirebaseMessaging
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -345,6 +347,44 @@ import AVFoundation
   override func applicationDidBecomeActive(_ application: UIApplication) {
     super.applicationDidBecomeActive(application)
     pipTutorialManager?.stopIfNeededOnReturn()
+  }
+
+  // MARK: - Push Notifications (APNS Token Handling)
+
+  override func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+  ) {
+    NSLog("[APNS] Registered for remote notifications")
+    NSLog("[APNS] Device token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
+
+    // Forward APNS token to Firebase (required when FirebaseAppDelegateProxyEnabled is false)
+    Messaging.messaging().apnsToken = deviceToken
+
+    super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
+  }
+
+  override func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    NSLog("[APNS] Failed to register for remote notifications: \(error.localizedDescription)")
+    super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
+  }
+
+  override func application(
+    _ application: UIApplication,
+    didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+    fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+  ) {
+    NSLog("[APNS] Received remote notification")
+
+    // Forward to Firebase
+    if let messageID = userInfo["gcm.message_id"] {
+      NSLog("[APNS] Message ID: \(messageID)")
+    }
+
+    super.application(application, didReceiveRemoteNotification: userInfo, fetchCompletionHandler: completionHandler)
   }
 
   private func getAppGroupId() -> String? {
