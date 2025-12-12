@@ -113,29 +113,73 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                 final checkpoint = onboardingState['onboarding_checkpoint'] ?? 'gender';
                 debugPrint('[Splash] Resuming onboarding from checkpoint: $checkpoint');
 
-                switch (checkpoint) {
-                  case 'gender':
-                    nextPage = const GenderSelectionPage();
-                    break;
-                  case 'discovery':
-                    nextPage = const DiscoverySourcePage();
-                    break;
-                  case 'tutorial':
-                    nextPage = const AwesomeIntroPage();
-                    break;
-                  case 'paywall':
-                    nextPage = const TrialIntroPage();
-                    break;
-                  case 'account':
-                    nextPage = const AccountCreationPage();
-                    break;
-                  case 'welcome':
-                    nextPage = const WelcomeFreeAnalysisPage();
-                    break;
-                  default:
-                    // Unknown checkpoint - start from beginning
-                    debugPrint('[Splash] Unknown checkpoint: $checkpoint, starting from beginning');
-                    nextPage = const GenderSelectionPage();
+                // Build navigation stack with all previous pages so back button works
+                final needsStackBuilding = checkpoint != 'gender';
+
+                if (!mounted) return;
+
+                if (needsStackBuilding) {
+                  // Replace splash with first page, then push subsequent pages
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (context) => const GenderSelectionPage()),
+                  );
+
+                  // Build the rest of the stack based on checkpoint
+                  switch (checkpoint) {
+                    case 'discovery':
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const DiscoverySourcePage()),
+                      );
+                      break;
+                    case 'tutorial':
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const DiscoverySourcePage()),
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const AwesomeIntroPage()),
+                      );
+                      break;
+                    case 'paywall':
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const DiscoverySourcePage()),
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const AwesomeIntroPage()),
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const TrialIntroPage()),
+                      );
+                      break;
+                    case 'account':
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const DiscoverySourcePage()),
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const AwesomeIntroPage()),
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const AccountCreationPage()),
+                      );
+                      break;
+                    case 'welcome':
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const DiscoverySourcePage()),
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const AwesomeIntroPage()),
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const AccountCreationPage()),
+                      );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const WelcomeFreeAnalysisPage()),
+                      );
+                      break;
+                  }
+                  return; // Early return since we've already navigated
+                } else {
+                  // Starting from beginning
+                  nextPage = const GenderSelectionPage();
                 }
               } else {
                 // Not started - go to gender selection
