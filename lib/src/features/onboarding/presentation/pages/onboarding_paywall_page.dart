@@ -14,6 +14,7 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/subscription_sync_service.dart';
+import '../../../../services/superwall_service.dart';
 
 enum OnboardingPaywallPlanType { monthly, yearly }
 
@@ -317,18 +318,54 @@ class _OnboardingPaywallPageState extends ConsumerState<OnboardingPaywallPage> {
   void _handleContinue(BuildContext context) async {
     HapticFeedback.mediumImpact();
 
-    final authService = ref.read(authServiceProvider);
-    final hasAccount = authService.currentUser != null;
+    // Present Superwall paywall after screenshot page
+    debugPrint('[OnboardingPaywall] Presenting Superwall paywall...');
 
-    // TODO: Add actual purchase logic here when Superwall is fully activated
-    // When purchase is implemented, call:
-    // if (hasAccount) {
-    //   await OnboardingStateService().markPaymentComplete(authService.currentUser!.id);
-    //   await SubscriptionSyncService().syncSubscriptionToSupabase();
-    // }
-    // For anonymous users, payment will be tracked after account creation
+    try {
+      final superwallService = SuperwallService();
+      final didPurchase = await superwallService.presentPaywall(
+        placement: 'onboarding_paywall',
+        timeout: const Duration(seconds: 60),
+      );
 
-    if (mounted) {
+      if (!mounted) return;
+
+      debugPrint('[OnboardingPaywall] Paywall result - purchased: $didPurchase');
+
+      final authService = ref.read(authServiceProvider);
+      final hasAccount = authService.currentUser != null;
+
+      // If user purchased and has account, sync subscription to Supabase
+      if (didPurchase && hasAccount) {
+        try {
+          debugPrint('[OnboardingPaywall] Syncing subscription to Supabase...');
+          await SubscriptionSyncService().syncSubscriptionToSupabase();
+          await OnboardingStateService().markPaymentComplete(authService.currentUser!.id);
+          debugPrint('[OnboardingPaywall] Subscription synced successfully');
+        } catch (e) {
+          debugPrint('[OnboardingPaywall] Error syncing subscription: $e');
+          // Non-critical - continue
+        }
+      }
+
+      // Navigate to next step regardless of purchase result
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) =>
+                hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage(),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[OnboardingPaywall] Error presenting paywall: $e');
+
+      // On error, navigate to next step anyway
+      if (!mounted) return;
+
+      final authService = ref.read(authServiceProvider);
+      final hasAccount = authService.currentUser != null;
+
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) =>
