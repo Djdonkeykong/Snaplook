@@ -191,7 +191,7 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
 
                   // Title
                   const Text(
-                    'Create Your Account',
+                    'Create your account',
                     style: TextStyle(
                       fontSize: 34,
                       fontFamily: 'PlusJakartaSans',
