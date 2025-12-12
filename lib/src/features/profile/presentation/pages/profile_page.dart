@@ -5,6 +5,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../shared/widgets/share_logs_page.dart';
+import '../../../../shared/widgets/debug_logs_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import 'package:share_plus/share_plus.dart';
@@ -318,6 +319,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       MaterialPageRoute(
                         builder: (_) => const ShareLogsPage(),
                         settings: const RouteSettings(name: '/share-logs'),
+                      ),
+                    );
+                  },
+                ),
+                _SimpleSettingItem(
+                  title: 'Debug Logs',
+                  onTap: () {
+                    debugPrint('[Profile] Opening Debug Logs page');
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const DebugLogsPage(),
+                        settings: const RouteSettings(name: '/debug-logs'),
                       ),
                     );
                   },

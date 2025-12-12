@@ -35,6 +35,7 @@ import 'src/features/auth/presentation/pages/login_page.dart';
 import 'src/features/favorites/domain/providers/favorites_provider.dart';
 import 'src/services/superwall_service.dart';
 import 'src/services/notification_service.dart';
+import 'src/shared/services/debug_log_service.dart';
 import 'dart:io';
 
 // Top-level background message handler for push notifications
@@ -124,6 +125,9 @@ Future<bool> _initializeFirebase() async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize debug log service FIRST to capture all logs
+  DebugLogService().initialize();
 
   // Lock orientation to portrait mode only
   await SystemChrome.setPreferredOrientations([
