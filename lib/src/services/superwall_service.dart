@@ -18,7 +18,15 @@ class SuperwallService {
   Future<void> initialize({required String apiKey, String? userId}) async {
     if (_configured) return;
 
-    sw.Superwall.configure(apiKey);
+    // Disable paywall preloading in debug mode to always fetch latest from server
+    if (kDebugMode) {
+      final options = sw.SuperwallOptions();
+      options.paywalls.shouldPreload = false;
+      sw.Superwall.configure(apiKey, options: options);
+      debugPrint('[Superwall] Configured with preloading DISABLED (debug mode)');
+    } else {
+      sw.Superwall.configure(apiKey);
+    }
     _configured = true;
 
     _statusSub = sw.Superwall.shared.subscriptionStatus.listen((status) {

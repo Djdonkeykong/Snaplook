@@ -34,7 +34,8 @@
       "mcp__revenuecat__mcp_RC_list_products",
       "mcp__revenuecat__mcp_RC_list_entitlements",
       "mcp__revenuecat__mcp_RC_get_products_from_entitlement",
-      "mcp__revenuecat__mcp_RC_list_packages"
+      "mcp__revenuecat__mcp_RC_list_packages",
+      "mcp__superwall-docs__docs_search"
     ]
   },
   "enableAllProjectMcpServers": true,
