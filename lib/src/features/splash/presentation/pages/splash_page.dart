@@ -31,20 +31,23 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     await precacheImage(const AssetImage(_assetPath), context);
 
     // Wait for auth state to be ready (with minimum 1.0s splash time)
-    final authStateAsync = ref.read(authStateProvider);
-
+    // CRITICAL: Wait for actual auth state data, not just the provider to be available
+    // This ensures Supabase session restoration from SharedPreferences completes
     await Future.wait([
       Future.delayed(const Duration(milliseconds: 1000)),
-      authStateAsync.when(
-        data: (_) => Future.value(),
-        loading: () => Future.value(),
-        error: (_, __) => Future.value(),
+      ref.read(authStateProvider.future).timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {
+          debugPrint('[Splash] Auth state timeout - assuming not authenticated');
+          return ref.read(authServiceProvider).authStateChanges.first;
+        },
       ),
     ]);
 
     if (!mounted) return;
 
     // Check if user is authenticated
+    // By this point, the auth state stream has emitted and session restoration is complete
     final isAuthenticated = ref.read(isAuthenticatedProvider);
 
     // Ensure share extension receives the latest auth state via AuthService.
