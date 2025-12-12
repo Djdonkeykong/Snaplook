@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 /// Service to manage RevenueCat SDK configuration and purchases
@@ -124,8 +125,8 @@ class RevenueCatService {
         debugPrint('[RevenueCat] Purchasing package: ${package.identifier}');
       }
 
-      final purchaseResult = await Purchases.purchasePackage(package);
-      _customerInfo = purchaseResult.customerInfo;
+      final customerInfo = await Purchases.purchasePackage(package);
+      _customerInfo = customerInfo;
 
       final hasActiveEntitlement = _customerInfo?.entitlements.active.isNotEmpty ?? false;
 
@@ -134,6 +135,18 @@ class RevenueCatService {
       }
 
       return hasActiveEntitlement;
+    } on PlatformException catch (e) {
+      final errorCode = PurchasesErrorHelper.getErrorCode(e);
+      if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
+        if (kDebugMode) {
+          debugPrint('[RevenueCat] Purchase cancelled by user');
+        }
+        return false;
+      }
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Purchase error: ${e.message}');
+      }
+      return false;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('[RevenueCat] Purchase error: $e');
