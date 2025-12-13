@@ -176,22 +176,6 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
             ),
           ],
         ),
-        secondaryButton: Align(
-          alignment: Alignment.center,
-          child: Text(
-            _isEligibleForTrial
-                ? 'Just \$41.99 per year (\$3.49/mo)'
-                : 'Choose your perfect plan',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-              fontFamily: 'PlusJakartaSans',
-              fontWeight: FontWeight.w500,
-              height: 1.5,
-            ),
-          ),
-        ),
       ),
     );
   }

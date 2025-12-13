@@ -13,6 +13,7 @@ import 'gender_selection_page.dart';
 import 'notification_permission_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
+import '../widgets/onboarding_bottom_bar.dart';
 
 class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
   const WelcomeFreeAnalysisPage({super.key});
@@ -323,82 +324,50 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
           },
         ),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 18,
-              offset: const Offset(0, -6),
-              spreadRadius: 1,
-            ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 6,
-              offset: const Offset(0, -1),
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        child: SafeArea(
-          top: false,
-          minimum: EdgeInsets.only(
-            left: spacing.l,
-            right: spacing.l,
-            bottom: spacing.m,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(height: spacing.m),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    HapticFeedback.mediumImpact();
+      bottomNavigationBar: OnboardingBottomBar(
+        primaryButton: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: () async {
+              HapticFeedback.mediumImpact();
 
-                    // Wait for initialization to complete before navigating
-                    if (_initializationFuture != null) {
-                      print('[WelcomePage] Waiting for initialization to complete...');
-                      await _initializationFuture;
-                      print('[WelcomePage] Initialization finished, navigating to app');
-                    }
+              // Wait for initialization to complete before navigating
+              if (_initializationFuture != null) {
+                print('[WelcomePage] Waiting for initialization to complete...');
+                await _initializationFuture;
+                print('[WelcomePage] Initialization finished, navigating to app');
+              }
 
-                    if (mounted) {
-                      // Reset to home tab and navigate to main app
-                      ref.read(selectedIndexProvider.notifier).state = 0;
-                      ref.invalidate(inspirationProvider);
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (context) => const MainNavigation(),
-                        ),
-                        (route) => false,
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFf2003c),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
+              if (mounted) {
+                // Reset to home tab and navigate to main app
+                ref.read(selectedIndexProvider.notifier).state = 0;
+                ref.invalidate(inspirationProvider);
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(),
                   ),
-                  child: const Text(
-                    'Start Exploring',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'PlusJakartaSans',
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ),
+                  (route) => false,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFf2003c),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
               ),
-              SizedBox(height: spacing.m),
-            ],
+            ),
+            child: const Text(
+              'Start Exploring',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'PlusJakartaSans',
+                letterSpacing: -0.2,
+              ),
+            ),
           ),
         ),
       ),

@@ -317,31 +317,34 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
 
               // Plan selection
               if (yearlyPackage != null && monthlyPackage != null) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: _PlanOption(
-                        plan: RevenueCatPaywallPlanType.monthly,
-                        title: 'Monthly',
-                        price: '\$${monthlyPackage.storeProduct.priceString}/mo',
-                        isSelected: selectedPlan == RevenueCatPaywallPlanType.monthly,
-                        onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
-                            RevenueCatPaywallPlanType.monthly,
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _PlanOption(
+                          plan: RevenueCatPaywallPlanType.monthly,
+                          title: 'Monthly',
+                          price: '\$${monthlyPackage.storeProduct.priceString}/mo',
+                          isSelected: selectedPlan == RevenueCatPaywallPlanType.monthly,
+                          onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
+                              RevenueCatPaywallPlanType.monthly,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: spacing.m),
-                    Expanded(
-                      child: _PlanOption(
-                        plan: RevenueCatPaywallPlanType.yearly,
-                        title: 'Yearly',
-                        price: '\$${(yearlyPackage.storeProduct.price / 12).toStringAsFixed(2)}/mo',
-                        isSelected: selectedPlan == RevenueCatPaywallPlanType.yearly,
-                        onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
-                            RevenueCatPaywallPlanType.yearly,
-                        badge: _isEligibleForTrial ? '3-Days FREE' : 'Most Popular',
+                      SizedBox(width: spacing.m),
+                      Expanded(
+                        child: _PlanOption(
+                          plan: RevenueCatPaywallPlanType.yearly,
+                          title: 'Yearly',
+                          price: '\$${(yearlyPackage.storeProduct.price / 12).toStringAsFixed(2)}/mo',
+                          isSelected: selectedPlan == RevenueCatPaywallPlanType.yearly,
+                          onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
+                              RevenueCatPaywallPlanType.yearly,
+                          badge: _isEligibleForTrial ? '3-Days FREE' : 'Most Popular',
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ] else ...[
                 // Show error state when products can't be loaded
@@ -527,60 +530,43 @@ class _PlanOption extends StatelessWidget {
         HapticFeedback.mediumImpact();
         onTap();
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFf2003c) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? const Color(0xFFf2003c) : const Color(0xFFE5E7EB),
-            width: 2,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (badge != null && !isSelected)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFf2003c),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  badge!,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontFamily: 'PlusJakartaSans',
-                  ),
-                ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected ? Colors.black : const Color(0xFFE5E7EB),
+                width: isSelected ? 3 : 2,
               ),
-            if (badge != null && !isSelected) const SizedBox(height: 8),
-            Row(
+            ),
+            child: Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         title,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.white : Colors.black,
+                          color: Colors.black,
                           fontFamily: 'PlusJakartaSans',
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         price,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                          color: Color(0xFF6B7280),
                           fontFamily: 'PlusJakartaSans',
                         ),
                       ),
@@ -590,13 +576,37 @@ class _PlanOption extends StatelessWidget {
                 if (isSelected)
                   const Icon(
                     Icons.check_circle,
-                    color: Colors.white,
+                    color: Color(0xFFf2003c),
                     size: 24,
                   ),
               ],
             ),
-          ],
-        ),
+          ),
+          if (badge != null)
+            Positioned(
+              top: -10,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFf2003c),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    badge!,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
