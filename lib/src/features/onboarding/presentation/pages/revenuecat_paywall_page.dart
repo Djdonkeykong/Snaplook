@@ -292,21 +292,21 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 ),
               ] else ...[
                 _BenefitItem(
-                  icon: Icons.check_circle,
+                  icon: Icons.check,
                   title: 'AI-powered matches',
                   description:
                       'Share an image to instantly find similar products from thousands of retailers.',
                 ),
                 SizedBox(height: spacing.m),
                 _BenefitItem(
-                  icon: Icons.check_circle,
+                  icon: Icons.check,
                   title: 'Save favorite finds',
                   description:
                       'Bookmark the products you love so you can jump back in when it\'s time to buy.',
                 ),
                 SizedBox(height: spacing.m),
                 _BenefitItem(
-                  icon: Icons.check_circle,
+                  icon: Icons.check,
                   title: '100 credits included',
                   description:
                       'Every subscription unlocks 100 credits (up to 100 searches) so you can keep scanning outfits all month.',
