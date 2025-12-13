@@ -267,51 +267,58 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
               SizedBox(height: spacing.xl),
 
               // Timeline for trial-eligible users OR Benefits for non-trial users
-              if (_isEligibleForTrial) ...[
-                _TimelineItem(
-                  icon: Icons.lock_open_rounded,
-                  iconColor: const Color(0xFFf2003c),
-                  title: 'Today',
-                  description:
-                      'Unlock all the app\'s features like AI fashion analysis and more.',
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                child: Column(
+                  children: [
+                    if (_isEligibleForTrial) ...[
+                      _TimelineItem(
+                        icon: Icons.lock_open_rounded,
+                        iconColor: const Color(0xFFf2003c),
+                        title: 'Today',
+                        description:
+                            'Unlock all the app\'s features like AI fashion analysis and more.',
+                      ),
+                      SizedBox(height: spacing.l),
+                      _TimelineItem(
+                        icon: Icons.notifications_rounded,
+                        iconColor: const Color(0xFFf2003c),
+                        title: 'In 2 Days',
+                        description: 'We\'ll send you a reminder that your trial is ending soon.',
+                      ),
+                      SizedBox(height: spacing.l),
+                      _TimelineItem(
+                        icon: Icons.event_rounded,
+                        iconColor: Colors.black,
+                        title: 'In 3 Days',
+                        description:
+                            'You\'ll be charged on ${DateTime.now().add(const Duration(days: 3)).month}/${DateTime.now().add(const Duration(days: 3)).day}/${DateTime.now().add(const Duration(days: 3)).year} unless you cancel anytime before.',
+                      ),
+                    ] else ...[
+                      _BenefitItem(
+                        icon: Icons.check,
+                        title: 'AI-powered matches',
+                        description:
+                            'Share an image to instantly find similar products from thousands of retailers.',
+                      ),
+                      SizedBox(height: spacing.l),
+                      _BenefitItem(
+                        icon: Icons.check,
+                        title: 'Save favorite finds',
+                        description:
+                            'Bookmark the products you love so you can jump back in when it\'s time to buy.',
+                      ),
+                      SizedBox(height: spacing.l),
+                      _BenefitItem(
+                        icon: Icons.check,
+                        title: '100 credits included',
+                        description:
+                            'Every subscription unlocks 100 credits (up to 100 searches) so you can keep scanning outfits all month.',
+                      ),
+                    ],
+                  ],
                 ),
-                SizedBox(height: spacing.m),
-                _TimelineItem(
-                  icon: Icons.notifications_rounded,
-                  iconColor: const Color(0xFFf2003c),
-                  title: 'In 2 Days',
-                  description: 'We\'ll send you a reminder that your trial is ending soon.',
-                ),
-                SizedBox(height: spacing.m),
-                _TimelineItem(
-                  icon: Icons.event_rounded,
-                  iconColor: Colors.black,
-                  title: 'In 3 Days',
-                  description:
-                      'You\'ll be charged on ${DateTime.now().add(const Duration(days: 3)).month}/${DateTime.now().add(const Duration(days: 3)).day}/${DateTime.now().add(const Duration(days: 3)).year} unless you cancel anytime before.',
-                ),
-              ] else ...[
-                _BenefitItem(
-                  icon: Icons.check,
-                  title: 'AI-powered matches',
-                  description:
-                      'Share an image to instantly find similar products from thousands of retailers.',
-                ),
-                SizedBox(height: spacing.m),
-                _BenefitItem(
-                  icon: Icons.check,
-                  title: 'Save favorite finds',
-                  description:
-                      'Bookmark the products you love so you can jump back in when it\'s time to buy.',
-                ),
-                SizedBox(height: spacing.m),
-                _BenefitItem(
-                  icon: Icons.check,
-                  title: '100 credits included',
-                  description:
-                      'Every subscription unlocks 100 credits (up to 100 searches) so you can keep scanning outfits all month.',
-                ),
-              ],
+              ),
 
               SizedBox(height: spacing.xl),
 
