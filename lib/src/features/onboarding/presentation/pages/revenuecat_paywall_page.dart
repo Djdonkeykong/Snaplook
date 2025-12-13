@@ -233,7 +233,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
               'Restore',
               style: TextStyle(
                 color: Color(0xFF6B7280),
-                fontSize: 16,
+                fontSize: 14,
                 fontFamily: 'PlusJakartaSans',
                 fontWeight: FontWeight.w500,
               ),
@@ -541,7 +541,7 @@ class _PlanOption extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isSelected ? Colors.black : const Color(0xFFE5E7EB),
-                width: isSelected ? 3 : 2,
+                width: 2,
               ),
             ),
             child: Row(
@@ -554,7 +554,7 @@ class _PlanOption extends StatelessWidget {
                       Text(
                         title,
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                           fontFamily: 'PlusJakartaSans',
@@ -564,7 +564,7 @@ class _PlanOption extends StatelessWidget {
                       Text(
                         price,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF6B7280),
                           fontFamily: 'PlusJakartaSans',

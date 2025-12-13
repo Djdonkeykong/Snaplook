@@ -37,7 +37,8 @@
       "mcp__revenuecat__mcp_RC_list_packages",
       "mcp__superwall-docs__docs_search",
       "mcp__revenuecat__mcp_RC_detach_products_from_package",
-      "mcp__revenuecat__mcp_RC_create_price"
+      "mcp__revenuecat__mcp_RC_create_price",
+      "mcp__revenuecat__mcp_RC_list_product_prices"
     ]
   },
   "enableAllProjectMcpServers": true,

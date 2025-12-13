@@ -100,6 +100,41 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
           currentStep: 7,
           totalSteps: 10,
         ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              try {
+                await RevenueCatService().restorePurchases();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Purchases restored successfully'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No purchases to restore'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text(
+              'Restore',
+              style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 14,
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: spacing.l),
@@ -223,22 +258,6 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
               ),
             ),
           ],
-        ),
-        secondaryButton: Align(
-          alignment: Alignment.center,
-          child: Text(
-            _isEligibleForTrial
-                ? 'Just \$41.99 per year (\$3.49/mo)'
-                : 'Unlock unlimited fashion searches',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-              fontFamily: 'PlusJakartaSans',
-              fontWeight: FontWeight.w500,
-              height: 1.5,
-            ),
-          ),
         ),
       ),
     );
