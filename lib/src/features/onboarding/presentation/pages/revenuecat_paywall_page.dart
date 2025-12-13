@@ -292,21 +292,21 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 ),
               ] else ...[
                 _BenefitItem(
-                  icon: Icons.auto_awesome_rounded,
+                  icon: Icons.check_circle,
                   title: 'AI-powered matches',
                   description:
                       'Share an image to instantly find similar products from thousands of retailers.',
                 ),
                 SizedBox(height: spacing.m),
                 _BenefitItem(
-                  icon: Icons.bookmark_rounded,
+                  icon: Icons.check_circle,
                   title: 'Save favorite finds',
                   description:
                       'Bookmark the products you love so you can jump back in when it\'s time to buy.',
                 ),
                 SizedBox(height: spacing.m),
                 _BenefitItem(
-                  icon: Icons.style_rounded,
+                  icon: Icons.check_circle,
                   title: '100 credits included',
                   description:
                       'Every subscription unlocks 100 credits (up to 100 searches) so you can keep scanning outfits all month.',
@@ -325,7 +325,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                         child: _PlanOption(
                           plan: RevenueCatPaywallPlanType.monthly,
                           title: 'Monthly',
-                          price: '\$${monthlyPackage.storeProduct.priceString}/mo',
+                          price: '${monthlyPackage.storeProduct.priceString}/mo',
                           isSelected: selectedPlan == RevenueCatPaywallPlanType.monthly,
                           onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
                               RevenueCatPaywallPlanType.monthly,
@@ -336,7 +336,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                         child: _PlanOption(
                           plan: RevenueCatPaywallPlanType.yearly,
                           title: 'Yearly',
-                          price: '\$${(yearlyPackage.storeProduct.price / 12).toStringAsFixed(2)}/mo',
+                          price: '\$${((yearlyPackage.storeProduct.price / 12) * 100).floor() / 100}/mo',
                           isSelected: selectedPlan == RevenueCatPaywallPlanType.yearly,
                           onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
                               RevenueCatPaywallPlanType.yearly,
@@ -490,7 +490,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                     ? 'Only ${monthlyPackage?.storeProduct.priceString}/month'
                     : _isEligibleForTrial
                         ? '3-days free, then ${yearlyPackage?.storeProduct.priceString} per year'
-                        : 'Just ${yearlyPackage?.storeProduct.priceString} per year (\$${(yearlyPackage!.storeProduct.price / 12).toStringAsFixed(2)}/mo)',
+                        : 'Just ${yearlyPackage?.storeProduct.priceString} per year (\$${((yearlyPackage!.storeProduct.price / 12) * 100).floor() / 100}/mo)',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
