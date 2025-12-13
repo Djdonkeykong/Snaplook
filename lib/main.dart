@@ -188,9 +188,13 @@ void main() async {
 
   // Initialize RevenueCat for subscriptions
   try {
-    final revenueCatApiKey = dotenv.env['REVENUECAT_API_KEY'] ?? 'appl_uohzNateNMeOXeZppfARhFngkQr';
+    // Use platform-specific API key
+    final revenueCatApiKey = Platform.isIOS
+        ? (dotenv.env['REVENUECAT_IOS_API_KEY'] ?? 'appl_uohzNateNMeOXeZppfARhFngkQr')
+        : (dotenv.env['REVENUECAT_ANDROID_API_KEY'] ?? 'goog_OiuFmkgbbrZuNQJnVUQRanFRnYp');
+
     await RevenueCatService().initialize(apiKey: revenueCatApiKey);
-    debugPrint('[RevenueCat] Initialized successfully');
+    debugPrint('[RevenueCat] Initialized successfully with ${Platform.isIOS ? "iOS" : "Android"} API key');
   } catch (e) {
     debugPrint('[RevenueCat] Initialization failed: $e');
   }

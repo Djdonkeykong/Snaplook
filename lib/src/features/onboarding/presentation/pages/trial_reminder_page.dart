@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:video_player/video_player.dart';
+import 'package:lottie/lottie.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
-import '../../../../shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'revenuecat_paywall_page.dart';
@@ -18,28 +17,16 @@ class TrialReminderPage extends ConsumerStatefulWidget {
   ConsumerState<TrialReminderPage> createState() => _TrialReminderPageState();
 }
 
-class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
-    with WidgetsBindingObserver {
-  VideoPlayerController? get _controller =>
-      VideoPreloader.instance.bellVideoController;
-
+class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
   bool _isEligibleForTrial = true;
   bool _isCheckingEligibility = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Ensure video plays when page loads
-      VideoPreloader.instance.playBellVideo();
-
       // Check trial eligibility
       _checkTrialEligibility();
-
-      if (mounted) {
-        setState(() {});
-      }
     });
   }
 
@@ -59,23 +46,6 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
           _isCheckingEligibility = false;
         });
       }
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    VideoPreloader.instance.pauseBellVideo();
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed) {
-      VideoPreloader.instance.playBellVideo();
-    } else if (state == AppLifecycleState.paused) {
-      VideoPreloader.instance.pauseBellVideo();
     }
   }
 
@@ -106,7 +76,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
             // Main heading - conditional based on trial eligibility
             Text(
               _isEligibleForTrial
-                  ? 'We\'ll send you a reminder before your free trial ends'
+                  ? 'We\'ll send you a reminder before your free trial ends.'
                   : 'Get notified about new styles and deals',
               textAlign: TextAlign.start,
               style: const TextStyle(
@@ -127,13 +97,11 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage>
               child: SizedBox(
                 width: 180,
                 height: 180,
-                child: _controller != null &&
-                        VideoPreloader.instance.isBellVideoInitialized
-                    ? AspectRatio(
-                        aspectRatio: _controller!.value.aspectRatio,
-                        child: VideoPlayer(_controller!),
-                      )
-                    : const SizedBox.shrink(),
+                child: Lottie.asset(
+                  'assets/animations/bell.json',
+                  fit: BoxFit.contain,
+                  repeat: true,
+                ),
               ),
             ),
 

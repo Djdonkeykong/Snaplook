@@ -77,3 +77,12 @@ scripts/.env
 # Storage and local data
 storage/
 codemagic_prebuild.sh
+
+# Android signing
+android/key.properties
+android/app/upload-keystore.jks
+*.jks
+*.keystore
+
+# Claude Code local settings
+.claude/settings.local.json
