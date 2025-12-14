@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
-import 'rating_social_proof_page.dart';
+import 'generate_profile_prep_page.dart';
 
 class TutorialNextStepsPage extends StatelessWidget {
   const TutorialNextStepsPage({super.key, this.returnToOnboarding = true});
@@ -81,9 +81,7 @@ class TutorialNextStepsPage extends StatelessWidget {
     if (returnToOnboarding) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const RatingSocialProofPage(
-            continueToTrialFlow: true,
-          ),
+          builder: (context) => const GenerateProfilePrepPage(),
         ),
       );
     } else {

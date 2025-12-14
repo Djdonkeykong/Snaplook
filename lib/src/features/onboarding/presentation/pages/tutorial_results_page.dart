@@ -15,7 +15,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
-import 'rating_social_proof_page.dart';
+import 'generate_profile_prep_page.dart';
 
 class TutorialResultsPage extends ConsumerStatefulWidget {
   final String? imagePath;
@@ -132,12 +132,10 @@ class _TutorialResultsPageState extends ConsumerState<TutorialResultsPage>
             icon: Icons.check,
             onPressed: () {
               if (widget.returnToOnboarding) {
-                // Coming from onboarding flow - continue to rating page
+                // Coming from onboarding flow - continue to generate profile page
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (context) => const RatingSocialProofPage(
-                      continueToTrialFlow: true,
-                    ),
+                    builder: (context) => const GenerateProfilePrepPage(),
                   ),
                 );
               } else {
