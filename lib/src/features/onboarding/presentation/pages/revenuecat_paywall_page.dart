@@ -409,18 +409,19 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.check_circle,
+                    Icons.check,
                     color: Colors.green,
-                    size: 18,
+                    size: 16,
                   ),
                   SizedBox(width: 8),
                   Text(
-                    'No payment due now',
+                    'No Payment Due Now',
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
                       fontFamily: 'PlusJakartaSans',
                       color: Colors.black,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ],
