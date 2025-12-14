@@ -11,7 +11,7 @@ import '../../../auth/domain/services/user_service.dart';
 import 'notification_permission_page.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import 'discovery_source_page.dart';
+import 'age_range_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 
@@ -199,8 +199,8 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 1,
-          totalSteps: 10,
+          currentStep: 2,
+          totalSteps: 20,
         ),
       ),
       body: SafeArea(
@@ -349,7 +349,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                     // Navigate to next page immediately
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const DiscoverySourcePage(),
+                        builder: (context) => const AgeRangePage(),
                       ),
                     );
                   }

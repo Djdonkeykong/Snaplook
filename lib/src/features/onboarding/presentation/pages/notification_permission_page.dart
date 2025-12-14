@@ -208,9 +208,9 @@ class _NotificationPermissionPageState
         scrolledUnderElevation: 0,
         leading: const SnaplookBackButton(),
         centerTitle: true,
-        title: OnboardingProgressIndicator(
-          currentStep: widget.continueToTrialFlow ? 6 : 5,
-          totalSteps: widget.continueToTrialFlow ? 10 : 6,
+        title: const OnboardingProgressIndicator(
+          currentStep: 15,
+          totalSteps: 20,
         ),
       ),
       body: SafeArea(

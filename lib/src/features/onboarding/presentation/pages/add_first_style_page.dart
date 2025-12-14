@@ -15,7 +15,7 @@ import 'safari_tutorial_page.dart';
 import 'photos_tutorial_page.dart';
 import 'imdb_tutorial_page.dart';
 import 'x_tutorial_page.dart';
-import 'notification_permission_page.dart';
+import 'generate_profile_prep_page.dart';
 
 class AddFirstStylePage extends ConsumerStatefulWidget {
   const AddFirstStylePage({super.key});
@@ -135,8 +135,8 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 4,
-          totalSteps: 10,
+          currentStep: 10,
+          totalSteps: 20,
         ),
       ),
       body: Padding(
@@ -192,9 +192,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
             HapticFeedback.mediumImpact();
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => const NotificationPermissionPage(
-                  continueToTrialFlow: true,
-                ),
+                builder: (context) => const GenerateProfilePrepPage(),
               ),
             );
           },

@@ -62,8 +62,8 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 8,
-          totalSteps: 10,
+          currentStep: 17,
+          totalSteps: 20,
         ),
         actions: [
           TextButton(

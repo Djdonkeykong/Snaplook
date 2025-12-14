@@ -202,8 +202,8 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 9,
-          totalSteps: 10,
+          currentStep: 18,
+          totalSteps: 20,
         ),
         actions: [
           TextButton(

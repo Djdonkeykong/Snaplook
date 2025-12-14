@@ -40,8 +40,8 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 3,
-          totalSteps: 10,
+          currentStep: 9,
+          totalSteps: 20,
         ),
       ),
       body: Padding(

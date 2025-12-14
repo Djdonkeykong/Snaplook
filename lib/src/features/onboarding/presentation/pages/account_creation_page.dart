@@ -169,8 +169,8 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 10,
-          totalSteps: 10,
+          currentStep: 19,
+          totalSteps: 20,
         ),
       ),
       body: SafeArea(

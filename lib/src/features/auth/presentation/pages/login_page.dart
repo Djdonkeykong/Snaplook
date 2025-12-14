@@ -12,7 +12,7 @@ import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../../src/shared/services/video_preloader.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
-import '../../../onboarding/presentation/pages/gender_selection_page.dart';
+import '../../../onboarding/presentation/pages/user_goals_page.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart' show AccountCreationPage;
 import '../../domain/providers/auth_provider.dart';
 import '../../../user/repositories/user_profile_repository.dart';
@@ -162,7 +162,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       HapticFeedback.mediumImpact();
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => const GenderSelectionPage(),
+                          builder: (context) => const UserGoalsPage(),
                         ),
                       );
                     },
@@ -324,7 +324,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   navigator.push(
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          const GenderSelectionPage(),
+                                          const UserGoalsPage(),
                                     ),
                                   );
                                 }
@@ -409,7 +409,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   navigator.push(
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          const GenderSelectionPage(),
+                                          const UserGoalsPage(),
                                     ),
                                   );
                                 }

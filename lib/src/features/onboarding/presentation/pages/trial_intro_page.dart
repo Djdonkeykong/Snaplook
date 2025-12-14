@@ -97,8 +97,8 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 7,
-          totalSteps: 10,
+          currentStep: 16,
+          totalSteps: 20,
         ),
         actions: [
           TextButton(
