@@ -42,7 +42,13 @@ const double _tapDoneRightFraction = 0;
 const double _tapDoneWidthFraction = 0.2;
 const double _tapDoneHeightFraction = 0.13;
 
-// Step 7 (final selection) placements
+// Step 7 (tapDoneLast) - second Done button on shortcut add screen
+const double _tapDoneLastTopFraction = 0;
+const double _tapDoneLastRightFraction = 0;
+const double _tapDoneLastWidthFraction = 0.2;
+const double _tapDoneLastHeightFraction = 0.13;
+
+// Step 8 (final selection) placements
 const double _finalSelectBottomFraction = 0.17;
 const double _finalSelectLeftFraction = 0.44;
 const double _finalSelectWidthFraction = 0.26;
@@ -55,6 +61,7 @@ enum ImdbTutorialStep {
   tapEdit,
   tapSnaplookShortcut,
   tapDone,
+  tapDoneLast,
   step2,
 }
 
@@ -104,6 +111,8 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
         return "Find Snaplook and tap the '+' button to add it.";
       case ImdbTutorialStep.tapDone:
         return "Tap 'Done'.";
+      case ImdbTutorialStep.tapDoneLast:
+        return "Tap 'Done' again to finish the setup.";
       case ImdbTutorialStep.step2:
         return "Now tap Snaplook to share the image with our app.";
     }
@@ -113,7 +122,8 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
     return step == ImdbTutorialStep.tapMore ||
            step == ImdbTutorialStep.tapEdit ||
            step == ImdbTutorialStep.tapSnaplookShortcut ||
-           step == ImdbTutorialStep.tapDone;
+           step == ImdbTutorialStep.tapDone ||
+           step == ImdbTutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
@@ -159,6 +169,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
               currentStep == ImdbTutorialStep.tapEdit ||
               currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
               currentStep == ImdbTutorialStep.tapDone ||
+              currentStep == ImdbTutorialStep.tapDoneLast ||
               currentStep == ImdbTutorialStep.step2))
             Positioned.fill(
               child: Container(
@@ -231,7 +242,20 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
               ),
             ),
 
-          // Step 7 overlay - after tapping Done (final step)
+          // Step 7 overlay - after tapping first Done (shows second Done button)
+          if (hasUserTapped && currentStep == ImdbTutorialStep.tapDoneLast)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/tap-done-last.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Step 8 overlay - after tapping second Done (final step)
           if (hasUserTapped && currentStep == ImdbTutorialStep.step2)
             Positioned(
               bottom: 0,
@@ -357,11 +381,32 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  _onActionComplete(ImdbTutorialStep.step2);
+                  _onActionComplete(ImdbTutorialStep.tapDoneLast);
                 },
                 child: Container(
                   width: screenWidth * _tapDoneWidthFraction,
                   height: screenHeight * _tapDoneHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Tap area for tapDoneLast - second Done button
+          if (hasUserTapped && currentPhase == ImdbTutorialPhase.waitingForAction && currentStep == ImdbTutorialStep.tapDoneLast)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + screenHeight * _tapDoneLastTopFraction,
+              right: screenWidth * _tapDoneLastRightFraction,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(ImdbTutorialStep.step2);
+                },
+                child: Container(
+                  width: screenWidth * _tapDoneLastWidthFraction,
+                  height: screenHeight * _tapDoneLastHeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
                     border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,

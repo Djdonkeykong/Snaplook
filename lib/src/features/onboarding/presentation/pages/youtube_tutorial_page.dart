@@ -12,6 +12,7 @@ enum YouTubeTutorialStep {
   tapEdit,
   tapSnaplookShortcut,
   tapDone,
+  tapDoneLast,
   step2,
 }
 
@@ -59,6 +60,8 @@ class _YouTubeTutorialPageState extends ConsumerState<YouTubeTutorialPage> {
         return "Find and tap the Snaplook icon to add it to your shortcuts.";
       case YouTubeTutorialStep.tapDone:
         return "Tap Done to save your changes.";
+      case YouTubeTutorialStep.tapDoneLast:
+        return "Tap 'Done' again to finish the setup.";
       case YouTubeTutorialStep.step2:
         return "Now select Snaplook from the share menu to find similar items.";
     }
@@ -93,6 +96,9 @@ class _YouTubeTutorialPageState extends ConsumerState<YouTubeTutorialPage> {
         nextStep = YouTubeTutorialStep.tapDone;
         break;
       case YouTubeTutorialStep.tapDone:
+        nextStep = YouTubeTutorialStep.tapDoneLast;
+        break;
+      case YouTubeTutorialStep.tapDoneLast:
         nextStep = YouTubeTutorialStep.step2;
         break;
       case YouTubeTutorialStep.step2:

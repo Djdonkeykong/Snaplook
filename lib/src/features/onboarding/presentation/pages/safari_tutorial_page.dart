@@ -42,7 +42,13 @@ const double _tapDoneRightFraction = 0;
 const double _tapDoneWidthFraction = 0.2;
 const double _tapDoneHeightFraction = 0.13;
 
-// Step 3 tap area placements
+// Step 7 (tapDoneLast) - second Done button on shortcut add screen
+const double _tapDoneLastTopFraction = 0.05;
+const double _tapDoneLastRightFraction = 0;
+const double _tapDoneLastWidthFraction = 0.2;
+const double _tapDoneLastHeightFraction = 0.13;
+
+// Step 8 tap area placements
 const double _step3TapAreaTopFraction = 0.70;
 const double _step3TapAreaLeftFraction = 0.45;
 const double _step3TapAreaWidthFraction = 0.25;
@@ -55,6 +61,7 @@ enum SafariTutorialStep {
   tapEdit,
   tapSnaplookShortcut,
   tapDone,
+  tapDoneLast,
   step3,
 }
 
@@ -105,6 +112,8 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
         return "Find Snaplook and tap the '+' button to add it.";
       case SafariTutorialStep.tapDone:
         return "Tap 'Done'.";
+      case SafariTutorialStep.tapDoneLast:
+        return "Tap 'Done' again to finish the setup.";
       case SafariTutorialStep.step3:
         return "Finally, tap on Snaplook to share the image with our app.";
     }
@@ -114,7 +123,8 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
     return step == SafariTutorialStep.tapMore ||
            step == SafariTutorialStep.tapEdit ||
            step == SafariTutorialStep.tapSnaplookShortcut ||
-           step == SafariTutorialStep.tapDone;
+           step == SafariTutorialStep.tapDone ||
+           step == SafariTutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
@@ -171,7 +181,8 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
           if (hasUserTapped && (currentStep == SafariTutorialStep.tapMore ||
               currentStep == SafariTutorialStep.tapEdit ||
               currentStep == SafariTutorialStep.tapSnaplookShortcut ||
-              currentStep == SafariTutorialStep.tapDone))
+              currentStep == SafariTutorialStep.tapDone ||
+              currentStep == SafariTutorialStep.tapDoneLast))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -230,7 +241,20 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               ),
             ),
 
-          // Popup overlay for step 3 (final confirmation)
+          // Step 7 popup overlay (after tapping first Done - shows second Done button)
+          if (hasUserTapped && currentStep == SafariTutorialStep.tapDoneLast)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/tap-done-last.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Popup overlay for step 8 (final confirmation)
           if (hasUserTapped && currentStep == SafariTutorialStep.step3)
             Positioned.fill(
               child: Image.asset(
@@ -353,7 +377,7 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.step3);
+                  _onActionComplete(SafariTutorialStep.tapDoneLast);
                 },
                 child: Container(
                   width: screenWidth * _tapDoneWidthFraction,
@@ -366,7 +390,28 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               ),
             ),
 
-          // Step 3 tap area (tap Snaplook) - only active when popup is visible
+          // Tap Done Last area (tapDoneLast step) - top right, second Done button
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.tapDoneLast)
+            Positioned(
+              top: screenHeight * _tapDoneLastTopFraction,
+              right: screenWidth * _tapDoneLastRightFraction,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(SafariTutorialStep.step3);
+                },
+                child: Container(
+                  width: screenWidth * _tapDoneLastWidthFraction,
+                  height: screenHeight * _tapDoneLastHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Step 8 tap area (tap Snaplook) - only active when popup is visible
           if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.step3)
             Positioned(
               top: screenHeight * _step3TapAreaTopFraction,

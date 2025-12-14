@@ -42,12 +42,19 @@ const double _tapDoneRightFraction = 0;
 const double _tapDoneWidthFraction = 0.2;
 const double _tapDoneHeightFraction = 0.13;
 
+// Step 7 (tapDoneLast) - second Done button on shortcut add screen
+const double _tapDoneLastTopFraction = 0.05;
+const double _tapDoneLastRightFraction = 0;
+const double _tapDoneLastWidthFraction = 0.2;
+const double _tapDoneLastHeightFraction = 0.13;
+
 enum PhotosTutorialStep {
   step1,
   tapMore,
   tapEdit,
   tapSnaplookShortcut,
   tapDone,
+  tapDoneLast,
   step2,
 }
 
@@ -96,6 +103,8 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
         return "Find Snaplook and tap the '+' button to add it.";
       case PhotosTutorialStep.tapDone:
         return "Tap 'Done'.";
+      case PhotosTutorialStep.tapDoneLast:
+        return "Tap 'Done' again to finish the setup.";
       case PhotosTutorialStep.step2:
         return "Now tap on Snaplook to share the image with our app.";
     }
@@ -105,7 +114,8 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
     return step == PhotosTutorialStep.tapMore ||
            step == PhotosTutorialStep.tapEdit ||
            step == PhotosTutorialStep.tapSnaplookShortcut ||
-           step == PhotosTutorialStep.tapDone;
+           step == PhotosTutorialStep.tapDone ||
+           step == PhotosTutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
@@ -153,6 +163,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               currentStep == PhotosTutorialStep.tapEdit ||
               currentStep == PhotosTutorialStep.tapSnaplookShortcut ||
               currentStep == PhotosTutorialStep.tapDone ||
+              currentStep == PhotosTutorialStep.tapDoneLast ||
               currentStep == PhotosTutorialStep.step2))
             Positioned.fill(
               child: Container(
@@ -212,7 +223,20 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               ),
             ),
 
-          // Step 6 popup overlay (after tapping Done - final confirmation)
+          // Step 7 popup overlay (after tapping first Done - shows second Done button)
+          if (hasUserTapped && currentStep == PhotosTutorialStep.tapDoneLast)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/tap-done-last.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Step 8 popup overlay (after tapping second Done - final confirmation)
           if (hasUserTapped && currentStep == PhotosTutorialStep.step2)
             Positioned(
               bottom: 0,
@@ -317,7 +341,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  _onActionComplete(PhotosTutorialStep.step2);
+                  _onActionComplete(PhotosTutorialStep.tapDoneLast);
                 },
                 child: Container(
                   width: screenWidth * _tapDoneWidthFraction,
@@ -330,7 +354,28 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               ),
             ),
 
-          // Step 2 tap area (tap share button) - only active when popup is visible
+          // Tap Done Last area (tapDoneLast step) - top right, second Done button
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.tapDoneLast)
+            Positioned(
+              top: screenHeight * _tapDoneLastTopFraction,
+              right: screenWidth * _tapDoneLastRightFraction,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(PhotosTutorialStep.step2);
+                },
+                child: Container(
+                  width: screenWidth * _tapDoneLastWidthFraction,
+                  height: screenHeight * _tapDoneLastHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Step 8 tap area (tap share button) - only active when popup is visible
           if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.step2)
             Positioned(
               top: screenHeight * _step2TapAreaTopFraction,

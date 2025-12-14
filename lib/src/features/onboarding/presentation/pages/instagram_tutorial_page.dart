@@ -42,7 +42,13 @@ const double _tapDoneRightFraction = 0;
 const double _tapDoneWidthFraction = 0.2;
 const double _tapDoneHeightFraction = 0.13;
 
-// Step 7 (confirmShare) placements
+// Step 7 (tapDoneLast) - second Done button on shortcut add screen
+const double _tapDoneLastTopFraction = 0.05;
+const double _tapDoneLastRightFraction = 0;
+const double _tapDoneLastWidthFraction = 0.2;
+const double _tapDoneLastHeightFraction = 0.13;
+
+// Step 8 (confirmShare) placements
 const double _confirmTapAreaBottomFraction = 0.17;
 const double _confirmTapAreaRightFraction = 0.315;
 const double _confirmTapAreaWidthFraction = 0.23;
@@ -55,6 +61,7 @@ enum TutorialStep {
   tapEdit,
   tapSnaplookShortcut,
   tapDone,
+  tapDoneLast,
   confirmShare,
 }
 
@@ -105,6 +112,8 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
         return "Find Snaplook and tap the '+' button to add it.";
       case TutorialStep.tapDone:
         return "Tap 'Done'.";
+      case TutorialStep.tapDoneLast:
+        return "Tap 'Done' again to finish the setup.";
       case TutorialStep.confirmShare:
         return "Now tap Snaplook to share the image with our app.";
     }
@@ -114,7 +123,8 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
     return step == TutorialStep.tapMore ||
            step == TutorialStep.tapEdit ||
            step == TutorialStep.tapSnaplookShortcut ||
-           step == TutorialStep.tapDone;
+           step == TutorialStep.tapDone ||
+           step == TutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
@@ -163,6 +173,7 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               currentStep == TutorialStep.tapEdit ||
               currentStep == TutorialStep.tapSnaplookShortcut ||
               currentStep == TutorialStep.tapDone ||
+              currentStep == TutorialStep.tapDoneLast ||
               currentStep == TutorialStep.confirmShare))
             Positioned.fill(
               child: Container(
@@ -235,7 +246,20 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               ),
             ),
 
-          // Step 7 popup overlay (after tapping Done - final confirmation)
+          // Step 7 popup overlay (after tapping first Done - shows second Done button)
+          if (hasUserTapped && currentStep == TutorialStep.tapDoneLast)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Image.asset(
+                'assets/images/tap-done-last.png',
+                fit: BoxFit.fitWidth,
+                gaplessPlayback: true,
+              ),
+            ),
+
+          // Step 8 popup overlay (after tapping second Done - final confirmation)
           if (hasUserTapped && currentStep == TutorialStep.confirmShare)
             Positioned(
               bottom: 0,
@@ -361,11 +385,32 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
-                  _onActionComplete(TutorialStep.confirmShare);
+                  _onActionComplete(TutorialStep.tapDoneLast);
                 },
                 child: Container(
                   width: screenWidth * _tapDoneWidthFraction,
                   height: screenHeight * _tapDoneHeightFraction,
+                  decoration: BoxDecoration(
+                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
+                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                  ),
+                ),
+              ),
+            ),
+
+          // Tap Done Last area (tapDoneLast step) - top right, second Done button
+          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TutorialStep.tapDoneLast)
+            Positioned(
+              top: screenHeight * _tapDoneLastTopFraction,
+              right: screenWidth * _tapDoneLastRightFraction,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _onActionComplete(TutorialStep.confirmShare);
+                },
+                child: Container(
+                  width: screenWidth * _tapDoneLastWidthFraction,
+                  height: screenHeight * _tapDoneLastHeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
                     border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
