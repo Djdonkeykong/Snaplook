@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'tutorial_image_analysis_page.dart';
 
-const bool _kShowTouchTargets = false;
+const bool _kShowTouchTargets = true;
 
 // Step 1 tap area placements (long press on image)
 const double _step1TapAreaTopFraction = 0.1;
