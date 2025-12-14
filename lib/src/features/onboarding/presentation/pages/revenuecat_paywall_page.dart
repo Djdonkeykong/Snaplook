@@ -320,81 +320,6 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 ),
               ),
 
-              SizedBox(height: spacing.xl),
-
-              // Plan selection
-              if (yearlyPackage != null && monthlyPackage != null) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _PlanOption(
-                          plan: RevenueCatPaywallPlanType.monthly,
-                          title: 'Monthly',
-                          price: '${monthlyPackage.storeProduct.priceString}/mo',
-                          isSelected: selectedPlan == RevenueCatPaywallPlanType.monthly,
-                          onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
-                              RevenueCatPaywallPlanType.monthly,
-                        ),
-                      ),
-                      SizedBox(width: spacing.m),
-                      Expanded(
-                        child: _PlanOption(
-                          plan: RevenueCatPaywallPlanType.yearly,
-                          title: 'Yearly',
-                          price: '\$${((yearlyPackage.storeProduct.price / 12) * 100).floor() / 100}/mo',
-                          isSelected: selectedPlan == RevenueCatPaywallPlanType.yearly,
-                          onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
-                              RevenueCatPaywallPlanType.yearly,
-                          badge: _isEligibleForTrial ? '3-Days FREE' : 'Most Popular',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ] else ...[
-                // Show error state when products can't be loaded
-                Container(
-                  padding: EdgeInsets.all(spacing.l),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFECACA)),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Color(0xFFEF4444),
-                        size: 48,
-                      ),
-                      SizedBox(height: spacing.m),
-                      const Text(
-                        'Unable to load plans',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontFamily: 'PlusJakartaSans',
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFEF4444),
-                        ),
-                      ),
-                      SizedBox(height: spacing.s),
-                      const Text(
-                        'Subscription plans are currently unavailable. You can continue and subscribe later from your profile.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontFamily: 'PlusJakartaSans',
-                          color: Color(0xFF6B7280),
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
               SizedBox(height: spacing.xxl),
             ],
           ),
@@ -404,6 +329,36 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         primaryButton: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Plan selection
+            if (yearlyPackage != null && monthlyPackage != null) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: _PlanOption(
+                      plan: RevenueCatPaywallPlanType.monthly,
+                      title: 'Monthly',
+                      price: '${monthlyPackage.storeProduct.priceString}/mo',
+                      isSelected: selectedPlan == RevenueCatPaywallPlanType.monthly,
+                      onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
+                          RevenueCatPaywallPlanType.monthly,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _PlanOption(
+                      plan: RevenueCatPaywallPlanType.yearly,
+                      title: 'Yearly',
+                      price: '\$${((yearlyPackage.storeProduct.price / 12) * 100).floor() / 100}/mo',
+                      isSelected: selectedPlan == RevenueCatPaywallPlanType.yearly,
+                      onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
+                          RevenueCatPaywallPlanType.yearly,
+                      badge: _isEligibleForTrial ? '3-Days FREE' : 'Most Popular',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
             if (_isEligibleForTrial) ...[
               const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
