@@ -88,6 +88,8 @@ class RatingSocialProofPage extends StatelessWidget {
                   await ReviewPromptLogsService.addLog(
                     '[$timestamp] requestReview() invoked successfully',
                   );
+                  // Wait for user to interact with the review dialog before navigating
+                  await Future.delayed(const Duration(seconds: 2));
                 } else {
                   await ReviewPromptLogsService.addLog(
                     '[$timestamp] requestReview() skipped (not available)',
