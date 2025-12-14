@@ -153,7 +153,7 @@ class ProfileReadyPage extends StatelessWidget {
               HapticFeedback.mediumImpact();
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const RatingSocialProofPage(
+                  builder: (context) => RatingSocialProofPage(
                     continueToTrialFlow: continueToTrialFlow,
                   ),
                 ),
