@@ -379,14 +379,9 @@ class _PlanOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color borderColor =
         isSelected ? AppColors.secondary : AppColors.outline;
-    final Color backgroundColor =
-        isSelected ? AppColors.secondary.withOpacity(0.06) : Colors.white;
 
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.mediumImpact();
-        onTap();
-      },
+      onTap: onTap,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -394,67 +389,33 @@ class _PlanOption extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: backgroundColor,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: borderColor,
-                width: isSelected ? 1.6 : 1.1,
+                width: 1.2,
               ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: AppColors.secondary.withOpacity(0.18),
-                        blurRadius: 24,
-                        offset: const Offset(0, 12),
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 12,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 12,
+                  offset: Offset(0, 8),
+                ),
+              ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isSelected ? AppColors.secondary : Colors.white,
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.secondary
-                              : AppColors.outline,
-                          width: 2,
-                        ),
-                      ),
-                      child: isSelected
-                          ? const Icon(Icons.check,
-                              color: Colors.white, size: 16)
-                          : null,
-                    ),
-                  ],
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -0.2,
+                  ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -670,7 +631,7 @@ class _PlanSelectionCard extends StatelessWidget {
             ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString}/year starting $trialEndFormatted.'
             : 'Just ${yearlyPackage.storeProduct.priceString} per year'
                 '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}';
-    const double planOptionHeight = 140;
+    const double planOptionHeight = 120;
 
     return Container(
       width: double.infinity,
