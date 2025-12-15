@@ -7,8 +7,37 @@ import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
 import 'gender_selection_page.dart';
 
-class HowItWorksPage extends StatelessWidget {
+class HowItWorksPage extends StatefulWidget {
   const HowItWorksPage({super.key});
+
+  @override
+  State<HowItWorksPage> createState() => _HowItWorksPageState();
+}
+
+class _HowItWorksPageState extends State<HowItWorksPage> {
+  bool _showStep1 = false;
+  bool _showStep2 = false;
+  bool _showStep3 = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startSequence();
+  }
+
+  Future<void> _startSequence() async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+    setState(() => _showStep1 = true);
+
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    setState(() => _showStep2 = true);
+
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    setState(() => _showStep3 = true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,38 +58,38 @@ class HowItWorksPage extends StatelessWidget {
       ),
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: spacing.l),
+          padding: EdgeInsets.fromLTRB(
+            spacing.l,
+            spacing.m,
+            spacing.l,
+            spacing.l,
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: spacing.l),
-
-              const Text(
-                "Here's how Snaplook works",
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -1.0,
-                  height: 1.3,
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _StepFrame(
+                      label: '1',
+                      assetPath: 'assets/images/photos_step1.png',
+                      visible: _showStep1,
+                    ),
+                    SizedBox(height: spacing.l),
+                    _StepFrame(
+                      label: '2',
+                      assetPath: 'assets/images/photos-step-2.png',
+                      visible: _showStep2,
+                    ),
+                    SizedBox(height: spacing.l),
+                    _StepFrame(
+                      label: '3',
+                      assetPath: 'assets/images/photos-step-3-snaplook.png',
+                      visible: _showStep3,
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: spacing.l),
-              const _HowItWorksSteps(),
-              SizedBox(height: spacing.l),
-              const Text(
-                'Works with screenshots, social apps, and photos.',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -0.2,
-                  height: 1.4,
-                ),
-              ),
-              const Spacer(),
             ],
           ),
         ),
@@ -102,101 +131,65 @@ class HowItWorksPage extends StatelessWidget {
   }
 }
 
-class _HowItWorksSteps extends StatelessWidget {
-  const _HowItWorksSteps();
+class _StepFrame extends StatelessWidget {
+  final String label;
+  final String assetPath;
+  final bool visible;
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        SizedBox(height: 4),
-        _HowItWorksStepRow(
-          number: 1,
-          title: 'Snap or share a look',
-          subtitle: 'Import from your camera or any app.',
-        ),
-        _HowItWorksStepRow(
-          number: 2,
-          title: 'Snaplook analyzes the outfit',
-          subtitle: 'We break down items, brands, and vibe.',
-        ),
-        _HowItWorksStepRow(
-          number: 3,
-          title: 'Get similar items instantly',
-          subtitle: 'Shop matching styles in seconds.',
-        ),
-      ],
-    );
-  }
-}
-
-class _HowItWorksStepRow extends StatelessWidget {
-  final int number;
-  final String title;
-  final String subtitle;
-
-  const _HowItWorksStepRow({
-    required this.number,
-    required this.title,
-    required this.subtitle,
+  const _StepFrame({
+    required this.label,
+    required this.assetPath,
+    required this.visible,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.secondary.withOpacity(0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$number',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                fontFamily: 'PlusJakartaSans',
-                color: AppColors.secondary,
+    final spacing = context.spacing;
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 450),
+      opacity: visible ? 1 : 0,
+      curve: Curves.easeOut,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 450),
+        scale: visible ? 1 : 0.98,
+        curve: Curves.easeOut,
+        child: Stack(
+          alignment: Alignment.topLeft,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: AspectRatio(
+                aspectRatio: 0.58,
+                child: Image.asset(
+                  assetPath,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
+            Positioned(
+              top: spacing.s,
+              left: spacing.s,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  label,
                   style: const TextStyle(
-                    fontSize: 16,
+                    color: Colors.white,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     fontFamily: 'PlusJakartaSans',
-                    color: AppColors.textPrimary,
                     letterSpacing: -0.2,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'PlusJakartaSans',
-                    color: AppColors.textSecondary,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
