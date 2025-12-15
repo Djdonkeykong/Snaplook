@@ -367,7 +367,7 @@ class _PlanOption extends StatelessWidget {
   final RevenueCatPaywallPlanType plan;
   final String title;
   final String price;
-  final String cadence;
+  final String? cadence;
   final String? helper;
   final bool isSelected;
   final VoidCallback onTap;
@@ -377,7 +377,7 @@ class _PlanOption extends StatelessWidget {
     required this.plan,
     required this.title,
     required this.price,
-    required this.cadence,
+    this.cadence,
     this.helper,
     required this.isSelected,
     required this.onTap,
@@ -453,16 +453,18 @@ class _PlanOption extends StatelessWidget {
                           letterSpacing: -0.3,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        cadence,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                          fontFamily: 'PlusJakartaSans',
+                      if (cadence != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          cadence!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
                         ),
-                      ),
+                      ],
                       if (helper != null) ...[
                         const SizedBox(height: 6),
                         Text(
@@ -681,6 +683,7 @@ class _PlanSelectionCard extends StatelessWidget {
             ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString}/year starting $trialEndFormatted.'
             : 'Just ${yearlyPackage.storeProduct.priceString} per year'
                 '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}';
+    const double planOptionHeight = 140;
 
     return Container(
       width: double.infinity,
@@ -704,30 +707,35 @@ class _PlanSelectionCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _PlanOption(
-                  plan: RevenueCatPaywallPlanType.monthly,
-                  title: 'Monthly',
-                  price: monthlyPackage.storeProduct.priceString,
-                  cadence: 'Billed monthly',
-                  helper: 'Cancel anytime',
-                  isSelected: selectedPlan == RevenueCatPaywallPlanType.monthly,
-                  onTap: () => onSelectPlan(RevenueCatPaywallPlanType.monthly),
+                child: SizedBox(
+                  height: planOptionHeight,
+                  child: _PlanOption(
+                    plan: RevenueCatPaywallPlanType.monthly,
+                    title: 'Monthly',
+                    price: monthlyPackage.storeProduct.priceString,
+                    isSelected:
+                        selectedPlan == RevenueCatPaywallPlanType.monthly,
+                    onTap: () =>
+                        onSelectPlan(RevenueCatPaywallPlanType.monthly),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _PlanOption(
-                  plan: RevenueCatPaywallPlanType.yearly,
-                  title: 'Yearly',
-                  price: yearlyPackage.storeProduct.priceString,
-                  cadence: yearlyMonthlyEquivalent != null
-                      ? '\$$yearlyMonthlyEquivalent/mo after trial'
-                      : 'Billed annually',
-                  helper:
-                      isEligibleForTrial ? '3-day free trial' : 'Best value',
-                  isSelected: selectedPlan == RevenueCatPaywallPlanType.yearly,
-                  onTap: () => onSelectPlan(RevenueCatPaywallPlanType.yearly),
-                  isPopular: true,
+                child: SizedBox(
+                  height: planOptionHeight,
+                  child: _PlanOption(
+                    plan: RevenueCatPaywallPlanType.yearly,
+                    title: 'Yearly',
+                    price: yearlyPackage.storeProduct.priceString,
+                    cadence: yearlyMonthlyEquivalent != null
+                        ? '\$$yearlyMonthlyEquivalent/mo'
+                        : 'Billed annually',
+                    isSelected:
+                        selectedPlan == RevenueCatPaywallPlanType.yearly,
+                    onTap: () => onSelectPlan(RevenueCatPaywallPlanType.yearly),
+                    isPopular: true,
+                  ),
                 ),
               ),
             ],
