@@ -436,10 +436,10 @@ class _PlanOption extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Text(
@@ -453,7 +453,6 @@ class _PlanOption extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             width: 28,
@@ -480,7 +479,7 @@ class _PlanOption extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const Spacer(),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -732,6 +731,7 @@ class _PlanSelectionCard extends StatelessWidget {
         children: [
           const SizedBox(height: 6),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: _PlanOption(
@@ -751,7 +751,7 @@ class _PlanSelectionCard extends StatelessWidget {
                   title: 'Yearly',
                   price: yearlyPackage.storeProduct.priceString,
                   cadence: yearlyMonthlyEquivalent != null
-                      ? '\$$yearlyMonthlyEquivalent/mo after trial'
+                      ? '\$$yearlyMonthlyEquivalent/mo'
                       : 'Billed annually',
                   helper: null,
                   isSelected: selectedPlan == RevenueCatPaywallPlanType.yearly,
