@@ -284,25 +284,11 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
-                          fontSize: 30,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
                           letterSpacing: -0.7,
                           height: 1.25,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _isEligibleForTrial
-                            ? 'Start your 3-day free trial and unlock unlimited matches.'
-                            : 'Unlock unlimited matches, saves, and smart alerts.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                          height: 1.4,
                         ),
                       ),
                     ],
@@ -592,7 +578,7 @@ class _HeroMark extends StatelessWidget {
               ],
             ),
             child: const Icon(
-              Icons.auto_awesome,
+              Icons.camera_alt_rounded,
               size: 48,
               color: AppColors.secondary,
             ),
@@ -622,15 +608,15 @@ class _FeatureItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 42,
-          height: 42,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             color: iconColor.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: iconColor, size: 22),
+          child: Icon(icon, color: iconColor, size: 18),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -643,17 +629,6 @@ class _FeatureItem extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                   letterSpacing: -0.3,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                description,
-                style: const TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
                 ),
               ),
             ],
@@ -695,7 +670,7 @@ class _PlanSelectionCard extends StatelessWidget {
             ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString}/year starting $trialEndFormatted.'
             : 'Just ${yearlyPackage.storeProduct.priceString} per year'
                 '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}';
-    const double planOptionHeight = 160;
+    const double planOptionHeight = 140;
 
     return Container(
       width: double.infinity,
