@@ -206,8 +206,10 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
     final trialEndDate = DateTime.now().add(const Duration(days: 3));
     final trialEndFormatted =
         '${trialEndDate.month}/${trialEndDate.day}/${trialEndDate.year}';
-    final yearlyMonthlyEquivalent = yearlyPackage != null
-        ? _formatPriceFloor(yearlyPackage.storeProduct.price / 12)
+    final double? yearlyMonthlyEquivalentValue =
+        yearlyPackage != null ? yearlyPackage.storeProduct.price / 12 : null;
+    final yearlyMonthlyEquivalent = yearlyMonthlyEquivalentValue != null
+        ? _formatPriceFloor(yearlyMonthlyEquivalentValue)
         : null;
     final hasPlans = yearlyPackage != null && monthlyPackage != null;
     final bottomScrollPadding =
@@ -338,6 +340,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 yearlyPackage: yearlyPackage!,
                 monthlyPackage: monthlyPackage!,
                 yearlyMonthlyEquivalent: yearlyMonthlyEquivalent,
+                yearlyMonthlyEquivalentValue: yearlyMonthlyEquivalentValue!,
                 selectedPlan: selectedPlanValue,
                 isEligibleForTrial: _isEligibleForTrial,
                 isPurchasing: _isPurchasing,
@@ -362,7 +365,7 @@ class _PlanOption extends StatelessWidget {
   final String? helper;
   final bool isSelected;
   final VoidCallback onTap;
-  final bool isPopular;
+  final String? badgeLabel;
 
   const _PlanOption({
     required this.plan,
@@ -372,7 +375,7 @@ class _PlanOption extends StatelessWidget {
     this.helper,
     required this.isSelected,
     required this.onTap,
-    this.isPopular = false,
+    this.badgeLabel,
   });
 
   @override
@@ -387,7 +390,8 @@ class _PlanOption extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.fromLTRB(12, isPopular ? 20 : 12, 12, 12),
+            padding:
+                EdgeInsets.fromLTRB(12, badgeLabel != null ? 20 : 12, 12, 12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
@@ -482,7 +486,7 @@ class _PlanOption extends StatelessWidget {
               ],
             ),
           ),
-          if (isPopular)
+          if (badgeLabel != null)
             Positioned(
               top: -14,
               left: 0,
@@ -495,9 +499,9 @@ class _PlanOption extends StatelessWidget {
                     color: AppColors.secondary,
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: const Text(
-                    'Best value',
-                    style: TextStyle(
+                  child: Text(
+                    badgeLabel!,
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -574,6 +578,7 @@ class _PlanSelectionCard extends StatelessWidget {
   final Package yearlyPackage;
   final Package monthlyPackage;
   final String? yearlyMonthlyEquivalent;
+  final double yearlyMonthlyEquivalentValue;
   final RevenueCatPaywallPlanType selectedPlan;
   final bool isEligibleForTrial;
   final bool isPurchasing;
@@ -585,6 +590,7 @@ class _PlanSelectionCard extends StatelessWidget {
     required this.yearlyPackage,
     required this.monthlyPackage,
     required this.yearlyMonthlyEquivalent,
+    required this.yearlyMonthlyEquivalentValue,
     required this.selectedPlan,
     required this.isEligibleForTrial,
     required this.isPurchasing,
@@ -595,6 +601,14 @@ class _PlanSelectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double monthlyPriceValue = monthlyPackage.storeProduct.price;
+    final int? yearlySavingsPercent = monthlyPriceValue > 0
+        ? ((1 - (yearlyMonthlyEquivalentValue / monthlyPriceValue)) * 100)
+            .round()
+            .clamp(0, 100)
+        : null;
+    final String? badgeLabel =
+        yearlySavingsPercent != null ? 'Save $yearlySavingsPercent%' : null;
     final String footnote = selectedPlan == RevenueCatPaywallPlanType.monthly
         ? 'Billed ${monthlyPackage.storeProduct.priceString} today.'
         : isEligibleForTrial
@@ -652,7 +666,7 @@ class _PlanSelectionCard extends StatelessWidget {
                     isSelected:
                         selectedPlan == RevenueCatPaywallPlanType.yearly,
                     onTap: () => onSelectPlan(RevenueCatPaywallPlanType.yearly),
-                    isPopular: true,
+                    badgeLabel: badgeLabel,
                   ),
                 ),
               ),
