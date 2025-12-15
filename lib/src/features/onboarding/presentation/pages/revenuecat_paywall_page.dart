@@ -288,7 +288,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                       ),
                       SizedBox(height: spacing.l),
                       _TimelineItem(
-                        icon: Icons.event_rounded,
+                        icon: Icons.workspace_premium, // crown icon
                         iconColor: Colors.black,
                         title: 'In 3 Days',
                         description:
@@ -596,14 +596,14 @@ class _TimelineItem extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: iconColor == const Color(0xFFf2003c)
-                ? const Color(0xFFf2003c).withOpacity(0.1)
-                : Colors.grey.shade100,
+            color: iconColor == Colors.black
+                ? Colors.black
+                : const Color(0xFFf2003c),
             shape: BoxShape.circle,
           ),
           child: Icon(
             icon,
-            color: iconColor,
+            color: Colors.white,
             size: 24,
           ),
         ),
@@ -615,7 +615,7 @@ class _TimelineItem extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 18,
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -676,7 +676,7 @@ class _BenefitItem extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 18,
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.bold,
                   color: Colors.black,

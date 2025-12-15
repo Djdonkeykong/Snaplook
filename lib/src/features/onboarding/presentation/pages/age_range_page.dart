@@ -22,6 +22,7 @@ class _AgeRangePageState extends ConsumerState<AgeRangePage>
     with TickerProviderStateMixin, RouteAware {
 
   static const List<String> _ageOptions = [
+    'Under 18',
     '18-24',
     '25-34',
     '35-44',
@@ -125,7 +126,7 @@ class _AgeRangePageState extends ConsumerState<AgeRangePage>
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,36 +162,45 @@ class _AgeRangePageState extends ConsumerState<AgeRangePage>
 
               SizedBox(height: spacing.xl),
 
-              // Options
-              ..._ageOptions.asMap().entries.map((entry) {
-                final index = entry.key;
-                final age = entry.value;
-                final isSelected = selectedAge == age;
+              // Options (scrollable) with header fixed
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ..._ageOptions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final age = entry.value;
+                        final isSelected = selectedAge == age;
 
-                return Padding(
-                  padding: EdgeInsets.only(bottom: spacing.m),
-                  child: AnimatedBuilder(
-                    animation: _animationControllers[index],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[index],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[index],
-                          child: OptionCard(
-                            label: age,
-                            isSelected: isSelected,
-                            onTap: () {
-                              ref.read(ageRangeProvider.notifier).state = age;
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: spacing.m),
+                          child: AnimatedBuilder(
+                            animation: _animationControllers[index],
+                            builder: (context, child) {
+                              return FadeTransition(
+                                opacity: _fadeAnimations[index],
+                                child: ScaleTransition(
+                                  scale: _scaleAnimations[index],
+                                  child: OptionCard(
+                                    label: age,
+                                    isSelected: isSelected,
+                                    onTap: () {
+                                      ref.read(ageRangeProvider.notifier).state = age;
+                                    },
+                                  ),
+                                ),
+                              );
                             },
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              }).toList(),
+                        );
+                      }).toList(),
 
-              SizedBox(height: spacing.xl),
+                      SizedBox(height: spacing.xl),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

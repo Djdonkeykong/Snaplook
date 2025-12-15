@@ -124,7 +124,7 @@ class _UserGoalsPageState extends ConsumerState<UserGoalsPage>
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,44 +160,53 @@ class _UserGoalsPageState extends ConsumerState<UserGoalsPage>
 
               SizedBox(height: spacing.xl),
 
-              // Options
-              ..._goalOptions.asMap().entries.map((entry) {
-                final index = entry.key;
-                final label = entry.value;
-                final isSelected = selectedGoals.contains(label);
+              // Options (scrollable) with header fixed
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ..._goalOptions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final label = entry.value;
+                        final isSelected = selectedGoals.contains(label);
 
-                return Padding(
-                  padding: EdgeInsets.only(bottom: spacing.m),
-                  child: AnimatedBuilder(
-                    animation: _animationControllers[index],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[index],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[index],
-                          child: OptionCard(
-                            label: label,
-                            isSelected: isSelected,
-                            onTap: () {
-                              if (isSelected) {
-                                ref.read(userGoalsProvider.notifier).state =
-                                    selectedGoals.where((g) => g != label).toList();
-                              } else {
-                                ref.read(userGoalsProvider.notifier).state = [
-                                  ...selectedGoals,
-                                  label
-                                ];
-                              }
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: spacing.m),
+                          child: AnimatedBuilder(
+                            animation: _animationControllers[index],
+                            builder: (context, child) {
+                              return FadeTransition(
+                                opacity: _fadeAnimations[index],
+                                child: ScaleTransition(
+                                  scale: _scaleAnimations[index],
+                                  child: OptionCard(
+                                    label: label,
+                                    isSelected: isSelected,
+                                    onTap: () {
+                                      if (isSelected) {
+                                        ref.read(userGoalsProvider.notifier).state =
+                                            selectedGoals.where((g) => g != label).toList();
+                                      } else {
+                                        ref.read(userGoalsProvider.notifier).state = [
+                                          ...selectedGoals,
+                                          label
+                                        ];
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
                             },
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              }).toList(),
+                        );
+                      }).toList(),
 
-              SizedBox(height: spacing.xl),
+                      SizedBox(height: spacing.xl),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

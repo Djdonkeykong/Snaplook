@@ -7,11 +7,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
+import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../../../profile/presentation/widgets/profile_webview_bottom_sheet.dart';
+import '../../../home/domain/providers/inspiration_provider.dart';
 import '../widgets/progress_indicator.dart';
 import 'welcome_free_analysis_page.dart';
 import 'gender_selection_page.dart';
+import 'user_goals_page.dart';
 import 'notification_permission_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
@@ -20,6 +23,8 @@ import '../../../../../shared/navigation/main_navigation.dart'
         scrollToTopTriggerProvider,
         isAtHomeRootProvider;
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../shared/widgets/bottom_sheet_handle.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -68,6 +73,202 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
       context: context,
       title: title,
       url: url,
+    );
+  }
+
+  Future<void> _handlePostSignInNavigation(BuildContext context) async {
+    final supabase = Supabase.instance.client;
+    final userId = supabase.auth.currentUser?.id;
+
+    if (userId == null) return;
+
+    final userResponse = await supabase
+        .from('users')
+        .select('onboarding_state')
+        .eq('id', userId)
+        .maybeSingle();
+
+    final hasCompletedOnboarding =
+        userResponse != null && userResponse['onboarding_state'] == 'completed';
+
+    if (!mounted) return;
+
+    if (hasCompletedOnboarding) {
+      // Reset to home tab and refresh providers
+      ref.read(selectedIndexProvider.notifier).state = 0;
+      ref.invalidate(selectedIndexProvider);
+      ref.invalidate(scrollToTopTriggerProvider);
+      ref.invalidate(isAtHomeRootProvider);
+      ref.invalidate(inspirationProvider);
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const MainNavigation(
+            key: ValueKey('fresh-main-nav'),
+          ),
+        ),
+        (route) => false,
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const UserGoalsPage(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showSignInBottomSheet(BuildContext context) async {
+    final spacing = context.spacing;
+    final platform = Theme.of(context).platform;
+    final isAppleSignInAvailable =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(20),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Stack(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(spacing.l),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      BottomSheetHandle(
+                        margin: EdgeInsets.only(bottom: spacing.m),
+                      ),
+                      const Center(
+                        child: Text(
+                          'Sign In',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontFamily: 'PlusJakartaSans',
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: spacing.xxl),
+                      if (isAppleSignInAvailable) ...[
+                        _AuthButton(
+                          icon: Icons.apple,
+                          iconSize: 32,
+                          label: 'Continue with Apple',
+                          backgroundColor: Colors.black,
+                          textColor: Colors.white,
+                          onPressed: () async {
+                            final authService = ref.read(authServiceProvider);
+                            try {
+                              await authService.signInWithApple();
+                              if (mounted) {
+                                Navigator.pop(context);
+                                await _handlePostSignInNavigation(context);
+                              }
+                            } catch (e) {
+                              if (mounted && e != AuthService.authCancelledException) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).clearSnackBars();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      e.toString(),
+                                      style: context.snackTextStyle(
+                                        merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                      ),
+                                    ),
+                                    duration: const Duration(milliseconds: 2500),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                        SizedBox(height: spacing.m),
+                      ],
+                      _AuthButtonWithSvg(
+                        svgAsset: 'assets/icons/google_logo.svg',
+                        iconSize: 22,
+                        label: 'Continue with Google',
+                        backgroundColor: Colors.white,
+                        textColor: Colors.black,
+                        borderColor: const Color(0xFFE5E7EB),
+                        onPressed: () async {
+                          final authService = ref.read(authServiceProvider);
+                          try {
+                            await authService.signInWithGoogle();
+                            if (mounted) {
+                              Navigator.pop(context);
+                              await _handlePostSignInNavigation(context);
+                            }
+                          } catch (e) {
+                            if (mounted && e != AuthService.authCancelledException) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    e.toString(),
+                                    style: context.snackTextStyle(
+                                      merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                                    ),
+                                  ),
+                                  duration: const Duration(milliseconds: 2500),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                      SizedBox(height: spacing.m),
+                      _AuthButton(
+                        icon: Icons.email_outlined,
+                        iconSize: 24,
+                        label: 'Continue with email',
+                        backgroundColor: Colors.white,
+                        textColor: Colors.black,
+                        borderColor: const Color(0xFFE5E7EB),
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const EmailSignInPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      SizedBox(height: spacing.xl),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: spacing.l,
+                  right: spacing.l,
+                  child: SnaplookCircularIconButton(
+                    icon: Icons.close,
+                    iconSize: 18,
+                    size: 32,
+                    onPressed: () => Navigator.pop(context),
+                    tooltip: 'Close',
+                    semanticLabel: 'Close',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -555,6 +756,38 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                 ),
                               );
                             },
+                          ),
+
+                          SizedBox(height: spacing.m),
+                          TextButton(
+                            onPressed: () async {
+                              HapticFeedback.mediumImpact();
+                              await _showSignInBottomSheet(context);
+                            },
+                            child: RichText(
+                              textAlign: TextAlign.center,
+                              text: const TextSpan(
+                                text: 'Already have an account? ',
+                                style: TextStyle(
+                                  color: Color(0xFF6B7280),
+                                  fontSize: 14,
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.5,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: 'Sign In',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'PlusJakartaSans',
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),

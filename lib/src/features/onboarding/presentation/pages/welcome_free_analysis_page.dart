@@ -61,7 +61,7 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
   Future<void> _precacheLottieAnimation() async {
     try {
       // Load the Lottie animation into cache
-      await rootBundle.load('assets/animations/success_animation.json');
+      await rootBundle.load('assets/animations/congratulations.json');
       if (mounted) {
         setState(() {
           _animationLoaded = true;
@@ -276,40 +276,17 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
                       FadeTransition(
                         opacity: _textFadeAnimation,
                         child: Transform.translate(
-                          offset: const Offset(0, -170),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.check_circle, color: Color(0xFF50d05c), size: 16),
-                              SizedBox(width: 6),
-                              Text(
-                                'All done!',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'PlusJakartaSans',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      FadeTransition(
-                        opacity: _textFadeAnimation,
-                        child: Transform.translate(
                           offset: const Offset(0, -154),
                           child: const Text(
                             'Your fashion search\nstarts now!',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 30,
+                              fontSize: 32,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.tertiary,
+                              color: Colors.black,
                               fontFamily: 'PlusJakartaSans',
                               letterSpacing: -0.5,
-                              height: 1.3,
+                              height: 1.2,
                             ),
                           ),
                         ),
@@ -389,7 +366,7 @@ class _CompletionBadgeState extends State<_CompletionBadge> {
       width: 600,
       height: 600,
       child: Lottie.asset(
-        'assets/animations/success_animation.json',
+        'assets/animations/congratulations.json',
         repeat: false,
         fit: BoxFit.contain,
         frameRate: FrameRate.max, // Ensure smooth animation

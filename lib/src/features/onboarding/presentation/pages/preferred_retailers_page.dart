@@ -22,19 +22,16 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
     with TickerProviderStateMixin, RouteAware {
 
   static const List<String> _retailerOptions = [
-    'Zara',
-    'H&M',
-    'Uniqlo',
-    'Nike',
-    'Adidas',
-    'ASOS',
-    'Shein',
-    'Nordstrom',
-    'Macy\'s',
-    'Vintage/Thrift stores',
+    'Fast fashion',
+    'Streetwear',
+    'Athletic/Athleisure',
+    'Department store',
+    'Online marketplace',
+    'Secondhand/Vintage',
+    'Luxury/Designer',
+    'Budget/Big box',
     'Local boutiques',
-    'Luxury brands',
-    'I\'m exploring new places',
+    'Exploring new places',
   ];
 
   late List<AnimationController> _animationControllers;
@@ -118,6 +115,16 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final selectedRetailers = ref.watch(preferredRetailersProvider);
+    const sublabels = {
+      'Fast fashion': 'Zara, H&M, Uniqlo',
+      'Streetwear': 'Nike, Adidas, Foot Locker',
+      'Athletic/Athleisure': 'Lululemon, Alo',
+      'Department store': 'Nordstrom, Bloomingdale\'s',
+      'Online marketplace': 'Amazon, ASOS',
+      'Secondhand/Vintage': 'Thrift, Depop, Poshmark',
+      'Luxury/Designer': 'LV, Gucci, SSENSE',
+      'Budget/Big box': 'Target, Walmart',
+    };
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -133,7 +140,7 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,16 +176,21 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
 
               SizedBox(height: spacing.xl),
 
-              // Options
-              ..._retailerOptions.asMap().entries.map((entry) {
-                final index = entry.key;
-                final retailer = entry.value;
-                final isSelected = selectedRetailers.contains(retailer);
+              // Options (scrollable) with header fixed
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ..._retailerOptions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final retailer = entry.value;
+                        final isSelected = selectedRetailers.contains(retailer);
 
-                return Padding(
-                  padding: EdgeInsets.only(bottom: spacing.m),
-                  child: AnimatedBuilder(
-                    animation: _animationControllers[index],
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: spacing.m),
+                          child: AnimatedBuilder(
+                            animation: _animationControllers[index],
                     builder: (context, child) {
                       return FadeTransition(
                         opacity: _fadeAnimations[index],
@@ -186,27 +198,32 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
                           scale: _scaleAnimations[index],
                           child: OptionCard(
                             label: retailer,
+                            sublabel: sublabels[retailer],
                             isSelected: isSelected,
                             onTap: () {
                               if (isSelected) {
                                 ref.read(preferredRetailersProvider.notifier).state =
                                     selectedRetailers.where((r) => r != retailer).toList();
-                              } else {
-                                ref.read(preferredRetailersProvider.notifier).state = [
-                                  ...selectedRetailers,
-                                  retailer
-                                ];
-                              }
+                                      } else {
+                                        ref.read(preferredRetailersProvider.notifier).state = [
+                                          ...selectedRetailers,
+                                          retailer
+                                        ];
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
                             },
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              }).toList(),
+                        );
+                      }).toList(),
 
-              SizedBox(height: spacing.xl),
+                      SizedBox(height: spacing.xl),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

@@ -28,7 +28,6 @@ class _CategoryInterestsPageState extends ConsumerState<CategoryInterestsPage>
     'Shoes & Sneakers',
     'Bags & Accessories',
     'Outerwear',
-    'Jewelry',
     'Everything!',
   ];
 
@@ -128,7 +127,7 @@ class _CategoryInterestsPageState extends ConsumerState<CategoryInterestsPage>
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,44 +163,53 @@ class _CategoryInterestsPageState extends ConsumerState<CategoryInterestsPage>
 
               SizedBox(height: spacing.xl),
 
-              // Options
-              ..._categoryOptions.asMap().entries.map((entry) {
-                final index = entry.key;
-                final label = entry.value;
-                final isSelected = selectedCategories.contains(label);
+              // Options (scrollable) with header fixed
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ..._categoryOptions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final label = entry.value;
+                        final isSelected = selectedCategories.contains(label);
 
-                return Padding(
-                  padding: EdgeInsets.only(bottom: spacing.m),
-                  child: AnimatedBuilder(
-                    animation: _animationControllers[index],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[index],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[index],
-                          child: OptionCard(
-                            label: label,
-                            isSelected: isSelected,
-                            onTap: () {
-                              if (isSelected) {
-                                ref.read(categoryInterestsProvider.notifier).state =
-                                    selectedCategories.where((c) => c != label).toList();
-                              } else {
-                                ref.read(categoryInterestsProvider.notifier).state = [
-                                  ...selectedCategories,
-                                  label
-                                ];
-                              }
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: spacing.m),
+                          child: AnimatedBuilder(
+                            animation: _animationControllers[index],
+                            builder: (context, child) {
+                              return FadeTransition(
+                                opacity: _fadeAnimations[index],
+                                child: ScaleTransition(
+                                  scale: _scaleAnimations[index],
+                                  child: OptionCard(
+                                    label: label,
+                                    isSelected: isSelected,
+                                    onTap: () {
+                                      if (isSelected) {
+                                        ref.read(categoryInterestsProvider.notifier).state =
+                                            selectedCategories.where((c) => c != label).toList();
+                                      } else {
+                                        ref.read(categoryInterestsProvider.notifier).state = [
+                                          ...selectedCategories,
+                                          label
+                                        ];
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
                             },
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              }).toList(),
+                        );
+                      }).toList(),
 
-              SizedBox(height: spacing.xl),
+                      SizedBox(height: spacing.xl),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

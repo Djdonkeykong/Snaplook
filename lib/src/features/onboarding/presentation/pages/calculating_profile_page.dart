@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
@@ -19,10 +20,10 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
 
   // Checklist items
   final List<String> _checklistItems = [
-    'Style preferences analyzed',
-    'Brands matched',
-    'Products curated',
-    'Feed personalized',
+    'Style picks locked in',
+    'Outfits matched to your taste',
+    'Brand mix tuned to you',
+    'Feed ready to explore',
   ];
 
   final List<bool> _checklistCompleted = [false, false, false, false];
@@ -32,7 +33,7 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
     super.initState();
 
     _controller = AnimationController(
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 5),
       vsync: this,
     );
 
@@ -56,15 +57,19 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
         // Update checklist
         if (progress >= 25 && !_checklistCompleted[0]) {
           _checklistCompleted[0] = true;
+          HapticFeedback.mediumImpact();
         }
         if (progress >= 50 && !_checklistCompleted[1]) {
           _checklistCompleted[1] = true;
+          HapticFeedback.mediumImpact();
         }
         if (progress >= 75 && !_checklistCompleted[2]) {
           _checklistCompleted[2] = true;
+          HapticFeedback.mediumImpact();
         }
         if (progress >= 95 && !_checklistCompleted[3]) {
           _checklistCompleted[3] = true;
+          HapticFeedback.mediumImpact();
         }
       });
     });
@@ -120,11 +125,11 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
               Text(
                 '${_counterAnimation.value}%',
                 style: const TextStyle(
-                  fontSize: 96,
+                  fontSize: 64,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                   fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -2,
+                  letterSpacing: -1.5,
                   height: 1,
                 ),
               ),
@@ -160,13 +165,7 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
                       flex: _counterAnimation.value,
                       child: Container(
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFf2003c),
-                              Color(0xFFFF6B9D),
-                              Color(0xFF6B9DFF),
-                            ],
-                          ),
+                          color: const Color(0xFFf2003c),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -202,13 +201,12 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Daily recommendation for',
+                      'Here\'s what we tuned for you',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

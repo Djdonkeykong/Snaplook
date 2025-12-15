@@ -30,17 +30,16 @@ class PaywallPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedPlan = ref.watch(selectedPlanProvider);
+    final isYearlySelected = selectedPlan == PaywallPlanType.yearly;
     final spacing = context.spacing;
     final isPurchasing = ref.watch(isPurchasingProvider);
-    final maxSheetHeight =
-        MediaQuery.of(context).size.height * maxHeightFactor;
+    final maxSheetHeight = MediaQuery.of(context).size.height * maxHeightFactor;
     final trialEndDate = DateTime.now().add(const Duration(days: 3));
-    final trialEndFormatted = DateFormat('d MMM y').format(trialEndDate);
-    final billingSubtitle =
-        'You\'ll be charged on $trialEndFormatted unless\nyou cancel anytime before.';
+    final trialEndFormatted = DateFormat('MMM d').format(trialEndDate);
 
     return Container(
-      constraints: isFullScreen ? null : BoxConstraints(maxHeight: maxSheetHeight),
+      constraints:
+          isFullScreen ? null : BoxConstraints(maxHeight: maxSheetHeight),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: isFullScreen
@@ -100,75 +99,72 @@ class PaywallPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    SizedBox(height: spacing.l),
-                    Text(
-                      selectedPlan == PaywallPlanType.monthly
-                          ? 'Unlock everything Snaplook offers.'
-                          : 'Start your 3-day FREE\ntrial to continue.',
-                        style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 38,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          letterSpacing: -1.0,
-                          height: 1.25,
+                        SizedBox(height: spacing.l),
+                        const _HeroMark(),
+                        SizedBox(height: spacing.l),
+                        Center(
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Access all of Snaplook',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                  letterSpacing: -0.9,
+                                  height: 1.25,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                isYearlySelected
+                                    ? 'Start your 3-day free trial and unlock unlimited matches.'
+                                    : 'Unlock unlimited matches, saves, and smart alerts.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      SizedBox(height: spacing.xxl),
-                      if (selectedPlan == PaywallPlanType.monthly)
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _FeatureItem(
-                              icon: Icons.check,
-                              title: 'AI-powered matches',
-                              subtitle:
-                                  'Tap into a massive catalog of brands — every image you upload is analyzed to surface the closest lookalikes across thousands of retailers.',
-                            ),
-                            SizedBox(height: spacing.xxl),
-                            const _FeatureItem(
-                              icon: Icons.bookmark_added,
-                              title: 'Save favorite finds',
-                              subtitle:
-                                  'Bookmark the products you love so you can jump back in when it\'s time to buy.',
-                            ),
-                            SizedBox(height: spacing.xxl),
-                            _FeatureItem(
-                              icon: Icons.bolt,
-                              title: '50 credits included',
-                              subtitle:
-                                  'Every subscription unlocks 50 credits (up to 50 searches) so you can keep scanning and saving outfits all month.',
-                            ),
-                            SizedBox(height: spacing.xl),
-                          ],
-                        )
-                      else
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const _TimelineItem(
-                              icon: Icons.lock,
-                              circleColor: Color(0xFFF2003C),
-                              title: 'Today',
-                              subtitle:
-                                  'Unlock all the app\'s features like AI\nfashion analysis and more.',
-                              isFirst: true,
-                            ),
-                            const _TimelineItem(
-                              icon: Icons.notifications_active,
-                              circleColor: Color(0xFFF2003C),
-                              title: 'In 2 Days - Reminder',
-                              subtitle:
-                                  'We\'ll send you a reminder that your trial\nis ending soon.',
-                            ),
-                            _TimelineItem(
-                              icon: Icons.star,
-                              circleColor: const Color(0xFF2ED3B7),
-                              title: 'In 3 Days - Billing Starts',
-                              subtitle: billingSubtitle,
-                              isLast: true,
-                            ),
-                          ],
+                        SizedBox(height: spacing.xl),
+                        const _FeatureItem(
+                          icon: Icons.search_rounded,
+                          iconColor: AppColors.tertiary,
+                          title: 'Unlimited visual searches',
+                          subtitle:
+                              'Instant matches from every photo you drop in.',
+                        ),
+                        SizedBox(height: spacing.l),
+                        const _FeatureItem(
+                          icon: Icons.favorite_rounded,
+                          iconColor: AppColors.secondary,
+                          title: 'Save & curate looks',
+                          subtitle:
+                              'Keep the styles you love in one place to revisit anytime.',
+                        ),
+                        SizedBox(height: spacing.l),
+                        const _FeatureItem(
+                          icon: Icons.bolt_rounded,
+                          iconColor: Colors.amber,
+                          title: 'AI-powered brand matches',
+                          subtitle:
+                              'See similar pieces across top retailers in seconds.',
+                        ),
+                        SizedBox(height: spacing.l),
+                        const _FeatureItem(
+                          icon: Icons.widgets_rounded,
+                          iconColor: Colors.indigo,
+                          title: 'Widgets & smart alerts',
+                          subtitle:
+                              'Lock-screen shortcuts and drop reminders for fast access.',
                         ),
                         SizedBox(height: spacing.xl),
                       ],
@@ -181,57 +177,118 @@ class PaywallPage extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _PlanOption(
-                            plan: PaywallPlanType.monthly,
-                            title: 'Monthly',
-                            price: '\$7.99/mo',
-                            subtitle: '',
-                            isSelected: selectedPlan == PaywallPlanType.monthly,
-                            onTap: () => ref
-                                .read(selectedPlanProvider.notifier)
-                                .state = PaywallPlanType.monthly,
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(26),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppColors.shadow,
+                            blurRadius: 28,
+                            offset: Offset(0, 18),
                           ),
-                        ),
-                        SizedBox(width: spacing.m),
-                        Expanded(
-                          child: _PlanOption(
-                            plan: PaywallPlanType.yearly,
-                            title: 'Yearly',
-                            price: '\$4.99/mo',
-                            subtitle: null,
-                            isSelected: selectedPlan == PaywallPlanType.yearly,
-                            onTap: () => ref
-                                .read(selectedPlanProvider.notifier)
-                                .state = PaywallPlanType.yearly,
-                            isPopular: true,
+                        ],
+                        border: Border.all(color: AppColors.outlineVariant),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.secondary.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.star_rounded,
+                                        size: 16, color: AppColors.secondary),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Save 20%',
+                                      style: TextStyle(
+                                        fontFamily: 'PlusJakartaSans',
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                        color: AppColors.secondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                isYearlySelected
+                                    ? 'Best value'
+                                    : 'Choose a plan',
+                                style: const TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _PlanOption(
+                                  title: 'Yearly',
+                                  price: '\$59.99',
+                                  cadence: '\$4.99/mo after trial',
+                                  helper: '3-day free trial',
+                                  isSelected: isYearlySelected,
+                                  onTap: () => ref
+                                      .read(selectedPlanProvider.notifier)
+                                      .state = PaywallPlanType.yearly,
+                                  isPopular: true,
+                                ),
+                              ),
+                              SizedBox(width: spacing.m),
+                              Expanded(
+                                child: _PlanOption(
+                                  title: 'Monthly',
+                                  price: '\$7.99',
+                                  cadence: 'Billed monthly',
+                                  helper: 'Cancel anytime',
+                                  isSelected:
+                                      selectedPlan == PaywallPlanType.monthly,
+                                  onTap: () => ref
+                                      .read(selectedPlanProvider.notifier)
+                                      .state = PaywallPlanType.monthly,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Center(
+                            child: Text(
+                              isYearlySelected
+                                  ? 'Nothing due today'
+                                  : 'Starts immediately, cancel anytime',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: isYearlySelected
+                                    ? AppColors.secondary
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.check, color: Colors.green, size: 16),
-                        const SizedBox(width: 8),
-                        Text(
-                          selectedPlan == PaywallPlanType.yearly
-                              ? 'No Payment Due Now'
-                              : 'No Commitment - Cancel Anytime',
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: spacing.m),
+                    SizedBox(height: spacing.l),
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -239,11 +296,11 @@ class PaywallPage extends ConsumerWidget {
                         onPressed: isPurchasing
                             ? null
                             : () => _handlePurchase(
-                                context,
-                                ref,
-                              ),
+                                  context,
+                                  ref,
+                                ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFf2003c),
+                          backgroundColor: AppColors.secondary,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           disabledBackgroundColor: Colors.grey.shade300,
@@ -262,11 +319,9 @@ class PaywallPage extends ConsumerWidget {
                                   ),
                                 ),
                               )
-                            : Text(
-                                selectedPlan == PaywallPlanType.yearly
-                                    ? 'Start My 3-Day Free Trial'
-                                    : 'Subscribe Now',
-                                style: const TextStyle(
+                            : const Text(
+                                'Continue',
+                                style: TextStyle(
                                   fontFamily: 'PlusJakartaSans',
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -278,9 +333,9 @@ class PaywallPage extends ConsumerWidget {
                     SizedBox(height: spacing.m),
                     Center(
                       child: Text(
-                        selectedPlan == PaywallPlanType.yearly
-                            ? '3 days free, then \$59.99 per year (\$4.99/mo)'
-                            : 'Just \$7.99 per month',
+                        isYearlySelected
+                            ? '3-day free trial. Then \$59.99/year starting $trialEndFormatted.'
+                            : 'Billed \$7.99 today. Cancel anytime.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontFamily: 'PlusJakartaSans',
@@ -340,8 +395,9 @@ class PaywallPage extends ConsumerWidget {
           final hasAccount = authService.currentUser != null;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) =>
-                  hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage(),
+              builder: (context) => hasAccount
+                  ? const WelcomeFreeAnalysisPage()
+                  : const AccountCreationPage(),
             ),
           );
         }
@@ -401,8 +457,9 @@ class PaywallPage extends ConsumerWidget {
           final hasAccount = authService.currentUser != null;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) =>
-                  hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage(),
+              builder: (context) => hasAccount
+                  ? const WelcomeFreeAnalysisPage()
+                  : const AccountCreationPage(),
             ),
           );
         }
@@ -456,13 +513,73 @@ class PaywallPage extends ConsumerWidget {
   }
 }
 
+class _HeroMark extends StatelessWidget {
+  const _HeroMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.secondary.withOpacity(0.16),
+                  AppColors.secondaryLight.withOpacity(0.08),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.secondary.withOpacity(0.18),
+                  blurRadius: 32,
+                  offset: const Offset(0, 18),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 104,
+            height: 104,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: AppColors.outlineVariant),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.auto_awesome,
+              size: 48,
+              color: AppColors.secondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _FeatureItem extends StatelessWidget {
   final IconData icon;
+  final Color iconColor;
   final String title;
   final String subtitle;
 
   const _FeatureItem({
     required this.icon,
+    required this.iconColor,
     required this.title,
     required this.subtitle,
   });
@@ -472,8 +589,16 @@ class _FeatureItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.check, color: Color(0xFF23B6A8), size: 32),
-        const SizedBox(width: 20),
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,26 +607,23 @@ class _FeatureItem extends StatelessWidget {
                 title,
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
-                  fontSize: 22,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                  letterSpacing: -0.5,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.3,
                 ),
               ),
-              if (subtitle.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 15,
-                    color: Color(0xFF6C7280),
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -0.2,
-                    height: 1.45,
-                  ),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                  height: 1.5,
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -510,272 +632,155 @@ class _FeatureItem extends StatelessWidget {
   }
 }
 
-class _TimelineItem extends StatelessWidget {
-  final IconData icon;
-  final Color circleColor;
-  final String title;
-  final String subtitle;
-  final bool isFirst;
-  final bool isLast;
-  final Color lineColor;
-
-  const _TimelineItem({
-    required this.icon,
-    required this.circleColor,
-    required this.title,
-    required this.subtitle,
-    this.isFirst = false,
-    this.isLast = false,
-    this.lineColor = const Color(0xFFE3E5ED),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const double circleDiameter = 52;
-    const double lineWidth = 6;
-
-    final circle = Container(
-      width: circleDiameter,
-      height: circleDiameter,
-      decoration: BoxDecoration(
-        color: circleColor,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: circleColor.withOpacity(0.15),
-            blurRadius: 12,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Icon(icon, size: 26, color: Colors.white),
-    );
-
-    final fadeDecoration = BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          lineColor,
-          lineColor.withOpacity(0.0),
-        ],
-      ),
-    );
-
-    const double connectorGap = 36;
-    final double topSegmentHeight = isFirst ? 0 : connectorGap;
-    final double bottomSegmentHeight = isLast ? 92 : connectorGap;
-
-    final lineSegments = SizedBox(
-      width: 60,
-      height: topSegmentHeight + circleDiameter + bottomSegmentHeight,
-      child: Stack(
-        alignment: Alignment.topCenter,
-        children: [
-          Positioned.fill(
-            child: Column(
-              children: [
-                if (!isFirst)
-                  Container(width: lineWidth, height: topSegmentHeight, color: lineColor),
-                Container(width: lineWidth, height: circleDiameter, color: lineColor),
-                if (!isLast)
-                  Container(width: lineWidth, height: bottomSegmentHeight, color: lineColor)
-                else
-                  Container(
-                    width: lineWidth,
-                    height: bottomSegmentHeight,
-                    decoration: fadeDecoration,
-                  ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: topSegmentHeight,
-            left: (60 - circleDiameter) / 2,
-            child: circle,
-          ),
-        ],
-      ),
-    );
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          lineSegments,
-          const SizedBox(width: 16),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(top: topSegmentHeight, bottom: 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 15,
-                      color: Color(0xFF6C7280),
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: -0.2,
-                      height: 1.45,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _PlanOption extends StatelessWidget {
-  final PaywallPlanType plan;
   final String title;
   final String price;
-  final String? subtitle;
+  final String cadence;
+  final String? helper;
   final bool isSelected;
   final VoidCallback onTap;
   final bool isPopular;
-  final double height;
 
   const _PlanOption({
-    required this.plan,
     required this.title,
     required this.price,
-    this.subtitle,
+    required this.cadence,
+    this.helper,
     required this.isSelected,
     required this.onTap,
     this.isPopular = false,
-    this.height = 106,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Color borderColor =
+        isSelected ? AppColors.secondary : AppColors.outline;
+    final Color backgroundColor =
+        isSelected ? AppColors.secondary.withOpacity(0.06) : Colors.white;
+
     return GestureDetector(
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: double.infinity,
-            height: height,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected ? Colors.black : Colors.grey.shade300,
-                width: isSelected ? 2.4 : 1.2,
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        price,
-                        style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      if (subtitle != null && subtitle!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle!,
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade600,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ],
-                    ],
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: borderColor,
+            width: isSelected ? 1.6 : 1.1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.secondary.withOpacity(0.18),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isPopular)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  'Best value',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.secondary,
                   ),
                 ),
+              ),
+            if (isPopular) const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const Spacer(),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: 32,
-                  height: 32,
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isSelected ? Colors.black : Colors.white,
+                    color: isSelected ? AppColors.secondary : Colors.white,
                     border: Border.all(
-                      color: isSelected ? Colors.black : Colors.grey.shade400,
+                      color:
+                          isSelected ? AppColors.secondary : AppColors.outline,
                       width: 2,
                     ),
                   ),
                   child: isSelected
-                      ? const Icon(Icons.check, size: 18, color: Colors.white)
+                      ? const Icon(
+                          Icons.check,
+                          size: 16,
+                          color: Colors.white,
+                        )
                       : null,
                 ),
               ],
             ),
-          ),
-          if (isPopular)
-            Positioned(
-              top: -12,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Text(
-                    '3 DAYS FREE',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ),
+            const SizedBox(height: 8),
+            Text(
+              price,
+              style: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.4,
               ),
             ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              cadence,
+              style: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            if (helper != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                helper!,
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected
+                      ? AppColors.secondary
+                      : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -7,9 +7,11 @@ class OptionCard extends StatelessWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.sublabel,
   });
 
   final String label;
+  final String? sublabel;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -23,21 +25,43 @@ class OptionCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
-        height: 64,
+        constraints: const BoxConstraints(minHeight: 68),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFf2003c) : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: isSelected ? Colors.white : Colors.black,
-              fontFamily: 'PlusJakartaSans',
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white : Colors.black,
+                fontFamily: 'PlusJakartaSans',
+              ),
             ),
-          ),
+            if (sublabel != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                sublabel!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color:
+                      isSelected ? Colors.white.withOpacity(0.9) : const Color(0xFF6B7280),
+                  fontFamily: 'PlusJakartaSans',
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

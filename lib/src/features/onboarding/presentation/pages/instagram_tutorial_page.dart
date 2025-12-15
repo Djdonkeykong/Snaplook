@@ -44,7 +44,7 @@ const double _tapDoneHeightFraction = 0.13;
 
 // Step 7 (tapDoneLast) - second Done button on shortcut add screen
 const double _tapDoneLastTopFraction = 0.05;
-const double _tapDoneLastRightFraction = 0;
+const double _tapDoneLastRightFraction = 0.8;
 const double _tapDoneLastWidthFraction = 0.2;
 const double _tapDoneLastHeightFraction = 0.13;
 

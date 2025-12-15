@@ -243,7 +243,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
               // Gender Options
               Expanded(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Men's Clothing
                     AnimatedBuilder(

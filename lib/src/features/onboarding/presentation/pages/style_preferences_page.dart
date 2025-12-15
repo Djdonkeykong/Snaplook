@@ -22,14 +22,14 @@ class _StylePreferencesPageState extends ConsumerState<StylePreferencesPage>
     with TickerProviderStateMixin, RouteAware {
 
   static const List<String> _styleOptions = [
-    'Minimalist/Classic',
-    'Streetwear/Urban',
-    'Vintage/Retro',
-    'Bohemian/Romantic',
-    'Athletic/Sporty',
-    'Luxury/Designer',
-    'Edgy/Alternative',
-    'Casual/Comfort',
+    'Minimalist & Classic',
+    'Streetwear & Urban',
+    'Vintage & Retro',
+    'Boho & Romantic',
+    'Athletic & Sporty',
+    'Luxury & Designer',
+    'Edgy & Alternative',
+    'Casual & Comfy',
   ];
 
   late List<AnimationController> _animationControllers;
@@ -128,7 +128,7 @@ class _StylePreferencesPageState extends ConsumerState<StylePreferencesPage>
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,44 +164,53 @@ class _StylePreferencesPageState extends ConsumerState<StylePreferencesPage>
 
               SizedBox(height: spacing.xl),
 
-              // Options
-              ..._styleOptions.asMap().entries.map((entry) {
-                final index = entry.key;
-                final label = entry.value;
-                final isSelected = selectedStyles.contains(label);
+              // Options (scrollable) with header fixed
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ..._styleOptions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final label = entry.value;
+                        final isSelected = selectedStyles.contains(label);
 
-                return Padding(
-                  padding: EdgeInsets.only(bottom: spacing.m),
-                  child: AnimatedBuilder(
-                    animation: _animationControllers[index],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[index],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[index],
-                          child: OptionCard(
-                            label: label,
-                            isSelected: isSelected,
-                            onTap: () {
-                              if (isSelected) {
-                                ref.read(stylePreferencesProvider.notifier).state =
-                                    selectedStyles.where((s) => s != label).toList();
-                              } else {
-                                ref.read(stylePreferencesProvider.notifier).state = [
-                                  ...selectedStyles,
-                                  label
-                                ];
-                              }
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: spacing.m),
+                          child: AnimatedBuilder(
+                            animation: _animationControllers[index],
+                            builder: (context, child) {
+                              return FadeTransition(
+                                opacity: _fadeAnimations[index],
+                                child: ScaleTransition(
+                                  scale: _scaleAnimations[index],
+                                  child: OptionCard(
+                                    label: label,
+                                    isSelected: isSelected,
+                                    onTap: () {
+                                      if (isSelected) {
+                                        ref.read(stylePreferencesProvider.notifier).state =
+                                            selectedStyles.where((s) => s != label).toList();
+                                      } else {
+                                        ref.read(stylePreferencesProvider.notifier).state = [
+                                          ...selectedStyles,
+                                          label
+                                        ];
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
                             },
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              }).toList(),
+                        );
+                      }).toList(),
 
-              SizedBox(height: spacing.xl),
+                      SizedBox(height: spacing.xl),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
