@@ -17,13 +17,15 @@ import '../../../../services/subscription_sync_service.dart';
 enum RevenueCatPaywallPlanType { monthly, yearly }
 
 final selectedRevenueCatPlanProvider =
-    StateProvider<RevenueCatPaywallPlanType?>((ref) => RevenueCatPaywallPlanType.yearly);
+    StateProvider<RevenueCatPaywallPlanType?>(
+        (ref) => RevenueCatPaywallPlanType.yearly);
 
 class RevenueCatPaywallPage extends ConsumerStatefulWidget {
   const RevenueCatPaywallPage({super.key});
 
   @override
-  ConsumerState<RevenueCatPaywallPage> createState() => _RevenueCatPaywallPageState();
+  ConsumerState<RevenueCatPaywallPage> createState() =>
+      _RevenueCatPaywallPageState();
 }
 
 class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
@@ -79,7 +81,8 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Unable to load subscription plans. You can skip for now.'),
+              content: Text(
+                  'Unable to load subscription plans. You can skip for now.'),
               duration: const Duration(seconds: 3),
             ),
           );
@@ -139,7 +142,8 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         try {
           debugPrint('[RevenueCatPaywall] Syncing subscription to Supabase...');
           await SubscriptionSyncService().syncSubscriptionToSupabase();
-          await OnboardingStateService().markPaymentComplete(authService.currentUser!.id);
+          await OnboardingStateService()
+              .markPaymentComplete(authService.currentUser!.id);
           debugPrint('[RevenueCatPaywall] Subscription synced successfully');
         } catch (e) {
           debugPrint('[RevenueCatPaywall] Error syncing subscription: $e');
@@ -167,8 +171,9 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) =>
-            hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage(),
+        builder: (context) => hasAccount
+            ? const WelcomeFreeAnalysisPage()
+            : const AccountCreationPage(),
       ),
     );
   }
@@ -192,6 +197,12 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
     final currentOffering = _offerings?.current;
     final yearlyPackage = currentOffering?.annual;
     final monthlyPackage = currentOffering?.monthly;
+    final trialEndDate = DateTime.now().add(const Duration(days: 3));
+    final trialEndFormatted =
+        '${trialEndDate.month}/${trialEndDate.day}/${trialEndDate.year}';
+    final yearlyMonthlyEquivalent = yearlyPackage != null
+        ? (yearlyPackage.storeProduct.price / 12).toStringAsFixed(2)
+        : null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -248,78 +259,71 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: spacing.l),
-
-              // Title
-              Text(
-                _isEligibleForTrial
-                    ? 'Start your 3-day FREE trial to continue'
-                    : 'Unlock everything Snaplook offers.',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -0.5,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  height: 1.2,
-                ),
-              ),
-
-              SizedBox(height: spacing.xl),
-
-              // Timeline for trial-eligible users OR Benefits for non-trial users
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.m),
+              const _HeroMark(),
+              SizedBox(height: spacing.l),
+              Center(
                 child: Column(
                   children: [
-                    if (_isEligibleForTrial) ...[
-                      _TimelineItem(
-                        icon: Icons.lock_open_rounded,
-                        iconColor: const Color(0xFFf2003c),
-                        title: 'Today',
-                        description:
-                            'Unlock all the app\'s features like AI fashion analysis and more.',
+                    const Text(
+                      'Access all of Snaplook',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.7,
+                        height: 1.25,
                       ),
-                      SizedBox(height: spacing.l),
-                      _TimelineItem(
-                        icon: Icons.notifications_rounded,
-                        iconColor: const Color(0xFFf2003c),
-                        title: 'In 2 Days',
-                        description: 'We\'ll send you a reminder that your trial is ending soon.',
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _isEligibleForTrial
+                          ? 'Start your 3-day free trial and unlock unlimited matches.'
+                          : 'Unlock unlimited matches, saves, and smart alerts.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                        height: 1.4,
                       ),
-                      SizedBox(height: spacing.l),
-                      _TimelineItem(
-                        icon: Icons.workspace_premium, // crown icon
-                        iconColor: Colors.black,
-                        title: 'In 3 Days',
-                        description:
-                            'You\'ll be charged on ${DateTime.now().add(const Duration(days: 3)).month}/${DateTime.now().add(const Duration(days: 3)).day}/${DateTime.now().add(const Duration(days: 3)).year} unless you cancel anytime before.',
-                      ),
-                    ] else ...[
-                      _BenefitItem(
-                        icon: Icons.check,
-                        title: 'AI-powered matches',
-                        description:
-                            'Share an image to instantly find similar products from thousands of retailers.',
-                      ),
-                      SizedBox(height: spacing.l),
-                      _BenefitItem(
-                        icon: Icons.check,
-                        title: 'Save favorite finds',
-                        description:
-                            'Bookmark the products you love so you can jump back in when it\'s time to buy.',
-                      ),
-                      SizedBox(height: spacing.l),
-                      _BenefitItem(
-                        icon: Icons.check,
-                        title: '100 credits included',
-                        description:
-                            'Every subscription unlocks 100 credits (up to 100 searches) so you can keep scanning outfits all month.',
-                      ),
-                    ],
+                    ),
                   ],
                 ),
               ),
-
+              SizedBox(height: spacing.xl),
+              const _FeatureItem(
+                icon: Icons.search_rounded,
+                iconColor: AppColors.tertiary,
+                title: 'Unlimited visual searches',
+                description: 'Instant matches from every photo you drop in.',
+              ),
+              SizedBox(height: spacing.l),
+              const _FeatureItem(
+                icon: Icons.favorite_rounded,
+                iconColor: AppColors.secondary,
+                title: 'Save & curate looks',
+                description:
+                    'Keep the styles you love in one place to revisit anytime.',
+              ),
+              SizedBox(height: spacing.l),
+              const _FeatureItem(
+                icon: Icons.bolt_rounded,
+                iconColor: Colors.amber,
+                title: 'AI-powered brand matches',
+                description:
+                    'See similar pieces across top retailers in seconds.',
+              ),
+              SizedBox(height: spacing.l),
+              const _FeatureItem(
+                icon: Icons.widgets_rounded,
+                iconColor: Colors.indigo,
+                title: 'Widgets & smart alerts',
+                description:
+                    'Lock-screen shortcuts and drop reminders for fast access.',
+              ),
               SizedBox(height: spacing.xxl),
             ],
           ),
@@ -329,89 +333,133 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         primaryButton: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Plan selection
-            if (yearlyPackage != null && monthlyPackage != null) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: _PlanOption(
-                      plan: RevenueCatPaywallPlanType.monthly,
-                      title: 'Monthly',
-                      price: '${monthlyPackage.storeProduct.priceString}/mo',
-                      isSelected: selectedPlan == RevenueCatPaywallPlanType.monthly,
-                      onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
-                          RevenueCatPaywallPlanType.monthly,
+            if (yearlyPackage != null && monthlyPackage != null)
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.shadow,
+                      blurRadius: 28,
+                      offset: Offset(0, 18),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _PlanOption(
-                      plan: RevenueCatPaywallPlanType.yearly,
-                      title: 'Yearly',
-                      price: '\$${((yearlyPackage.storeProduct.price / 12) * 100).floor() / 100}/mo',
-                      isSelected: selectedPlan == RevenueCatPaywallPlanType.yearly,
-                      onTap: () => ref.read(selectedRevenueCatPlanProvider.notifier).state =
-                          RevenueCatPaywallPlanType.yearly,
-                      badge: _isEligibleForTrial ? '3-Days FREE' : 'Most Popular',
+                  ],
+                  border: Border.all(color: AppColors.outlineVariant),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.star_rounded,
+                                  size: 16, color: AppColors.secondary),
+                              SizedBox(width: 6),
+                              Text(
+                                'Save 20%',
+                                style: TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          selectedPlan == RevenueCatPaywallPlanType.yearly
+                              ? 'Best value'
+                              : 'Choose a plan',
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _PlanOption(
+                            plan: RevenueCatPaywallPlanType.yearly,
+                            title: 'Yearly',
+                            price: yearlyPackage.storeProduct.priceString,
+                            cadence: yearlyMonthlyEquivalent != null
+                                ? '\$$yearlyMonthlyEquivalent/mo after trial'
+                                : 'Billed annually',
+                            helper: _isEligibleForTrial
+                                ? '3-day free trial'
+                                : 'Best value',
+                            isSelected: selectedPlan ==
+                                RevenueCatPaywallPlanType.yearly,
+                            onTap: () => ref
+                                .read(selectedRevenueCatPlanProvider.notifier)
+                                .state = RevenueCatPaywallPlanType.yearly,
+                            isPopular: true,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _PlanOption(
+                            plan: RevenueCatPaywallPlanType.monthly,
+                            title: 'Monthly',
+                            price: monthlyPackage.storeProduct.priceString,
+                            cadence: 'Billed monthly',
+                            helper: 'Cancel anytime',
+                            isSelected: selectedPlan ==
+                                RevenueCatPaywallPlanType.monthly,
+                            onTap: () => ref
+                                .read(selectedRevenueCatPlanProvider.notifier)
+                                .state = RevenueCatPaywallPlanType.monthly,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Center(
+                      child: Text(
+                        _isEligibleForTrial
+                            ? 'Nothing due today'
+                            : 'Starts immediately, cancel anytime',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: _isEligibleForTrial
+                              ? AppColors.secondary
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-            ],
-            if (_isEligibleForTrial) ...[
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.check,
-                    color: Colors.green,
-                    size: 16,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'No Payment Due Now',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'PlusJakartaSans',
-                      color: Colors.black,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ] else ...[
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                    size: 18,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'No commitment - cancel anytime',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'PlusJakartaSans',
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
+            SizedBox(height: spacing.l),
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
                 onPressed: _isPurchasing ? null : _handleContinue,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFf2003c),
+                  backgroundColor: AppColors.secondary,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -424,15 +472,16 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
                     : Text(
                         _offerings?.current == null
                             ? 'Skip for Now'
                             : _isEligibleForTrial
-                                ? 'Start my 3-day FREE'
-                                : 'Start my journey',
+                                ? 'Continue'
+                                : 'Subscribe now',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -450,10 +499,11 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
             _offerings?.current == null
                 ? ''
                 : selectedPlan == RevenueCatPaywallPlanType.monthly
-                    ? 'Only ${monthlyPackage?.storeProduct.priceString}/month'
+                    ? 'Billed ${monthlyPackage?.storeProduct.priceString} today.'
                     : _isEligibleForTrial
-                        ? '3-days free, then ${yearlyPackage?.storeProduct.priceString} per year'
-                        : 'Just ${yearlyPackage?.storeProduct.priceString} per year (\$${((yearlyPackage!.storeProduct.price / 12) * 100).floor() / 100}/mo)',
+                        ? '3-day free trial, then ${yearlyPackage?.storeProduct.priceString}/year starting $trialEndFormatted.'
+                        : 'Just ${yearlyPackage?.storeProduct.priceString} per year'
+                            '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}',
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
@@ -473,21 +523,30 @@ class _PlanOption extends StatelessWidget {
   final RevenueCatPaywallPlanType plan;
   final String title;
   final String price;
+  final String cadence;
+  final String? helper;
   final bool isSelected;
   final VoidCallback onTap;
-  final String? badge;
+  final bool isPopular;
 
   const _PlanOption({
     required this.plan,
     required this.title,
     required this.price,
+    required this.cadence,
+    this.helper,
     required this.isSelected,
     required this.onTap,
-    this.badge,
+    this.isPopular = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Color borderColor =
+        isSelected ? AppColors.secondary : AppColors.outline;
+    final Color backgroundColor =
+        isSelected ? AppColors.secondary.withOpacity(0.06) : Colors.white;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.mediumImpact();
@@ -500,12 +559,27 @@ class _PlanOption extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: isSelected ? Colors.black : const Color(0xFFE5E7EB),
-                width: 2,
+                color: borderColor,
+                width: isSelected ? 1.6 : 1.1,
               ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.secondary.withOpacity(0.18),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
             ),
             child: Row(
               children: [
@@ -517,52 +591,90 @@ class _PlanOption extends StatelessWidget {
                       Text(
                         title,
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
                           fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         price,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                          fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        cadence,
+                        style: const TextStyle(
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textSecondary,
                           fontFamily: 'PlusJakartaSans',
                         ),
                       ),
+                      if (helper != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          helper!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected
+                                ? AppColors.secondary
+                                : AppColors.textSecondary,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                if (isSelected)
-                  const Icon(
-                    Icons.check_circle,
-                    color: Color(0xFFf2003c),
-                    size: 24,
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? AppColors.secondary : Colors.white,
+                    border: Border.all(
+                      color:
+                          isSelected ? AppColors.secondary : AppColors.outline,
+                      width: 2,
+                    ),
                   ),
+                  child: isSelected
+                      ? const Icon(Icons.check, color: Colors.white, size: 16)
+                      : null,
+                ),
               ],
             ),
           ),
-          if (badge != null)
+          if (isPopular)
             Positioned(
               top: -10,
               left: 0,
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFf2003c),
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.secondary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(999),
                   ),
-                  child: Text(
-                    badge!,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  child: const Text(
+                    'Best value',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.secondary,
                       fontFamily: 'PlusJakartaSans',
                     ),
                   ),
@@ -575,13 +687,71 @@ class _PlanOption extends StatelessWidget {
   }
 }
 
-class _TimelineItem extends StatelessWidget {
+class _HeroMark extends StatelessWidget {
+  const _HeroMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.secondary.withOpacity(0.16),
+                  AppColors.secondaryLight.withOpacity(0.08),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.secondary.withOpacity(0.18),
+                  blurRadius: 32,
+                  offset: const Offset(0, 18),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 104,
+            height: 104,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: AppColors.outlineVariant),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.auto_awesome,
+              size: 48,
+              color: AppColors.secondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureItem extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final String title;
   final String description;
 
-  const _TimelineItem({
+  const _FeatureItem({
     required this.icon,
     required this.iconColor,
     required this.title,
@@ -594,20 +764,15 @@ class _TimelineItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
-            color: iconColor == Colors.black
-                ? Colors.black
-                : const Color(0xFFf2003c),
+            color: iconColor.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 24,
-          ),
+          child: Icon(icon, color: iconColor, size: 22),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -615,82 +780,22 @@ class _TimelineItem extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 18,
                   fontFamily: 'PlusJakartaSans',
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.3,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 description,
                 style: const TextStyle(
+                  fontFamily: 'PlusJakartaSans',
                   fontSize: 14,
-                  fontFamily: 'PlusJakartaSans',
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7280),
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BenefitItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-
-  const _BenefitItem({
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            color: Color(0xFFf2003c),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontFamily: 'PlusJakartaSans',
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontFamily: 'PlusJakartaSans',
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7280),
-                  height: 1.4,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                  height: 1.5,
                 ),
               ),
             ],
