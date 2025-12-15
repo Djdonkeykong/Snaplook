@@ -180,6 +180,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
   @override
   Widget build(BuildContext context) {
     final selectedPlan = ref.watch(selectedRevenueCatPlanProvider);
+    final selectedPlanValue = selectedPlan ?? RevenueCatPaywallPlanType.yearly;
     final spacing = context.spacing;
     final viewPadding = MediaQuery.of(context).padding;
 
@@ -346,7 +347,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 yearlyPackage: yearlyPackage!,
                 monthlyPackage: monthlyPackage!,
                 yearlyMonthlyEquivalent: yearlyMonthlyEquivalent,
-                selectedPlan: selectedPlan,
+                selectedPlan: selectedPlanValue,
                 isEligibleForTrial: _isEligibleForTrial,
                 isPurchasing: _isPurchasing,
                 trialEndFormatted: trialEndFormatted,
