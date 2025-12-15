@@ -205,13 +205,11 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
     final trialEndFormatted =
         '${trialEndDate.month}/${trialEndDate.day}/${trialEndDate.year}';
     final yearlyMonthlyEquivalent = yearlyPackage != null
-        ? (((yearlyPackage.storeProduct.price / 12) * 100).floorToDouble() /
-                  100)
-              .toStringAsFixed(2)
+        ? (yearlyPackage.storeProduct.price / 12).toStringAsFixed(2)
         : null;
     final hasPlans = yearlyPackage != null && monthlyPackage != null;
     final bottomScrollPadding =
-        (hasPlans ? 260.0 : spacing.l * 2) + viewPadding.bottom;
+        (hasPlans ? 360.0 : spacing.l * 2) + viewPadding.bottom;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -433,93 +431,129 @@ class _PlanOption extends StatelessWidget {
                       ),
                     ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -0.2,
-                        ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                                fontFamily: 'PlusJakartaSans',
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isSelected
+                                  ? AppColors.secondary
+                                  : Colors.white,
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.secondary
+                                    : AppColors.outline,
+                                width: 2,
+                              ),
+                            ),
+                            child: isSelected
+                                ? const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 16,
+                                  )
+                                : null,
+                          ),
+                        ],
                       ),
-                    ),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isSelected ? AppColors.secondary : Colors.white,
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.secondary
-                              : AppColors.outline,
-                          width: 2,
-                        ),
-                      ),
-                      child: isSelected
-                          ? const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 16,
-                            )
-                          : null,
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      price,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                        fontFamily: 'PlusJakartaSans',
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    if (cadence.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        cadence,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                          fontFamily: 'PlusJakartaSans',
-                        ),
+                      const Spacer(),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            price,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                              fontFamily: 'PlusJakartaSans',
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          if (cadence.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              cadence,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ],
+                          if (helper != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              helper!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isSelected
+                                    ? AppColors.secondary
+                                    : AppColors.textSecondary,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
-                    if (helper != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        helper!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isSelected
-                              ? AppColors.secondary
-                              : AppColors.textSecondary,
-                          fontFamily: 'PlusJakartaSans',
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
+          if (isPopular)
+            Positioned(
+              top: -10,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text(
+                    'Best value',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.secondary,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
