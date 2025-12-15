@@ -280,8 +280,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                   child: Column(
                     children: [
                       const Text(
-                        'Access all of
-                        Snaplook',
+                        'Access all of Snaplook',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
