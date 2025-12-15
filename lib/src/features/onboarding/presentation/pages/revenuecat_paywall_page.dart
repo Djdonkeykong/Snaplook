@@ -401,7 +401,7 @@ class _PlanOption extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(18),
@@ -684,7 +684,7 @@ class _PlanSelectionCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -700,50 +700,21 @@ class _PlanSelectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: 6),
           Row(
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.star_rounded,
-                        size: 16, color: AppColors.secondary),
-                    SizedBox(width: 6),
-                    Text(
-                      'Save 20%',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        color: AppColors.secondary,
-                      ),
-                    ),
-                  ],
+              Expanded(
+                child: _PlanOption(
+                  plan: RevenueCatPaywallPlanType.monthly,
+                  title: 'Monthly',
+                  price: monthlyPackage.storeProduct.priceString,
+                  cadence: 'Billed monthly',
+                  helper: 'Cancel anytime',
+                  isSelected: selectedPlan == RevenueCatPaywallPlanType.monthly,
+                  onTap: () => onSelectPlan(RevenueCatPaywallPlanType.monthly),
                 ),
               ),
-              const Spacer(),
-              Text(
-                selectedPlan == RevenueCatPaywallPlanType.yearly
-                    ? 'Best value'
-                    : 'Choose a plan',
-                style: const TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
+              const SizedBox(width: 12),
               Expanded(
                 child: _PlanOption(
                   plan: RevenueCatPaywallPlanType.yearly,
@@ -759,21 +730,9 @@ class _PlanSelectionCard extends StatelessWidget {
                   isPopular: true,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _PlanOption(
-                  plan: RevenueCatPaywallPlanType.monthly,
-                  title: 'Monthly',
-                  price: monthlyPackage.storeProduct.priceString,
-                  cadence: 'Billed monthly',
-                  helper: 'Cancel anytime',
-                  isSelected: selectedPlan == RevenueCatPaywallPlanType.monthly,
-                  onTap: () => onSelectPlan(RevenueCatPaywallPlanType.monthly),
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Center(
             child: Text(
               isEligibleForTrial
