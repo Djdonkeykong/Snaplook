@@ -391,7 +391,7 @@ class _PlanOption extends StatelessWidget {
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding:
-                EdgeInsets.fromLTRB(12, badgeLabel != null ? 20 : 12, 12, 12),
+                EdgeInsets.fromLTRB(12, badgeLabel != null ? 22 : 12, 12, 12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
@@ -488,7 +488,7 @@ class _PlanOption extends StatelessWidget {
           ),
           if (badgeLabel != null)
             Positioned(
-              top: -14,
+              top: -12,
               left: 0,
               right: 0,
               child: Center(

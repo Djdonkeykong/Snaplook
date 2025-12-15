@@ -46,16 +46,32 @@ class RatingSocialProofPage extends StatelessWidget {
               SizedBox(height: spacing.l),
               const Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  'Give us a rating',
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -1.0,
-                    height: 1.3,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'How does this feel so far?',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -1.0,
+                        height: 1.3,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      "We're just getting started.",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                        fontFamily: 'PlusJakartaSans',
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Expanded(

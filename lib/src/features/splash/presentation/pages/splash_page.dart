@@ -6,7 +6,7 @@ import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/subscription_sync_service.dart';
-import '../../../onboarding/presentation/pages/user_goals_page.dart';
+import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../onboarding/presentation/pages/discovery_source_page.dart';
 import '../../../onboarding/presentation/pages/awesome_intro_page.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart';
@@ -120,7 +120,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                 if (needsStackBuilding) {
                   // Replace splash with first page, then push subsequent pages
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => const UserGoalsPage()),
+                    MaterialPageRoute(builder: (context) => const HowItWorksPage()),
                   );
 
                   // Build the rest of the stack based on checkpoint
@@ -167,18 +167,18 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                   return; // Early return since we've already navigated
                 } else {
                   // Starting from beginning
-                  nextPage = const UserGoalsPage();
+                  nextPage = const HowItWorksPage();
                 }
               } else {
                 // Not started - go to gender selection
-                nextPage = const UserGoalsPage();
+                nextPage = const HowItWorksPage();
               }
             }
           }
         } catch (e) {
           debugPrint('[Splash] Error determining onboarding state: $e');
           // On error, default to safe behavior
-          nextPage = const UserGoalsPage();
+          nextPage = const HowItWorksPage();
         }
       }
     } else {

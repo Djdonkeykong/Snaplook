@@ -14,7 +14,7 @@ import '../../../home/domain/providers/inspiration_provider.dart';
 import '../widgets/progress_indicator.dart';
 import 'welcome_free_analysis_page.dart';
 import 'gender_selection_page.dart';
-import 'user_goals_page.dart';
+import 'how_it_works_page.dart';
 import 'notification_permission_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
@@ -112,7 +112,7 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
     } else {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => const UserGoalsPage(),
+          builder: (context) => const HowItWorksPage(),
         ),
       );
     }
