@@ -17,7 +17,8 @@ enum RevenueCatPaywallPlanType { monthly, yearly }
 
 final selectedRevenueCatPlanProvider =
     StateProvider<RevenueCatPaywallPlanType?>(
-        (ref) => RevenueCatPaywallPlanType.yearly);
+      (ref) => RevenueCatPaywallPlanType.yearly,
+    );
 
 class RevenueCatPaywallPage extends ConsumerStatefulWidget {
   const RevenueCatPaywallPage({super.key});
@@ -60,9 +61,9 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
 
   Future<void> _loadOfferings() async {
     try {
-      final offerings = await RevenueCatService()
-          .getOfferings()
-          .timeout(const Duration(seconds: 10));
+      final offerings = await RevenueCatService().getOfferings().timeout(
+        const Duration(seconds: 10),
+      );
       if (mounted) {
         setState(() {
           _offerings = offerings;
@@ -81,7 +82,8 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                  'Unable to load subscription plans. You can skip for now.'),
+                'Unable to load subscription plans. You can skip for now.',
+              ),
               duration: const Duration(seconds: 3),
             ),
           );
@@ -141,8 +143,9 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         try {
           debugPrint('[RevenueCatPaywall] Syncing subscription to Supabase...');
           await SubscriptionSyncService().syncSubscriptionToSupabase();
-          await OnboardingStateService()
-              .markPaymentComplete(authService.currentUser!.id);
+          await OnboardingStateService().markPaymentComplete(
+            authService.currentUser!.id,
+          );
           debugPrint('[RevenueCatPaywall] Subscription synced successfully');
         } catch (e) {
           debugPrint('[RevenueCatPaywall] Error syncing subscription: $e');
@@ -351,9 +354,9 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 isEligibleForTrial: _isEligibleForTrial,
                 isPurchasing: _isPurchasing,
                 trialEndFormatted: trialEndFormatted,
-                onSelectPlan: (plan) => ref
-                    .read(selectedRevenueCatPlanProvider.notifier)
-                    .state = plan,
+                onSelectPlan: (plan) =>
+                    ref.read(selectedRevenueCatPlanProvider.notifier).state =
+                        plan,
                 onContinue: _handleContinue,
               ),
             ),
@@ -386,10 +389,12 @@ class _PlanOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color borderColor =
-        isSelected ? AppColors.secondary : AppColors.outline;
-    final Color backgroundColor =
-        isSelected ? AppColors.secondary.withOpacity(0.06) : Colors.white;
+    final Color borderColor = isSelected
+        ? AppColors.secondary
+        : AppColors.outline;
+    final Color backgroundColor = isSelected
+        ? AppColors.secondary.withOpacity(0.06)
+        : Colors.white;
 
     return GestureDetector(
       onTap: () {
@@ -430,72 +435,93 @@ class _PlanOption extends StatelessWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        price,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        cadence,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                          fontFamily: 'PlusJakartaSans',
-                        ),
-                      ),
-                      if (helper != null) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          helper!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: isSelected
-                                ? AppColors.secondary
-                                : AppColors.textSecondary,
-                            fontFamily: 'PlusJakartaSans',
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                                fontFamily: 'PlusJakartaSans',
+                                letterSpacing: -0.2,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isSelected
+                                  ? AppColors.secondary
+                                  : Colors.white,
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.secondary
+                                    : AppColors.outline,
+                                width: 2,
+                              ),
+                            ),
+                            child: isSelected
+                                ? const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 16,
+                                  )
+                                : null,
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          Text(
+                            price,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                              fontFamily: 'PlusJakartaSans',
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          if (cadence.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              cadence,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ],
+                          if (helper != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              helper!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isSelected
+                                    ? AppColors.secondary
+                                    : AppColors.textSecondary,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
-                ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isSelected ? AppColors.secondary : Colors.white,
-                    border: Border.all(
-                      color:
-                          isSelected ? AppColors.secondary : AppColors.outline,
-                      width: 2,
-                    ),
-                  ),
-                  child: isSelected
-                      ? const Icon(Icons.check, color: Colors.white, size: 16)
-                      : null,
                 ),
               ],
             ),
@@ -507,8 +533,10 @@ class _PlanOption extends StatelessWidget {
               right: 0,
               child: Center(
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.secondary.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(999),
@@ -678,9 +706,9 @@ class _PlanSelectionCard extends StatelessWidget {
     final String footnote = selectedPlan == RevenueCatPaywallPlanType.monthly
         ? 'Billed ${monthlyPackage.storeProduct.priceString} today.'
         : isEligibleForTrial
-            ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString}/year starting $trialEndFormatted.'
-            : 'Just ${yearlyPackage.storeProduct.priceString} per year'
-                '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}';
+        ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString}/year starting $trialEndFormatted.'
+        : 'Just ${yearlyPackage.storeProduct.priceString} per year'
+              '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}';
 
     return Container(
       width: double.infinity,
@@ -708,8 +736,8 @@ class _PlanSelectionCard extends StatelessWidget {
                   plan: RevenueCatPaywallPlanType.monthly,
                   title: 'Monthly',
                   price: monthlyPackage.storeProduct.priceString,
-                  cadence: 'Billed monthly',
-                  helper: 'Cancel anytime',
+                  cadence: '',
+                  helper: null,
                   isSelected: selectedPlan == RevenueCatPaywallPlanType.monthly,
                   onTap: () => onSelectPlan(RevenueCatPaywallPlanType.monthly),
                 ),
@@ -723,11 +751,10 @@ class _PlanSelectionCard extends StatelessWidget {
                   cadence: yearlyMonthlyEquivalent != null
                       ? '\$$yearlyMonthlyEquivalent/mo after trial'
                       : 'Billed annually',
-                  helper:
-                      isEligibleForTrial ? '3-day free trial' : 'Best value',
+                  helper: null,
                   isSelected: selectedPlan == RevenueCatPaywallPlanType.yearly,
                   onTap: () => onSelectPlan(RevenueCatPaywallPlanType.yearly),
-                  isPopular: true,
+                  isPopular: false,
                 ),
               ),
             ],
