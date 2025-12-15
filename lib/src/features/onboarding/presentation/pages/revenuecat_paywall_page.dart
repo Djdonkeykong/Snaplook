@@ -284,7 +284,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
-                          fontSize: 26,
+                          fontSize: 34,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
                           letterSpacing: -0.7,
@@ -544,6 +544,7 @@ class _FeatureItem extends StatelessWidget {
         Container(
           width: 32,
           height: 32,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: iconColor.withOpacity(0.12),
             shape: BoxShape.circle,
