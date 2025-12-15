@@ -125,7 +125,7 @@ class _ShoppingFrequencyPageState extends ConsumerState<ShoppingFrequencyPage>
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,36 +161,45 @@ class _ShoppingFrequencyPageState extends ConsumerState<ShoppingFrequencyPage>
 
               SizedBox(height: spacing.xl),
 
-              // Options
-              ..._frequencyOptions.asMap().entries.map((entry) {
-                final index = entry.key;
-                final frequency = entry.value;
-                final isSelected = selectedFrequency == frequency;
+              // Options list scrolls while header stays fixed
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ..._frequencyOptions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final frequency = entry.value;
+                        final isSelected = selectedFrequency == frequency;
 
-                return Padding(
-                  padding: EdgeInsets.only(bottom: spacing.m),
-                  child: AnimatedBuilder(
-                    animation: _animationControllers[index],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[index],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[index],
-                          child: OptionCard(
-                            label: frequency,
-                            isSelected: isSelected,
-                            onTap: () {
-                              ref.read(shoppingFrequencyProvider.notifier).state = frequency;
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: spacing.m),
+                          child: AnimatedBuilder(
+                            animation: _animationControllers[index],
+                            builder: (context, child) {
+                              return FadeTransition(
+                                opacity: _fadeAnimations[index],
+                                child: ScaleTransition(
+                                  scale: _scaleAnimations[index],
+                                  child: OptionCard(
+                                    label: frequency,
+                                    isSelected: isSelected,
+                                    onTap: () {
+                                      ref.read(shoppingFrequencyProvider.notifier).state = frequency;
+                                    },
+                                  ),
+                                ),
+                              );
                             },
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              }).toList(),
+                        );
+                      }).toList(),
 
-              SizedBox(height: spacing.xl),
+                      SizedBox(height: spacing.xl),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

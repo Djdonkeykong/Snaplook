@@ -125,7 +125,7 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,36 +161,45 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
 
               SizedBox(height: spacing.xl),
 
-              // Options
-              ..._priceOptions.asMap().entries.map((entry) {
-                final index = entry.key;
-                final label = entry.value;
-                final isSelected = selectedPrice == label;
+              // Options list scrolls while header stays fixed
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ..._priceOptions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final label = entry.value;
+                        final isSelected = selectedPrice == label;
 
-                return Padding(
-                  padding: EdgeInsets.only(bottom: spacing.m),
-                  child: AnimatedBuilder(
-                    animation: _animationControllers[index],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[index],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[index],
-                          child: OptionCard(
-                            label: label,
-                            isSelected: isSelected,
-                            onTap: () {
-                              ref.read(priceRangeProvider.notifier).state = label;
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: spacing.m),
+                          child: AnimatedBuilder(
+                            animation: _animationControllers[index],
+                            builder: (context, child) {
+                              return FadeTransition(
+                                opacity: _fadeAnimations[index],
+                                child: ScaleTransition(
+                                  scale: _scaleAnimations[index],
+                                  child: OptionCard(
+                                    label: label,
+                                    isSelected: isSelected,
+                                    onTap: () {
+                                      ref.read(priceRangeProvider.notifier).state = label;
+                                    },
+                                  ),
+                                ),
+                              );
                             },
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              }).toList(),
+                        );
+                      }).toList(),
 
-              SizedBox(height: spacing.xl),
+                      SizedBox(height: spacing.xl),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
