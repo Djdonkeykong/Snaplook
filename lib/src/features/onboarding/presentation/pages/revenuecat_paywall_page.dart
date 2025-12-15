@@ -40,6 +40,11 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
     _checkTrialEligibility();
   }
 
+  String _formatPriceFloor(double value) {
+    final cents = (value * 100).floor();
+    return (cents / 100).toStringAsFixed(2);
+  }
+
   Future<void> _checkTrialEligibility() async {
     try {
       final isEligible = await RevenueCatService().isEligibleForTrial();
@@ -202,7 +207,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
     final trialEndFormatted =
         '${trialEndDate.month}/${trialEndDate.day}/${trialEndDate.year}';
     final yearlyMonthlyEquivalent = yearlyPackage != null
-        ? (yearlyPackage.storeProduct.price / 12).toStringAsFixed(2)
+        ? _formatPriceFloor(yearlyPackage.storeProduct.price / 12)
         : null;
     final hasPlans = yearlyPackage != null && monthlyPackage != null;
     final bottomScrollPadding =
@@ -425,14 +430,15 @@ class _PlanOption extends StatelessWidget {
                       ),
                     ],
             ),
-            child: Row(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
                         title,
                         style: const TextStyle(
                           fontSize: 15,
@@ -442,62 +448,68 @@ class _PlanOption extends StatelessWidget {
                           letterSpacing: -0.2,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        price,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -0.3,
+                    ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSelected ? AppColors.secondary : Colors.white,
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.secondary
+                              : AppColors.outline,
+                          width: 2,
                         ),
                       ),
-                      if (cadence != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          cadence!,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                        ),
-                      ],
-                      if (helper != null) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          helper!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: isSelected
-                                ? AppColors.secondary
-                                : AppColors.textSecondary,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isSelected ? AppColors.secondary : Colors.white,
-                    border: Border.all(
-                      color:
-                          isSelected ? AppColors.secondary : AppColors.outline,
-                      width: 2,
+                      child: isSelected
+                          ? const Icon(Icons.check,
+                              color: Colors.white, size: 16)
+                          : null,
                     ),
-                  ),
-                  child: isSelected
-                      ? const Icon(Icons.check, color: Colors.white, size: 16)
-                      : null,
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    if (cadence != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        cadence!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                    ],
+                    if (helper != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        helper!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected
+                              ? AppColors.secondary
+                              : AppColors.textSecondary,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -683,7 +695,7 @@ class _PlanSelectionCard extends StatelessWidget {
             ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString}/year starting $trialEndFormatted.'
             : 'Just ${yearlyPackage.storeProduct.priceString} per year'
                 '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}';
-    const double planOptionHeight = 140;
+    const double planOptionHeight = 240;
 
     return Container(
       width: double.infinity,
