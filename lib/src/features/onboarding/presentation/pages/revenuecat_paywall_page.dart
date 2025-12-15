@@ -209,7 +209,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         : null;
     final hasPlans = yearlyPackage != null && monthlyPackage != null;
     final bottomScrollPadding =
-        (hasPlans ? 360.0 : spacing.l * 2) + viewPadding.bottom;
+        (hasPlans ? 260.0 : spacing.l * 2) + viewPadding.bottom;
 
     return Scaffold(
       backgroundColor: AppColors.background,
