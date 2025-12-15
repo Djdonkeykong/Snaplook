@@ -407,6 +407,7 @@ class _PlanOption extends StatelessWidget {
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(12),
+            constraints: const BoxConstraints(minHeight: 120),
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.circular(18),
@@ -438,7 +439,7 @@ class _PlanOption extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: Text(
@@ -452,6 +453,7 @@ class _PlanOption extends StatelessWidget {
                               ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             width: 28,
@@ -478,10 +480,10 @@ class _PlanOption extends StatelessWidget {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 8),
                           Text(
                             price,
                             style: const TextStyle(
@@ -493,11 +495,11 @@ class _PlanOption extends StatelessWidget {
                             ),
                           ),
                           if (cadence.isNotEmpty) ...[
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 4),
                             Text(
                               cadence,
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textSecondary,
                                 fontFamily: 'PlusJakartaSans',
