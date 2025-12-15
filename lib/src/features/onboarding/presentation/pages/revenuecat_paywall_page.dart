@@ -294,7 +294,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                     ],
                   ),
                 ),
-                SizedBox(height: spacing.xl),
+                SizedBox(height: spacing.xl + spacing.s),
                 const _FeatureItem(
                   icon: Icons.search_rounded,
                   iconColor: AppColors.tertiary,
@@ -539,6 +539,7 @@ class _FeatureItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
         Container(
           width: 32,
@@ -603,7 +604,7 @@ class _PlanSelectionCard extends StatelessWidget {
             ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString}/year starting $trialEndFormatted.'
             : 'Just ${yearlyPackage.storeProduct.priceString} per year'
                 '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}';
-    const double planOptionHeight = 240;
+    const double planOptionHeight = 120;
 
     return Container(
       width: double.infinity,
