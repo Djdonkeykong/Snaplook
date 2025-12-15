@@ -695,7 +695,7 @@ class _PlanSelectionCard extends StatelessWidget {
             ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString}/year starting $trialEndFormatted.'
             : 'Just ${yearlyPackage.storeProduct.priceString} per year'
                 '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}';
-    const double planOptionHeight = 240;
+    const double planOptionHeight = 160;
 
     return Container(
       width: double.infinity,
