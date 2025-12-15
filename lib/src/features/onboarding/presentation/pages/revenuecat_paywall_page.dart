@@ -6,7 +6,6 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
-import '../widgets/onboarding_bottom_bar.dart';
 import 'account_creation_page.dart';
 import 'welcome_free_analysis_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
@@ -324,194 +323,186 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 description:
                     'Lock-screen shortcuts and drop reminders for fast access.',
               ),
-              SizedBox(height: spacing.xxl),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: OnboardingBottomBar(
-        primaryButton: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (yearlyPackage != null && monthlyPackage != null)
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: AppColors.shadow,
-                      blurRadius: 28,
-                      offset: Offset(0, 18),
-                    ),
-                  ],
-                  border: Border.all(color: AppColors.outlineVariant),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.secondary.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.star_rounded,
-                                  size: 16, color: AppColors.secondary),
-                              SizedBox(width: 6),
-                              Text(
-                                'Save 20%',
-                                style: TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
-                                  color: AppColors.secondary,
+              SizedBox(height: spacing.xl),
+              if (yearlyPackage != null && monthlyPackage != null)
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: AppColors.shadow,
+                        blurRadius: 28,
+                        offset: Offset(0, 18),
+                      ),
+                    ],
+                    border: Border.all(color: AppColors.outlineVariant),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondary.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.star_rounded,
+                                    size: 16, color: AppColors.secondary),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Save 20%',
+                                  style: TextStyle(
+                                    fontFamily: 'PlusJakartaSans',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                    color: AppColors.secondary,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          selectedPlan == RevenueCatPaywallPlanType.yearly
-                              ? 'Best value'
-                              : 'Choose a plan',
-                          style: const TextStyle(
+                          const Spacer(),
+                          Text(
+                            selectedPlan == RevenueCatPaywallPlanType.yearly
+                                ? 'Best value'
+                                : 'Choose a plan',
+                            style: const TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _PlanOption(
+                              plan: RevenueCatPaywallPlanType.yearly,
+                              title: 'Yearly',
+                              price: yearlyPackage.storeProduct.priceString,
+                              cadence: yearlyMonthlyEquivalent != null
+                                  ? '\$$yearlyMonthlyEquivalent/mo after trial'
+                                  : 'Billed annually',
+                              helper: _isEligibleForTrial
+                                  ? '3-day free trial'
+                                  : 'Best value',
+                              isSelected: selectedPlan ==
+                                  RevenueCatPaywallPlanType.yearly,
+                              onTap: () => ref
+                                  .read(selectedRevenueCatPlanProvider.notifier)
+                                  .state = RevenueCatPaywallPlanType.yearly,
+                              isPopular: true,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _PlanOption(
+                              plan: RevenueCatPaywallPlanType.monthly,
+                              title: 'Monthly',
+                              price: monthlyPackage.storeProduct.priceString,
+                              cadence: 'Billed monthly',
+                              helper: 'Cancel anytime',
+                              isSelected: selectedPlan ==
+                                  RevenueCatPaywallPlanType.monthly,
+                              onTap: () => ref
+                                  .read(selectedRevenueCatPlanProvider.notifier)
+                                  .state = RevenueCatPaywallPlanType.monthly,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Center(
+                        child: Text(
+                          _isEligibleForTrial
+                              ? 'Nothing due today'
+                              : 'Starts immediately, cancel anytime',
+                          style: TextStyle(
                             fontFamily: 'PlusJakartaSans',
                             fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w700,
+                            color: _isEligibleForTrial
+                                ? AppColors.secondary
+                                : AppColors.textSecondary,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _PlanOption(
-                            plan: RevenueCatPaywallPlanType.yearly,
-                            title: 'Yearly',
-                            price: yearlyPackage.storeProduct.priceString,
-                            cadence: yearlyMonthlyEquivalent != null
-                                ? '\$$yearlyMonthlyEquivalent/mo after trial'
-                                : 'Billed annually',
-                            helper: _isEligibleForTrial
-                                ? '3-day free trial'
-                                : 'Best value',
-                            isSelected: selectedPlan ==
-                                RevenueCatPaywallPlanType.yearly,
-                            onTap: () => ref
-                                .read(selectedRevenueCatPlanProvider.notifier)
-                                .state = RevenueCatPaywallPlanType.yearly,
-                            isPopular: true,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _PlanOption(
-                            plan: RevenueCatPaywallPlanType.monthly,
-                            title: 'Monthly',
-                            price: monthlyPackage.storeProduct.priceString,
-                            cadence: 'Billed monthly',
-                            helper: 'Cancel anytime',
-                            isSelected: selectedPlan ==
-                                RevenueCatPaywallPlanType.monthly,
-                            onTap: () => ref
-                                .read(selectedRevenueCatPlanProvider.notifier)
-                                .state = RevenueCatPaywallPlanType.monthly,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Center(
-                      child: Text(
-                        _isEligibleForTrial
-                            ? 'Nothing due today'
-                            : 'Starts immediately, cancel anytime',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: _isEligibleForTrial
-                              ? AppColors.secondary
-                              : AppColors.textSecondary,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            SizedBox(height: spacing.l),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isPurchasing ? null : _handleContinue,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.secondary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _isPurchasing ? null : _handleContinue,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.secondary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                          ),
+                          child: _isPurchasing
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  _offerings?.current == null
+                                      ? 'Skip for Now'
+                                      : _isEligibleForTrial
+                                          ? 'Continue'
+                                          : 'Subscribe now',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'PlusJakartaSans',
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _offerings?.current == null
+                            ? ''
+                            : selectedPlan == RevenueCatPaywallPlanType.monthly
+                                ? 'Billed ${monthlyPackage.storeProduct.priceString} today.'
+                                : _isEligibleForTrial
+                                    ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString}/year starting $trialEndFormatted.'
+                                    : 'Just ${yearlyPackage.storeProduct.priceString} per year'
+                                        '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 14,
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.w500,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: _isPurchasing
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : Text(
-                        _offerings?.current == null
-                            ? 'Skip for Now'
-                            : _isEligibleForTrial
-                                ? 'Continue'
-                                : 'Subscribe now',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-              ),
-            ),
-          ],
-        ),
-        secondaryButton: Align(
-          alignment: Alignment.center,
-          child: Text(
-            _offerings?.current == null
-                ? ''
-                : selectedPlan == RevenueCatPaywallPlanType.monthly
-                    ? 'Billed ${monthlyPackage?.storeProduct.priceString} today.'
-                    : _isEligibleForTrial
-                        ? '3-day free trial, then ${yearlyPackage?.storeProduct.priceString}/year starting $trialEndFormatted.'
-                        : 'Just ${yearlyPackage?.storeProduct.priceString} per year'
-                            '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-              fontWeight: FontWeight.w500,
-              height: 1.5,
-            ),
+              SizedBox(height: spacing.l * 2),
+            ],
           ),
         ),
       ),
