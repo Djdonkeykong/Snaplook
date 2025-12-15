@@ -265,9 +265,9 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         children: [
           SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
-              spacing.l,
+              spacing.l * 1.5,
               0,
-              spacing.l,
+              spacing.l * 1.5,
               bottomScrollPadding,
             ),
             child: Column(
@@ -387,7 +387,7 @@ class _PlanOption extends StatelessWidget {
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.fromLTRB(12, isPopular ? 20 : 12, 12, 12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
@@ -484,7 +484,7 @@ class _PlanOption extends StatelessWidget {
           ),
           if (isPopular)
             Positioned(
-              top: -10,
+              top: -14,
               left: 0,
               right: 0,
               child: Center(
@@ -492,7 +492,7 @@ class _PlanOption extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppColors.secondary.withOpacity(0.12),
+                    color: AppColors.secondary,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: const Text(
@@ -500,7 +500,7 @@ class _PlanOption extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.secondary,
+                      color: Colors.white,
                       fontFamily: 'PlusJakartaSans',
                     ),
                   ),
