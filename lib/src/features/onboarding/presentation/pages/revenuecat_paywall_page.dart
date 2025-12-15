@@ -280,7 +280,8 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                   child: Column(
                     children: [
                       const Text(
-                        'Access all of Snaplook',
+                        'Access all of
+                        Snaplook',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
@@ -537,23 +538,23 @@ class _FeatureItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: iconColor, size: 16),
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.12),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(width: 10),
-          Text(
+          child: Icon(icon, color: iconColor, size: 16),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
             title,
             style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
@@ -564,8 +565,8 @@ class _FeatureItem extends StatelessWidget {
               height: 1.1,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
