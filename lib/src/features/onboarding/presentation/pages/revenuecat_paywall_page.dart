@@ -168,16 +168,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
   void _navigateNext(bool didPurchase) {
     if (!mounted) return;
 
-    final authService = ref.read(authServiceProvider);
-    final hasAccount = authService.currentUser != null;
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => hasAccount
-            ? const WelcomeFreeAnalysisPage()
-            : const AccountCreationPage(),
-      ),
-    );
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
