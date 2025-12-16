@@ -27,111 +27,99 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     setState(() => _showStep1 = true);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final spacing = context.spacing;
+@override
+Widget build(BuildContext context) {
+  final spacing = context.spacing;
+  const double buttonHeight = 56;
 
-    const double buttonHeight = 56;
-
-    // Scroll padding so content can scroll behind the button,
-    // but never gets permanently hidden by it.
-    final double bottomInset = MediaQuery.of(context).padding.bottom;
-    final double scrollBottomPadding = spacing.l + buttonHeight + spacing.l + bottomInset;
-
-    return Scaffold(
+  return Scaffold(
+    backgroundColor: AppColors.background,
+    appBar: AppBar(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: SnaplookBackButton(),
-      ),
-
-      // ✅ Content takes full height and can scroll "behind" the bottom button.
-      body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          spacing.l,
-          spacing.l,
-          spacing.l,
-          scrollBottomPadding,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'How Snaplook works',
-              style: TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -1.0,
-                height: 1.2,
-              ),
-            ),
-            SizedBox(height: spacing.l),
-            Center(
-              child: _StepFrame(
-                label: '1',
-                assetPath: 'assets/images/photos_step1.png',
-                visible: _showStep1,
-                maxWidth: 360,
-                aspectRatio: 0.56,
-              ),
-            ),
-            SizedBox(height: spacing.l),
-          ],
-        ),
-      ),
-
-// ✅ Button stays fixed, content scrolls behind it (transparent)
-bottomNavigationBar: SafeArea(
-  top: false,
-  child: Material(
-    color: Colors.transparent, // 👈 key line
-    child: Padding(
-      padding: EdgeInsets.only(
-        left: spacing.l,
-        right: spacing.l,
-        bottom: spacing.l,
-        top: spacing.l,
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        height: buttonHeight,
-        child: ElevatedButton(
-          onPressed: () {
-            HapticFeedback.mediumImpact();
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const GenderSelectionPage(),
-              ),
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFf2003c),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-            ),
-          ),
-          child: const Text(
-            'Set up my style',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'PlusJakartaSans',
-              letterSpacing: -0.2,
-            ),
-          ),
-        ),
-      ),
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leading: SnaplookBackButton(),
     ),
-  ),
-),
-    );
-  }
+
+    body: Stack(
+      children: [
+        // 🔹 SCROLL CONTENT (goes BEHIND button)
+        SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            spacing.l,
+            spacing.l,
+            spacing.l,
+            spacing.l + buttonHeight + MediaQuery.of(context).padding.bottom,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'How Snaplook works',
+                style: TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  fontFamily: 'PlusJakartaSans',
+                  letterSpacing: -1.0,
+                  height: 1.2,
+                ),
+              ),
+              SizedBox(height: spacing.l),
+              Center(
+                child: _StepFrame(
+                  label: '1',
+                  assetPath: 'assets/images/photos_step1.png',
+                  visible: _showStep1,
+                  maxWidth: 360,
+                  aspectRatio: 0.56,
+                ),
+              ),
+              SizedBox(height: spacing.l),
+            ],
+          ),
+        ),
+
+        // 🔹 FIXED BUTTON (no background, no overlay)
+        Positioned(
+          left: spacing.l,
+          right: spacing.l,
+          bottom: spacing.l + MediaQuery.of(context).padding.bottom,
+          child: SizedBox(
+            height: buttonHeight,
+            child: ElevatedButton(
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const GenderSelectionPage(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFf2003c),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+              ),
+              child: const Text(
+                'Set up my style',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'PlusJakartaSans',
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }
 
 class _StepFrame extends StatelessWidget {
