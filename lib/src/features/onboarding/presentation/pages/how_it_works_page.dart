@@ -15,8 +15,6 @@ class HowItWorksPage extends StatefulWidget {
 
 class _HowItWorksPageState extends State<HowItWorksPage> {
   bool _showStep1 = false;
-  double _fade = 1.0;
-  static const double _fadeThreshold = 140;
 
   @override
   void initState() {
@@ -36,9 +34,8 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: SnaplookBackButton(),
@@ -51,66 +48,32 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
             spacing.l,
             spacing.l,
           ),
-          child: NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification is ScrollUpdateNotification) {
-                final offset = notification.metrics.pixels;
-                final fade = (1 - (offset / _fadeThreshold)).clamp(0.0, 1.0);
-                if (fade != _fade) setState(() => _fade = fade);
-              }
-              return false;
-            },
-            child: Stack(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SingleChildScrollView(
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 160),
-                    opacity: _fade,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'How Snaplook works',
-                          style: TextStyle(
-                            fontSize: 34,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            fontFamily: 'PlusJakartaSans',
-                            letterSpacing: -1.0,
-                            height: 1.2,
-                          ),
-                        ),
-                        SizedBox(height: spacing.l),
-                        Center(
-                          child: _StepFrame(
-                            label: '1',
-                            assetPath: 'assets/images/photos_step1.png',
-                            visible: _showStep1,
-                            maxWidth: 360,
-                            aspectRatio: 0.56,
-                          ),
-                        ),
-                        SizedBox(height: spacing.l),
-                      ],
-                    ),
+                const Text(
+                  'How Snaplook works',
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -1.0,
+                    height: 1.2,
                   ),
                 ),
-                IgnorePointer(
-                  child: Container(
-                    height: 120,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.white,
-                          Colors.white54,
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
+                SizedBox(height: spacing.l),
+                Center(
+                  child: _StepFrame(
+                    label: '1',
+                    assetPath: 'assets/images/photos_step1.png',
+                    visible: _showStep1,
+                    maxWidth: 360,
+                    aspectRatio: 0.56,
                   ),
                 ),
+                SizedBox(height: spacing.l),
               ],
             ),
           ),
