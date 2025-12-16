@@ -61,7 +61,16 @@ class PersonalizationIntroPage extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: spacing.xl),
-                      const _PersonalizationPreview(),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: AspectRatio(
+                          aspectRatio: 3 / 4,
+                          child: Image.asset(
+                            'assets/images/mannequin.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
                       SizedBox(height: spacing.xl),
                     ],
                   ),
@@ -102,116 +111,6 @@ class PersonalizationIntroPage extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PersonalizationPreview extends StatelessWidget {
-  const _PersonalizationPreview();
-
-  @override
-  Widget build(BuildContext context) {
-    final spacing = context.spacing;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(spacing.l),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF8F2FF),
-            Color(0xFFE8F3FF),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: spacing.m,
-              vertical: spacing.xs,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.85),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              'Preview',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-                fontFamily: 'PlusJakartaSans',
-              ),
-            ),
-          ),
-          SizedBox(height: spacing.m),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: AspectRatio(
-              aspectRatio: 3 / 4,
-              child: Image.asset(
-                'assets/images/mannequin.png',
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          SizedBox(height: spacing.m),
-          Wrap(
-            spacing: spacing.s,
-            runSpacing: spacing.s,
-            children: const [
-              _InfoChip(label: 'Sharper matches'),
-              _InfoChip(label: 'Fewer misses'),
-              _InfoChip(label: 'Fits your vibe'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final String label;
-
-  const _InfoChip({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Colors.black,
-          fontFamily: 'PlusJakartaSans',
         ),
       ),
     );
