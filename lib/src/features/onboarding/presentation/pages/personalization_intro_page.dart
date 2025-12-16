@@ -60,12 +60,12 @@ class PersonalizationIntroPage extends StatelessWidget {
                           height: 1.4,
                         ),
                       ),
-                      SizedBox(height: spacing.xxl * 2),
+                      SizedBox(height: spacing.xxl * 3),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           SizedBox(
-                            width: 200,
+                            width: 220,
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(18),
                               child: AspectRatio(
