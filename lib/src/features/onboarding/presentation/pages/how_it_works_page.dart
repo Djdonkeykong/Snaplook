@@ -4,7 +4,6 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import '../widgets/progress_indicator.dart';
 import 'gender_selection_page.dart';
 
 class HowItWorksPage extends StatefulWidget {
@@ -16,8 +15,7 @@ class HowItWorksPage extends StatefulWidget {
 
 class _HowItWorksPageState extends State<HowItWorksPage> {
   bool _showStep1 = false;
-  bool _showStep2 = false;
-  bool _showStep3 = false;
+  double _fade = 1.0;
 
   @override
   void initState() {
@@ -29,14 +27,6 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     await Future<void>.delayed(const Duration(milliseconds: 150));
     if (!mounted) return;
     setState(() => _showStep1 = true);
-
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-    setState(() => _showStep2 = true);
-
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-    setState(() => _showStep3 = true);
   }
 
   @override
@@ -45,52 +35,66 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
-        centerTitle: true,
-        title: const OnboardingProgressIndicator(
-          currentStep: 1,
-          totalSteps: 20,
-        ),
+        leading: SnaplookBackButton(),
       ),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.fromLTRB(
             spacing.l,
-            spacing.m,
+            spacing.l + kToolbarHeight,
             spacing.l,
             spacing.l,
           ),
-          child: Column(
-            children: [
-              Expanded(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollUpdateNotification) {
+                final offset = notification.metrics.pixels;
+                final fade = (1 - (offset / 80)).clamp(0.6, 1.0);
+                if (fade != _fade) {
+                  setState(() {
+                    _fade = fade;
+                  });
+                }
+              }
+              return false;
+            },
+            child: SingleChildScrollView(
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: _fade,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _StepFrame(
-                      label: '1',
-                      assetPath: 'assets/images/photos_step1.png',
-                      visible: _showStep1,
+                    const Text(
+                      'How Snaplook works',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -1.0,
+                        height: 1.2,
+                      ),
                     ),
                     SizedBox(height: spacing.l),
-                    _StepFrame(
-                      label: '2',
-                      assetPath: 'assets/images/photos-step-2.png',
-                      visible: _showStep2,
-                    ),
-                    SizedBox(height: spacing.l),
-                    _StepFrame(
-                      label: '3',
-                      assetPath: 'assets/images/photos-step-3-snaplook.png',
-                      visible: _showStep3,
+                    Center(
+                      child: _StepFrame(
+                        label: '1',
+                        assetPath: 'assets/images/photos_step1.png',
+                        visible: _showStep1,
+                        maxWidth: 360,
+                        aspectRatio: 0.56,
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -98,26 +102,26 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
         primaryButton: SizedBox(
           width: double.infinity,
           height: 56,
-          child: ElevatedButton(
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const GenderSelectionPage(),
+            child: ElevatedButton(
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const GenderSelectionPage(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFf2003c),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
               ),
-            ),
-            child: const Text(
-              'Set up my style',
-              style: TextStyle(
+              child: const Text(
+                'Set up my style',
+                style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'PlusJakartaSans',
@@ -135,11 +139,15 @@ class _StepFrame extends StatelessWidget {
   final String label;
   final String assetPath;
   final bool visible;
+  final double maxWidth;
+  final double aspectRatio;
 
   const _StepFrame({
     required this.label,
     required this.assetPath,
     required this.visible,
+    required this.maxWidth,
+    required this.aspectRatio,
   });
 
   @override
@@ -153,41 +161,27 @@ class _StepFrame extends StatelessWidget {
         duration: const Duration(milliseconds: 450),
         scale: visible ? 1 : 0.98,
         curve: Curves.easeOut,
-        child: Stack(
-          alignment: Alignment.topLeft,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: AspectRatio(
-                aspectRatio: 0.58,
-                child: Image.asset(
-                  assetPath,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            Positioned(
-              top: spacing.s,
-              left: spacing.s,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -0.2,
+          child: Stack(
+            alignment: Alignment.topLeft,
+            children: [
+            LayoutBuilder(builder: (context, constraints) {
+              final double width =
+                  constraints.maxWidth.clamp(0, maxWidth).toDouble(); // limit desktop
+              return Align(
+                alignment: Alignment.center,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: SizedBox(
+                    width: width,
+                    height: width / aspectRatio,
+                    child: Image.asset(
+                      assetPath,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            }),
           ],
         ),
       ),

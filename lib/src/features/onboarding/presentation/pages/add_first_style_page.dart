@@ -483,7 +483,7 @@ class _AppCard extends ConsumerWidget {
       },
       child: Container(
         width: double.infinity,
-        height: 64,
+        height: 56,
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(16),

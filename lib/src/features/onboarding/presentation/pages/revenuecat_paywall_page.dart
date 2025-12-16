@@ -622,7 +622,7 @@ class _PlanSelectionCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: const [
           BoxShadow(
             color: AppColors.shadow,

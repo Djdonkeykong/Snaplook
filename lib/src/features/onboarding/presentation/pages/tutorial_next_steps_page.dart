@@ -169,7 +169,7 @@ class _ChoiceCard extends StatelessWidget {
           children: [
             Container(
               width: 52,
-              height: 52,
+              height: 56,
               decoration: BoxDecoration(
                 color: iconColor.withOpacity(0.1),
                 shape: BoxShape.circle,
