@@ -71,7 +71,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
 
     final double topInset = MediaQuery.of(context).padding.top;
     final double bottomInset = MediaQuery.of(context).padding.bottom;
-    final double buttonMargin = spacing.s;
+    const double buttonMargin = 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
