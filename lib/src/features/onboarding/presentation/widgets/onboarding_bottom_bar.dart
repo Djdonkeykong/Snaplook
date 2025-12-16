@@ -17,23 +17,7 @@ class OnboardingBottomBar extends StatelessWidget {
     final spacing = context.spacing;
 
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 18,
-            offset: const Offset(0, -6),
-            spreadRadius: 1,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 6,
-            offset: const Offset(0, -1),
-            spreadRadius: 0,
-          ),
-        ],
-      ),
+      color: Colors.transparent,
       child: SafeArea(
         top: false,
         minimum: EdgeInsets.only(
