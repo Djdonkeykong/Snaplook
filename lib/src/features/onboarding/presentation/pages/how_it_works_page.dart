@@ -116,7 +116,6 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
           ),
         ),
       ),
-      ),
       bottomNavigationBar: OnboardingBottomBar(
         primaryButton: SizedBox(
           width: double.infinity,
