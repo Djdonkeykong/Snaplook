@@ -164,7 +164,7 @@ class _PersonalizationPreview extends StatelessWidget {
             child: AspectRatio(
               aspectRatio: 3 / 4,
               child: Image.asset(
-                'assets/images/photos_step1.png',
+                'assets/images/mannequin.png',
                 fit: BoxFit.cover,
               ),
             ),
