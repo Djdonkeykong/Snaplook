@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -36,228 +37,14 @@ class ProfileReadyPage extends StatelessWidget {
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: spacing.l),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: spacing.xl),
-
-              // Check icon
-              Container(
-                width: 56,
-                height: 56,
-                decoration: const BoxDecoration(
-                  color: Colors.black,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check,
-                  size: 32,
-                  color: Colors.white,
-                ),
-              ),
-
+              _HeroCard(spacing: spacing),
               SizedBox(height: spacing.xl),
-
-              // Title
-              const Text(
-                'Your Snaplook is ready',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -0.5,
-                  height: 1.2,
-                ),
-              ),
-
-              SizedBox(height: spacing.m),
-
-              // Profile snapshot card
-              SizedBox(height: spacing.l),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(spacing.l),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFFFDE8EF),
-                      Color(0xFFE7EEFF),
-                    ],
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Profile snapshot',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      "Catalog: Men's & Women's",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Focus: Nike, Zara, Uniqlo',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _TagChip(label: 'Streetwear'),
-                        _TagChip(label: 'Casual'),
-                        _TagChip(label: 'Clean lines'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: spacing.l),
-
-              // Feed preview strip
-              SizedBox(
-                height: 120,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: 4,
-                  separatorBuilder: (_, __) => SizedBox(width: spacing.m),
-                  itemBuilder: (context, index) {
-                    final labels = [
-                      'Streetwear picks',
-                      'Work-ready fits',
-                      'Weekend casual',
-                      'Clean layers',
-                    ];
-                    final colors = [
-                      const Color(0xFFf2003c),
-                      const Color(0xFF6B9DFF),
-                      const Color(0xFFFFA726),
-                      Colors.black,
-                    ];
-                    return Container(
-                      width: 180,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            colors[index % colors.length].withOpacity(0.1),
-                            Colors.white,
-                          ],
-                        ),
-                        border:
-                            Border.all(color: Colors.black.withOpacity(0.05)),
-                      ),
-                      padding: EdgeInsets.all(spacing.m),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Icon(
-                            Icons.auto_awesome,
-                            color: colors[index % colors.length],
-                          ),
-                          Text(
-                            labels[index % labels.length],
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
-                              fontFamily: 'PlusJakartaSans',
-                            ),
-                          ),
-                          const Text(
-                            'Peek the lineup we picked for you.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF6B7280),
-                              fontFamily: 'PlusJakartaSans',
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              SizedBox(height: spacing.l),
-
-              // Quick highlights
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(spacing.l),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9F9F9),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Here\'s what we tuned for you',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      '• Style picks locked in',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                        height: 1.4,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      '• Outfits matched to your taste',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                        height: 1.4,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      '• Feed ready to explore',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
+              _SnapshotCard(spacing: spacing),
+              SizedBox(height: spacing.xl),
+              _HighlightsCard(spacing: spacing),
               SizedBox(height: spacing.xl),
             ],
           ),
@@ -277,24 +64,279 @@ class ProfileReadyPage extends StatelessWidget {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
+              backgroundColor: Colors.black,
               foregroundColor: Colors.white,
-              elevation: 0,
+              elevation: 2,
+              shadowColor: Colors.black.withOpacity(0.18),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
+              splashFactory: InkSparkle.splashFactory,
             ),
             child: const Text(
-              'Let\'s get started!',
+              "Let's get started",
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
                 fontFamily: 'PlusJakartaSans',
-                letterSpacing: -0.2,
+                letterSpacing: -0.1,
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _HeroCard extends StatelessWidget {
+  const _HeroCard({required this.spacing});
+
+  final ThemeSpacing spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(spacing.l),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            Colors.black.withOpacity(0.04),
+            Colors.white,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.14),
+                  blurRadius: 16,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.check,
+              size: 28,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: spacing.m),
+          const Text(
+            'Your Snaplook is ready',
+            style: TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.w800,
+              color: Colors.black,
+              fontFamily: 'PlusJakartaSans',
+              letterSpacing: -0.3,
+              height: 1.25,
+            ),
+          ),
+          SizedBox(height: spacing.sm),
+          const Text(
+            'We matched your preferred brands and silhouettes. A clean, ready-to-browse feed awaits.',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+              fontFamily: 'PlusJakartaSans',
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SnapshotCard extends StatelessWidget {
+  const _SnapshotCard({required this.spacing});
+
+  final ThemeSpacing spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(spacing.l),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white,
+        border: Border.all(color: Colors.black.withOpacity(0.06)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Profile snapshot',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+              fontFamily: 'PlusJakartaSans',
+              letterSpacing: -0.1,
+            ),
+          ),
+          SizedBox(height: spacing.s),
+          const Text(
+            "Catalog: Men's & Women's • Balanced fits",
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textPrimary,
+              fontFamily: 'PlusJakartaSans',
+              height: 1.45,
+            ),
+          ),
+          const Text(
+            'Focus brands: Nike, Zara, Uniqlo',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textPrimary,
+              fontFamily: 'PlusJakartaSans',
+              height: 1.45,
+            ),
+          ),
+          SizedBox(height: spacing.s),
+          const Text(
+            'Style direction',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+              fontFamily: 'PlusJakartaSans',
+              letterSpacing: -0.1,
+            ),
+          ),
+          SizedBox(height: spacing.s),
+          Wrap(
+            spacing: spacing.s,
+            runSpacing: spacing.s,
+            children: const [
+              _TagChip(label: 'Streetwear'),
+              _TagChip(label: 'Casual comfort'),
+              _TagChip(label: 'Clean lines'),
+            ],
+          ),
+          SizedBox(height: spacing.l),
+          Row(
+            children: [
+              _MiniTile(
+                title: 'Weekday',
+                caption: 'Tailored picks',
+              ),
+              SizedBox(width: spacing.s),
+              _MiniTile(
+                title: 'Weekend',
+                caption: 'Relaxed layers',
+              ),
+              SizedBox(width: spacing.s),
+              _MiniTile(
+                title: 'Sport',
+                caption: 'Performance first',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HighlightsCard extends StatelessWidget {
+  const _HighlightsCard({required this.spacing});
+
+  final ThemeSpacing spacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(spacing.l),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.black.withOpacity(0.04)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Highlights ready',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+              fontFamily: 'PlusJakartaSans',
+            ),
+          ),
+          SizedBox(height: spacing.m),
+          const _HighlightRow(label: 'Looks calibrated to your picks'),
+          SizedBox(height: spacing.s),
+          const _HighlightRow(label: 'Feeds tuned for weekday and weekend'),
+          SizedBox(height: spacing.s),
+          const _HighlightRow(label: 'Ready to browse immediately'),
+          SizedBox(height: spacing.l),
+          Divider(
+            height: 1,
+            color: Colors.black.withOpacity(0.08),
+          ),
+          SizedBox(height: spacing.m),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: Colors.black.withOpacity(0.08)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(
+                  Icons.auto_awesome,
+                  size: 16,
+                  color: Colors.black,
+                ),
+                SizedBox(width: 6),
+                Text(
+                  'Powered by Snaplook AI',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                    fontFamily: 'PlusJakartaSans',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -321,6 +363,98 @@ class _TagChip extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: Colors.black,
           fontFamily: 'PlusJakartaSans',
+        ),
+      ),
+    );
+  }
+}
+
+class _HighlightRow extends StatelessWidget {
+  const _HighlightRow({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.06),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.check,
+            size: 16,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+              fontFamily: 'PlusJakartaSans',
+              height: 1.45,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniTile extends StatelessWidget {
+  const _MiniTile({
+    required this.title,
+    required this.caption,
+  });
+
+  final String title;
+  final String caption;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.all(spacing.m),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6F6F6),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.black.withOpacity(0.04)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+                fontFamily: 'PlusJakartaSans',
+              ),
+            ),
+            SizedBox(height: spacing.xs),
+            Text(
+              caption,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+                fontFamily: 'PlusJakartaSans',
+                height: 1.4,
+              ),
+            ),
+          ],
         ),
       ),
     );
