@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart' show ScrollDirection;
+import 'package:flutter/widgets.dart' as fw show ScrollDirection;
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -83,7 +83,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
               // Snap back to the anchor whenever a gesture ends in any direction.
               if (n is ScrollEndNotification ||
                   (n is UserScrollNotification &&
-                      n.direction == ScrollDirection.idle)) {
+                      n.direction == fw.ScrollDirection.idle)) {
                 _snapBackToAnchor();
               }
               return false;
