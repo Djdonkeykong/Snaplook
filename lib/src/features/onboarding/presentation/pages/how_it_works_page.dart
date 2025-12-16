@@ -7,6 +7,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'discovery_source_page.dart';
+import '../widgets/progress_indicator.dart';
 
 class HowItWorksPage extends StatefulWidget {
   const HowItWorksPage({super.key});
@@ -160,6 +161,11 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                   elevation: 0,
                   scrolledUnderElevation: 0,
                   leading: SnaplookBackButton(),
+                  centerTitle: true,
+                  title: const OnboardingProgressIndicator(
+                    currentStep: 1,
+                    totalSteps: 14,
+                  ),
                 ),
               ),
             ),

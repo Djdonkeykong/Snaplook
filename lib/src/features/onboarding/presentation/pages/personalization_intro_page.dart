@@ -7,6 +7,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'style_direction_page.dart';
+import '../widgets/progress_indicator.dart';
 
 class PersonalizationIntroPage extends StatefulWidget {
   const PersonalizationIntroPage({super.key});
@@ -71,6 +72,19 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: SnaplookBackButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        centerTitle: true,
+        title: const OnboardingProgressIndicator(
+          currentStep: 3,
+          totalSteps: 14,
+        ),
+      ),
       body: Stack(
         children: [
           NotificationListener<ScrollNotification>(
