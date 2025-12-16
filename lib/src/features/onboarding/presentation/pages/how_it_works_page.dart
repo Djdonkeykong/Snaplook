@@ -183,7 +183,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
           Positioned(
             left: spacing.l,
             right: spacing.l,
-            bottom: spacing.xl,
+            bottom: bottomInset + buttonGap,
             child: SizedBox(
               height: buttonHeight,
               child: ElevatedButton(
