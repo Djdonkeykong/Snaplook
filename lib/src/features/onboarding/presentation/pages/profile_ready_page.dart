@@ -40,35 +40,14 @@ class ProfileReadyPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: spacing.xl * 1.5),
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
-                      blurRadius: 18,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.check,
-                  size: 30,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(height: spacing.l),
               const Text(
                 'Ready to find your\nnext style',
                 style: TextStyle(
                   fontSize: 32,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.bold,
                   color: Colors.black,
                   fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -0.3,
+                  letterSpacing: -0.5,
                   height: 1.2,
                 ),
               ),
