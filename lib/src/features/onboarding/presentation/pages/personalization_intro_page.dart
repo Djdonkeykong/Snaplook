@@ -61,20 +61,23 @@ class PersonalizationIntroPage extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: spacing.xl),
-                      Center(
-                        child: SizedBox(
-                          width: 200,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(18),
-                            child: AspectRatio(
-                              aspectRatio: 3 / 4,
-                              child: Image.asset(
-                                'assets/images/mannequin.png',
-                                fit: BoxFit.cover,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 200,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              child: AspectRatio(
+                                aspectRatio: 3 / 4,
+                                child: Image.asset(
+                                  'assets/images/mannequin.png',
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                       SizedBox(height: spacing.xl),
                     ],
