@@ -6,7 +6,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
-import 'calculating_profile_page.dart';
+import 'generate_profile_prep_page.dart';
 
 class BudgetPage extends StatefulWidget {
   final Set<String> selectedStyles;
@@ -163,7 +163,7 @@ class _BudgetPageState extends State<BudgetPage> with TickerProviderStateMixin {
                     HapticFeedback.mediumImpact();
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const CalculatingProfilePage(),
+                        builder: (context) => const GenerateProfilePrepPage(),
                       ),
                     );
                   }

@@ -15,7 +15,7 @@ import 'safari_tutorial_page.dart';
 import 'photos_tutorial_page.dart';
 import 'imdb_tutorial_page.dart';
 import 'x_tutorial_page.dart';
-import 'generate_profile_prep_page.dart';
+import 'rating_social_proof_page.dart';
 
 class AddFirstStylePage extends ConsumerStatefulWidget {
   const AddFirstStylePage({super.key});
@@ -192,7 +192,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
             HapticFeedback.mediumImpact();
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => const GenerateProfilePrepPage(),
+                builder: (context) => const RatingSocialProofPage(),
               ),
             );
           },
