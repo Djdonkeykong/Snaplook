@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
+
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -53,13 +54,15 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     if ((currentOffset - _anchorOffset).abs() < 0.5) return;
 
     _isSnapping = true;
-    _scrollController.animateTo(
-      _anchorOffset,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-    ).whenComplete(() {
-      _isSnapping = false;
-    });
+    _scrollController
+        .animateTo(
+          _anchorOffset,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        )
+        .whenComplete(() {
+          _isSnapping = false;
+        });
   }
 
   @override
@@ -71,11 +74,12 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
 
     final double topInset = MediaQuery.of(context).padding.top;
     final double bottomInset = MediaQuery.of(context).padding.bottom;
-    const double buttonMargin = 0;
+
+    // ✅ Add a small gap so the fixed button sits *almost* at the bottom
+    const double buttonMargin = 12;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-
       body: Stack(
         children: [
           // 🔹 SCROLL CONTENT (anchored)
@@ -97,6 +101,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                 parent: AlwaysScrollableScrollPhysics(),
               ),
 
+              // ✅ Keep extra bottom padding so content doesn't hide behind the button
               padding: EdgeInsets.fromLTRB(
                 spacing.l,
                 spacing.l + appBarHeight + topInset,
@@ -156,6 +161,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
           Positioned(
             left: spacing.l,
             right: spacing.l,
+            // ✅ Apply buttonMargin so it sits slightly above the system bottom inset
             bottom: buttonMargin + bottomInset,
             child: SizedBox(
               height: buttonHeight,
