@@ -84,49 +84,52 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
         ),
       ),
 
-      // ✅ Button stays fixed, content scrolls behind it.
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: spacing.l,
-            right: spacing.l,
-            bottom: spacing.l,
-            top: spacing.l,
+// ✅ Button stays fixed, content scrolls behind it (transparent)
+bottomNavigationBar: SafeArea(
+  top: false,
+  child: Material(
+    color: Colors.transparent, // 👈 key line
+    child: Padding(
+      padding: EdgeInsets.only(
+        left: spacing.l,
+        right: spacing.l,
+        bottom: spacing.l,
+        top: spacing.l,
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: buttonHeight,
+        child: ElevatedButton(
+          onPressed: () {
+            HapticFeedback.mediumImpact();
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const GenderSelectionPage(),
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFf2003c),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
           ),
-          child: SizedBox(
-            width: double.infinity,
-            height: buttonHeight,
-            child: ElevatedButton(
-              onPressed: () {
-                HapticFeedback.mediumImpact();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const GenderSelectionPage(),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFf2003c),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
-              ),
-              child: const Text(
-                'Set up my style',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -0.2,
-                ),
-              ),
+          child: const Text(
+            'Set up my style',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'PlusJakartaSans',
+              letterSpacing: -0.2,
             ),
           ),
         ),
       ),
+    ),
+  ),
+),
     );
   }
 }
