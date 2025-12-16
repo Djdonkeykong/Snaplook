@@ -74,122 +74,126 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
 
     final double topInset = MediaQuery.of(context).padding.top;
 
-    // ✅ Small gap above the bottom (tweak 0–16 to taste)
-    const double buttonMargin = 8;
+    // ✅ You can still keep a tiny visual gap if you want (0 = flush bottom)
+    const double buttonMargin = 0;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // 🔹 SCROLL CONTENT (anchored)
-          NotificationListener<ScrollNotification>(
-            onNotification: (n) {
-              if (n is ScrollEndNotification ||
-                  (n is UserScrollNotification &&
-                      n.direction == ScrollDirection.idle)) {
-                _snapBackToAnchor();
-              }
-              return false;
-            },
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              padding: EdgeInsets.fromLTRB(
-                spacing.l,
-                spacing.l + appBarHeight + topInset,
-                spacing.l,
-                // ✅ Reserve space only for the fixed button (NO bottomInset here)
-                buttonMargin + buttonHeight,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'How Snaplook works',
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontFamily: 'PlusJakartaSans',
-                      letterSpacing: -1.0,
-                      height: 1.2,
+    // ✅ Remove the bottom safe-area padding for this entire page
+    return MediaQuery.removePadding(
+      context: context,
+      removeBottom: true,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Stack(
+          children: [
+            // 🔹 SCROLL CONTENT (anchored)
+            NotificationListener<ScrollNotification>(
+              onNotification: (n) {
+                if (n is ScrollEndNotification ||
+                    (n is UserScrollNotification &&
+                        n.direction == ScrollDirection.idle)) {
+                  _snapBackToAnchor();
+                }
+                return false;
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                padding: EdgeInsets.fromLTRB(
+                  spacing.l,
+                  spacing.l + appBarHeight + topInset,
+                  spacing.l,
+                  // ✅ Reserve only for the fixed button (no bottom inset now)
+                  buttonMargin + buttonHeight,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'How Snaplook works',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -1.0,
+                        height: 1.2,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: spacing.l),
-                  Center(
-                    child: _StepFrame(
-                      label: '1',
-                      assetPath: 'assets/images/photos_step1.png',
-                      visible: _showStep1,
-                      maxWidth: 320,
-                      aspectRatio: 0.56,
+                    SizedBox(height: spacing.l),
+                    Center(
+                      child: _StepFrame(
+                        label: '1',
+                        assetPath: 'assets/images/photos_step1.png',
+                        visible: _showStep1,
+                        maxWidth: 320,
+                        aspectRatio: 0.56,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: spacing.l),
-                ],
+                    SizedBox(height: spacing.l),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          // 🔹 APP BAR OVERLAY
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            child: SafeArea(
-              bottom: false,
+            // 🔹 APP BAR OVERLAY
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: SafeArea(
+                bottom: false,
+                child: SizedBox(
+                  height: appBarHeight,
+                  child: AppBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    scrolledUnderElevation: 0,
+                    leading: SnaplookBackButton(),
+                  ),
+                ),
+              ),
+            ),
+
+            // 🔹 FIXED BUTTON OVERLAY (ignoring bottom safe area)
+            Positioned(
+              left: spacing.l,
+              right: spacing.l,
+              bottom: buttonMargin, // ✅ will go into the home-indicator area
               child: SizedBox(
-                height: appBarHeight,
-                child: AppBar(
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  scrolledUnderElevation: 0,
-                  leading: SnaplookBackButton(),
-                ),
-              ),
-            ),
-          ),
-
-          // 🔹 FIXED BUTTON OVERLAY
-          Positioned(
-            left: spacing.l,
-            right: spacing.l,
-            // ✅ NO bottomInset here (prevents double safe-area padding)
-            bottom: buttonMargin,
-            child: SizedBox(
-              height: buttonHeight,
-              child: ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const GenderSelectionPage(),
+                height: buttonHeight,
+                child: ElevatedButton(
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const GenderSelectionPage(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFf2003c),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFf2003c),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
                   ),
-                ),
-                child: const Text(
-                  'Set up my style',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -0.2,
+                  child: const Text(
+                    'Set up my style',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -0.2,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
