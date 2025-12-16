@@ -16,6 +16,7 @@ class HowItWorksPage extends StatefulWidget {
 class _HowItWorksPageState extends State<HowItWorksPage> {
   bool _showStep1 = false;
   double _fade = 1.0;
+  static const double _fadeThreshold = 140;
 
   @override
   void initState() {
@@ -46,7 +47,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
         child: Padding(
           padding: EdgeInsets.fromLTRB(
             spacing.l,
-            spacing.l + kToolbarHeight,
+            spacing.l,
             spacing.l,
             spacing.l,
           ),
@@ -54,49 +55,67 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
             onNotification: (notification) {
               if (notification is ScrollUpdateNotification) {
                 final offset = notification.metrics.pixels;
-                final fade = (1 - (offset / 80)).clamp(0.6, 1.0);
-                if (fade != _fade) {
-                  setState(() {
-                    _fade = fade;
-                  });
-                }
+                final fade = (1 - (offset / _fadeThreshold)).clamp(0.0, 1.0);
+                if (fade != _fade) setState(() => _fade = fade);
               }
               return false;
             },
-            child: SingleChildScrollView(
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 180),
-                opacity: _fade,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'How Snaplook works',
-                      style: TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        fontFamily: 'PlusJakartaSans',
-                        letterSpacing: -1.0,
-                        height: 1.2,
-                      ),
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 160),
+                    opacity: _fade,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'How Snaplook works',
+                          style: TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontFamily: 'PlusJakartaSans',
+                            letterSpacing: -1.0,
+                            height: 1.2,
+                          ),
+                        ),
+                        SizedBox(height: spacing.l),
+                        Center(
+                          child: _StepFrame(
+                            label: '1',
+                            assetPath: 'assets/images/photos_step1.png',
+                            visible: _showStep1,
+                            maxWidth: 360,
+                            aspectRatio: 0.56,
+                          ),
+                        ),
+                        SizedBox(height: spacing.l),
+                      ],
                     ),
-                    SizedBox(height: spacing.l),
-                    Center(
-                      child: _StepFrame(
-                        label: '1',
-                        assetPath: 'assets/images/photos_step1.png',
-                        visible: _showStep1,
-                        maxWidth: 360,
-                        aspectRatio: 0.56,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                IgnorePointer(
+                  child: Container(
+                    height: 120,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white,
+                          Colors.white54,
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
       ),
       bottomNavigationBar: OnboardingBottomBar(
         primaryButton: SizedBox(
