@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
-import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/theme/theme_extensions.dart';
-import '../../../../shared/widgets/snaplook_back_button.dart';
+
+import './././././core/theme/app_colors.dart';
+import './././././core/theme/theme_extensions.dart';
+import '././././shared/widgets/snaplook_back_button.dart';
 import 'gender_selection_page.dart';
-import '../widgets/onboarding_bottom_bar.dart';
+import './widgets/onboarding_bottom_bar.dart';
 
 class HowItWorksPage extends StatefulWidget {
   const HowItWorksPage({super.key});
@@ -54,13 +55,15 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     if ((currentOffset - _anchorOffset).abs() < 0.5) return;
 
     _isSnapping = true;
-    _scrollController.animateTo(
-      _anchorOffset,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-    ).whenComplete(() {
-      _isSnapping = false;
-    });
+    _scrollController
+        .animateTo(
+          _anchorOffset,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        )
+        .whenComplete(() {
+          _isSnapping = false;
+        });
   }
 
   @override
@@ -72,12 +75,14 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     final double topInset = MediaQuery.of(context).padding.top;
     final double bottomPadding = spacing.l;
 
+    // How tall the fade zone is at the very top of the scroll content.
+    const double topFadeHeight = 36;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-
       body: Stack(
         children: [
-          // 🔹 SCROLL CONTENT (anchored)
+          // 🔹 SCROLL CONTENT (anchored) + TOP FADE MASK
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
               // Snap back to the anchor whenever a gesture ends in any direction.
@@ -88,46 +93,66 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
               }
               return false;
             },
-            child: SingleChildScrollView(
-              controller: _scrollController,
+            child: ShaderMask(
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (Rect rect) {
+                final double fadeStop =
+                    (topFadeHeight / rect.height).clamp(0.0, 1.0);
 
-              // Allow overscroll in both directions
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
+                return LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: const [
+                    Colors.transparent,
+                    Colors.black,
+                  ],
+                  stops: [
+                    0.0,
+                    fadeStop,
+                  ],
+                ).createShader(rect);
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
 
-              padding: EdgeInsets.fromLTRB(
-                spacing.l,
-                spacing.l + appBarHeight + topInset,
-                spacing.l,
-                bottomPadding,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'How Snaplook works',
-                    style: TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontFamily: 'PlusJakartaSans',
-                      letterSpacing: -1.0,
-                      height: 1.2,
+                // Allow overscroll in both directions
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+
+                padding: EdgeInsets.fromLTRB(
+                  spacing.l,
+                  spacing.l + appBarHeight + topInset,
+                  spacing.l,
+                  bottomPadding,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'How Snaplook works',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -1.0,
+                        height: 1.2,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: spacing.l),
-                  Center(
-                    child: _StepFrame(
-                      label: '1',
-                      assetPath: 'assets/images/photos_step1.png',
-                      visible: _showStep1,
-                      maxWidth: 320,
-                      aspectRatio: 0.56,
+                    SizedBox(height: spacing.l),
+                    Center(
+                      child: _StepFrame(
+                        label: '1',
+                        assetPath: 'assets/images/photos_step1.png',
+                        visible: _showStep1,
+                        maxWidth: 320,
+                        aspectRatio: 0.56,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: spacing.l),
-                ],
+                    SizedBox(height: spacing.l),
+                  ],
+                ),
               ),
             ),
           ),
