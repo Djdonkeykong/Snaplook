@@ -73,10 +73,9 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     const double appBarHeight = kToolbarHeight;
 
     final double topInset = MediaQuery.of(context).padding.top;
-    final double bottomInset = MediaQuery.of(context).padding.bottom;
 
-    // ✅ Add a small gap so the fixed button sits *almost* at the bottom
-    const double buttonMargin = 12;
+    // ✅ Small gap above the bottom (tweak 0–16 to taste)
+    const double buttonMargin = 8;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -85,7 +84,6 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
           // 🔹 SCROLL CONTENT (anchored)
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
-              // Snap back to the anchor whenever a gesture ends in any direction.
               if (n is ScrollEndNotification ||
                   (n is UserScrollNotification &&
                       n.direction == ScrollDirection.idle)) {
@@ -95,18 +93,15 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
             },
             child: SingleChildScrollView(
               controller: _scrollController,
-
-              // Allow overscroll in both directions
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
-
-              // ✅ Keep extra bottom padding so content doesn't hide behind the button
               padding: EdgeInsets.fromLTRB(
                 spacing.l,
                 spacing.l + appBarHeight + topInset,
                 spacing.l,
-                buttonMargin + buttonHeight + bottomInset,
+                // ✅ Reserve space only for the fixed button (NO bottomInset here)
+                buttonMargin + buttonHeight,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,8 +156,8 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
           Positioned(
             left: spacing.l,
             right: spacing.l,
-            // ✅ Apply buttonMargin so it sits slightly above the system bottom inset
-            bottom: buttonMargin + bottomInset,
+            // ✅ NO bottomInset here (prevents double safe-area padding)
+            bottom: buttonMargin,
             child: SizedBox(
               height: buttonHeight,
               child: ElevatedButton(
