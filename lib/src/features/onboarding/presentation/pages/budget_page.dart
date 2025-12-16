@@ -5,6 +5,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
+import '../widgets/progress_indicator.dart';
 
 class BudgetPage extends StatefulWidget {
   final Set<String> selectedStyles;
@@ -20,7 +21,7 @@ class BudgetPage extends StatefulWidget {
   State<BudgetPage> createState() => _BudgetPageState();
 }
 
-class _BudgetPageState extends State<BudgetPage> {
+class _BudgetPageState extends State<BudgetPage> with TickerProviderStateMixin {
   static const _options = [
     'Affordable',
     'Mid-range',
@@ -29,6 +30,50 @@ class _BudgetPageState extends State<BudgetPage> {
   ];
 
   String _selected = 'Affordable';
+
+  late List<AnimationController> _animationControllers;
+  late List<Animation<double>> _fadeAnimations;
+  late List<Animation<double>> _scaleAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationControllers = List.generate(
+      _options.length,
+      (_) => AnimationController(
+        duration: const Duration(milliseconds: 400),
+        vsync: this,
+      ),
+    );
+    _fadeAnimations = _animationControllers
+        .map((c) => Tween<double>(begin: 0, end: 1).animate(
+              CurvedAnimation(parent: c, curve: Curves.easeOut),
+            ))
+        .toList();
+    _scaleAnimations = _animationControllers
+        .map((c) => Tween<double>(begin: 0.8, end: 1).animate(
+              CurvedAnimation(parent: c, curve: Curves.easeOutBack),
+            ))
+        .toList();
+
+    Future.microtask(_startStaggeredAnimation);
+  }
+
+  void _startStaggeredAnimation() {
+    for (int i = 0; i < _animationControllers.length; i++) {
+      Future.delayed(Duration(milliseconds: i * 80), () {
+        if (mounted) _animationControllers[i].forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _animationControllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +87,11 @@ class _BudgetPageState extends State<BudgetPage> {
         scrolledUnderElevation: 0,
         leading: SnaplookBackButton(
           onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        centerTitle: true,
+        title: const OnboardingProgressIndicator(
+          currentStep: 3,
+          totalSteps: 3,
         ),
       ),
       body: SafeArea(
@@ -74,13 +124,18 @@ class _BudgetPageState extends State<BudgetPage> {
               SizedBox(height: spacing.l),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: _options
-                    .map(
-                      (option) => Padding(
-                        padding: EdgeInsets.only(bottom: spacing.s),
+                children: List.generate(_options.length, (index) {
+                  final option = _options[index];
+                  final isSelected = _selected == option;
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: spacing.s),
+                    child: FadeTransition(
+                      opacity: _fadeAnimations[index],
+                      child: ScaleTransition(
+                        scale: _scaleAnimations[index],
                         child: _RadioTile(
                           label: option,
-                          selected: _selected == option,
+                          selected: isSelected,
                           onTap: () {
                             setState(() {
                               _selected = option;
@@ -88,8 +143,9 @@ class _BudgetPageState extends State<BudgetPage> {
                           },
                         ),
                       ),
-                    )
-                    .toList(),
+                    ),
+                  );
+                }),
               ),
               const Spacer(),
             ],
@@ -145,52 +201,54 @@ class _RadioTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: spacing.m,
-            vertical: spacing.m,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 22,
-                height: 22,
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFf2003c) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: EdgeInsets.symmetric(horizontal: spacing.m),
+        child: Row(
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? Colors.white : Colors.black26,
+                  width: 2,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 10,
+                height: 10,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: selected ? Colors.black : Colors.black26,
-                    width: 2,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected ? Colors.black : Colors.transparent,
-                  ),
+                  color: selected ? Colors.white : Colors.transparent,
                 ),
               ),
-              SizedBox(width: spacing.m),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                ),
+            ),
+            SizedBox(width: spacing.m),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : Colors.black,
+                fontFamily: 'PlusJakartaSans',
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

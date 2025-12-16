@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
+import '../widgets/progress_indicator.dart';
 import 'budget_page.dart';
 
 class WhatYouWantPage extends StatefulWidget {
@@ -16,7 +18,8 @@ class WhatYouWantPage extends StatefulWidget {
   State<WhatYouWantPage> createState() => _WhatYouWantPageState();
 }
 
-class _WhatYouWantPageState extends State<WhatYouWantPage> {
+class _WhatYouWantPageState extends State<WhatYouWantPage>
+    with TickerProviderStateMixin {
   static const _options = [
     'Outfits',
     'Shoes',
@@ -27,10 +30,50 @@ class _WhatYouWantPageState extends State<WhatYouWantPage> {
 
   late Set<String> _selected;
 
+  late List<AnimationController> _animationControllers;
+  late List<Animation<double>> _fadeAnimations;
+  late List<Animation<double>> _scaleAnimations;
+
   @override
   void initState() {
     super.initState();
     _selected = {'Outfits', 'Accessories'};
+
+    _animationControllers = List.generate(
+      _options.length,
+      (_) => AnimationController(
+        duration: const Duration(milliseconds: 400),
+        vsync: this,
+      ),
+    );
+    _fadeAnimations = _animationControllers
+        .map((c) => Tween<double>(begin: 0, end: 1).animate(
+              CurvedAnimation(parent: c, curve: Curves.easeOut),
+            ))
+        .toList();
+    _scaleAnimations = _animationControllers
+        .map((c) => Tween<double>(begin: 0.8, end: 1).animate(
+              CurvedAnimation(parent: c, curve: Curves.easeOutBack),
+            ))
+        .toList();
+
+    Future.microtask(_startStaggeredAnimation);
+  }
+
+  void _startStaggeredAnimation() {
+    for (int i = 0; i < _animationControllers.length; i++) {
+      Future.delayed(Duration(milliseconds: i * 80), () {
+        if (mounted) _animationControllers[i].forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _animationControllers) {
+      c.dispose();
+    }
+    super.dispose();
   }
 
   void _toggle(String value) {
@@ -55,6 +98,11 @@ class _WhatYouWantPageState extends State<WhatYouWantPage> {
         scrolledUnderElevation: 0,
         leading: SnaplookBackButton(
           onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        centerTitle: true,
+        title: const OnboardingProgressIndicator(
+          currentStep: 2,
+          totalSteps: 3,
         ),
       ),
       body: SafeArea(
@@ -85,18 +133,25 @@ class _WhatYouWantPageState extends State<WhatYouWantPage> {
                 ),
               ),
               SizedBox(height: spacing.l),
-              Wrap(
-                spacing: spacing.s,
-                runSpacing: spacing.s,
-                children: _options
-                    .map(
-                      (option) => _SelectablePill(
-                        label: option,
-                        selected: _selected.contains(option),
-                        onTap: () => _toggle(option),
+              Column(
+                children: List.generate(_options.length, (index) {
+                  final option = _options[index];
+                  final isSelected = _selected.contains(option);
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: spacing.s),
+                    child: FadeTransition(
+                      opacity: _fadeAnimations[index],
+                      child: ScaleTransition(
+                        scale: _scaleAnimations[index],
+                        child: _SelectableTile(
+                          label: option,
+                          isSelected: isSelected,
+                          onTap: () => _toggle(option),
+                        ),
                       ),
-                    )
-                    .toList(),
+                    ),
+                  );
+                }),
               ),
               const Spacer(),
             ],
@@ -108,32 +163,38 @@ class _WhatYouWantPageState extends State<WhatYouWantPage> {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => BudgetPage(
-                    selectedStyles: widget.initialStyles,
-                    selectedInterests: _selected,
-                  ),
-                ),
-              );
-            },
+            onPressed: _selected.isNotEmpty
+                ? () {
+                    HapticFeedback.mediumImpact();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => BudgetPage(
+                          selectedStyles: widget.initialStyles,
+                          selectedInterests: _selected,
+                        ),
+                      ),
+                    );
+                  }
+                : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
+              backgroundColor: _selected.isNotEmpty
+                  ? const Color(0xFFf2003c)
+                  : Colors.grey.shade300,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
             ),
-            child: const Text(
+            child: Text(
               'Continue',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
+                color:
+                    _selected.isNotEmpty ? Colors.white : Colors.grey.shade600,
               ),
             ),
           ),
@@ -143,33 +204,39 @@ class _WhatYouWantPageState extends State<WhatYouWantPage> {
   }
 }
 
-class _SelectablePill extends StatelessWidget {
+class _SelectableTile extends StatelessWidget {
   final String label;
-  final bool selected;
+  final bool isSelected;
   final VoidCallback onTap;
 
-  const _SelectablePill({
+  const _SelectableTile({
     required this.label,
-    required this.selected,
+    required this.isSelected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? Colors.black : Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        height: 56,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFf2003c) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : Colors.black87,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? Colors.white : Colors.black,
               fontFamily: 'PlusJakartaSans',
             ),
           ),
