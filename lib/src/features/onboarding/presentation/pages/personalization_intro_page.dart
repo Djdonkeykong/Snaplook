@@ -21,6 +21,9 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
 
+  // One source of truth for bottom bar height
+  static const double _bottomBarHeight = 96.0;
+
   @override
   void initState() {
     super.initState();
@@ -63,9 +66,13 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
     const double appBarHeight = kToolbarHeight;
 
     final double topInset = MediaQuery.of(context).padding.top;
-    const double bottomPadding = 0;
+    final double bottomInset = MediaQuery.of(context).padding.bottom;
 
     const double topFadeHeight = 36;
+
+    // This is the key fix: give scroll content enough bottom padding
+    // so the image can sit right above the fixed bottom bar.
+    final double contentBottomPadding = _bottomBarHeight + bottomInset + spacing.l;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -101,14 +108,13 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
               },
               child: SingleChildScrollView(
                 controller: _scrollController,
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ),
+                // Fix #2: remove AlwaysScrollableScrollPhysics (forces extra space)
+                physics: const BouncingScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
                   spacing.l,
                   spacing.l + appBarHeight + topInset,
                   spacing.l,
-                  bottomPadding,
+                  contentBottomPadding,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,7 +141,10 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                         height: 1.4,
                       ),
                     ),
-                    SizedBox(height: spacing.xxl * 2.5),
+
+                    // Optional: reduce this if it was contributing to "too much gap"
+                    SizedBox(height: spacing.xl),
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -154,7 +163,6 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                         ),
                       ],
                     ),
-                    const SizedBox.shrink(),
                   ],
                 ),
               ),
@@ -179,34 +187,42 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
           ),
         ],
       ),
-      bottomNavigationBar: OnboardingBottomBar(
-        primaryButton: SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const GenderSelectionPage(),
+
+      // Fix #1 reinforcement: enforce bottom bar height and safe-area handling
+      bottomNavigationBar: SizedBox(
+        height: _bottomBarHeight + bottomInset,
+        child: SafeArea(
+          top: false,
+          child: OnboardingBottomBar(
+            primaryButton: SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const GenderSelectionPage(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFf2003c),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
-              ),
-            ),
-            child: const Text(
-              'Sounds good',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -0.2,
+                child: const Text(
+                  'Sounds good',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -0.2,
+                  ),
+                ),
               ),
             ),
           ),
