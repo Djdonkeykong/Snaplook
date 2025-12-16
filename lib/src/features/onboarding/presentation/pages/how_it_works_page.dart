@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 
-import './././././core/theme/app_colors.dart';
-import './././././core/theme/theme_extensions.dart';
-import '././././shared/widgets/snaplook_back_button.dart';
+import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
 import 'gender_selection_page.dart';
-import './widgets/onboarding_bottom_bar.dart';
+import '../widgets/onboarding_bottom_bar.dart';
 
 class HowItWorksPage extends StatefulWidget {
   const HowItWorksPage({super.key});
@@ -75,14 +75,14 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     final double topInset = MediaQuery.of(context).padding.top;
     final double bottomPadding = spacing.l;
 
-    // How tall the fade zone is at the very top of the scroll content.
+    // ✅ How tall the fade zone is at the very top of the scroll viewport.
     const double topFadeHeight = 36;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // 🔹 SCROLL CONTENT (anchored) + TOP FADE MASK
+          // 🔹 SCROLL CONTENT (anchored) + TOP FADE
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
               // Snap back to the anchor whenever a gesture ends in any direction.
@@ -103,8 +103,8 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: const [
-                    Colors.transparent,
-                    Colors.black,
+                    Colors.transparent, // fully faded at very top
+                    Colors.black, // fully visible after fade zone
                   ],
                   stops: [
                     0.0,
