@@ -92,7 +92,7 @@ class ProfileReadyPage extends StatelessWidget {
 class _HeroCard extends StatelessWidget {
   const _HeroCard({required this.spacing});
 
-  final ThemeSpacing spacing;
+  final AppSpacingExtension spacing;
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +172,7 @@ class _HeroCard extends StatelessWidget {
 class _SnapshotCard extends StatelessWidget {
   const _SnapshotCard({required this.spacing});
 
-  final ThemeSpacing spacing;
+  final AppSpacingExtension spacing;
 
   @override
   Widget build(BuildContext context) {
@@ -272,7 +272,7 @@ class _SnapshotCard extends StatelessWidget {
 class _HighlightsCard extends StatelessWidget {
   const _HighlightsCard({required this.spacing});
 
-  final ThemeSpacing spacing;
+  final AppSpacingExtension spacing;
 
   @override
   Widget build(BuildContext context) {
