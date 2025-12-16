@@ -61,11 +61,8 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    const double appBarHeight = kToolbarHeight;
-    final double topInset = MediaQuery.of(context).padding.top;
-
-    // Match HowItWorksPage pattern:
-    // Keep a simple bottom padding; don't try to measure the bottom bar.
+    // NOTE: We no longer add appBarHeight + topInset here.
+    // Scaffold/AppBar already handle that layout.
     final double bottomPadding = spacing.l;
 
     const double topFadeHeight = 36;
@@ -120,16 +117,16 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                 physics: const BouncingScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
                   spacing.l,
-                  spacing.l + appBarHeight + topInset,
+                  spacing.l, // ✅ fixed: no extra appBarHeight + topInset
                   spacing.l,
                   bottomPadding,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Let\'s tailor Snaplook to you',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
@@ -149,22 +146,24 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                         height: 1.4,
                       ),
                     ),
-                    SizedBox(height: spacing.l),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: SizedBox(
-                        width: 220,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: AspectRatio(
-                            aspectRatio: 3 / 4,
-                            child: Image.asset(
-                              'assets/images/mannequin.png',
-                              fit: BoxFit.cover,
+                    SizedBox(height: spacing.xxl * 2.5),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 220,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: AspectRatio(
+                              aspectRatio: 3 / 4,
+                              child: Image.asset(
+                                'assets/images/mannequin.png',
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
