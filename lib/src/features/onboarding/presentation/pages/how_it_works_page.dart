@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
-import '../widgets/onboarding_bottom_bar.dart';
 import 'gender_selection_page.dart';
 
 class HowItWorksPage extends StatefulWidget {
@@ -47,67 +46,81 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
           spacing.l,
           spacing.l,
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'How Snaplook works',
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -1.0,
-                  height: 1.2,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'How Snaplook works',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -1.0,
+                        height: 1.2,
+                      ),
+                    ),
+                    SizedBox(height: spacing.l),
+                    Center(
+                      child: _StepFrame(
+                        label: '1',
+                        assetPath: 'assets/images/photos_step1.png',
+                        visible: _showStep1,
+                        maxWidth: 360,
+                        aspectRatio: 0.56,
+                      ),
+                    ),
+                    SizedBox(height: spacing.l),
+                  ],
                 ),
-              ),
-              SizedBox(height: spacing.l),
-              Center(
-                child: _StepFrame(
-                  label: '1',
-                  assetPath: 'assets/images/photos_step1.png',
-                  visible: _showStep1,
-                  maxWidth: 360,
-                  aspectRatio: 0.56,
-                ),
-              ),
-              SizedBox(height: spacing.l),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: OnboardingBottomBar(
-        primaryButton: SizedBox(
-          width: double.infinity,
-          height: 56,
-            child: ElevatedButton(
-              onPressed: () {
-                HapticFeedback.mediumImpact();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const GenderSelectionPage(),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFf2003c),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
-              ),
-              child: const Text(
-                'Set up my style',
-                style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -0.2,
               ),
             ),
-          ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: spacing.l,
+                  right: spacing.l,
+                  bottom: spacing.l,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const GenderSelectionPage(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFf2003c),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                    child: const Text(
+                      'Set up my style',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
