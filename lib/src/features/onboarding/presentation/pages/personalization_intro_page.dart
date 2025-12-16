@@ -60,7 +60,7 @@ class PersonalizationIntroPage extends StatelessWidget {
                           height: 1.4,
                         ),
                       ),
-                      SizedBox(height: spacing.xl),
+                      SizedBox(height: spacing.xxl),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
