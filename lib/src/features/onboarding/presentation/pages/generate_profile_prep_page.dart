@@ -166,7 +166,7 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
               ),
             ),
             child: const Text(
-              'Continue',
+              'I\'m ready!',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,

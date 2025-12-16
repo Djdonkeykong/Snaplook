@@ -194,7 +194,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
               ),
             ),
             child: const Text(
-              'Set up my style',
+              'Continue',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
