@@ -145,7 +145,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                     SizedBox(height: spacing.xl),
 
                     Padding(
-                      padding: EdgeInsets.only(top: spacing.xl),
+                      padding: EdgeInsets.only(top: spacing.xl * 2),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
