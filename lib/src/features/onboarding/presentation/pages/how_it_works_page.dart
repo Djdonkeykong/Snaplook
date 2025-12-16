@@ -79,9 +79,10 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
           // 🔹 SCROLL CONTENT (anchored)
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
-              // When the user releases (regardless of direction),
-              // snap back to the anchor.
-              if (n is ScrollEndNotification) {
+              // Snap back to the anchor whenever a gesture ends in any direction.
+              if (n is ScrollEndNotification ||
+                  (n is UserScrollNotification &&
+                      n.direction == ScrollDirection.idle)) {
                 _snapBackToAnchor();
               }
               return false;
