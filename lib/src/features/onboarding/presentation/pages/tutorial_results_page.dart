@@ -15,7 +15,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/custom_button.dart';
 import '../../../favorites/presentation/widgets/favorite_button.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
-import 'generate_profile_prep_page.dart';
+import 'discovery_source_page.dart';
 
 class TutorialResultsPage extends ConsumerStatefulWidget {
   final String? imagePath;

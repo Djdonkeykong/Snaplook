@@ -13,7 +13,7 @@ import '../../../detection/presentation/widgets/detection_progress_overlay.dart'
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../results/presentation/widgets/results_bottom_sheet.dart';
 import '../../domain/services/tutorial_service.dart';
-import 'generate_profile_prep_page.dart';
+import 'discovery_source_page.dart';
 
 class TutorialImageAnalysisPage extends ConsumerStatefulWidget {
   final String? imagePath;
@@ -94,14 +94,12 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
                     padding: EdgeInsets.zero,
                     onPressed: () {
                       if (widget.returnToOnboarding) {
-                        // Coming from onboarding flow - continue to generate profile page
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
-                            builder: (context) => const GenerateProfilePrepPage(),
+                            builder: (context) => const DiscoverySourcePage(),
                           ),
                         );
                       } else {
-                        // Coming from home page tutorials - return to home
                         Navigator.of(context).popUntil((route) => route.isFirst);
                       }
                     },
