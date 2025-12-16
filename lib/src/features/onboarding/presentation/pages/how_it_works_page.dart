@@ -89,7 +89,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                 spacing.l,
                 spacing.l + appBarHeight + topInset,
                 spacing.l,
-                buttonHeight + 12, // only reserve for button
+                buttonHeight + 12,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,20 +132,22 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
             ),
           ),
 
-          /// 🔹 BOTTOM BACKGROUND (kills white bar)
+          /// 🔹 BOTTOM BACKGROUND (covers iOS home indicator area)
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             height: bottomInset,
-            child: Container(color: AppColors.background),
+            child: Container(
+              color: AppColors.background,
+            ),
           ),
 
           /// 🔹 FIXED BUTTON
           Positioned(
             left: spacing.l,
             right: spacing.l,
-            bottom: 6, // visually flush
+            bottom: 6,
             child: SizedBox(
               height: buttonHeight,
               child: ElevatedButton(
@@ -159,18 +161,72 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFf2003c),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
                 child: const Text(
                   'Set up my style',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 🔹 STEP FRAME (RESTORED)
+class _StepFrame extends StatelessWidget {
+  final String label;
+  final String assetPath;
+  final bool visible;
+  final double maxWidth;
+  final double aspectRatio;
+
+  const _StepFrame({
+    required this.label,
+    required this.assetPath,
+    required this.visible,
+    required this.maxWidth,
+    required this.aspectRatio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 450),
+      opacity: visible ? 1 : 0,
+      curve: Curves.easeOut,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 450),
+        scale: visible ? 1 : 0.98,
+        curve: Curves.easeOut,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width =
+                constraints.maxWidth.clamp(0, maxWidth).toDouble();
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: SizedBox(
+                width: width,
+                height: width / aspectRatio,
+                child: Image.asset(
+                  assetPath,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
