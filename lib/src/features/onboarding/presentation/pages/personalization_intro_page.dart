@@ -21,9 +21,6 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
 
-  // Measured height of the bottom bar (no guessing -> no overflow)
-  double _bottomBarHeight = 0.0;
-
   @override
   void initState() {
     super.initState();
@@ -65,13 +62,12 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
 
     const double appBarHeight = kToolbarHeight;
     final double topInset = MediaQuery.of(context).padding.top;
-    final double bottomInset = MediaQuery.of(context).padding.bottom;
+
+    // Match HowItWorksPage pattern:
+    // Keep a simple bottom padding; don't try to measure the bottom bar.
+    final double bottomPadding = spacing.l;
 
     const double topFadeHeight = 36;
-
-    // Key: pad scroll content by the *actual* bottom bar height (+ safe area + a little breathing room)
-    final double contentBottomPadding =
-        _bottomBarHeight + bottomInset + spacing.l;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -107,13 +103,12 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
               },
               child: SingleChildScrollView(
                 controller: _scrollController,
-                // Removing AlwaysScrollable avoids “fake” scroll extent on short pages.
                 physics: const BouncingScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
                   spacing.l,
                   spacing.l + appBarHeight + topInset,
                   spacing.l,
-                  contentBottomPadding,
+                  bottomPadding,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,9 +136,10 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                       ),
                     ),
 
-                    // Keep this modest; your old xxl*2.5 made the gap feel worse.
+                    // General spacing after text
                     SizedBox(height: spacing.xl),
 
+                    // Extra distance between text and image (x2 as requested)
                     Padding(
                       padding: EdgeInsets.only(top: spacing.xl * 2),
                       child: Row(
@@ -189,92 +185,39 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
           ),
         ],
       ),
-
-      // Key: do NOT force a height here. Let the bar size itself.
-      // We measure it and pad the scroll content accordingly.
-      bottomNavigationBar: MeasureSize(
-        onChange: (size) {
-          final h = size.height;
-          if (h > 0 && (h - _bottomBarHeight).abs() > 0.5) {
-            setState(() => _bottomBarHeight = h);
-          }
-        },
-        child: SafeArea(
-          top: false,
-          child: OnboardingBottomBar(
-            primaryButton: SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const GenderSelectionPage(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFf2003c),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
+      bottomNavigationBar: OnboardingBottomBar(
+        primaryButton: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const GenderSelectionPage(),
                 ),
-                child: const Text(
-                  'Sounds good',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -0.2,
-                  ),
-                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFf2003c),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            child: const Text(
+              'Sounds good',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'PlusJakartaSans',
+                letterSpacing: -0.2,
               ),
             ),
           ),
         ),
       ),
     );
-  }
-}
-
-/// Measures its child after layout and reports the size.
-/// Handy for “pad content by bottom bar height” without hardcoding values.
-class MeasureSize extends StatefulWidget {
-  const MeasureSize({
-    super.key,
-    required this.onChange,
-    required this.child,
-  });
-
-  final void Function(Size size) onChange;
-  final Widget child;
-
-  @override
-  State<MeasureSize> createState() => _MeasureSizeState();
-}
-
-class _MeasureSizeState extends State<MeasureSize> {
-  final GlobalKey _key = GlobalKey();
-  Size? _oldSize;
-
-  @override
-  Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _key.currentContext;
-      if (ctx == null) return;
-
-      final newSize = ctx.size;
-      if (newSize == null) return;
-
-      if (_oldSize != newSize) {
-        _oldSize = newSize;
-        widget.onChange(newSize);
-      }
-    });
-
-    return Container(key: _key, child: widget.child);
   }
 }
