@@ -144,23 +144,26 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                     // Keep this modest; your old xxl*2.5 made the gap feel worse.
                     SizedBox(height: spacing.xl),
 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 220,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(18),
-                            child: AspectRatio(
-                              aspectRatio: 3 / 4,
-                              child: Image.asset(
-                                'assets/images/mannequin.png',
-                                fit: BoxFit.cover,
+                    Padding(
+                      padding: EdgeInsets.only(top: spacing.xl),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 220,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              child: AspectRatio(
+                                aspectRatio: 3 / 4,
+                                child: Image.asset(
+                                  'assets/images/mannequin.png',
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
