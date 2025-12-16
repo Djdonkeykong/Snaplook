@@ -122,7 +122,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                       label: '1',
                       assetPath: 'assets/images/photos_step1.png',
                       visible: _showStep1,
-                      maxWidth: 360,
+                      maxWidth: 320,
                       aspectRatio: 0.56,
                     ),
                   ),
