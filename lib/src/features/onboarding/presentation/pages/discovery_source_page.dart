@@ -11,7 +11,7 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'awesome_intro_page.dart';
-import 'rating_social_proof_page.dart';
+import 'personalization_intro_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 
@@ -377,7 +377,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                     if (!context.mounted) return;
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => AwesomeIntroPage(),
+                        builder: (context) => const PersonalizationIntroPage(),
                       ),
                     );
                   }
