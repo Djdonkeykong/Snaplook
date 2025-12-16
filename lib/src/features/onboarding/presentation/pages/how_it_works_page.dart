@@ -31,25 +31,24 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
 Widget build(BuildContext context) {
   final spacing = context.spacing;
   const double buttonHeight = 56;
+  final double topInset = MediaQuery.of(context).padding.top;
+  final double bottomInset = MediaQuery.of(context).padding.bottom;
+
+  const double appBarHeight = kToolbarHeight; // 56
 
   return Scaffold(
     backgroundColor: AppColors.background,
-    appBar: AppBar(
-      backgroundColor: AppColors.background,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      leading: SnaplookBackButton(),
-    ),
 
+    // ✅ no scaffold appBar
     body: Stack(
       children: [
-        // 🔹 SCROLL CONTENT (goes BEHIND button)
+        // 🔹 SCROLL CONTENT (goes behind app bar + button)
         SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             spacing.l,
+            spacing.l + appBarHeight + topInset, // keep title readable
             spacing.l,
-            spacing.l,
-            spacing.l + buttonHeight + MediaQuery.of(context).padding.bottom,
+            spacing.l + buttonHeight + bottomInset,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,11 +79,30 @@ Widget build(BuildContext context) {
           ),
         ),
 
-        // 🔹 FIXED BUTTON (no background, no overlay)
+        // 🔹 APP BAR OVERLAY (no reserved space)
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          child: SafeArea(
+            bottom: false,
+            child: SizedBox(
+              height: appBarHeight,
+              child: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                leading: SnaplookBackButton(),
+              ),
+            ),
+          ),
+        ),
+
+        // 🔹 FIXED BUTTON OVERLAY
         Positioned(
           left: spacing.l,
           right: spacing.l,
-          bottom: spacing.l + MediaQuery.of(context).padding.bottom,
+          bottom: spacing.l + bottomInset,
           child: SizedBox(
             height: buttonHeight,
             child: ElevatedButton(
