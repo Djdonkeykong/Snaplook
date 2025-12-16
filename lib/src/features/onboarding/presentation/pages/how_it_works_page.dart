@@ -15,10 +15,29 @@ class HowItWorksPage extends StatefulWidget {
 class _HowItWorksPageState extends State<HowItWorksPage> {
   bool _showStep1 = false;
 
+  final ScrollController _scrollController = ScrollController();
+  double _anchorOffset = 0.0;
+
   @override
   void initState() {
     super.initState();
     _startSequence();
+
+    // Capture the initial "anchor" scroll offset after first layout.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_scrollController.hasClients) {
+        _anchorOffset = _scrollController.offset;
+      } else {
+        _anchorOffset = 0.0;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _startSequence() async {
@@ -27,117 +46,148 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     setState(() => _showStep1 = true);
   }
 
-@override
-Widget build(BuildContext context) {
-  final spacing = context.spacing;
-  const double buttonHeight = 56;
-  final double topInset = MediaQuery.of(context).padding.top;
-  final double bottomInset = MediaQuery.of(context).padding.bottom;
+  void _snapBackToAnchorIfNeeded() {
+    if (!_scrollController.hasClients) return;
 
-  const double appBarHeight = kToolbarHeight; // 56
+    // "Wrong way" = user pulled/scrolls above the anchor (typically overscroll / negative direction).
+    if (_scrollController.offset < _anchorOffset) {
+      _scrollController.animateTo(
+        _anchorOffset,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+    }
+  }
 
-  return Scaffold(
-    backgroundColor: AppColors.background,
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
 
-    // ✅ no scaffold appBar
-    body: Stack(
-      children: [
-        // 🔹 SCROLL CONTENT (goes behind app bar + button)
-        SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            spacing.l,
-            spacing.l + appBarHeight + topInset, // keep title readable
-            spacing.l,
-            spacing.l + buttonHeight + bottomInset,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'How Snaplook works',
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -1.0,
-                  height: 1.2,
-                ),
+    const double buttonHeight = 56;
+    const double appBarHeight = kToolbarHeight; // 56
+
+    final double topInset = MediaQuery.of(context).padding.top;
+    final double bottomInset = MediaQuery.of(context).padding.bottom;
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+
+      // ✅ no scaffold appBar
+      body: Stack(
+        children: [
+          // 🔹 SCROLL CONTENT (goes behind app bar + button)
+          NotificationListener<ScrollNotification>(
+            onNotification: (n) {
+              // Snap back when user lets go / scrolling ends.
+              if (n is ScrollEndNotification) {
+                _snapBackToAnchorIfNeeded();
+              }
+              return false;
+            },
+            child: SingleChildScrollView(
+              controller: _scrollController,
+
+              // Force overscroll behavior consistently (Android + iOS),
+              // so "pulling the wrong way" can happen and then snap back.
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
               ),
-              SizedBox(height: spacing.l),
-              Center(
-                child: _StepFrame(
-                  label: '1',
-                  assetPath: 'assets/images/photos_step1.png',
-                  visible: _showStep1,
-                  maxWidth: 360,
-                  aspectRatio: 0.56,
-                ),
-              ),
-              SizedBox(height: spacing.l),
-            ],
-          ),
-        ),
 
-        // 🔹 APP BAR OVERLAY (no reserved space)
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          child: SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: appBarHeight,
-              child: AppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                scrolledUnderElevation: 0,
-                leading: SnaplookBackButton(),
+              padding: EdgeInsets.fromLTRB(
+                spacing.l,
+                spacing.l + appBarHeight + topInset, // keep title readable at rest
+                spacing.l,
+                spacing.l + buttonHeight + bottomInset, // allow content behind button
               ),
-            ),
-          ),
-        ),
-
-        // 🔹 FIXED BUTTON OVERLAY
-        Positioned(
-          left: spacing.l,
-          right: spacing.l,
-          bottom: spacing.l + bottomInset,
-          child: SizedBox(
-            height: buttonHeight,
-            child: ElevatedButton(
-              onPressed: () {
-                HapticFeedback.mediumImpact();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const GenderSelectionPage(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'How Snaplook works',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -1.0,
+                      height: 1.2,
+                    ),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFf2003c),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
+                  SizedBox(height: spacing.l),
+                  Center(
+                    child: _StepFrame(
+                      label: '1',
+                      assetPath: 'assets/images/photos_step1.png',
+                      visible: _showStep1,
+                      maxWidth: 360,
+                      aspectRatio: 0.56,
+                    ),
+                  ),
+                  SizedBox(height: spacing.l),
+                ],
               ),
-              child: const Text(
-                'Set up my style',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -0.2,
+            ),
+          ),
+
+          // 🔹 APP BAR OVERLAY (no reserved space)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: SafeArea(
+              bottom: false,
+              child: SizedBox(
+                height: appBarHeight,
+                child: AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  leading: SnaplookBackButton(),
                 ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+
+          // 🔹 FIXED BUTTON OVERLAY (no background overlay)
+          Positioned(
+            left: spacing.l,
+            right: spacing.l,
+            bottom: spacing.l + bottomInset,
+            child: SizedBox(
+              height: buttonHeight,
+              child: ElevatedButton(
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const GenderSelectionPage(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFf2003c),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+                child: const Text(
+                  'Set up my style',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _StepFrame extends StatelessWidget {
