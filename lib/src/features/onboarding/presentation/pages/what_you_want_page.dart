@@ -101,8 +101,8 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 2,
-          totalSteps: 3,
+          currentStep: 5,
+          totalSteps: 14,
         ),
       ),
       body: SafeArea(

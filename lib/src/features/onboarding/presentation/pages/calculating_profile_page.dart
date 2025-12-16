@@ -110,8 +110,8 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
         leading: const SizedBox(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 12,
-          totalSteps: 20,
+          currentStep: 8,
+          totalSteps: 14,
         ),
       ),
       body: SafeArea(

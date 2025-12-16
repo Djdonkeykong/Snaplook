@@ -22,8 +22,8 @@ class RatingSocialProofPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final radius = context.radius;
-    final currentStep = 14;
-    final totalSteps = 20;
+    final currentStep = 12;
+    final totalSteps = 14;
 
     return Scaffold(
       backgroundColor: AppColors.background,

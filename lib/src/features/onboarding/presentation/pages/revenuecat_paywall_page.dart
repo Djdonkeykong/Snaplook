@@ -6,8 +6,6 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
-import 'account_creation_page.dart';
-import 'welcome_free_analysis_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/revenuecat_service.dart';
@@ -224,8 +222,8 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 18,
-          totalSteps: 20,
+          currentStep: 14,
+          totalSteps: 14,
         ),
         actions: [
           TextButton(

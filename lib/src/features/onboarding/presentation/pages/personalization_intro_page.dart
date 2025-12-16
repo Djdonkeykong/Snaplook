@@ -180,23 +180,6 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
               ),
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            child: SafeArea(
-              bottom: false,
-              child: SizedBox(
-                height: appBarHeight,
-                child: AppBar(
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  scrolledUnderElevation: 0,
-                  leading: SnaplookBackButton(),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
       bottomNavigationBar: OnboardingBottomBar(

@@ -28,8 +28,8 @@ class ProfileReadyPage extends StatelessWidget {
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 13,
-          totalSteps: 20,
+          currentStep: 9,
+          totalSteps: 14,
         ),
       ),
       body: SafeArea(

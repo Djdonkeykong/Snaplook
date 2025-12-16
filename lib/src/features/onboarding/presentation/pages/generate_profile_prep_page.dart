@@ -58,8 +58,8 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 11,
-          totalSteps: 20,
+          currentStep: 7,
+          totalSteps: 14,
         ),
       ),
       body: SafeArea(
