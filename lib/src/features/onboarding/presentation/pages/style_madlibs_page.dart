@@ -244,6 +244,14 @@ class _StyleMadLibsPageState extends State<StyleMadLibsPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: SnaplookBackButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+      ),
       body: SafeArea(
         bottom: false,
         child: Column(
