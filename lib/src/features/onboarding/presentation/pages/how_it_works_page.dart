@@ -23,13 +23,11 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     super.initState();
     _startSequence();
 
-    // Capture the initial "anchor" scroll offset after first layout.
+    // Capture anchor after first layout
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_scrollController.hasClients) {
         _anchorOffset = _scrollController.offset;
-      } else {
-        _anchorOffset = 0.0;
       }
     });
   }
@@ -46,17 +44,14 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     setState(() => _showStep1 = true);
   }
 
-  void _snapBackToAnchorIfNeeded() {
+  void _snapBackToAnchor() {
     if (!_scrollController.hasClients) return;
 
-    // "Wrong way" = user pulled/scrolls above the anchor (typically overscroll / negative direction).
-    if (_scrollController.offset < _anchorOffset) {
-      _scrollController.animateTo(
-        _anchorOffset,
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-      );
-    }
+    _scrollController.animateTo(
+      _anchorOffset,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
@@ -64,7 +59,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     final spacing = context.spacing;
 
     const double buttonHeight = 56;
-    const double appBarHeight = kToolbarHeight; // 56
+    const double appBarHeight = kToolbarHeight;
 
     final double topInset = MediaQuery.of(context).padding.top;
     final double bottomInset = MediaQuery.of(context).padding.bottom;
@@ -72,32 +67,31 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
 
-      // ✅ no scaffold appBar
       body: Stack(
         children: [
-          // 🔹 SCROLL CONTENT (goes behind app bar + button)
+          // 🔹 SCROLL CONTENT (anchored)
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
-              // Snap back when user lets go / scrolling ends.
+              // When the user releases (regardless of direction),
+              // snap back to the anchor.
               if (n is ScrollEndNotification) {
-                _snapBackToAnchorIfNeeded();
+                _snapBackToAnchor();
               }
               return false;
             },
             child: SingleChildScrollView(
               controller: _scrollController,
 
-              // Force overscroll behavior consistently (Android + iOS),
-              // so "pulling the wrong way" can happen and then snap back.
+              // Allow overscroll in both directions
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
 
               padding: EdgeInsets.fromLTRB(
                 spacing.l,
-                spacing.l + appBarHeight + topInset, // keep title readable at rest
+                spacing.l + appBarHeight + topInset,
                 spacing.l,
-                spacing.l + buttonHeight + bottomInset, // allow content behind button
+                spacing.l + buttonHeight + bottomInset,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,7 +123,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
             ),
           ),
 
-          // 🔹 APP BAR OVERLAY (no reserved space)
+          // 🔹 APP BAR OVERLAY
           Positioned(
             left: 0,
             right: 0,
@@ -148,7 +142,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
             ),
           ),
 
-          // 🔹 FIXED BUTTON OVERLAY (no background overlay)
+          // 🔹 FIXED BUTTON OVERLAY
           Positioned(
             left: spacing.l,
             right: spacing.l,
@@ -207,8 +201,6 @@ class _StepFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spacing = context.spacing;
-
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 450),
       opacity: visible ? 1 : 0,
@@ -217,30 +209,25 @@ class _StepFrame extends StatelessWidget {
         duration: const Duration(milliseconds: 450),
         scale: visible ? 1 : 0.98,
         curve: Curves.easeOut,
-        child: Stack(
-          alignment: Alignment.topLeft,
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final double width =
-                    constraints.maxWidth.clamp(0, maxWidth).toDouble(); // limit desktop
-                return Align(
-                  alignment: Alignment.center,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: SizedBox(
-                      width: width,
-                      height: width / aspectRatio,
-                      child: Image.asset(
-                        assetPath,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final double width =
+                constraints.maxWidth.clamp(0, maxWidth).toDouble();
+            return Align(
+              alignment: Alignment.center,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: SizedBox(
+                  width: width,
+                  height: width / aspectRatio,
+                  child: Image.asset(
+                    assetPath,
+                    fit: BoxFit.cover,
                   ),
-                );
-              },
-            ),
-          ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
