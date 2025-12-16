@@ -213,7 +213,7 @@ class _StepFrame extends StatelessWidget {
   const _StepFrame({
     required this.label,
     required this.assetPath,
-    required this.visible,
+    this.visible = true,
     required this.maxWidth,
     required this.aspectRatio,
   });
