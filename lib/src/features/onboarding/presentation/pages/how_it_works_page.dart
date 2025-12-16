@@ -70,6 +70,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     const double appBarHeight = kToolbarHeight;
 
     final double topInset = MediaQuery.of(context).padding.top;
+    final double bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -99,7 +100,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                 spacing.l,
                 spacing.l + appBarHeight + topInset,
                 spacing.l,
-                buttonHeight,
+                spacing.l + buttonHeight + bottomInset,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +155,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
           Positioned(
             left: spacing.l,
             right: spacing.l,
-            bottom: 0,
+            bottom: spacing.xs + bottomInset,
             child: SizedBox(
               height: buttonHeight,
               child: ElevatedButton(
