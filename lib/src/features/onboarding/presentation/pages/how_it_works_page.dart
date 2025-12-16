@@ -5,8 +5,8 @@ import 'package:flutter/rendering.dart' show ScrollDirection;
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
-import 'gender_selection_page.dart';
 import '../widgets/onboarding_bottom_bar.dart';
+import 'personalization_intro_page.dart';
 
 class HowItWorksPage extends StatefulWidget {
   const HowItWorksPage({super.key});
@@ -47,13 +47,13 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     _isSnapping = true;
     _scrollController
         .animateTo(
-          _anchorOffset,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        )
+      _anchorOffset,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    )
         .whenComplete(() {
-          _isSnapping = false;
-        });
+      _isSnapping = false;
+    });
   }
 
   @override
@@ -131,14 +131,14 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                       ),
                     ),
                     SizedBox(height: spacing.l),
-                  Center(
-                    child: _StepFrame(
-                      label: '1',
-                      assetPath: 'assets/images/photos_step1.png',
-                      maxWidth: 320,
-                      aspectRatio: 0.56,
+                    Center(
+                      child: _StepFrame(
+                        label: '1',
+                        assetPath: 'assets/images/photos_step1.png',
+                        maxWidth: 320,
+                        aspectRatio: 0.56,
+                      ),
                     ),
-                  ),
                     SizedBox(height: spacing.l),
                   ],
                 ),
@@ -175,7 +175,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
               HapticFeedback.mediumImpact();
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const GenderSelectionPage(),
+                  builder: (context) => const PersonalizationIntroPage(),
                 ),
               );
             },
