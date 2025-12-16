@@ -63,7 +63,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
     const double appBarHeight = kToolbarHeight;
 
     final double topInset = MediaQuery.of(context).padding.top;
-    final double bottomPadding = spacing.l;
+    const double bottomPadding = 0;
 
     const double topFadeHeight = 36;
 
@@ -154,7 +154,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: spacing.xl),
+                    const SizedBox.shrink(),
                   ],
                 ),
               ),
