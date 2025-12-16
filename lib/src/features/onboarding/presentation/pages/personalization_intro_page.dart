@@ -266,7 +266,7 @@ class _MeasureSizeState extends State<MeasureSize> {
       final newSize = ctx.size;
       if (newSize == null) return;
 
-      if (_oldSize == null || (_oldSize! - newSize).distance > 0.5) {
+      if (_oldSize != newSize) {
         _oldSize = newSize;
         widget.onChange(newSize);
       }
