@@ -15,7 +15,8 @@ import 'safari_tutorial_page.dart';
 import 'photos_tutorial_page.dart';
 import 'imdb_tutorial_page.dart';
 import 'x_tutorial_page.dart';
-import 'rating_social_proof_page.dart';
+import 'personalization_intro_page.dart';
+import 'discovery_source_page.dart';
 
 class AddFirstStylePage extends ConsumerStatefulWidget {
   const AddFirstStylePage({super.key});
@@ -135,7 +136,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 11,
+          currentStep: 4,
           totalSteps: 14,
         ),
       ),
@@ -192,7 +193,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
             HapticFeedback.mediumImpact();
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => const RatingSocialProofPage(),
+                builder: (context) => const DiscoverySourcePage(),
               ),
             );
           },

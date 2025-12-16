@@ -101,7 +101,7 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 5,
+          currentStep: 7,
           totalSteps: 14,
         ),
       ),

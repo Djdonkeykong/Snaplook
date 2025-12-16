@@ -40,39 +40,39 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
     _counterAnimation = IntTween(begin: 0, end: 100).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     )..addListener(() {
-      setState(() {
-        final progress = _counterAnimation.value;
+        setState(() {
+          final progress = _counterAnimation.value;
 
-        // Update status text
-        if (progress < 25) {
-          _statusText = 'Analyzing your style preferences...';
-        } else if (progress < 50) {
-          _statusText = 'Finding brands you\'ll love...';
-        } else if (progress < 75) {
-          _statusText = 'Matching products to your taste...';
-        } else {
-          _statusText = 'Finalizing results...';
-        }
+          // Update status text
+          if (progress < 25) {
+            _statusText = 'Analyzing your style preferences...';
+          } else if (progress < 50) {
+            _statusText = 'Finding brands you\'ll love...';
+          } else if (progress < 75) {
+            _statusText = 'Matching products to your taste...';
+          } else {
+            _statusText = 'Finalizing results...';
+          }
 
-        // Update checklist
-        if (progress >= 25 && !_checklistCompleted[0]) {
-          _checklistCompleted[0] = true;
-          HapticFeedback.mediumImpact();
-        }
-        if (progress >= 50 && !_checklistCompleted[1]) {
-          _checklistCompleted[1] = true;
-          HapticFeedback.mediumImpact();
-        }
-        if (progress >= 75 && !_checklistCompleted[2]) {
-          _checklistCompleted[2] = true;
-          HapticFeedback.mediumImpact();
-        }
-        if (progress >= 95 && !_checklistCompleted[3]) {
-          _checklistCompleted[3] = true;
-          HapticFeedback.mediumImpact();
-        }
+          // Update checklist
+          if (progress >= 25 && !_checklistCompleted[0]) {
+            _checklistCompleted[0] = true;
+            HapticFeedback.mediumImpact();
+          }
+          if (progress >= 50 && !_checklistCompleted[1]) {
+            _checklistCompleted[1] = true;
+            HapticFeedback.mediumImpact();
+          }
+          if (progress >= 75 && !_checklistCompleted[2]) {
+            _checklistCompleted[2] = true;
+            HapticFeedback.mediumImpact();
+          }
+          if (progress >= 95 && !_checklistCompleted[3]) {
+            _checklistCompleted[3] = true;
+            HapticFeedback.mediumImpact();
+          }
+        });
       });
-    });
 
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -110,7 +110,7 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
         leading: const SizedBox(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 8,
+          currentStep: 10,
           totalSteps: 14,
         ),
       ),

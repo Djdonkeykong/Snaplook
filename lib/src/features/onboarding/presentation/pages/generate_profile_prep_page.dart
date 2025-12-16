@@ -14,7 +14,8 @@ class GenerateProfilePrepPage extends StatefulWidget {
   const GenerateProfilePrepPage({super.key});
 
   @override
-  State<GenerateProfilePrepPage> createState() => _GenerateProfilePrepPageState();
+  State<GenerateProfilePrepPage> createState() =>
+      _GenerateProfilePrepPageState();
 }
 
 class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
@@ -58,7 +59,7 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 7,
+          currentStep: 9,
           totalSteps: 14,
         ),
       ),

@@ -81,7 +81,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 3,
+          currentStep: 5,
           totalSteps: 14,
         ),
       ),

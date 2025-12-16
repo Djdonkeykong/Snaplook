@@ -10,7 +10,7 @@ import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import 'personalization_intro_page.dart';
+import 'rating_social_proof_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 
@@ -132,7 +132,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 2,
+          currentStep: 12,
           totalSteps: 14,
         ),
       ),
@@ -376,7 +376,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                     if (!context.mounted) return;
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const PersonalizationIntroPage(),
+                        builder: (context) => const AwesomeIntroPage(),
                       ),
                     );
                   }

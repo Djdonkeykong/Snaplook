@@ -91,7 +91,7 @@ class _BudgetPageState extends State<BudgetPage> with TickerProviderStateMixin {
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 6,
+          currentStep: 8,
           totalSteps: 14,
         ),
       ),

@@ -204,7 +204,7 @@ class _NotificationPermissionPageState
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 13,
+          currentStep: 14,
           totalSteps: 14,
         ),
       ),

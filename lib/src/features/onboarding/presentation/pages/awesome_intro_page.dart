@@ -6,6 +6,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
+import 'discovery_source_page.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
@@ -40,7 +41,7 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 10,
+          currentStep: 3,
           totalSteps: 14,
         ),
       ),

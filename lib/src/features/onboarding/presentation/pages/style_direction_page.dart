@@ -97,7 +97,7 @@ class _StyleDirectionPageState extends State<StyleDirectionPage>
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 4,
+          currentStep: 6,
           totalSteps: 14,
         ),
       ),
