@@ -46,9 +46,7 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
     final spacing = context.spacing;
     final mediaQuery = MediaQuery.of(context);
     final availableWidth = mediaQuery.size.width - spacing.l * 2;
-    final outerSize = math.max(0.0, math.min(availableWidth, 640.0));
-    final innerSize = outerSize * 0.82;
-    const lottieScale = 1.2;
+    final lottieSize = math.max(0.0, math.min(availableWidth, 360.0));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -72,43 +70,22 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
               children: [
                 const Spacer(),
 
-                // Lottie illustration
-                Container(
-                  width: outerSize,
-                  height: outerSize,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFFFFE5EC).withOpacity(0.5),
-                        const Color(0xFFE5F0FF).withOpacity(0.5),
-                      ],
-                    ),
-                  ),
-                  child: Center(
-                    child: SizedBox(
-                      width: innerSize,
-                      height: innerSize,
-                      child: Transform.scale(
-                        scale: lottieScale,
-                        child: Lottie.asset(
-                          'assets/animations/clap.json',
-                          controller: _lottieController,
-                          repeat: false,
-                          fit: BoxFit.contain,
-                          onLoaded: (composition) {
-                            if (!mounted) return;
-                            _lottieController
-                              ..duration = composition.duration
-                              ..value = 0
-                              ..forward();
-                          },
-                        ),
-                      ),
-                    ),
+                // Lottie illustration (no circle frame)
+                SizedBox(
+                  width: lottieSize,
+                  height: lottieSize,
+                  child: Lottie.asset(
+                    'assets/animations/clap.json',
+                    controller: _lottieController,
+                    repeat: false,
+                    fit: BoxFit.contain,
+                    onLoaded: (composition) {
+                      if (!mounted) return;
+                      _lottieController
+                        ..duration = composition.duration
+                        ..value = 0
+                        ..forward();
+                    },
                   ),
                 ),
 

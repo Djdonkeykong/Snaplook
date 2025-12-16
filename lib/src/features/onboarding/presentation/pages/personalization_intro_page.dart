@@ -127,10 +127,10 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Let\'s tailor Snaplook to you',
-                      style: const TextStyle(
-                        fontSize: 32,
+                      style: TextStyle(
+                        fontSize: 34,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
                         fontFamily: 'PlusJakartaSans',
@@ -149,30 +149,21 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                         height: 1.4,
                       ),
                     ),
-
-                    // General spacing after text
-                    SizedBox(height: spacing.xl),
-
-                    // Extra distance between text and image (x2 as requested)
-                    Padding(
-                      padding: EdgeInsets.only(top: spacing.xl * 2),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 220,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(18),
-                              child: AspectRatio(
-                                aspectRatio: 3 / 4,
-                                child: Image.asset(
-                                  'assets/images/mannequin.png',
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
+                    SizedBox(height: spacing.l),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: 220,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: AspectRatio(
+                            aspectRatio: 3 / 4,
+                            child: Image.asset(
+                              'assets/images/mannequin.png',
+                              fit: BoxFit.cover,
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
