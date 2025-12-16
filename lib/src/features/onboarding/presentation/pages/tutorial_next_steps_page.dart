@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
-import 'generate_profile_prep_page.dart';
+import 'discovery_source_page.dart';
 
 class TutorialNextStepsPage extends StatelessWidget {
   const TutorialNextStepsPage({super.key, this.returnToOnboarding = true});
@@ -53,7 +53,8 @@ class TutorialNextStepsPage extends StatelessWidget {
               SizedBox(height: spacing.l),
               _ChoiceCard(
                 title: 'Keep browsing in Snaplook',
-                subtitle: 'Jump back to your feed and keep discovering outfits.',
+                subtitle:
+                    'Jump back to your feed and keep discovering outfits.',
                 icon: Icons.check_circle_outline,
                 iconColor: const Color(0xFF1A73E8),
                 onTap: () => _handleKeepBrowsing(context),
@@ -62,7 +63,8 @@ class TutorialNextStepsPage extends StatelessWidget {
               SizedBox(height: spacing.m),
               _ChoiceCard(
                 title: 'Try sharing an image from Instagram',
-                subtitle: 'Open Instagram to share a post into Snaplook yourself.',
+                subtitle:
+                    'Open Instagram to share a post into Snaplook yourself.',
                 icon: Icons.camera_alt_outlined,
                 iconColor: const Color(0xFFF2003C),
                 onTap: () => _openInstagram(context),
@@ -81,7 +83,7 @@ class TutorialNextStepsPage extends StatelessWidget {
     if (returnToOnboarding) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const GenerateProfilePrepPage(),
+          builder: (context) => const DiscoverySourcePage(),
         ),
       );
     } else {
