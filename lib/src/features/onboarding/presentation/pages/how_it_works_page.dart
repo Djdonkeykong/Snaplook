@@ -71,6 +71,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
 
     final double topInset = MediaQuery.of(context).padding.top;
     final double bottomInset = MediaQuery.of(context).padding.bottom;
+    final double buttonMargin = spacing.s;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -100,7 +101,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                 spacing.l,
                 spacing.l + appBarHeight + topInset,
                 spacing.l,
-                spacing.l + buttonHeight + bottomInset,
+                buttonMargin + buttonHeight + bottomInset,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
