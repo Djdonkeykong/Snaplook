@@ -136,7 +136,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 4,
+          currentStep: 3,
           totalSteps: 14,
         ),
       ),

@@ -132,7 +132,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
         leading: const SnaplookBackButton(),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 12,
+          currentStep: 4,
           totalSteps: 14,
         ),
       ),
@@ -376,7 +376,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                     if (!context.mounted) return;
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const AwesomeIntroPage(),
+                        builder: (context) => AwesomeIntroPage(),
                       ),
                     );
                   }

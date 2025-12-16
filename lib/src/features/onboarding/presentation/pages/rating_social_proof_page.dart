@@ -22,7 +22,7 @@ class RatingSocialProofPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final radius = context.radius;
-    final currentStep = 13;
+    final currentStep = 12;
     final totalSteps = 14;
 
     return Scaffold(
