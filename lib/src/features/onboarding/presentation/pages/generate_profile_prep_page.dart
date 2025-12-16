@@ -125,7 +125,7 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
                 Transform.translate(
                   offset: const Offset(0, -12),
                   child: const Text(
-                    'Time to generate\nyour style profile!',
+                    'Time to dial in your\nstyle journey',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 32,
