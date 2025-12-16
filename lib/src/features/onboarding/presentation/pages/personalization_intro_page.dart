@@ -33,64 +33,55 @@ class PersonalizationIntroPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: ConstrainedBox(
-                        constraints:
-                            BoxConstraints(minHeight: constraints.maxHeight),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Let\'s tailor Snaplook to you',
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                                fontFamily: 'PlusJakartaSans',
-                                letterSpacing: -1.0,
-                                height: 1.1,
-                              ),
-                            ),
-                            SizedBox(height: spacing.s),
-                            const Text(
-                              'A few quick choices help us fine-tune recommendations just for you.',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black54,
-                                fontFamily: 'PlusJakartaSans',
-                                height: 1.4,
-                              ),
-                            ),
-                            SizedBox(height: spacing.xxl * 1.5),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 200,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(18),
-                                    child: AspectRatio(
-                                      aspectRatio: 3 / 4,
-                                      child: Image.asset(
-                                        'assets/images/mannequin.png',
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: spacing.xl),
-                          ],
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Let\'s tailor Snaplook to you',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                          fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -1.0,
+                          height: 1.1,
                         ),
                       ),
-                    );
-                  },
+                      SizedBox(height: spacing.s),
+                      const Text(
+                        'A few quick choices help us fine-tune recommendations just for you.',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black54,
+                          fontFamily: 'PlusJakartaSans',
+                          height: 1.4,
+                        ),
+                      ),
+                      SizedBox(height: spacing.xxl * 2),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 200,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              child: AspectRatio(
+                                aspectRatio: 3 / 4,
+                                child: Image.asset(
+                                  'assets/images/mannequin.png',
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: spacing.xl),
+                    ],
+                  ),
                 ),
               ),
             ],
