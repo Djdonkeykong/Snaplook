@@ -6,6 +6,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
+import 'calculating_profile_page.dart';
 
 class BudgetPage extends StatefulWidget {
   final Set<String> selectedStyles;
@@ -160,7 +161,11 @@ class _BudgetPageState extends State<BudgetPage> with TickerProviderStateMixin {
             onPressed: _selected.isNotEmpty
                 ? () {
                     HapticFeedback.mediumImpact();
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const CalculatingProfilePage(),
+                      ),
+                    );
                   }
                 : null,
             style: ElevatedButton.styleFrom(
@@ -217,41 +222,15 @@ class _RadioTile extends StatelessWidget {
           color: selected ? const Color(0xFFf2003c) : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(16),
         ),
-        padding: EdgeInsets.symmetric(horizontal: spacing.m),
-        child: Row(
-          children: [
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? Colors.white : Colors.black26,
-                  width: 2,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: selected ? Colors.white : Colors.transparent,
-                ),
-              ),
-            ),
-            SizedBox(width: spacing.m),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : Colors.black,
-                fontFamily: 'PlusJakartaSans',
-              ),
-            ),
-          ],
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : Colors.black,
+            fontFamily: 'PlusJakartaSans',
+          ),
         ),
       ),
     );

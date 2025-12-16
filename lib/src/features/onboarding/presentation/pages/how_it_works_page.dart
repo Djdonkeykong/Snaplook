@@ -6,7 +6,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import 'personalization_intro_page.dart';
+import 'discovery_source_page.dart';
 
 class HowItWorksPage extends StatefulWidget {
   const HowItWorksPage({super.key});
@@ -175,7 +175,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
               HapticFeedback.mediumImpact();
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const PersonalizationIntroPage(),
+                  builder: (context) => const DiscoverySourcePage(),
                 ),
               );
             },

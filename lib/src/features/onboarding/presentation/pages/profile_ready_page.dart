@@ -5,7 +5,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
-import 'rating_social_proof_page.dart';
+import 'awesome_intro_page.dart';
 
 class ProfileReadyPage extends StatelessWidget {
   const ProfileReadyPage({
@@ -166,7 +166,8 @@ class ProfileReadyPage extends StatelessWidget {
                             Colors.white,
                           ],
                         ),
-                        border: Border.all(color: Colors.black.withOpacity(0.05)),
+                        border:
+                            Border.all(color: Colors.black.withOpacity(0.05)),
                       ),
                       padding: EdgeInsets.all(spacing.m),
                       child: Column(
@@ -271,9 +272,7 @@ class ProfileReadyPage extends StatelessWidget {
               HapticFeedback.mediumImpact();
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => RatingSocialProofPage(
-                    continueToTrialFlow: continueToTrialFlow,
-                  ),
+                  builder: (context) => const AwesomeIntroPage(),
                 ),
               );
             },
