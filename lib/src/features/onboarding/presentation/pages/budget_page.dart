@@ -29,7 +29,7 @@ class _BudgetPageState extends State<BudgetPage> with TickerProviderStateMixin {
     'It varies',
   ];
 
-  String _selected = 'Affordable';
+  String _selected = '';
 
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _fadeAnimations;
@@ -104,7 +104,7 @@ class _BudgetPageState extends State<BudgetPage> with TickerProviderStateMixin {
               const Text(
                 'What price range feels right?',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 34,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                   fontFamily: 'PlusJakartaSans',
@@ -115,7 +115,7 @@ class _BudgetPageState extends State<BudgetPage> with TickerProviderStateMixin {
               const Text(
                 'Pick one',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: Colors.black54,
                   fontFamily: 'PlusJakartaSans',
@@ -128,7 +128,7 @@ class _BudgetPageState extends State<BudgetPage> with TickerProviderStateMixin {
                   final option = _options[index];
                   final isSelected = _selected == option;
                   return Padding(
-                    padding: EdgeInsets.only(bottom: spacing.s),
+                    padding: EdgeInsets.only(bottom: spacing.m),
                     child: FadeTransition(
                       opacity: _fadeAnimations[index],
                       child: ScaleTransition(
@@ -157,13 +157,16 @@ class _BudgetPageState extends State<BudgetPage> with TickerProviderStateMixin {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              // TODO: Hook into next step or save preferences.
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
+            onPressed: _selected.isNotEmpty
+                ? () {
+                    HapticFeedback.mediumImpact();
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
+                : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
+              backgroundColor: _selected.isNotEmpty
+                  ? const Color(0xFFf2003c)
+                  : Colors.grey.shade300,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(

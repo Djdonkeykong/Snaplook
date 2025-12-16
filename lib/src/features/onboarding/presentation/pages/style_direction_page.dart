@@ -25,7 +25,7 @@ class _StyleDirectionPageState extends State<StyleDirectionPage>
     'Bold',
   ];
 
-  final Set<String> _selected = {'Streetwear', 'Minimal'};
+  final Set<String> _selected = {};
 
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _fadeAnimations;
@@ -111,7 +111,7 @@ class _StyleDirectionPageState extends State<StyleDirectionPage>
               const Text(
                 'Which styles do you like?',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 34,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                   fontFamily: 'PlusJakartaSans',
@@ -122,7 +122,7 @@ class _StyleDirectionPageState extends State<StyleDirectionPage>
               const Text(
                 'Pick as many as you want',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: Colors.black54,
                   fontFamily: 'PlusJakartaSans',
@@ -134,7 +134,7 @@ class _StyleDirectionPageState extends State<StyleDirectionPage>
                   final option = _styleOptions[index];
                   final isSelected = _selected.contains(option);
                   return Padding(
-                    padding: EdgeInsets.only(bottom: spacing.s),
+                    padding: EdgeInsets.only(bottom: spacing.m),
                     child: FadeTransition(
                       opacity: _fadeAnimations[index],
                       child: ScaleTransition(

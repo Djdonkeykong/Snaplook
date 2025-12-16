@@ -37,7 +37,7 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
   @override
   void initState() {
     super.initState();
-    _selected = {'Outfits', 'Accessories'};
+    _selected = {};
 
     _animationControllers = List.generate(
       _options.length,
@@ -115,7 +115,7 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
               const Text(
                 'What are you mostly looking for?',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 34,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                   fontFamily: 'PlusJakartaSans',
@@ -126,7 +126,7 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
               const Text(
                 'Pick as many as you want',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: Colors.black54,
                   fontFamily: 'PlusJakartaSans',
@@ -138,7 +138,7 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
                   final option = _options[index];
                   final isSelected = _selected.contains(option);
                   return Padding(
-                    padding: EdgeInsets.only(bottom: spacing.s),
+                    padding: EdgeInsets.only(bottom: spacing.m),
                     child: FadeTransition(
                       opacity: _fadeAnimations[index],
                       child: ScaleTransition(
