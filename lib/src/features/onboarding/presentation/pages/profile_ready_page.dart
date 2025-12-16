@@ -41,7 +41,7 @@ class ProfileReadyPage extends StatelessWidget {
             children: [
               SizedBox(height: spacing.xl * 1.5),
               const Text(
-                'Ready to find your\nnext style',
+                'Your style, tuned to you',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -81,10 +81,9 @@ class ProfileReadyPage extends StatelessWidget {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black,
+              backgroundColor: const Color(0xFFf2003c),
               foregroundColor: Colors.white,
-              elevation: 2,
-              shadowColor: Colors.black.withOpacity(0.18),
+              elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
