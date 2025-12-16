@@ -16,8 +16,6 @@ class HowItWorksPage extends StatefulWidget {
 }
 
 class _HowItWorksPageState extends State<HowItWorksPage> {
-  bool _showStep1 = false;
-
   final ScrollController _scrollController = ScrollController();
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
@@ -25,8 +23,6 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   @override
   void initState() {
     super.initState();
-    _startSequence();
-
     // Capture anchor after first layout
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -40,12 +36,6 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  Future<void> _startSequence() async {
-    await Future<void>.delayed(const Duration(milliseconds: 150));
-    if (!mounted) return;
-    setState(() => _showStep1 = true);
   }
 
   void _snapBackToAnchor() {
@@ -141,15 +131,14 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                       ),
                     ),
                     SizedBox(height: spacing.l),
-                    Center(
-                      child: _StepFrame(
-                        label: '1',
-                        assetPath: 'assets/images/photos_step1.png',
-                        visible: _showStep1,
-                        maxWidth: 320,
-                        aspectRatio: 0.56,
-                      ),
+                  Center(
+                    child: _StepFrame(
+                      label: '1',
+                      assetPath: 'assets/images/photos_step1.png',
+                      maxWidth: 320,
+                      aspectRatio: 0.56,
                     ),
+                  ),
                     SizedBox(height: spacing.l),
                   ],
                 ),
