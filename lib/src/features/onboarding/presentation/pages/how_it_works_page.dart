@@ -17,6 +17,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
 
   final ScrollController _scrollController = ScrollController();
   double _anchorOffset = 0.0;
+  bool _isSnapping = false;
 
   @override
   void initState() {
@@ -45,13 +46,19 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   }
 
   void _snapBackToAnchor() {
-    if (!_scrollController.hasClients) return;
+    if (!_scrollController.hasClients || _isSnapping) return;
 
+    final double currentOffset = _scrollController.offset;
+    if ((currentOffset - _anchorOffset).abs() < 0.5) return;
+
+    _isSnapping = true;
     _scrollController.animateTo(
       _anchorOffset,
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-    );
+    ).whenComplete(() {
+      _isSnapping = false;
+    });
   }
 
   @override
