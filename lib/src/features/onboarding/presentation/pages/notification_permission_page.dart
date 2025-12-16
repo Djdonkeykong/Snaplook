@@ -8,9 +8,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
-import 'account_creation_page.dart';
-import 'welcome_free_analysis_page.dart';
-import 'trial_intro_page.dart';
+import 'revenuecat_paywall_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
@@ -41,11 +39,13 @@ class _NotificationPermissionPageState
     try {
       final user = ref.read(authServiceProvider).currentUser;
       if (user == null) {
-        debugPrint('[NotificationPermission] No authenticated user - preference will be saved later');
+        debugPrint(
+            '[NotificationPermission] No authenticated user - preference will be saved later');
         return;
       }
 
-      debugPrint('[NotificationPermission] Saving notification preference: $granted');
+      debugPrint(
+          '[NotificationPermission] Saving notification preference: $granted');
 
       // Save notification preference to database
       await OnboardingStateService().saveUserPreferences(
@@ -53,9 +53,11 @@ class _NotificationPermissionPageState
         notificationEnabled: granted,
       );
 
-      debugPrint('[NotificationPermission] Notification preference saved successfully');
+      debugPrint(
+          '[NotificationPermission] Notification preference saved successfully');
     } catch (e) {
-      debugPrint('[NotificationPermission] Error saving notification preference: $e');
+      debugPrint(
+          '[NotificationPermission] Error saving notification preference: $e');
       // Non-critical error - allow user to continue
     }
   }
@@ -90,20 +92,25 @@ class _NotificationPermissionPageState
           provisional: false,
         );
 
-        granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
-            settings.authorizationStatus == AuthorizationStatus.provisional;
+        granted =
+            settings.authorizationStatus == AuthorizationStatus.authorized ||
+                settings.authorizationStatus == AuthorizationStatus.provisional;
 
-        debugPrint('[NotificationPermission] Permission requested, granted: $granted');
-        debugPrint('[NotificationPermission] Authorization status: ${settings.authorizationStatus}');
+        debugPrint(
+            '[NotificationPermission] Permission requested, granted: $granted');
+        debugPrint(
+            '[NotificationPermission] Authorization status: ${settings.authorizationStatus}');
 
         // CRITICAL: Explicitly register for remote notifications with iOS
         // When FirebaseAppDelegateProxyEnabled is false, we must manually trigger this
         if (granted && Platform.isIOS) {
-          debugPrint('[NotificationPermission] Explicitly registering for remote notifications on iOS...');
+          debugPrint(
+              '[NotificationPermission] Explicitly registering for remote notifications on iOS...');
           try {
             const platform = MethodChannel('snaplook/notifications');
             await platform.invokeMethod('registerForRemoteNotifications');
-            debugPrint('[NotificationPermission] Remote notification registration triggered');
+            debugPrint(
+                '[NotificationPermission] Remote notification registration triggered');
 
             // Give iOS a moment to generate APNS token, then try to get FCM token
             await Future.delayed(const Duration(milliseconds: 500));
@@ -112,15 +119,18 @@ class _NotificationPermissionPageState
             if (token != null) {
               debugPrint('[NotificationPermission] Got FCM token: $token');
             } else {
-              debugPrint('[NotificationPermission] FCM token is null - APNS token may not be available yet');
+              debugPrint(
+                  '[NotificationPermission] FCM token is null - APNS token may not be available yet');
             }
           } catch (e) {
-            debugPrint('[NotificationPermission] Error during notification registration: $e');
+            debugPrint(
+                '[NotificationPermission] Error during notification registration: $e');
             // Token will be registered later when APNS token becomes available
           }
         }
       } else {
-        debugPrint('[NotificationPermission] Skipping permission request - Firebase not ready');
+        debugPrint(
+            '[NotificationPermission] Skipping permission request - Firebase not ready');
       }
 
       // Store permission result in provider
@@ -133,7 +143,8 @@ class _NotificationPermissionPageState
       if (granted && firebaseReady) {
         try {
           await NotificationService().initialize();
-          debugPrint('[NotificationPermission] FCM initialized and token registered');
+          debugPrint(
+              '[NotificationPermission] FCM initialized and token registered');
         } catch (e) {
           debugPrint('[NotificationPermission] Error initializing FCM: $e');
         }
@@ -173,25 +184,9 @@ class _NotificationPermissionPageState
   void _navigateToNextStep() {
     if (!mounted) return;
 
-    if (widget.continueToTrialFlow) {
-      // Navigate to trial intro page (which leads to reminder, then paywall)
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const TrialIntroPage(),
-        ),
-      );
-      return;
-    }
-
-    // Not in trial flow - go directly to account creation or welcome
-    final authService = ref.read(authServiceProvider);
-    final isAuthenticated = authService.currentUser != null;
-
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => isAuthenticated
-            ? const WelcomeFreeAnalysisPage()
-            : const AccountCreationPage(),
+        builder: (context) => const RevenueCatPaywallPage(),
       ),
     );
   }
