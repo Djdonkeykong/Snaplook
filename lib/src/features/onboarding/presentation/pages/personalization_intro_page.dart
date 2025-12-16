@@ -21,8 +21,8 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
 
-  // One source of truth for bottom bar height
-  static const double _bottomBarHeight = 96.0;
+  // Measured height of the bottom bar (no guessing -> no overflow)
+  double _bottomBarHeight = 0.0;
 
   @override
   void initState() {
@@ -64,15 +64,14 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
     final spacing = context.spacing;
 
     const double appBarHeight = kToolbarHeight;
-
     final double topInset = MediaQuery.of(context).padding.top;
     final double bottomInset = MediaQuery.of(context).padding.bottom;
 
     const double topFadeHeight = 36;
 
-    // This is the key fix: give scroll content enough bottom padding
-    // so the image can sit right above the fixed bottom bar.
-    final double contentBottomPadding = _bottomBarHeight + bottomInset + spacing.l;
+    // Key: pad scroll content by the *actual* bottom bar height (+ safe area + a little breathing room)
+    final double contentBottomPadding =
+        _bottomBarHeight + bottomInset + spacing.l;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -108,7 +107,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
               },
               child: SingleChildScrollView(
                 controller: _scrollController,
-                // Fix #2: remove AlwaysScrollableScrollPhysics (forces extra space)
+                // Removing AlwaysScrollable avoids “fake” scroll extent on short pages.
                 physics: const BouncingScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(
                   spacing.l,
@@ -142,7 +141,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                       ),
                     ),
 
-                    // Optional: reduce this if it was contributing to "too much gap"
+                    // Keep this modest; your old xxl*2.5 made the gap feel worse.
                     SizedBox(height: spacing.xl),
 
                     Row(
@@ -188,9 +187,15 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
         ],
       ),
 
-      // Fix #1 reinforcement: enforce bottom bar height and safe-area handling
-      bottomNavigationBar: SizedBox(
-        height: _bottomBarHeight + bottomInset,
+      // Key: do NOT force a height here. Let the bar size itself.
+      // We measure it and pad the scroll content accordingly.
+      bottomNavigationBar: MeasureSize(
+        onChange: (size) {
+          final h = size.height;
+          if (h > 0 && (h - _bottomBarHeight).abs() > 0.5) {
+            setState(() => _bottomBarHeight = h);
+          }
+        },
         child: SafeArea(
           top: false,
           child: OnboardingBottomBar(
@@ -229,5 +234,44 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
         ),
       ),
     );
+  }
+}
+
+/// Measures its child after layout and reports the size.
+/// Handy for “pad content by bottom bar height” without hardcoding values.
+class MeasureSize extends StatefulWidget {
+  const MeasureSize({
+    super.key,
+    required this.onChange,
+    required this.child,
+  });
+
+  final void Function(Size size) onChange;
+  final Widget child;
+
+  @override
+  State<MeasureSize> createState() => _MeasureSizeState();
+}
+
+class _MeasureSizeState extends State<MeasureSize> {
+  final GlobalKey _key = GlobalKey();
+  Size? _oldSize;
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _key.currentContext;
+      if (ctx == null) return;
+
+      final newSize = ctx.size;
+      if (newSize == null) return;
+
+      if (_oldSize == null || (_oldSize! - newSize).distance > 0.5) {
+        _oldSize = newSize;
+        widget.onChange(newSize);
+      }
+    });
+
+    return Container(key: _key, child: widget.child);
   }
 }
