@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
-
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -26,12 +25,19 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     super.initState();
     _startSequence();
 
+    // Capture anchor after first layout
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_scrollController.hasClients) {
         _anchorOffset = _scrollController.offset;
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _startSequence() async {
@@ -43,17 +49,17 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   void _snapBackToAnchor() {
     if (!_scrollController.hasClients || _isSnapping) return;
 
-    final currentOffset = _scrollController.offset;
+    final double currentOffset = _scrollController.offset;
     if ((currentOffset - _anchorOffset).abs() < 0.5) return;
 
     _isSnapping = true;
-    _scrollController
-        .animateTo(
-          _anchorOffset,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        )
-        .whenComplete(() => _isSnapping = false);
+    _scrollController.animateTo(
+      _anchorOffset,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    ).whenComplete(() {
+      _isSnapping = false;
+    });
   }
 
   @override
@@ -63,16 +69,18 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     const double buttonHeight = 56;
     const double appBarHeight = kToolbarHeight;
 
-    final topInset = MediaQuery.of(context).padding.top;
-    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final double topInset = MediaQuery.of(context).padding.top;
+    final double bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: AppColors.background,
+
       body: Stack(
         children: [
-          /// 🔹 SCROLL CONTENT
+          // 🔹 SCROLL CONTENT (anchored)
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
+              // Snap back to the anchor whenever a gesture ends in any direction.
               if (n is ScrollEndNotification ||
                   (n is UserScrollNotification &&
                       n.direction == ScrollDirection.idle)) {
@@ -82,14 +90,17 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
             },
             child: SingleChildScrollView(
               controller: _scrollController,
+
+              // Allow overscroll in both directions
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
+
               padding: EdgeInsets.fromLTRB(
                 spacing.l,
                 spacing.l + appBarHeight + topInset,
                 spacing.l,
-                buttonHeight + 12,
+                spacing.l + buttonHeight + bottomInset,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,6 +110,9 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                     style: TextStyle(
                       fontSize: 34,
                       fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -1.0,
                       height: 1.2,
                     ),
                   ),
@@ -112,42 +126,36 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                       aspectRatio: 0.56,
                     ),
                   ),
+                  SizedBox(height: spacing.l),
                 ],
               ),
             ),
           ),
 
-          /// 🔹 APP BAR
+          // 🔹 APP BAR OVERLAY
           Positioned(
-            top: 0,
             left: 0,
             right: 0,
+            top: 0,
             child: SafeArea(
               bottom: false,
-              child: AppBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                leading: SnaplookBackButton(),
+              child: SizedBox(
+                height: appBarHeight,
+                child: AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  leading: SnaplookBackButton(),
+                ),
               ),
             ),
           ),
 
-          /// 🔹 BOTTOM BACKGROUND (covers iOS home indicator area)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: bottomInset,
-            child: Container(
-              color: AppColors.background,
-            ),
-          ),
-
-          /// 🔹 FIXED BUTTON
+          // 🔹 FIXED BUTTON OVERLAY
           Positioned(
             left: spacing.l,
             right: spacing.l,
-            bottom: 6,
+            bottom: spacing.l + bottomInset,
             child: SizedBox(
               height: buttonHeight,
               child: ElevatedButton(
@@ -155,7 +163,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                   HapticFeedback.mediumImpact();
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const GenderSelectionPage(),
+                      builder: (context) => const GenderSelectionPage(),
                     ),
                   );
                 },
@@ -172,6 +180,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    fontFamily: 'PlusJakartaSans',
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -184,7 +193,6 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   }
 }
 
-/// 🔹 STEP FRAME (RESTORED)
 class _StepFrame extends StatelessWidget {
   final String label;
   final String assetPath;
@@ -212,16 +220,19 @@ class _StepFrame extends StatelessWidget {
         curve: Curves.easeOut,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final width =
+            final double width =
                 constraints.maxWidth.clamp(0, maxWidth).toDouble();
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(28),
-              child: SizedBox(
-                width: width,
-                height: width / aspectRatio,
-                child: Image.asset(
-                  assetPath,
-                  fit: BoxFit.cover,
+            return Align(
+              alignment: Alignment.center,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: SizedBox(
+                  width: width,
+                  height: width / aspectRatio,
+                  child: Image.asset(
+                    assetPath,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             );
