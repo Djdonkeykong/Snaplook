@@ -5,6 +5,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import 'gender_selection_page.dart';
+import '../widgets/onboarding_bottom_bar.dart';
 
 class HowItWorksPage extends StatefulWidget {
   const HowItWorksPage({super.key});
@@ -66,11 +67,10 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    const double buttonHeight = 56;
     const double appBarHeight = kToolbarHeight;
 
     final double topInset = MediaQuery.of(context).padding.top;
-    final double bottomInset = MediaQuery.of(context).padding.bottom;
+    final double bottomPadding = spacing.l;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -100,7 +100,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                 spacing.l,
                 spacing.l + appBarHeight + topInset,
                 spacing.l,
-                spacing.l + buttonHeight + bottomInset,
+                bottomPadding,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,44 +150,40 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
               ),
             ),
           ),
-
-          // 🔹 FIXED BUTTON OVERLAY
-          Positioned(
-            left: spacing.l,
-            right: spacing.l,
-            bottom: 0 + bottomInset,
-            child: SizedBox(
-              height: buttonHeight,
-              child: ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const GenderSelectionPage(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFf2003c),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
+        ],
+      ),
+      bottomNavigationBar: OnboardingBottomBar(
+        primaryButton: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const GenderSelectionPage(),
                 ),
-                child: const Text(
-                  'Set up my style',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -0.2,
-                  ),
-                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFf2003c),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            child: const Text(
+              'Set up my style',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'PlusJakartaSans',
+                letterSpacing: -0.2,
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
