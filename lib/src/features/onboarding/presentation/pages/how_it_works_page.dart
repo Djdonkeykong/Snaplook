@@ -40,42 +40,40 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
         scrolledUnderElevation: 0,
         leading: SnaplookBackButton(),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            spacing.l,
-            spacing.l,
-            spacing.l,
-            spacing.l,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'How Snaplook works',
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -1.0,
-                    height: 1.2,
-                  ),
+      body: Padding(
+        padding: EdgeInsets.fromLTRB(
+          spacing.l,
+          spacing.l,
+          spacing.l,
+          spacing.l,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'How Snaplook works',
+                style: TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                  fontFamily: 'PlusJakartaSans',
+                  letterSpacing: -1.0,
+                  height: 1.2,
                 ),
-                SizedBox(height: spacing.l),
-                Center(
-                  child: _StepFrame(
-                    label: '1',
-                    assetPath: 'assets/images/photos_step1.png',
-                    visible: _showStep1,
-                    maxWidth: 360,
-                    aspectRatio: 0.56,
-                  ),
+              ),
+              SizedBox(height: spacing.l),
+              Center(
+                child: _StepFrame(
+                  label: '1',
+                  assetPath: 'assets/images/photos_step1.png',
+                  visible: _showStep1,
+                  maxWidth: 360,
+                  aspectRatio: 0.56,
                 ),
-                SizedBox(height: spacing.l),
-              ],
-            ),
+              ),
+              SizedBox(height: spacing.l),
+            ],
           ),
         ),
       ),
