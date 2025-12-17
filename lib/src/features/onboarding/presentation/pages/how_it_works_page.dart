@@ -20,7 +20,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   final ScrollController _scrollController = ScrollController();
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
-  bool _didPrecacheShareImage = false;
+  Future<void>? _shareImagePrecache;
 
   @override
   void initState() {
@@ -37,11 +37,9 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_didPrecacheShareImage) return;
-    _didPrecacheShareImage = true;
 
-    // Preload the "Share your style" artwork before navigating to that page to avoid a flash
-    precacheImage(
+    // Kick off caching the next screen's hero image so there's no flash on navigation.
+    _shareImagePrecache ??= precacheImage(
       const AssetImage('assets/images/social_media_share_mobile_screen.png'),
       context,
     );
@@ -192,8 +190,10 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               HapticFeedback.mediumImpact();
+              // Ensure the next page's image decode finishes before transitioning.
+              await (_shareImagePrecache ?? Future.value());
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const AwesomeIntroPage(),
