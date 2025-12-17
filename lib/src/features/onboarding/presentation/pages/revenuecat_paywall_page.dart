@@ -804,7 +804,7 @@ class _TrialTimeline extends StatelessWidget {
             isLast: false,
           ),
           _TimelineItem(
-            iconAsset: 'assets/icons/mdi--bell-ring-outline.svg',
+            iconAsset: 'assets/icons/mdi--bell-ring-outline-alt.svg',
             iconColor: Colors.white,
             iconBgColor: const Color(0xFFf2003c),
             iconSize: 18,
