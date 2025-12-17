@@ -268,15 +268,15 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         children: [
           SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
-              spacing.l * 1.5,
+              spacing.l,
               0,
-              spacing.l * 1.5,
+              spacing.l,
               bottomScrollPadding,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: spacing.l),
+                SizedBox(height: spacing.m),
                 const _HeroMark(),
                 SizedBox(height: spacing.l),
                 Center(
@@ -850,8 +850,8 @@ class _TimelineItem extends StatelessWidget {
           Column(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: iconBgColor,
                   shape: BoxShape.circle,
@@ -859,13 +859,13 @@ class _TimelineItem extends StatelessWidget {
                 child: Icon(
                   icon,
                   color: iconColor,
-                  size: 24,
+                  size: 20,
                 ),
               ),
               if (!isLast)
                 Expanded(
                   child: Container(
-                    width: 3,
+                    width: 4,
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFD1DC),
@@ -878,27 +878,27 @@ class _TimelineItem extends StatelessWidget {
           const SizedBox(width: 16),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 24),
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     title,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                       letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
                     description,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textSecondary,
                       height: 1.4,
