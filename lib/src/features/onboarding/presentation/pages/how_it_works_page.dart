@@ -149,7 +149,8 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                       child: _StepFrame(
                         label: '1',
                         assetPath: 'assets/images/how_it_works.png',
-                        maxWidth: 320,
+                        // Allow slightly larger render on wider phones/tablets while still capping for quality.
+                        maxWidth: 420,
                         aspectRatio: 792 / 1285,
                       ),
                     ),
