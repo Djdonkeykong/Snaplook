@@ -132,6 +132,7 @@ class ResultsBottomSheetContent extends StatelessWidget {
                     result: result,
                     onTap: () => onProductTap(result),
                     isFirst: index == 0,
+                    showFavoriteButton: showFavoriteButton,
                   );
                 },
               ),
@@ -147,11 +148,13 @@ class _ProductCard extends StatelessWidget {
   final DetectionResult result;
   final VoidCallback onTap;
   final bool isFirst;
+  final bool showFavoriteButton;
 
   const _ProductCard({
     required this.result,
     required this.onTap,
     required this.isFirst,
+    this.showFavoriteButton = true,
   });
 
   String _formatPrice(BuildContext context, double price, String? currency) {
