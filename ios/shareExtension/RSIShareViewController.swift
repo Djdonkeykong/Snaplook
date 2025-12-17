@@ -5873,11 +5873,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         revertCropButton?.removeFromSuperview()
         let revertButton = UIButton(type: .system)
         revertButton.translatesAutoresizingMaskIntoConstraints = false
-        let revertConfig = UIImage.SymbolConfiguration(pointSize: 24, weight: .semibold)
+        let revertConfig = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
         revertButton.setImage(UIImage(systemName: "arrow.uturn.backward", withConfiguration: revertConfig), for: .normal)
         revertButton.tintColor = .white
         revertButton.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        revertButton.layer.cornerRadius = 20
+        revertButton.layer.cornerRadius = 14
         revertButton.layer.masksToBounds = true
         revertButton.addTarget(self, action: #selector(revertCropTapped), for: .touchUpInside)
         revertButton.accessibilityLabel = "Revert to original image"
@@ -5923,8 +5923,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Revert button anchored to image corner
             revertButton.trailingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: -12),
             revertButton.bottomAnchor.constraint(equalTo: imageView.bottomAnchor, constant: -12),
-            revertButton.widthAnchor.constraint(equalToConstant: 40),
-            revertButton.heightAnchor.constraint(equalToConstant: 40),
+            revertButton.widthAnchor.constraint(equalToConstant: 28),
+            revertButton.heightAnchor.constraint(equalToConstant: 28),
 
             // Crop button above analyze button
             cropButton.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
