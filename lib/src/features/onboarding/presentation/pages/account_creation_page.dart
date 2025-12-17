@@ -301,12 +301,15 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
       final hasActiveRevenueCat = entitlement != null;
       final isTrial = entitlement?.periodType == PeriodType.trial ||
           entitlement?.periodType == PeriodType.intro;
+      final expirationDateIso = entitlement?.expirationDate != null
+          ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
+          : null;
 
       try {
         await Supabase.instance.client.from('users').upsert({
           'id': userId,
           'subscription_status': hasActiveRevenueCat ? 'active' : 'free',
-          'subscription_expires_at': entitlement?.expirationDate?.toIso8601String(),
+          'subscription_expires_at': expirationDateIso,
           'billing_user_id': userId,
           'subscription_product_id': entitlement?.productIdentifier,
           'subscription_provider': 'revenuecat',
