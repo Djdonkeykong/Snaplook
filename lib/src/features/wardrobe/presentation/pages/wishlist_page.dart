@@ -125,7 +125,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
           ),
           unselectedLabelStyle: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             fontFamily: 'PlusJakartaSans',
           ),
           tabs: const [

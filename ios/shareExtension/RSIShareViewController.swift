@@ -664,6 +664,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var headerContainerView: UIView?
     private var headerLogoImageView: UIImageView?
     private var cancelButtonView: UIButton?
+    private var backButtonView: UIButton?
+    private var isShowingResults = false
     private let bannedKeywordPatterns: [NSRegularExpression] = [
         try! NSRegularExpression(pattern: "\\bwig\\b", options: [.caseInsensitive]),
         try! NSRegularExpression(pattern: "\\bwigs\\b", options: [.caseInsensitive]),
@@ -3825,18 +3827,47 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 container.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
                 container.heightAnchor.constraint(equalToConstant: 48),
 
-                logo.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                logo.centerXAnchor.constraint(equalTo: container.centerXAnchor),
                 logo.centerYAnchor.constraint(equalTo: container.centerYAnchor),
                 logo.heightAnchor.constraint(equalToConstant: 28),
                 logo.widthAnchor.constraint(equalToConstant: 132),
 
                 cancelButton.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-                cancelButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-                cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16)
+                cancelButton.centerYAnchor.constraint(equalTo: container.centerYAnchor)
             ])
 
             headerContainerView = container
             headerLogoImageView = logo
+        }
+
+        // Add/show back button only when showing results
+        if isShowingResults {
+            if backButtonView == nil {
+                let backButton = UIButton(type: .system)
+                backButton.translatesAutoresizingMaskIntoConstraints = false
+
+                // Create back arrow icon
+                let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
+                let backImage = UIImage(systemName: "chevron.left", withConfiguration: config)
+                backButton.setImage(backImage, for: .normal)
+                backButton.tintColor = UIColor(red: 28/255, green: 28/255, blue: 37/255, alpha: 1.0)
+
+                backButton.addTarget(self, action: #selector(backToPreviewTapped), for: .touchUpInside)
+
+                headerContainerView?.addSubview(backButton)
+
+                NSLayoutConstraint.activate([
+                    backButton.leadingAnchor.constraint(equalTo: headerContainerView!.leadingAnchor, constant: 16),
+                    backButton.centerYAnchor.constraint(equalTo: headerContainerView!.centerYAnchor),
+                    backButton.widthAnchor.constraint(equalToConstant: 44),
+                    backButton.heightAnchor.constraint(equalToConstant: 44)
+                ])
+
+                backButtonView = backButton
+            }
+            backButtonView?.isHidden = false
+        } else {
+            backButtonView?.isHidden = true
         }
 
         headerContainerView?.isHidden = false
@@ -4130,6 +4161,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func displayResultsUI() {
+
+        // Mark that we're showing results (for back button)
+        isShowingResults = true
 
         // Hide loading indicator
         activityIndicator?.stopAnimating()
@@ -5770,6 +5804,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func showImagePreview(imageData: Data) {
         shareLog("Showing image preview")
 
+        // Mark that we're not showing results (so back button won't appear)
+        isShowingResults = false
+
         // Hide loading UI
         hideLoadingUI()
 
@@ -6425,6 +6462,55 @@ open class RSIShareViewController: SLComposeServiceViewController {
         )
         didCompleteRequest = true
         extensionContext?.cancelRequest(withError: error)
+    }
+
+    @objc private func backToPreviewTapped() {
+        shareLog("Back button tapped - returning to image preview")
+
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+
+        // Clear results UI
+        clearResultsUI()
+
+        // Show the image preview again
+        guard let imageData = analyzedImageData else {
+            shareLog("ERROR: No image data available to show preview")
+            return
+        }
+
+        showImagePreview(imageData: imageData)
+    }
+
+    private func clearResultsUI() {
+        shareLog("Clearing results UI")
+
+        // Mark that we're no longer showing results
+        isShowingResults = false
+
+        // Remove table view
+        resultsTableView?.removeFromSuperview()
+        resultsTableView = nil
+
+        // Remove category filter view
+        categoryFilterView?.removeFromSuperview()
+        categoryFilterView = nil
+
+        // Remove all subviews from loading view except header
+        if let loadingView = loadingView {
+            for subview in loadingView.subviews {
+                if subview != headerContainerView {
+                    subview.removeFromSuperview()
+                }
+            }
+        }
+
+        // Clear detection results data
+        filteredResults = []
+        selectedGroup = nil
+
+        shareLog("Results UI cleared")
     }
 
     @objc private func analyzeInAppTapped() {
