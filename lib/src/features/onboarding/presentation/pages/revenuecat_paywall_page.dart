@@ -300,7 +300,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                     icon: const Icon(
                       Icons.search_rounded,
                       color: AppColors.tertiary,
-                      size: 16,
+                      size: 18,
                     ),
                     title: 'Turn photos into matches',
                     description:
@@ -312,7 +312,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                     icon: const Icon(
                       Icons.favorite_rounded,
                       color: Color(0xFFf2003c),
-                      size: 16,
+                      size: 18,
                     ),
                     title: 'Save the looks you love',
                     description:
@@ -338,8 +338,8 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                     iconBgColor: const Color(0xFFEFF2FF),
                     icon: SvgPicture.asset(
                       'assets/icons/lets-icons--bell-pin.svg',
-                      width: 16,
-                      height: 16,
+                      width: 18,
+                      height: 18,
                     ),
                     title: 'Never miss a match',
                     description:
@@ -565,8 +565,8 @@ class _FeatureItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 32,
-          height: 32,
+          width: 36,
+          height: 36,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: iconBgColor,
@@ -574,17 +574,17 @@ class _FeatureItem extends StatelessWidget {
           ),
           child: icon,
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Text(
             title,
             style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 16,
+              fontSize: 17,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
               letterSpacing: -0.3,
-              height: 1.1,
+              height: 1.15,
             ),
           ),
         ),
