@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -7,23 +8,17 @@ import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
+import '../../domain/providers/onboarding_preferences_provider.dart';
 import 'generate_profile_prep_page.dart';
 
-class BudgetPage extends StatefulWidget {
-  final Set<String> selectedStyles;
-  final Set<String> selectedInterests;
-
-  const BudgetPage({
-    super.key,
-    required this.selectedStyles,
-    required this.selectedInterests,
-  });
+class BudgetPage extends ConsumerStatefulWidget {
+  const BudgetPage({super.key});
 
   @override
-  State<BudgetPage> createState() => _BudgetPageState();
+  ConsumerState<BudgetPage> createState() => _BudgetPageState();
 }
 
-class _BudgetPageState extends State<BudgetPage>
+class _BudgetPageState extends ConsumerState<BudgetPage>
     with TickerProviderStateMixin, RouteAware {
   static const _options = [
     'Affordable',
@@ -31,8 +26,6 @@ class _BudgetPageState extends State<BudgetPage>
     'Premium',
     'It varies',
   ];
-
-  String _selected = '';
 
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _fadeAnimations;
@@ -108,6 +101,7 @@ class _BudgetPageState extends State<BudgetPage>
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final selected = ref.watch(budgetProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -156,7 +150,7 @@ class _BudgetPageState extends State<BudgetPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: List.generate(_options.length, (index) {
                   final option = _options[index];
-                  final isSelected = _selected == option;
+                  final isSelected = selected == option;
                   return Padding(
                     padding: EdgeInsets.only(bottom: spacing.m),
                     child: FadeTransition(
@@ -167,9 +161,7 @@ class _BudgetPageState extends State<BudgetPage>
                           label: option,
                           selected: isSelected,
                           onTap: () {
-                            setState(() {
-                              _selected = option;
-                            });
+                            ref.read(budgetProvider.notifier).state = option;
                           },
                         ),
                       ),
@@ -187,7 +179,7 @@ class _BudgetPageState extends State<BudgetPage>
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: _selected.isNotEmpty
+            onPressed: selected != null && selected.isNotEmpty
                 ? () {
                     HapticFeedback.mediumImpact();
                     Navigator.of(context).push(
@@ -198,7 +190,7 @@ class _BudgetPageState extends State<BudgetPage>
                   }
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _selected.isNotEmpty
+              backgroundColor: selected != null && selected.isNotEmpty
                   ? const Color(0xFFf2003c)
                   : Colors.grey.shade300,
               foregroundColor: Colors.white,

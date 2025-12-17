@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -7,18 +8,17 @@ import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
+import '../../domain/providers/onboarding_preferences_provider.dart';
 import 'budget_page.dart';
 
-class WhatYouWantPage extends StatefulWidget {
-  final Set<String> initialStyles;
-
-  const WhatYouWantPage({super.key, required this.initialStyles});
+class WhatYouWantPage extends ConsumerStatefulWidget {
+  const WhatYouWantPage({super.key});
 
   @override
-  State<WhatYouWantPage> createState() => _WhatYouWantPageState();
+  ConsumerState<WhatYouWantPage> createState() => _WhatYouWantPageState();
 }
 
-class _WhatYouWantPageState extends State<WhatYouWantPage>
+class _WhatYouWantPageState extends ConsumerState<WhatYouWantPage>
     with TickerProviderStateMixin, RouteAware {
   static const _options = [
     'Outfits',
@@ -28,8 +28,6 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
     'Everything',
   ];
 
-  late Set<String> _selected;
-
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _fadeAnimations;
   late List<Animation<double>> _scaleAnimations;
@@ -38,7 +36,6 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
   @override
   void initState() {
     super.initState();
-    _selected = {};
 
     _animationControllers = List.generate(
       _options.length,
@@ -104,18 +101,20 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
   }
 
   void _toggle(String value) {
-    setState(() {
-      if (_selected.contains(value)) {
-        _selected.remove(value);
-      } else {
-        _selected.add(value);
-      }
-    });
+    final currentSelection = ref.read(whatYouWantProvider);
+    if (currentSelection.contains(value)) {
+      ref.read(whatYouWantProvider.notifier).state =
+          currentSelection.where((item) => item != value).toList();
+    } else {
+      ref.read(whatYouWantProvider.notifier).state =
+          [...currentSelection, value];
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final selected = ref.watch(whatYouWantProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -163,7 +162,7 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
               Column(
                 children: List.generate(_options.length, (index) {
                   final option = _options[index];
-                  final isSelected = _selected.contains(option);
+                  final isSelected = selected.contains(option);
                   return Padding(
                     padding: EdgeInsets.only(bottom: spacing.m),
                     child: FadeTransition(
@@ -190,21 +189,18 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: _selected.isNotEmpty
+            onPressed: selected.isNotEmpty
                 ? () {
                     HapticFeedback.mediumImpact();
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => BudgetPage(
-                          selectedStyles: widget.initialStyles,
-                          selectedInterests: _selected,
-                        ),
+                        builder: (context) => const BudgetPage(),
                       ),
                     );
                   }
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _selected.isNotEmpty
+              backgroundColor: selected.isNotEmpty
                   ? const Color(0xFFf2003c)
                   : Colors.grey.shade300,
               foregroundColor: Colors.white,
@@ -221,7 +217,7 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
                 color:
-                    _selected.isNotEmpty ? Colors.white : Colors.grey.shade600,
+                    selected.isNotEmpty ? Colors.white : Colors.grey.shade600,
               ),
             ),
           ),

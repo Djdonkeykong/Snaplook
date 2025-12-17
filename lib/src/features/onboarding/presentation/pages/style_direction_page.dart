@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -7,16 +8,17 @@ import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
+import '../../domain/providers/onboarding_preferences_provider.dart';
 import 'what_you_want_page.dart';
 
-class StyleDirectionPage extends StatefulWidget {
+class StyleDirectionPage extends ConsumerStatefulWidget {
   const StyleDirectionPage({super.key});
 
   @override
-  State<StyleDirectionPage> createState() => _StyleDirectionPageState();
+  ConsumerState<StyleDirectionPage> createState() => _StyleDirectionPageState();
 }
 
-class _StyleDirectionPageState extends State<StyleDirectionPage>
+class _StyleDirectionPageState extends ConsumerState<StyleDirectionPage>
     with TickerProviderStateMixin, RouteAware {
   static const _styleOptions = [
     'Streetwear',
@@ -25,8 +27,6 @@ class _StyleDirectionPageState extends State<StyleDirectionPage>
     'Classic',
     'Bold',
   ];
-
-  final Set<String> _selected = {};
 
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _fadeAnimations;
@@ -101,18 +101,20 @@ class _StyleDirectionPageState extends State<StyleDirectionPage>
   }
 
   void _toggle(String value) {
-    setState(() {
-      if (_selected.contains(value)) {
-        _selected.remove(value);
-      } else {
-        _selected.add(value);
-      }
-    });
+    final currentSelection = ref.read(styleDirectionProvider);
+    if (currentSelection.contains(value)) {
+      ref.read(styleDirectionProvider.notifier).state =
+          currentSelection.where((item) => item != value).toList();
+    } else {
+      ref.read(styleDirectionProvider.notifier).state =
+          [...currentSelection, value];
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final selected = ref.watch(styleDirectionProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -160,7 +162,7 @@ class _StyleDirectionPageState extends State<StyleDirectionPage>
               Column(
                 children: List.generate(_styleOptions.length, (index) {
                   final option = _styleOptions[index];
-                  final isSelected = _selected.contains(option);
+                  final isSelected = selected.contains(option);
                   return Padding(
                     padding: EdgeInsets.only(bottom: spacing.m),
                     child: FadeTransition(
@@ -187,20 +189,18 @@ class _StyleDirectionPageState extends State<StyleDirectionPage>
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: _selected.isNotEmpty
+            onPressed: selected.isNotEmpty
                 ? () {
                     HapticFeedback.mediumImpact();
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => WhatYouWantPage(
-                          initialStyles: _selected,
-                        ),
+                        builder: (context) => const WhatYouWantPage(),
                       ),
                     );
                   }
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _selected.isNotEmpty
+              backgroundColor: selected.isNotEmpty
                   ? const Color(0xFFf2003c)
                   : Colors.grey.shade300,
               foregroundColor: Colors.white,
@@ -217,7 +217,7 @@ class _StyleDirectionPageState extends State<StyleDirectionPage>
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
                 color:
-                    _selected.isNotEmpty ? Colors.white : Colors.grey.shade600,
+                    selected.isNotEmpty ? Colors.white : Colors.grey.shade600,
               ),
             ),
           ),
