@@ -300,10 +300,10 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 ),
                 SizedBox(height: spacing.l),
                 _FeatureItem(
-                  iconBgColor: const Color(0xFFf2003c),
+                  iconBgColor: const Color(0xFFf2003c).withOpacity(0.3),
                   icon: const Icon(
                     Icons.favorite_rounded,
-                    color: Colors.white,
+                    color: Color(0xFFf2003c),
                     size: 16,
                   ),
                   title: 'Save the looks you love',
