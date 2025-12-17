@@ -160,17 +160,16 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
               ),
             ),
 
-            SizedBox(height: spacing.m),
+            SizedBox(height: spacing.xs),
 
             // Subtitle
             const Text(
               'Learn to share from your favorite apps',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.black,
+                color: Colors.black54,
                 fontWeight: FontWeight.w500,
                 fontFamily: 'PlusJakartaSans',
-                letterSpacing: -0.3,
               ),
             ),
 

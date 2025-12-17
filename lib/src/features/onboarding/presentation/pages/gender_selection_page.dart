@@ -220,7 +220,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                 ),
               ),
 
-              SizedBox(height: spacing.m),
+              SizedBox(height: spacing.xs),
 
               // Subtitle
               const Text(
