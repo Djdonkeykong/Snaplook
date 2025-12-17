@@ -300,10 +300,10 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 ),
                 SizedBox(height: spacing.l),
                 _FeatureItem(
-                  iconBgColor: AppColors.secondary.withOpacity(0.12),
+                  iconBgColor: const Color(0xFFf2003c),
                   icon: const Icon(
                     Icons.favorite_rounded,
-                    color: AppColors.secondary,
+                    color: Colors.white,
                     size: 16,
                   ),
                   title: 'Save the looks you love',
@@ -312,11 +312,11 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 ),
                 SizedBox(height: spacing.l),
                 _FeatureItem(
-                  iconBgColor: const Color(0xFFFFF4E5),
+                  iconBgColor: const Color(0xFFFFE9D6),
                   icon: SvgPicture.asset(
                     'assets/icons/meteocons--lightning-bolt.svg',
-                    width: 16,
-                    height: 16,
+                    width: 48,
+                    height: 48,
                   ),
                   title: 'Shop similar pieces instantly',
                   description:
@@ -688,7 +688,7 @@ class _PlanSelectionCard extends StatelessWidget {
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: isEligibleForTrial
                     ? AppColors.secondary
                     : AppColors.textSecondary,
