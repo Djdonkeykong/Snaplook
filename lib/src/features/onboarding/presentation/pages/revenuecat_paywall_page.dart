@@ -291,7 +291,6 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                     height: 1.2,
                   ),
                 ),
-                SizedBox(height: spacing.l),
                 SizedBox(height: spacing.xl + spacing.s),
                 if (_isEligibleForTrial && selectedPlan == RevenueCatPaywallPlanType.yearly)
                   _TrialTimeline(trialEndFormatted: trialEndFormatted)
