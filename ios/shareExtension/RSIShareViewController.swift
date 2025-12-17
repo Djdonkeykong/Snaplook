@@ -5059,33 +5059,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if let image = shareImage {
             // Simple, clean filename
             let tempDir = FileManager.default.temporaryDirectory
-            let imageFileName = "Snaplook-Fashion-Matches.jpg"
+            let imageFileName = "snaplook_fashion_search.jpg"
             let imageURL = tempDir.appendingPathComponent(imageFileName)
 
-            // Build subject/subtitle for share sheet based on source
-            var subject = "Snaplook Fashion Match"
-
-            // Extract Instagram username if available
-            var instagramUsername: String?
-            if let instagramUrl = pendingInstagramUrl {
-                let pattern = "instagram\\.com/([^/?]+)"
-                if let regex = try? NSRegularExpression(pattern: pattern),
-                   let match = regex.firstMatch(in: instagramUrl, range: NSRange(instagramUrl.startIndex..., in: instagramUrl)) {
-                    if let usernameRange = Range(match.range(at: 1), in: instagramUrl) {
-                        instagramUsername = String(instagramUrl[usernameRange])
-                    }
-                }
-            }
-
-            if let username = instagramUsername {
-                subject = "from Instagram @\(username)"
-            } else if let sourceApp = readSourceApplicationBundleIdentifier() {
-                if sourceApp.contains("instagram") {
-                    subject = "from Instagram"
-                } else if sourceApp.contains("photos") {
-                    subject = "from Photos"
-                }
-            }
+            // Consistent subject for share sheet
+            let subject = "snaplook_fashion_search"
 
             if let jpegData = image.jpegData(compressionQuality: 0.9) {
                 do {

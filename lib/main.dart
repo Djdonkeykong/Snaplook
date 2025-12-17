@@ -172,6 +172,8 @@ void main() async {
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
     authOptions: FlutterAuthClientOptions(
+      persistSession: true,
+      autoRefreshToken: true,
       localStorage: SharedPreferencesLocalStorage(),
     ),
   );

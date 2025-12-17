@@ -615,14 +615,13 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       );
 
       final jpg = img.encodeJpg(square, quality: 90);
-      final tempPath =
-          '${Directory.systemTemp.path}/snaplook_share_square_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final tempPath = '${Directory.systemTemp.path}/snaplook_fashion_search.jpg';
       final file = await File(tempPath).create();
       await file.writeAsBytes(jpg, flush: true);
       return XFile(
         file.path,
         mimeType: 'image/jpeg',
-        name: 'snaplook.jpg',
+        name: 'snaplook_fashion_search.jpg',
       );
     } catch (e) {
       print('Error squaring share image: $e');

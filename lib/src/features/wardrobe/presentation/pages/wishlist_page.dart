@@ -1112,13 +1112,12 @@ class _HistoryCard extends ConsumerWidget {
       );
 
       final jpg = img.encodeJpg(square, quality: 90);
-      final tempPath =
-          '${Directory.systemTemp.path}/snaplook_history_share_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final tempPath = '${Directory.systemTemp.path}/snaplook_fashion_search.jpg';
       await File(tempPath).writeAsBytes(jpg, flush: true);
       return XFile(
         tempPath,
         mimeType: 'image/jpeg',
-        name: 'snaplook.jpg',
+        name: 'snaplook_fashion_search.jpg',
       );
     } catch (e) {
       debugPrint('Error preparing share image: $e');
