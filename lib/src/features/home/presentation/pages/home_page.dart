@@ -754,8 +754,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       _TutorialOptionData(
         label: 'Pinterest',
         source: _TutorialSource.pinterest,
-        isEnabled: false,
-        statusLabel: 'Coming soon',
         iconBuilder: () => SvgPicture.asset(
           'assets/icons/pinterest.svg',
           width: 24,
@@ -936,6 +934,9 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       case _TutorialSource.instagram:
         target = PipTutorialTarget.instagram;
         break;
+      case _TutorialSource.pinterest:
+        target = PipTutorialTarget.pinterest;
+        break;
       default:
         return; // Other apps still disabled for now
     }
@@ -978,14 +979,22 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   Future<void> _launchPipTutorial(PipTutorialTarget target) async {
     const instagramDeepLink =
         'https://www.instagram.com/p/DQSaR_FEsU8/?igsh=MTEyNzJuaXF6cDlmNA==';
-    final videoAsset = target == PipTutorialTarget.instagram
-        ? 'assets/videos/instagram-tutorial.mp4'
-        : 'assets/videos/pip-test.mp4';
+    const pinterestDeepLink = 'https://pin.it/Ani6VLsSY';
+    final videoAsset = switch (target) {
+      PipTutorialTarget.instagram => 'assets/videos/instagram-tutorial.mp4',
+      PipTutorialTarget.pinterest => 'assets/videos/pinterest-tutorial.mp4',
+      _ => 'assets/videos/pip-test.mp4',
+    };
+    final deepLink = switch (target) {
+      PipTutorialTarget.instagram => instagramDeepLink,
+      PipTutorialTarget.pinterest => pinterestDeepLink,
+      _ => null,
+    };
     try {
       await _pipTutorialService.startTutorial(
         target: target,
         videoAsset: videoAsset,
-        deepLink: target == PipTutorialTarget.instagram ? instagramDeepLink : null,
+        deepLink: deepLink,
       );
     } catch (e) {
       if (!mounted) return;
@@ -1939,16 +1948,6 @@ class _TutorialAppCard extends StatelessWidget {
         if (isLoading) return;
         if (!isEnabled) {
           HapticFeedback.lightImpact();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              content: Text(
-                statusLabel ?? 'Tutorial coming soon',
-                style: context.snackTextStyle(),
-              ),
-              duration: const Duration(seconds: 2),
-            ),
-          );
           return;
         }
         HapticFeedback.mediumImpact();

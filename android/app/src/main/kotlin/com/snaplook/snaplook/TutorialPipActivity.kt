@@ -133,6 +133,8 @@ class TutorialPipActivity : AppCompatActivity() {
             Intent(Intent.ACTION_VIEW, Uri.parse(cleanedDeepLink)).apply {
                 if (target == "instagram") {
                     setPackage("com.instagram.android")
+                } else if (target == "pinterest") {
+                    setPackage("com.pinterest")
                 }
             }
         } else {

@@ -46,6 +46,8 @@ class PipTutorialService {
   String _defaultAssetForTarget(PipTutorialTarget target) {
     if (target == PipTutorialTarget.instagram) {
       return 'assets/videos/instagram-tutorial.mp4';
+    } else if (target == PipTutorialTarget.pinterest) {
+      return 'assets/videos/pinterest-tutorial.mp4';
     }
     return 'assets/videos/pip-test.mp4';
   }
