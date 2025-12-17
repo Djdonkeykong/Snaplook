@@ -259,7 +259,7 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
                                 fontFamily: 'PlusJakartaSans',
                                 fontWeight: isCompleted
                                     ? FontWeight.w600
-                                    : FontWeight.normal,
+                                    : FontWeight.w500,
                               ),
                             ),
                           ],

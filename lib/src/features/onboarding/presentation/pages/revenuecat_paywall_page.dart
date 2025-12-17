@@ -796,6 +796,8 @@ class _TrialTimeline extends StatelessWidget {
             iconAsset: 'assets/icons/iconamoon--lock-off.svg',
             iconColor: Colors.white,
             iconBgColor: const Color(0xFFf2003c),
+            iconSize: 18,
+            iconVerticalOffset: -1,
             title: 'Today',
             description:
                 "Unlock all the app's features like AI fashion analysis and more.",
@@ -805,6 +807,7 @@ class _TrialTimeline extends StatelessWidget {
             iconAsset: 'assets/icons/lucide--bell-ring.svg',
             iconColor: Colors.white,
             iconBgColor: const Color(0xFFf2003c),
+            iconSize: 16,
             title: 'In 2 Days',
             description: "We'll send you a reminder that your trial is ending soon.",
             isLast: false,
@@ -813,6 +816,8 @@ class _TrialTimeline extends StatelessWidget {
             iconAsset: 'assets/icons/mdi--crown-outline.svg',
             iconColor: Colors.white,
             iconBgColor: AppColors.textPrimary,
+            iconSize: 18,
+            iconVerticalOffset: -2,
             title: 'In 3 Days',
             description:
                 "You'll be charged on $trialEndFormatted unless you cancel anytime before.",
@@ -828,6 +833,8 @@ class _TimelineItem extends StatelessWidget {
   final String iconAsset;
   final Color iconColor;
   final Color iconBgColor;
+  final double iconSize;
+  final double iconVerticalOffset;
   final String title;
   final String description;
   final bool isLast;
@@ -836,6 +843,8 @@ class _TimelineItem extends StatelessWidget {
     required this.iconAsset,
     required this.iconColor,
     required this.iconBgColor,
+    this.iconSize = 18,
+    this.iconVerticalOffset = 0,
     required this.title,
     required this.description,
     required this.isLast,
@@ -857,11 +866,14 @@ class _TimelineItem extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: SvgPicture.asset(
-                    iconAsset,
-                    width: 18,
-                    height: 18,
-                    color: iconColor,
+                  child: Transform.translate(
+                    offset: Offset(0, iconVerticalOffset),
+                    child: SvgPicture.asset(
+                      iconAsset,
+                      width: iconSize,
+                      height: iconSize,
+                      color: iconColor,
+                    ),
                   ),
                 ),
               ),
