@@ -282,10 +282,12 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 Center(
                   child: Column(
                     children: [
-                      const Text(
-                        'Access all of Snaplook',
+                      Text(
+                        _isEligibleForTrial
+                            ? 'Start your 3-day FREE trial to continue'
+                            : 'Access all of Snaplook',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
@@ -298,57 +300,61 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                   ),
                 ),
                 SizedBox(height: spacing.xl + spacing.s),
-                _FeatureItem(
-                  iconBgColor: AppColors.tertiary.withOpacity(0.12),
-                  icon: const Icon(
-                    Icons.search_rounded,
-                    color: AppColors.tertiary,
-                    size: 16,
-                  ),
-                  title: 'Turn photos into matches',
-                  description:
-                      'Get instant matches from photos, screenshots, or social posts.',
-                ),
-                SizedBox(height: spacing.l),
-                _FeatureItem(
-                  iconBgColor: const Color(0xFFf2003c).withOpacity(0.1),
-                  icon: const Icon(
-                    Icons.favorite_rounded,
-                    color: Color(0xFFf2003c),
-                    size: 16,
-                  ),
-                  title: 'Save the looks you love',
-                  description:
-                      'Keep styles in one place and come back to them anytime.',
-                ),
-                SizedBox(height: spacing.l),
-                _FeatureItem(
-                  iconBgColor: const Color(0xFFFFF1E0),
-                  icon: Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: SvgPicture.asset(
-                      'assets/icons/meteocons--lightning-bolt.svg',
-                      width: 48,
-                      height: 48,
+                if (_isEligibleForTrial && selectedPlan == RevenueCatPaywallPlanType.yearly)
+                  _TrialTimeline(trialEndFormatted: trialEndFormatted)
+                else ...[
+                  _FeatureItem(
+                    iconBgColor: AppColors.tertiary.withOpacity(0.12),
+                    icon: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.tertiary,
+                      size: 16,
                     ),
+                    title: 'Turn photos into matches',
+                    description:
+                        'Get instant matches from photos, screenshots, or social posts.',
                   ),
-                  title: 'Shop similar pieces instantly',
-                  description:
-                      'Discover similar items from trusted retailers in seconds.',
-                ),
-                SizedBox(height: spacing.l),
-                _FeatureItem(
-                  iconBgColor: const Color(0xFFEFF2FF),
-                  icon: SvgPicture.asset(
-                    'assets/icons/lets-icons--bell-pin.svg',
-                    width: 16,
-                    height: 16,
+                  SizedBox(height: spacing.l),
+                  _FeatureItem(
+                    iconBgColor: const Color(0xFFf2003c).withOpacity(0.1),
+                    icon: const Icon(
+                      Icons.favorite_rounded,
+                      color: Color(0xFFf2003c),
+                      size: 16,
+                    ),
+                    title: 'Save the looks you love',
+                    description:
+                        'Keep styles in one place and come back to them anytime.',
                   ),
-                  title: 'Never miss a match',
-                  description:
-                      "Receive alerts when we find similar pieces you'll like.",
-                ),
-                SizedBox(height: spacing.l * 2),
+                  SizedBox(height: spacing.l),
+                  _FeatureItem(
+                    iconBgColor: const Color(0xFFFFF1E0),
+                    icon: Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: SvgPicture.asset(
+                        'assets/icons/meteocons--lightning-bolt.svg',
+                        width: 48,
+                        height: 48,
+                      ),
+                    ),
+                    title: 'Shop similar pieces instantly',
+                    description:
+                        'Discover similar items from trusted retailers in seconds.',
+                  ),
+                  SizedBox(height: spacing.l),
+                  _FeatureItem(
+                    iconBgColor: const Color(0xFFEFF2FF),
+                    icon: SvgPicture.asset(
+                      'assets/icons/lets-icons--bell-pin.svg',
+                      width: 16,
+                      height: 16,
+                    ),
+                    title: 'Never miss a match',
+                    description:
+                        "Receive alerts when we find similar pieces you'll like.",
+                  ),
+                  SizedBox(height: spacing.l * 2),
+                ],
               ],
             ),
           ),
@@ -628,12 +634,13 @@ class _PlanSelectionCard extends StatelessWidget {
             .round()
             .clamp(0, 100)
         : null;
-    final String? badgeLabel =
-        yearlySavingsPercent != null ? 'Save $yearlySavingsPercent%' : null;
+    final String? badgeLabel = isEligibleForTrial
+        ? '3-day FREE'
+        : (yearlySavingsPercent != null ? 'Save $yearlySavingsPercent%' : null);
     final String footnote = selectedPlan == RevenueCatPaywallPlanType.monthly
         ? 'Billed ${monthlyPackage.storeProduct.priceString} today.'
         : isEligibleForTrial
-            ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString}/year starting $trialEndFormatted.'
+            ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString} per year'
             : 'Just ${yearlyPackage.storeProduct.priceString} per year'
                 '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}';
     const double planOptionHeight = 120;
@@ -695,18 +702,29 @@ class _PlanSelectionCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Center(
-            child: Text(
-              isEligibleForTrial
-                  ? 'Nothing due today'
-                  : 'Starts immediately, cancel anytime',
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isEligibleForTrial
-                    ? AppColors.secondary
-                    : AppColors.textSecondary,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isEligibleForTrial) ...[
+                  const Icon(
+                    Icons.check_rounded,
+                    color: AppColors.textPrimary,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  isEligibleForTrial
+                      ? 'No payment due now'
+                      : 'Starts immediately, cancel anytime',
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -733,7 +751,9 @@ class _PlanSelectionCard extends StatelessWidget {
                       ),
                     )
                   : Text(
-                      isEligibleForTrial ? 'Continue' : 'Subscribe now',
+                      isEligibleForTrial && selectedPlan == RevenueCatPaywallPlanType.yearly
+                          ? 'Continue for free'
+                          : 'Subscribe now',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -753,6 +773,139 @@ class _PlanSelectionCard extends StatelessWidget {
               color: Color(0xFF6B7280),
               fontWeight: FontWeight.w500,
               height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrialTimeline extends StatelessWidget {
+  final String trialEndFormatted;
+
+  const _TrialTimeline({required this.trialEndFormatted});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        children: [
+          _TimelineItem(
+            icon: Icons.lock_open_rounded,
+            iconColor: const Color(0xFFf2003c),
+            iconBgColor: const Color(0xFFf2003c),
+            title: 'Today',
+            description:
+                "Unlock all the app's features like AI fashion analysis and more.",
+            isLast: false,
+          ),
+          _TimelineItem(
+            icon: Icons.notifications_rounded,
+            iconColor: const Color(0xFFf2003c),
+            iconBgColor: const Color(0xFFf2003c),
+            title: 'In 2 Days',
+            description: "We'll send you a reminder that your trial is ending soon.",
+            isLast: false,
+          ),
+          _TimelineItem(
+            icon: Icons.workspace_premium_rounded,
+            iconColor: Colors.white,
+            iconBgColor: AppColors.textPrimary,
+            title: 'In 3 Days',
+            description:
+                "You'll be charged on $trialEndFormatted unless you cancel anytime before.",
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimelineItem extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
+  final String title;
+  final String description;
+  final bool isLast;
+
+  const _TimelineItem({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
+    required this.title,
+    required this.description,
+    required this.isLast,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  color: iconColor,
+                  size: 24,
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 3,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD1DC),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
