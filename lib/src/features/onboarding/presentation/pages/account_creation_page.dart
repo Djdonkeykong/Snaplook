@@ -28,6 +28,8 @@ import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../domain/providers/gender_provider.dart';
+import '../../../../services/revenuecat_service.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 
 class AccountCreationPage extends ConsumerStatefulWidget {
   const AccountCreationPage({super.key});
@@ -279,6 +281,52 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
 
       await SubscriptionSyncService().identifyWithSuperwall(userId);
 
+      // Also merge the anonymous RevenueCat purchaser into the new account
+      await RevenueCatService().identify(userId);
+
+      // Refresh RevenueCat customer info to capture the purchase
+      CustomerInfo? customerInfo;
+      try {
+        customerInfo =
+            RevenueCatService().currentCustomerInfo ?? await Purchases.getCustomerInfo();
+      } catch (e) {
+        debugPrint('[AccountCreation] Error fetching RevenueCat customer info: $e');
+      }
+
+      // Persist subscription details from RevenueCat to Supabase
+      final activeEntitlements = customerInfo?.entitlements.active.values;
+      final entitlement = (activeEntitlements != null && activeEntitlements.isNotEmpty)
+          ? activeEntitlements.first
+          : null;
+      final hasActiveRevenueCat = entitlement != null;
+      final isTrial = entitlement?.periodType == PeriodType.trial ||
+          entitlement?.periodType == PeriodType.intro;
+
+      try {
+        await Supabase.instance.client.from('users').upsert({
+          'id': userId,
+          'subscription_status': hasActiveRevenueCat ? 'active' : 'free',
+          'subscription_expires_at': entitlement?.expirationDate?.toIso8601String(),
+          'billing_user_id': userId,
+          'subscription_product_id': entitlement?.productIdentifier,
+          'subscription_provider': 'revenuecat',
+          'is_trial': isTrial,
+          'subscription_last_synced_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'id');
+      } catch (e) {
+        debugPrint('[AccountCreation] Error upserting RevenueCat subscription: $e');
+      }
+
+      // Mark onboarding payment complete when RevenueCat shows an active entitlement
+      if (hasActiveRevenueCat) {
+        try {
+          await OnboardingStateService().markPaymentComplete(userId);
+        } catch (e) {
+          debugPrint('[AccountCreation] Error marking payment complete: $e');
+        }
+      }
+
       // Update device fingerprint for fraud prevention
       await FraudPreventionService.updateUserDeviceFingerprint(userId);
 
@@ -310,6 +358,38 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
         );
       }
       return false;
+    }
+  }
+
+  Future<void> _persistOnboardingSelections(String userId) async {
+    try {
+      final selectedGender = ref.read(selectedGenderProvider);
+      final notificationGranted = ref.read(notificationPermissionGrantedProvider);
+
+      String? preferredGenderFilter;
+      if (selectedGender != null) {
+        switch (selectedGender) {
+          case Gender.male:
+            preferredGenderFilter = 'men';
+            break;
+          case Gender.female:
+            preferredGenderFilter = 'women';
+            break;
+          case Gender.other:
+            preferredGenderFilter = 'all';
+            break;
+        }
+      }
+
+      if (preferredGenderFilter != null || notificationGranted != null) {
+        await OnboardingStateService().saveUserPreferences(
+          userId: userId,
+          preferredGenderFilter: preferredGenderFilter,
+          notificationEnabled: notificationGranted,
+        );
+      }
+    } catch (e) {
+      debugPrint('[AccountCreation] Error persisting onboarding selections: $e');
     }
   }
 
@@ -483,6 +563,9 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                       return;
                                     }
 
+                                    // Persist onboarding selections captured before account creation
+                                    await _persistOnboardingSelections(userId);
+
                                     // First check if user went through onboarding already (providers have values)
                                     final selectedGender =
                                         ref.read(selectedGenderProvider);
@@ -547,25 +630,25 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                             (route) => false,
                                           );
                                         } else {
-                                          // New user - start onboarding at How It Works
+                                          // New user - go directly to welcome to finish setup
                                           print(
-                                              '[AccountCreation] Apple - New user - navigating to how it works');
+                                              '[AccountCreation] Apple - New user - navigating to welcome');
                                           Navigator.of(context).push(
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  const HowItWorksPage(),
+                                                  const WelcomeFreeAnalysisPage(),
                                             ),
                                           );
                                         }
                                       } catch (e) {
-                                        // If check fails, assume new user
+                                        // If check fails, assume new user and continue to welcome
                                         print(
-                                            '[AccountCreation] Apple - Check error, assuming new user: $e');
+                                            '[AccountCreation] Apple - Check error, sending to welcome: $e');
                                         if (context.mounted) {
                                           Navigator.of(context).push(
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  const HowItWorksPage(),
+                                                  const WelcomeFreeAnalysisPage(),
                                             ),
                                           );
                                         }
@@ -647,6 +730,9 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                     return;
                                   }
 
+                                  // Persist onboarding selections captured before account creation
+                                  await _persistOnboardingSelections(userId);
+
                                   // First check if user went through onboarding already (providers have values)
                                   final selectedGender =
                                       ref.read(selectedGenderProvider);
@@ -663,11 +749,11 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                         builder: (context) =>
                                             const WelcomeFreeAnalysisPage(),
                                       ),
-                                      (route) => false,
-                                    );
-                                  } else {
-                                    // No provider values, check database to see if returning user
-                                    try {
+                                            (route) => false,
+                                          );
+                                    } else {
+                                      // No provider values, check database to see if returning user
+                                      try {
                                       final supabase = Supabase.instance.client;
                                       final userResponse = await supabase
                                           .from('users')
@@ -710,25 +796,25 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                           (route) => false,
                                         );
                                       } else {
-                                        // New user - start onboarding at How It Works
+                                        // New user with purchase - go directly to welcome
                                         print(
-                                            '[AccountCreation] Google - New user - navigating to how it works');
+                                            '[AccountCreation] Google - New user - navigating to welcome');
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                const HowItWorksPage(),
+                                                const WelcomeFreeAnalysisPage(),
                                           ),
                                         );
                                       }
                                     } catch (e) {
-                                      // If check fails, assume new user
+                                      // If check fails, assume new user and continue to welcome
                                       print(
-                                          '[AccountCreation] Google - Check error, assuming new user: $e');
+                                          '[AccountCreation] Google - Check error, sending to welcome: $e');
                                       if (context.mounted) {
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                const HowItWorksPage(),
+                                                const WelcomeFreeAnalysisPage(),
                                           ),
                                         );
                                       }
