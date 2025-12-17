@@ -170,6 +170,7 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
                       results: _results,
                       scrollController: scrollController,
                       onProductTap: _openProduct,
+                      showFavoriteButton: false,
                     );
                   },
                 ),

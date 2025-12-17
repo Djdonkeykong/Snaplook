@@ -106,10 +106,10 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
           return Transform.scale(
             scale: _scaleAnimation.value,
             child: Container(
-              width: widget.size + 16,
-              height: widget.size + 16,
+              width: widget.size + 12,
+              height: widget.size + 12,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withOpacity(0.75),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
@@ -124,7 +124,7 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
                   offset: isFavorite ? Offset.zero : const Offset(-1, 0),
                   child: Icon(
                     isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
-                    size: isFavorite ? widget.size * 0.85 : widget.size * 0.75,
+                    size: widget.size * 0.8,
                     color: isFavorite
                         ? (widget.activeColor ?? const Color(0xFFf2003c))
                         : (widget.inactiveColor ?? Colors.black),

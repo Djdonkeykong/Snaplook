@@ -52,8 +52,8 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
       CurvedAnimation(parent: _textAnimationController, curve: Curves.easeIn),
     );
 
-    // Start text fade-in after 2 seconds
-    Future.delayed(const Duration(seconds: 2), () {
+    // Start text fade-in after 0.5 seconds
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         _textAnimationController.forward();
       }

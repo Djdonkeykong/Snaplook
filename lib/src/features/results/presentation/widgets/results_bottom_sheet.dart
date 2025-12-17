@@ -11,12 +11,14 @@ class ResultsBottomSheetContent extends StatelessWidget {
   final List<DetectionResult> results;
   final ScrollController scrollController;
   final ValueChanged<DetectionResult> onProductTap;
+  final bool showFavoriteButton;
 
   const ResultsBottomSheetContent({
     super.key,
     required this.results,
     required this.scrollController,
     required this.onProductTap,
+    this.showFavoriteButton = true,
   });
 
   @override
@@ -217,14 +219,15 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Positioned(
-                  bottom: 4,
-                  right: 4,
-                  child: FavoriteButton(
-                    product: result,
-                    size: 18,
+                if (showFavoriteButton)
+                  Positioned(
+                    bottom: 4,
+                    right: 4,
+                    child: FavoriteButton(
+                      product: result,
+                      size: 18,
+                    ),
                   ),
-                ),
               ],
             ),
             SizedBox(width: spacing.m),

@@ -6997,12 +6997,12 @@ class ResultCell: UITableViewCell {
     private let favoriteButton: UIButton = {
         let button = UIButton(type: .custom)
         button.translatesAutoresizingMaskIntoConstraints = false
-        let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
+        let config = UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
         button.setImage(UIImage(systemName: "heart", withConfiguration: config), for: .normal)
         button.setImage(UIImage(systemName: "heart.fill", withConfiguration: config), for: .selected)
         button.tintColor = .black
-        button.backgroundColor = UIColor(white: 1.0, alpha: 0.9)
-        button.layer.cornerRadius = 16
+        button.backgroundColor = UIColor(white: 1.0, alpha: 0.75)
+        button.layer.cornerRadius = 14
         button.layer.masksToBounds = false
         button.layer.shadowColor = UIColor.black.withAlphaComponent(0.1).cgColor
         button.layer.shadowOpacity = 1
@@ -7064,8 +7064,8 @@ class ResultCell: UITableViewCell {
 
             favoriteButton.bottomAnchor.constraint(equalTo: productImageView.bottomAnchor, constant: -6),
             favoriteButton.trailingAnchor.constraint(equalTo: productImageView.trailingAnchor, constant: -6),
-            favoriteButton.widthAnchor.constraint(equalToConstant: 32),
-            favoriteButton.heightAnchor.constraint(equalToConstant: 32),
+            favoriteButton.widthAnchor.constraint(equalToConstant: 28),
+            favoriteButton.heightAnchor.constraint(equalToConstant: 28),
 
             chevronImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             chevronImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
