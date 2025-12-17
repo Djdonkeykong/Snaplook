@@ -3845,6 +3845,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             if backButtonView == nil {
                 let backButton = UIButton(type: .system)
                 backButton.translatesAutoresizingMaskIntoConstraints = false
+                backButton.adjustsImageWhenHighlighted = false
 
                 backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
 
@@ -3853,8 +3854,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 NSLayoutConstraint.activate([
                     backButton.leadingAnchor.constraint(equalTo: headerContainerView!.leadingAnchor, constant: 16),
                     backButton.centerYAnchor.constraint(equalTo: headerContainerView!.centerYAnchor, constant: 1),
-                    backButton.widthAnchor.constraint(equalToConstant: 22),
-                    backButton.heightAnchor.constraint(equalToConstant: 22)
+                    backButton.widthAnchor.constraint(equalToConstant: 18),
+                    backButton.heightAnchor.constraint(equalToConstant: 18)
                 ])
 
                 backButtonView = backButton
@@ -3866,13 +3867,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 let backImage = UIImage(systemName: "chevron.left", withConfiguration: config)
                 backButton.setImage(backImage, for: .normal)
                 backButton.tintColor = UIColor(red: 28/255, green: 28/255, blue: 37/255, alpha: 1.0)
+                backButton.adjustsImageWhenHighlighted = false
 
                 // Ensure size matches onboarding style even if constraints already existed
                 backButton.constraints.forEach { constraint in
                     if constraint.firstAttribute == .width {
-                        constraint.constant = 22
+                        constraint.constant = 18
                     } else if constraint.firstAttribute == .height {
-                        constraint.constant = 22
+                        constraint.constant = 18
                     } else if constraint.firstAttribute == .centerY {
                         constraint.constant = 1
                     }
