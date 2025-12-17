@@ -5864,7 +5864,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let revertButton = UIButton(type: .system)
         revertButton.translatesAutoresizingMaskIntoConstraints = false
         let revertConfig = UIImage.SymbolConfiguration(pointSize: 22, weight: .semibold, scale: .small)
-        let revertImage = UIImage(systemName: "arrow.uturn.backward", withConfiguration: revertConfig)
+        // Match the crop tool's reset icon for consistency with TOCropViewController.
+        let revertImage = UIImage(systemName: "arrow.counterclockwise", withConfiguration: revertConfig)
         revertButton.setImage(revertImage, for: .normal)
         revertButton.setPreferredSymbolConfiguration(revertConfig, forImageIn: .normal)
         revertButton.imageEdgeInsets = UIEdgeInsets(top: -1, left: 0, bottom: 1, right: 0)
@@ -6065,6 +6066,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cropViewController.toolbar.tintColor = .white
         cropViewController.toolbar.doneTextButton.setTitleColor(snaplookRed, for: .normal)
         cropViewController.toolbar.doneTextButton.setTitleColor(snaplookRed.withAlphaComponent(0.8), for: .highlighted)
+        // Add a touch of horizontal padding so the titles sit further from the edges.
+        let toolbarInset: CGFloat = 10
+        let toolbarEdgeInsets = UIEdgeInsets(top: 6, left: toolbarInset, bottom: 6, right: toolbarInset)
+        cropViewController.toolbar.doneTextButton.contentEdgeInsets = toolbarEdgeInsets
+        cropViewController.toolbar.cancelTextButton.contentEdgeInsets = toolbarEdgeInsets
 
         // Wrap in navigation controller for proper safe area handling in Share Extension
         let navController = UINavigationController(rootViewController: cropViewController)
