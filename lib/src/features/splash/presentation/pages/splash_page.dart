@@ -64,60 +64,10 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     Widget nextPage;
 
     if (isAuthenticated) {
-      // User is authenticated - check onboarding and subscription state
+      // Trust the Supabase session; avoid signing out on onboarding fetch issues.
       final user = ref.read(authServiceProvider).currentUser;
-      if (user == null) {
-        // No user despite being authenticated - go to login
-        nextPage = const LoginPage();
-      } else {
-        try {
-          // Sync subscription data from Superwall
-          // TODO: Re-enable when Superwall is configured in production
-          // await SubscriptionSyncService().syncSubscriptionToSupabase();
-
-          // Get onboarding state
-          final onboardingService = OnboardingStateService();
-          final onboardingState = await onboardingService.getOnboardingState(user.id);
-
-          if (onboardingState == null) {
-            // No database record found despite being authenticated
-            // This can happen if the user was deleted or there's a sync issue
-            // Sign them out and send to login
-            debugPrint('[Splash] No database record found for authenticated user - signing out');
-            await ref.read(authServiceProvider).signOut();
-            nextPage = const LoginPage();
-          } else {
-            final subscriptionStatus = onboardingState['subscription_status'] ?? 'free';
-            final isTrial = onboardingState['is_trial'] == true;
-            final onboardingStateValue = onboardingState['onboarding_state'] ?? 'not_started';
-
-            // Check if user has completed onboarding
-            if (onboardingStateValue == 'completed') {
-              // Check if subscription is active or in trial
-              if (subscriptionStatus == 'active' || isTrial) {
-                // Completed onboarding + active subscription = Home
-                nextPage = const MainNavigation();
-              } else {
-                // Completed onboarding but subscription expired
-                // For now, send to login (you can create a resubscribe paywall later)
-                nextPage = const LoginPage();
-              }
-            } else {
-              // Onboarding not completed - sign out and return to login
-              debugPrint(
-                  '[Splash] Onboarding state "$onboardingStateValue" not completed - signing out and redirecting to login');
-              await ref.read(authServiceProvider).signOut();
-              nextPage = const LoginPage();
-            }
-          }
-        } catch (e) {
-          debugPrint('[Splash] Error determining onboarding state: $e');
-          // On error, default to safe behavior
-          nextPage = const LoginPage();
-        }
-      }
+      nextPage = user == null ? const LoginPage() : const MainNavigation();
     } else {
-      // No account → go to login/tutorials flow
       nextPage = const LoginPage();
     }
 
