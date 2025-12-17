@@ -3846,15 +3846,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 let backButton = UIButton(type: .system)
                 backButton.translatesAutoresizingMaskIntoConstraints = false
 
-                // Create back arrow icon styled like the onboarding back button
-                let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
-                let backImage = UIImage(systemName: "chevron.left", withConfiguration: config)
-                backButton.setImage(backImage, for: .normal)
-                backButton.tintColor = UIColor(red: 28/255, green: 28/255, blue: 37/255, alpha: 1.0)
-                backButton.backgroundColor = UIColor(red: 243/255, green: 244/255, blue: 246/255, alpha: 1.0)
-                backButton.layer.cornerRadius = 20
-                backButton.clipsToBounds = true
-
                 backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
 
                 headerContainerView?.addSubview(backButton)
@@ -3868,7 +3859,28 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 backButtonView = backButton
             }
-            backButtonView?.isHidden = false
+
+            // Apply onboarding-style appearance (also when reusing an existing button)
+            if let backButton = backButtonView {
+                let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
+                let backImage = UIImage(systemName: "chevron.left", withConfiguration: config)
+                backButton.setImage(backImage, for: .normal)
+                backButton.tintColor = UIColor(red: 28/255, green: 28/255, blue: 37/255, alpha: 1.0)
+                backButton.backgroundColor = UIColor(red: 243/255, green: 244/255, blue: 246/255, alpha: 1.0)
+                backButton.layer.cornerRadius = 20
+                backButton.clipsToBounds = true
+
+                // Ensure size matches onboarding style even if constraints already existed
+                backButton.constraints.forEach { constraint in
+                    if constraint.firstAttribute == .width {
+                        constraint.constant = 40
+                    } else if constraint.firstAttribute == .height {
+                        constraint.constant = 40
+                    }
+                }
+
+                backButton.isHidden = false
+            }
         } else {
             backButtonView?.isHidden = true
         }
