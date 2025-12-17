@@ -111,7 +111,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
             // Main heading - conditional based on trial eligibility
             Text(
               _isEligibleForTrial
-                  ? 'We\'ll send you a reminder before your free trial ends.'
+                  ? 'We\'ll send you a reminder before your free trial ends'
                   : 'Get notified about new styles and deals',
               textAlign: TextAlign.start,
               style: const TextStyle(

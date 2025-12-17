@@ -178,7 +178,7 @@ class _EncouragementCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            "If you're enjoying the process, we'd love a quick rating. It really helps us.",
+            "If you're enjoying the process, we'd love a quick rating - it really helps us",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,

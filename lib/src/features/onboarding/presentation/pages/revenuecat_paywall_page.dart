@@ -304,7 +304,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                     ),
                     title: 'Turn photos into matches',
                     description:
-                        'Get instant matches from photos, screenshots, or social posts.',
+                        'Get instant matches from photos, screenshots, or social posts',
                   ),
                   SizedBox(height: spacing.l),
                   _FeatureItem(
@@ -316,7 +316,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                     ),
                     title: 'Save the looks you love',
                     description:
-                        'Keep styles in one place and come back to them anytime.',
+                        'Keep styles in one place and come back to them anytime',
                   ),
                   SizedBox(height: spacing.l),
                   _FeatureItem(
@@ -331,7 +331,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                     ),
                     title: 'Shop similar pieces instantly',
                     description:
-                        'Discover similar items from trusted retailers in seconds.',
+                        'Discover similar items from trusted retailers in seconds',
                   ),
                   SizedBox(height: spacing.l),
                   _FeatureItem(
@@ -343,7 +343,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                     ),
                     title: 'Never miss a match',
                     description:
-                        "Receive alerts when we find similar pieces you'll like.",
+                        "Receive alerts when we find similar pieces you'll like",
                   ),
                   SizedBox(height: spacing.l * 2),
                 ],

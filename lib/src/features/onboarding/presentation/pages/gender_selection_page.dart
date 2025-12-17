@@ -224,7 +224,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
 
               // Subtitle
               const Text(
-                'Pick what you want to see and we’ll tailor the feed.',
+                'Pick what you want to see and we'll tailor the feed',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.black54,

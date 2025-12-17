@@ -137,7 +137,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                     ),
                     SizedBox(height: spacing.s),
                     const Text(
-                      'A few quick choices help us fine-tune recommendations just for you.',
+                      'A few quick choices help us fine-tune recommendations just for you',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
