@@ -5877,6 +5877,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let revertImage = UIImage(systemName: "arrow.uturn.backward", withConfiguration: revertConfig)
         revertButton.setImage(revertImage, for: .normal)
         revertButton.setPreferredSymbolConfiguration(revertConfig, forImageIn: .normal)
+        revertButton.imageEdgeInsets = UIEdgeInsets(top: -1, left: 0, bottom: 1, right: 0)
         revertButton.tintColor = .white
         revertButton.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         revertButton.layer.cornerRadius = 20
