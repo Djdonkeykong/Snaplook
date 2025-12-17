@@ -404,7 +404,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               ),
             ),
 
-            SizedBox(height: spacing.m),
+            SizedBox(height: spacing.xs),
 
             // Subtitle
             RichText(
@@ -412,9 +412,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 text: 'Please enter the 6-digit code we\'ve just sent to ',
                 style: const TextStyle(
                   fontSize: 16,
-                  color: Color(0xFF6B7280),
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
                   fontFamily: 'PlusJakartaSans',
-                  height: 1.5,
                 ),
                 children: [
                   TextSpan(
@@ -431,7 +431,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               ),
             ),
 
-            SizedBox(height: spacing.xl),
+            SizedBox(height: spacing.l),
 
             // Code input boxes
             Row(

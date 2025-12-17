@@ -860,15 +860,14 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                                 height: 1.3,
                               ),
                             ),
-                            SizedBox(height: spacing.m),
+                            SizedBox(height: spacing.xs),
                             const Text(
                               'Learn to share from your favorite apps',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.black,
+                                color: Colors.black54,
                                 fontWeight: FontWeight.w500,
                                 fontFamily: 'PlusJakartaSans',
-                                letterSpacing: -0.3,
                               ),
                             ),
                             SizedBox(height: spacing.l),

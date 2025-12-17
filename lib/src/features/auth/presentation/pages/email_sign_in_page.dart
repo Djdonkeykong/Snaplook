@@ -132,20 +132,20 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
                 ),
               ),
 
-              SizedBox(height: spacing.m),
+              SizedBox(height: spacing.xs),
 
               // Subtitle
               const Text(
                 'Enter your email to continue',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Color(0xFF6B7280),
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
                   fontFamily: 'PlusJakartaSans',
-                  height: 1.5,
                 ),
               ),
 
-              SizedBox(height: spacing.xl),
+              SizedBox(height: spacing.l),
 
               // Email input
               TextField(
