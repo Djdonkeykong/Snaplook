@@ -705,7 +705,7 @@ class _PlanSelectionCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (isEligibleForTrial) ...[
+                if (isEligibleForTrial && selectedPlan == RevenueCatPaywallPlanType.yearly) ...[
                   const Icon(
                     Icons.check_rounded,
                     color: AppColors.textPrimary,
@@ -714,7 +714,7 @@ class _PlanSelectionCard extends StatelessWidget {
                   const SizedBox(width: 4),
                 ],
                 Text(
-                  isEligibleForTrial
+                  isEligibleForTrial && selectedPlan == RevenueCatPaywallPlanType.yearly
                       ? 'No payment due now'
                       : 'Starts immediately, cancel anytime',
                   style: const TextStyle(
@@ -794,7 +794,7 @@ class _TrialTimeline extends StatelessWidget {
         children: [
           _TimelineItem(
             iconAsset: 'assets/icons/iconamoon--lock-off.svg',
-            iconColor: const Color(0xFFf2003c),
+            iconColor: Colors.white,
             iconBgColor: const Color(0xFFf2003c),
             title: 'Today',
             description:
@@ -803,7 +803,7 @@ class _TrialTimeline extends StatelessWidget {
           ),
           _TimelineItem(
             iconAsset: 'assets/icons/lucide--bell-ring.svg',
-            iconColor: const Color(0xFFf2003c),
+            iconColor: Colors.white,
             iconBgColor: const Color(0xFFf2003c),
             title: 'In 2 Days',
             description: "We'll send you a reminder that your trial is ending soon.",
