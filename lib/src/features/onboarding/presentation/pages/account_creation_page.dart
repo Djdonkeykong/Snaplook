@@ -1031,11 +1031,17 @@ class _AuthButtonState extends State<_AuthButton> {
           children: [
             if (_isLoading)
               SizedBox(
-                width: widget.icon == Icons.apple ? 22 : widget.iconSize,
-                height: widget.icon == Icons.apple ? 22 : widget.iconSize,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                width: widget.iconSize,
+                height: widget.iconSize,
+                child: Center(
+                  child: SizedBox(
+                    width: widget.icon == Icons.apple ? 22 : widget.iconSize,
+                    height: widget.icon == Icons.apple ? 22 : widget.iconSize,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                    ),
+                  ),
                 ),
               )
             else
