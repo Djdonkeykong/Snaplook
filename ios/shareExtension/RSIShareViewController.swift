@@ -3879,6 +3879,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         headerContainerView?.removeFromSuperview()
         headerContainerView = nil
         cancelButtonView = nil
+        backButtonView = nil
     }
 
     // Trigger detection using the Cloudinary-backed API
@@ -4164,6 +4165,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Mark that we're showing results (for back button)
         isShowingResults = true
+        isShowingPreview = false
 
         // Hide loading indicator
         activityIndicator?.stopAnimating()
@@ -5804,8 +5806,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func showImagePreview(imageData: Data) {
         shareLog("Showing image preview")
 
-        // Mark that we're not showing results (so back button won't appear)
+        // Mark that we're showing preview (and not results) so back button appears on the header
         isShowingResults = false
+        isShowingPreview = true
 
         // Hide loading UI
         hideLoadingUI()
@@ -5906,6 +5909,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
+
+        // Leave preview state before showing the loading UI
+        isShowingPreview = false
 
         // Get the stored image data
         guard let imageData = analyzedImageData else {
@@ -6462,6 +6468,44 @@ open class RSIShareViewController: SLComposeServiceViewController {
         )
         didCompleteRequest = true
         extensionContext?.cancelRequest(withError: error)
+    }
+
+    @objc private func backButtonTapped() {
+        // If results are showing, reuse existing flow to return to preview
+        if isShowingResults {
+            backToPreviewTapped()
+            return
+        }
+
+        // If we're on the preview screen, go back to the initial choice UI
+        if isShowingPreview {
+            shareLog("Back button tapped - returning to choice screen")
+
+            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+            impactFeedback.impactOccurred()
+
+            showInitialChoiceScreen()
+        }
+    }
+
+    private func showInitialChoiceScreen() {
+        // Reset state flags
+        isShowingPreview = false
+        isShowingResults = false
+
+        // Remove any existing overlays/header UI
+        hideLoadingUI()
+
+        // Recreate blank overlay for the choice buttons
+        let blankOverlay = UIView(frame: view.bounds)
+        blankOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        blankOverlay.backgroundColor = UIColor.systemBackground
+        blankOverlay.tag = 9999
+        view.addSubview(blankOverlay)
+
+        addLogoAndCancel()
+        showChoiceButtons()
+        hideDefaultUI()
     }
 
     @objc private func backToPreviewTapped() {
@@ -7320,7 +7364,3 @@ extension URL {
         return nil
     }
 }
-
-
-
-
