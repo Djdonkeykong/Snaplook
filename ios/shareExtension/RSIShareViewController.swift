@@ -644,7 +644,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var currentSearchId: String?
     private var currentImageCacheId: String?
     private var analyzedImageData: Data? // Store the analyzed image for sharing
+    private var originalImageData: Data? // Preserve the original image so users can revert after cropping
     private var previewImageView: UIImageView? // Reference to preview image for updating after crop
+    private var revertCropButton: UIButton? // Reset button shown on preview after a crop
     private var selectedGroup: CategoryGroup?
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
@@ -4016,6 +4018,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func showNoResultsUI() {
         shareLog("Displaying no results UI")
 
+        // Treat this as a results state so the back button appears in the header
+        isShowingResults = true
+        isShowingPreview = false
+        addLogoAndCancel()
+
         // Hide loading indicator and progress bar
         activityIndicator?.stopAnimating()
         activityIndicator?.isHidden = true
@@ -5819,7 +5826,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         hideDefaultUI()
     }
 
-    private func showImagePreview(imageData: Data) {
+    private func showImagePreview(imageData: Data, resetOriginal: Bool = false) {
         shareLog("Showing image preview")
 
         // Mark that we're showing preview (and not results) so back button appears on the header
@@ -5829,7 +5836,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Hide loading UI
         hideLoadingUI()
 
-        // Store image data for later analysis
+        // Store image data for later analysis and preserve the original for revert
+        if resetOriginal || originalImageData == nil {
+            originalImageData = imageData
+        }
         analyzedImageData = imageData
 
         // Create preview overlay
@@ -5858,6 +5868,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Store reference for later updates
         previewImageView = imageView
         overlay.addSubview(imageView)
+
+        // Revert crop button (appears after a crop)
+        revertCropButton?.removeFromSuperview()
+        let revertButton = UIButton(type: .system)
+        revertButton.translatesAutoresizingMaskIntoConstraints = false
+        let revertConfig = UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold)
+        revertButton.setImage(UIImage(systemName: "arrow.uturn.backward", withConfiguration: revertConfig), for: .normal)
+        revertButton.tintColor = .white
+        revertButton.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        revertButton.layer.cornerRadius = 20
+        revertButton.layer.masksToBounds = true
+        revertButton.addTarget(self, action: #selector(revertCropTapped), for: .touchUpInside)
+        revertButton.accessibilityLabel = "Revert to original image"
+        overlay.addSubview(revertButton)
+        revertCropButton = revertButton
 
         // "Crop" button (secondary style - white with border)
         let cropButton = UIButton(type: .system)
@@ -5895,6 +5920,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
             imageView.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -20),
             imageView.bottomAnchor.constraint(equalTo: cropButton.topAnchor, constant: -16),
 
+            // Revert button anchored to image corner
+            revertButton.trailingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: -12),
+            revertButton.bottomAnchor.constraint(equalTo: imageView.bottomAnchor, constant: -12),
+            revertButton.widthAnchor.constraint(equalToConstant: 40),
+            revertButton.heightAnchor.constraint(equalToConstant: 40),
+
             // Crop button above analyze button
             cropButton.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
             cropButton.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
@@ -5914,9 +5945,45 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if let header = addResultsHeaderIfNeeded() {
             overlay.bringSubviewToFront(header)
         }
+        if let revertButton = revertCropButton {
+            overlay.bringSubviewToFront(revertButton)
+        }
 
         hideDefaultUI()
+        updateRevertButtonVisibility()
         shareLog("Image preview displayed")
+    }
+
+    private func updateRevertButtonVisibility() {
+        let shouldShow = (originalImageData != nil) &&
+            (analyzedImageData != nil) &&
+            (analyzedImageData != originalImageData)
+        revertCropButton?.isHidden = !shouldShow
+        revertCropButton?.isEnabled = shouldShow
+    }
+
+    @objc private func revertCropTapped() {
+        shareLog("Revert crop tapped")
+
+        guard let originalData = originalImageData else {
+            shareLog("ERROR: No original image available to revert")
+            return
+        }
+
+        // Update stored data back to original
+        analyzedImageData = originalData
+
+        if let image = UIImage(data: originalData), let previewImageView = previewImageView {
+            UIView.transition(with: previewImageView, duration: 0.25, options: .transitionCrossDissolve, animations: {
+                previewImageView.image = image
+            }, completion: nil)
+        }
+
+        // Light feedback so the user knows we reverted
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+
+        updateRevertButtonVisibility()
     }
 
     @objc private func analyzeFromPreviewTapped() {
@@ -6832,7 +6899,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
                                         // Stop smooth progress to lock at 100%
                                         self.stopSmoothProgress()
-                                        self.showImagePreview(imageData: imageData)
+                                        self.showImagePreview(imageData: imageData, resetOriginal: true)
                                     }
                                 } else {
                                     shareLog("ERROR: Could not read downloaded \(platformName) file")
@@ -6878,7 +6945,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     // Show preview after progress completes
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                         self?.stopSmoothProgress()
-                        self?.showImagePreview(imageData: imageData)
+                        self?.showImagePreview(imageData: imageData, resetOriginal: true)
                     }
                 }
             }
@@ -6903,6 +6970,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func clearSharedData() {
         sharedMedia.removeAll()
+        analyzedImageData = nil
+        originalImageData = nil
+        previewImageView = nil
+        revertCropButton?.removeFromSuperview()
+        revertCropButton = nil
         if let defaults = UserDefaults(suiteName: appGroupId) {
             defaults.removeObject(forKey: kUserDefaultsKey)
             defaults.removeObject(forKey: kUserDefaultsMessageKey)
@@ -7334,6 +7406,7 @@ extension RSIShareViewController: TOCropViewControllerDelegate {
             }, completion: nil)
             shareLog("Updated preview with cropped image")
         }
+        updateRevertButtonVisibility()
 
         // Dismiss crop view controller
         cropViewController.dismiss(animated: true) {
