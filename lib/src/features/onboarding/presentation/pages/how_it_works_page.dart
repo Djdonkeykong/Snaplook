@@ -78,7 +78,6 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     const double appBarHeight = kToolbarHeight;
 
     final double topInset = MediaQuery.of(context).padding.top;
-    final double bottomPadding = 0;
 
     // ✅ How tall the fade zone is at the very top of the scroll viewport.
     const double topFadeHeight = 36;
@@ -120,16 +119,16 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
               child: SingleChildScrollView(
                 controller: _scrollController,
 
-                // Allow overscroll in both directions
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ),
+                // ✅ Remove "always scrollable" behavior so short pages don't create
+                // extra scrollable space / bounce gap.
+                physics: const BouncingScrollPhysics(),
 
+                // ✅ Remove bottom padding completely.
                 padding: EdgeInsets.fromLTRB(
                   spacing.l,
                   spacing.l + appBarHeight + topInset,
                   spacing.l,
-                  bottomPadding,
+                  0,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +153,9 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                         aspectRatio: 792 / 1285,
                       ),
                     ),
-                    SizedBox(height: spacing.l),
+
+                    // ✅ Removed the trailing SizedBox that added space under the image.
+                    // SizedBox(height: spacing.l),
                   ],
                 ),
               ),
