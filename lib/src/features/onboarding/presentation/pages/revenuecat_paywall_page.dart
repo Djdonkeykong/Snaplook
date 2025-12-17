@@ -277,28 +277,21 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: spacing.m),
-                const _HeroMark(),
-                SizedBox(height: spacing.l),
-                Center(
-                  child: Column(
-                    children: [
-                      Text(
-                        _isEligibleForTrial
-                            ? 'Start your 3-day FREE trial to continue'
-                            : 'Access all of Snaplook',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                          letterSpacing: -0.7,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
+                Text(
+                  _isEligibleForTrial
+                      ? 'Start your 3-day FREE trial to continue'
+                      : 'Access all of Snaplook',
+                  textAlign: TextAlign.start,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -1.0,
+                    height: 1.2,
                   ),
                 ),
+                SizedBox(height: spacing.l),
                 SizedBox(height: spacing.xl + spacing.s),
                 if (_isEligibleForTrial && selectedPlan == RevenueCatPaywallPlanType.yearly)
                   _TrialTimeline(trialEndFormatted: trialEndFormatted)
