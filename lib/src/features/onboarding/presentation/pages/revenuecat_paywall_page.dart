@@ -11,6 +11,8 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/subscription_sync_service.dart';
+import 'account_creation_page.dart';
+import 'welcome_free_analysis_page.dart';
 
 enum RevenueCatPaywallPlanType { monthly, yearly }
 
@@ -169,7 +171,16 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
   void _navigateNext(bool didPurchase) {
     if (!mounted) return;
 
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    final hasAccount = ref.read(authServiceProvider).currentUser != null;
+    debugPrint(
+        '[RevenueCatPaywall] Navigating after purchase: $didPurchase, hasAccount: $hasAccount');
+
+    final nextPage =
+        hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage();
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => nextPage),
+    );
   }
 
   @override
