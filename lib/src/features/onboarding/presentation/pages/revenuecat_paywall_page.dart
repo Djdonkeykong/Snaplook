@@ -268,15 +268,15 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         children: [
           SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
-              spacing.l * 1.5,
+              spacing.l,
               0,
-              spacing.l * 1.5,
+              spacing.l,
               bottomScrollPadding,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: spacing.m),
+                SizedBox(height: spacing.l),
                 Text(
                   _isEligibleForTrial
                       ? 'Start your 3-day FREE trial to continue'
