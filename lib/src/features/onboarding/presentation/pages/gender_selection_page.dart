@@ -227,10 +227,9 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                 'Pick what you want to see and we’ll tailor the feed.',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.black,
+                  color: Colors.black54,
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.w500,
-                  letterSpacing: -0.3,
                 ),
               ),
 

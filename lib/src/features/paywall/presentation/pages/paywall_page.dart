@@ -138,33 +138,33 @@ class PaywallPage extends ConsumerWidget {
                         const _FeatureItem(
                           icon: Icons.search_rounded,
                           iconColor: AppColors.tertiary,
-                          title: 'Unlimited visual searches',
+                          title: 'Turn photos into matches',
                           subtitle:
-                              'Instant matches from every photo you drop in.',
+                              'Get instant matches from photos, screenshots, or social posts.',
                         ),
                         SizedBox(height: spacing.l),
                         const _FeatureItem(
                           icon: Icons.favorite_rounded,
                           iconColor: AppColors.secondary,
-                          title: 'Save & curate looks',
+                          title: 'Save the looks you love',
                           subtitle:
-                              'Keep the styles you love in one place to revisit anytime.',
+                              'Keep styles in one place and come back to them anytime.',
                         ),
                         SizedBox(height: spacing.l),
                         const _FeatureItem(
                           icon: Icons.bolt_rounded,
                           iconColor: Colors.amber,
-                          title: 'AI-powered brand matches',
+                          title: 'Shop similar pieces instantly',
                           subtitle:
-                              'See similar pieces across top retailers in seconds.',
+                              'Discover similar items from trusted retailers in seconds.',
                         ),
                         SizedBox(height: spacing.l),
                         const _FeatureItem(
                           icon: Icons.widgets_rounded,
                           iconColor: Colors.indigo,
-                          title: 'Widgets & smart alerts',
+                          title: 'Never miss a match',
                           subtitle:
-                              'Lock-screen shortcuts and drop reminders for fast access.',
+                              'Receive alerts when we find similar pieces you’ll like.',
                         ),
                         SizedBox(height: spacing.xl),
                       ],

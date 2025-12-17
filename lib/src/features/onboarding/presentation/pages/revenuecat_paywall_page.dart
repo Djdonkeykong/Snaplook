@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -286,35 +287,52 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                   ),
                 ),
                 SizedBox(height: spacing.xl + spacing.s),
-                const _FeatureItem(
-                  icon: Icons.search_rounded,
-                  iconColor: AppColors.tertiary,
-                  title: 'Unlimited visual searches',
-                  description: 'Instant matches from every photo you drop in.',
+                _FeatureItem(
+                  iconBgColor: AppColors.tertiary.withOpacity(0.12),
+                  icon: const Icon(
+                    Icons.search_rounded,
+                    color: AppColors.tertiary,
+                    size: 16,
+                  ),
+                  title: 'Turn photos into matches',
+                  description:
+                      'Get instant matches from photos, screenshots, or social posts.',
                 ),
                 SizedBox(height: spacing.l),
-                const _FeatureItem(
-                  icon: Icons.favorite_rounded,
-                  iconColor: AppColors.secondary,
-                  title: 'Save & curate looks',
+                _FeatureItem(
+                  iconBgColor: AppColors.secondary.withOpacity(0.12),
+                  icon: const Icon(
+                    Icons.favorite_rounded,
+                    color: AppColors.secondary,
+                    size: 16,
+                  ),
+                  title: 'Save the looks you love',
                   description:
-                      'Keep the styles you love in one place to revisit anytime.',
+                      'Keep styles in one place and come back to them anytime.',
                 ),
                 SizedBox(height: spacing.l),
-                const _FeatureItem(
-                  icon: Icons.bolt_rounded,
-                  iconColor: Colors.amber,
-                  title: 'AI-powered brand matches',
+                _FeatureItem(
+                  iconBgColor: const Color(0xFFFFF4E5),
+                  icon: SvgPicture.asset(
+                    'assets/icons/meteocons--lightning-bolt.svg',
+                    width: 16,
+                    height: 16,
+                  ),
+                  title: 'Shop similar pieces instantly',
                   description:
-                      'See similar pieces across top retailers in seconds.',
+                      'Discover similar items from trusted retailers in seconds.',
                 ),
                 SizedBox(height: spacing.l),
-                const _FeatureItem(
-                  icon: Icons.widgets_rounded,
-                  iconColor: Colors.indigo,
-                  title: 'Widgets & smart alerts',
+                _FeatureItem(
+                  iconBgColor: const Color(0xFFEFF2FF),
+                  icon: SvgPicture.asset(
+                    'assets/icons/lets-icons--bell-pin.svg',
+                    width: 16,
+                    height: 16,
+                  ),
+                  title: 'Never miss a match',
                   description:
-                      'Lock-screen shortcuts and drop reminders for fast access.',
+                      "Receive alerts when we find similar pieces you'll like.",
                 ),
                 SizedBox(height: spacing.l * 2),
               ],
@@ -516,14 +534,14 @@ class _HeroMark extends StatelessWidget {
 }
 
 class _FeatureItem extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
+  final Widget icon;
+  final Color iconBgColor;
   final String title;
   final String description;
 
   const _FeatureItem({
     required this.icon,
-    required this.iconColor,
+    required this.iconBgColor,
     required this.title,
     required this.description,
   });
@@ -539,10 +557,10 @@ class _FeatureItem extends StatelessWidget {
           height: 32,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.12),
+            color: iconBgColor,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: iconColor, size: 16),
+          child: icon,
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -670,7 +688,7 @@ class _PlanSelectionCard extends StatelessWidget {
               style: TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 fontSize: 13,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
                 color: isEligibleForTrial
                     ? AppColors.secondary
                     : AppColors.textSecondary,

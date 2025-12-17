@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
@@ -19,7 +19,7 @@ class WhatYouWantPage extends StatefulWidget {
 }
 
 class _WhatYouWantPageState extends State<WhatYouWantPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, RouteAware {
   static const _options = [
     'Outfits',
     'Shoes',
@@ -33,6 +33,7 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _fadeAnimations;
   late List<Animation<double>> _scaleAnimations;
+  bool _isRouteAware = false;
 
   @override
   void initState() {
@@ -60,20 +61,46 @@ class _WhatYouWantPageState extends State<WhatYouWantPage>
     Future.microtask(_startStaggeredAnimation);
   }
 
-  void _startStaggeredAnimation() {
-    for (int i = 0; i < _animationControllers.length; i++) {
-      Future.delayed(Duration(milliseconds: i * 80), () {
-        if (mounted) _animationControllers[i].forward();
-      });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (!_isRouteAware && route is PageRoute) {
+      routeObserver.subscribe(this, route);
+      _isRouteAware = true;
     }
   }
 
   @override
   void dispose() {
+    if (_isRouteAware) {
+      routeObserver.unsubscribe(this);
+    }
     for (final c in _animationControllers) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  @override
+  void didPush() {
+    _startStaggeredAnimation();
+  }
+
+  @override
+  void didPopNext() {
+    _startStaggeredAnimation();
+  }
+
+  void _startStaggeredAnimation() {
+    for (final c in _animationControllers) {
+      c.reset();
+    }
+    for (int i = 0; i < _animationControllers.length; i++) {
+      Future.delayed(Duration(milliseconds: i * 80), () {
+        if (mounted) _animationControllers[i].forward();
+      });
+    }
   }
 
   void _toggle(String value) {
