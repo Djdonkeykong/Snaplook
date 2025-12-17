@@ -892,16 +892,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
             headerContainer.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
             headerContainer.heightAnchor.constraint(equalToConstant: 48),
 
-            // Logo
-            logo.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
+            // Logo - centered
+            logo.centerXAnchor.constraint(equalTo: headerContainer.centerXAnchor),
             logo.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
             logo.heightAnchor.constraint(equalToConstant: 28),
             logo.widthAnchor.constraint(equalToConstant: 132),
 
             // Cancel button
             cancelButton.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
-            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
-            cancelButton.leadingAnchor.constraint(greaterThanOrEqualTo: logo.trailingAnchor, constant: 16),
+            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor)
         ])
     }
 
