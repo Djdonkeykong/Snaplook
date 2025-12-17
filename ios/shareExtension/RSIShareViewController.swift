@@ -5873,13 +5873,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         revertCropButton?.removeFromSuperview()
         let revertButton = UIButton(type: .system)
         revertButton.translatesAutoresizingMaskIntoConstraints = false
-        let revertConfig = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold, scale: .small)
+        let revertConfig = UIImage.SymbolConfiguration(pointSize: 15, weight: .semibold, scale: .small)
         let revertImage = UIImage(systemName: "arrow.uturn.backward", withConfiguration: revertConfig)
         revertButton.setImage(revertImage, for: .normal)
         revertButton.setPreferredSymbolConfiguration(revertConfig, forImageIn: .normal)
         revertButton.tintColor = .white
         revertButton.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        revertButton.layer.cornerRadius = 14
+        revertButton.layer.cornerRadius = 20
         revertButton.layer.masksToBounds = true
         revertButton.addTarget(self, action: #selector(revertCropTapped), for: .touchUpInside)
         revertButton.accessibilityLabel = "Revert to original image"
