@@ -793,7 +793,7 @@ class _TrialTimeline extends StatelessWidget {
       child: Column(
         children: [
           _TimelineItem(
-            iconAsset: 'assets/icons/iconamoon--lock-off.svg',
+            iconAsset: 'assets/icons/uil--unlock-alt.svg',
             iconColor: Colors.white,
             iconBgColor: const Color(0xFFf2003c),
             iconSize: 20,
@@ -804,10 +804,11 @@ class _TrialTimeline extends StatelessWidget {
             isLast: false,
           ),
           _TimelineItem(
-            iconAsset: 'assets/icons/lucide--bell-ring.svg',
+            iconAsset: 'assets/icons/mdi--lock-open-outline.svg',
             iconColor: Colors.white,
             iconBgColor: const Color(0xFFf2003c),
             iconSize: 18,
+            flipHorizontally: true,
             title: 'In 2 Days',
             description: "We'll send you a reminder that your trial is ending soon.",
             isLast: false,
@@ -835,6 +836,7 @@ class _TimelineItem extends StatelessWidget {
   final Color iconBgColor;
   final double iconSize;
   final double iconVerticalOffset;
+  final bool flipHorizontally;
   final String title;
   final String description;
   final bool isLast;
@@ -845,6 +847,7 @@ class _TimelineItem extends StatelessWidget {
     required this.iconBgColor,
     this.iconSize = 18,
     this.iconVerticalOffset = 0,
+    this.flipHorizontally = false,
     required this.title,
     required this.description,
     required this.isLast,
@@ -868,11 +871,14 @@ class _TimelineItem extends StatelessWidget {
                 child: Center(
                   child: Transform.translate(
                     offset: Offset(0, iconVerticalOffset),
-                    child: SvgPicture.asset(
-                      iconAsset,
-                      width: iconSize,
-                      height: iconSize,
-                      color: iconColor,
+                    child: Transform.flip(
+                      flipX: flipHorizontally,
+                      child: SvgPicture.asset(
+                        iconAsset,
+                        width: iconSize,
+                        height: iconSize,
+                        color: iconColor,
+                      ),
                     ),
                   ),
                 ),
