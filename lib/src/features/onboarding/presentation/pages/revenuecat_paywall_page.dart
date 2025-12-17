@@ -268,9 +268,9 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
         children: [
           SingleChildScrollView(
             padding: EdgeInsets.fromLTRB(
-              spacing.l,
+              spacing.l * 1.5,
               0,
-              spacing.l,
+              spacing.l * 1.5,
               bottomScrollPadding,
             ),
             child: Column(
@@ -289,7 +289,7 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontFamily: 'PlusJakartaSans',
-                          fontSize: 34,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
                           letterSpacing: -0.7,
@@ -700,7 +700,7 @@ class _PlanSelectionCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -769,7 +769,7 @@ class _PlanSelectionCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: 14,
+              fontSize: 12,
               color: Color(0xFF6B7280),
               fontWeight: FontWeight.w500,
               height: 1.5,
