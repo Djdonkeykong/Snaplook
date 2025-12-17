@@ -10,6 +10,8 @@ import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show MainNavigation, selectedIndexProvider, scrollToTopTriggerProvider, isAtHomeRootProvider;
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../services/onboarding_state_service.dart';
+import '../../../../services/subscription_sync_service.dart';
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
@@ -108,6 +110,13 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
 
         if (userId != null) {
           try {
+            // Refresh subscription data in case purchase happened pre-signup
+            try {
+              await SubscriptionSyncService().syncSubscriptionToSupabase();
+            } catch (syncError) {
+              print('[EmailVerification] Subscription sync error (ignored): $syncError');
+            }
+
             // Check if user has completed onboarding
             final supabase = Supabase.instance.client;
             final userResponse = await supabase
@@ -142,8 +151,17 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 (route) => false,
               );
             } else {
-              // New user. If they already purchased, jump to welcome; otherwise start from How It Works.
+              // New user. If they already purchased, mark payment complete and jump to welcome; otherwise start from How It Works.
               final shouldJumpToWelcome = hasActiveSubscription || paymentCompleteState;
+
+              if (shouldJumpToWelcome) {
+                try {
+                  await OnboardingStateService().markPaymentComplete(userId);
+                } catch (e) {
+                  print('[EmailVerification] Error marking payment complete: $e');
+                }
+              }
+
               print('[EmailVerification] New user - navigating to ${shouldJumpToWelcome ? 'welcome' : 'onboarding intro'}');
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
