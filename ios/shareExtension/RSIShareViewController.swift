@@ -3852,9 +3852,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 NSLayoutConstraint.activate([
                     backButton.leadingAnchor.constraint(equalTo: headerContainerView!.leadingAnchor, constant: 16),
-                    backButton.centerYAnchor.constraint(equalTo: headerContainerView!.centerYAnchor),
-                    backButton.widthAnchor.constraint(equalToConstant: 24),
-                    backButton.heightAnchor.constraint(equalToConstant: 24)
+                    backButton.centerYAnchor.constraint(equalTo: headerContainerView!.centerYAnchor, constant: 1),
+                    backButton.widthAnchor.constraint(equalToConstant: 22),
+                    backButton.heightAnchor.constraint(equalToConstant: 22)
                 ])
 
                 backButtonView = backButton
@@ -3870,9 +3870,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // Ensure size matches onboarding style even if constraints already existed
                 backButton.constraints.forEach { constraint in
                     if constraint.firstAttribute == .width {
-                        constraint.constant = 24
+                        constraint.constant = 22
                     } else if constraint.firstAttribute == .height {
-                        constraint.constant = 24
+                        constraint.constant = 22
+                    } else if constraint.firstAttribute == .centerY {
+                        constraint.constant = 1
                     }
                 }
 
