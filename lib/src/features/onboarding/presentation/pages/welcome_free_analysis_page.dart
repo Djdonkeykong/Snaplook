@@ -14,6 +14,8 @@ import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../../domain/providers/gender_provider.dart';
+import '../../domain/providers/onboarding_preferences_provider.dart';
+import 'discovery_source_page.dart';
 
 class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
   const WelcomeFreeAnalysisPage({super.key});
@@ -116,14 +118,22 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
       // preferences are stored in providers but NOT saved to database yet.
       // We need to save them now that we have a user ID.
 
-      // Read preferences from providers
+      // Read ALL preferences from providers
       final selectedGender = ref.read(selectedGenderProvider);
       final notificationGranted = ref.read(notificationPermissionGrantedProvider);
+      final styleDirection = ref.read(styleDirectionProvider);
+      final whatYouWant = ref.read(whatYouWantProvider);
+      final budget = ref.read(budgetProvider);
+      final discoverySource = ref.read(selectedDiscoverySourceProvider);
 
       debugPrint('');
-      debugPrint('[WelcomePage] ===== CHECKING PROVIDERS =====');
+      debugPrint('[WelcomePage] ===== CHECKING ALL PROVIDERS =====');
       debugPrint('[WelcomePage] Gender from provider: ${selectedGender?.name}');
       debugPrint('[WelcomePage] Notification permission from provider: $notificationGranted');
+      debugPrint('[WelcomePage] Style direction from provider: $styleDirection');
+      debugPrint('[WelcomePage] What you want from provider: $whatYouWant');
+      debugPrint('[WelcomePage] Budget from provider: $budget');
+      debugPrint('[WelcomePage] Discovery source from provider: ${discoverySource?.name}');
       debugPrint('[WelcomePage] ================================');
 
       // Map Gender enum to preferred_gender_filter
@@ -143,31 +153,33 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
         debugPrint('[WelcomePage] Mapped gender ${selectedGender.name} to filter: $preferredGenderFilter');
       }
 
-      // Save preferences to database
-      if (preferredGenderFilter != null || notificationGranted != null) {
-        debugPrint('');
-        debugPrint('[WelcomePage] ===== SAVING PREFERENCES TO DATABASE =====');
-        debugPrint('[WelcomePage] User ID: $userId');
-        debugPrint('[WelcomePage] Gender filter: $preferredGenderFilter');
-        debugPrint('[WelcomePage] Notification enabled: $notificationGranted');
-        try {
-          await OnboardingStateService().saveUserPreferences(
-            userId: userId,
-            preferredGenderFilter: preferredGenderFilter,
-            notificationEnabled: notificationGranted,
-          );
-          debugPrint('[WelcomePage] SUCCESS: Preferences saved to database');
-          debugPrint('[WelcomePage] ==========================================');
-        } catch (saveError, stackTrace) {
-          debugPrint('[WelcomePage] ERROR saving preferences: $saveError');
-          debugPrint('[WelcomePage] Stack trace: $stackTrace');
-          debugPrint('[WelcomePage] ==========================================');
-          // Non-critical - allow user to continue
-        }
-      } else {
-        debugPrint('[WelcomePage] WARNING: No preferences to save!');
-        debugPrint('[WelcomePage] - preferredGenderFilter: $preferredGenderFilter');
-        debugPrint('[WelcomePage] - notificationGranted: $notificationGranted');
+      // Map DiscoverySource enum to string
+      String? discoverySourceString;
+      if (discoverySource != null) {
+        discoverySourceString = discoverySource.name;
+      }
+
+      // Save ALL preferences to database
+      debugPrint('');
+      debugPrint('[WelcomePage] ===== SAVING ALL PREFERENCES TO DATABASE =====');
+      debugPrint('[WelcomePage] User ID: $userId');
+      try {
+        await OnboardingStateService().saveUserPreferences(
+          userId: userId,
+          preferredGenderFilter: preferredGenderFilter,
+          notificationEnabled: notificationGranted,
+          styleDirection: styleDirection.isNotEmpty ? styleDirection : null,
+          whatYouWant: whatYouWant.isNotEmpty ? whatYouWant : null,
+          budget: budget,
+          discoverySource: discoverySourceString,
+        );
+        debugPrint('[WelcomePage] SUCCESS: All preferences saved to database');
+        debugPrint('[WelcomePage] ==========================================');
+      } catch (saveError, stackTrace) {
+        debugPrint('[WelcomePage] ERROR saving preferences: $saveError');
+        debugPrint('[WelcomePage] Stack trace: $stackTrace');
+        debugPrint('[WelcomePage] ==========================================');
+        // Non-critical - allow user to continue
       }
 
       // If notification permission was granted, initialize FCM and register token

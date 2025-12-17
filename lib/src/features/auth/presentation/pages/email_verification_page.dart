@@ -7,11 +7,16 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
+import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show MainNavigation, selectedIndexProvider, scrollToTopTriggerProvider, isAtHomeRootProvider;
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/subscription_sync_service.dart';
+import '../../../../services/fraud_prevention_service.dart';
+import '../../../onboarding/domain/providers/gender_provider.dart';
+import '../../../onboarding/domain/providers/onboarding_preferences_provider.dart';
+import '../../../onboarding/presentation/pages/discovery_source_page.dart';
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
@@ -110,11 +115,92 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
 
         if (userId != null) {
           try {
-            // Refresh subscription data in case purchase happened pre-signup
+            // Update checkpoint to 'account' to mark account creation
+            print('[EmailVerification] Updating checkpoint to account...');
             try {
-              await SubscriptionSyncService().syncSubscriptionToSupabase();
-            } catch (syncError) {
-              print('[EmailVerification] Subscription sync error (ignored): $syncError');
+              await OnboardingStateService().updateCheckpoint(
+                userId,
+                OnboardingCheckpoint.account,
+              );
+              print('[EmailVerification] Checkpoint updated to account');
+            } catch (checkpointError) {
+              print('[EmailVerification] Error updating checkpoint: $checkpointError');
+            }
+
+            // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
+            // This must happen BEFORE checking subscription status
+            print('[EmailVerification] Linking RevenueCat subscription to account...');
+            try {
+              await SubscriptionSyncService().identify(userId);
+              print('[EmailVerification] RevenueCat subscription linked and synced');
+            } catch (linkError) {
+              print('[EmailVerification] Error linking RevenueCat subscription: $linkError');
+            }
+
+            // Update device fingerprint for fraud prevention
+            await FraudPreventionService.updateUserDeviceFingerprint(userId);
+
+            // Calculate fraud score
+            try {
+              await FraudPreventionService.calculateFraudScore(
+                userId,
+                email: widget.email,
+              );
+            } catch (fraudError) {
+              print('[EmailVerification] Error calculating fraud score: $fraudError');
+            }
+
+            // Persist ALL onboarding selections if they exist in providers
+            final selectedGender = ref.read(selectedGenderProvider);
+            final notificationGranted = ref.read(notificationPermissionGrantedProvider);
+            final styleDirection = ref.read(styleDirectionProvider);
+            final whatYouWant = ref.read(whatYouWantProvider);
+            final budget = ref.read(budgetProvider);
+            final discoverySource = ref.read(selectedDiscoverySourceProvider);
+
+            print('[EmailVerification] Gender from provider: ${selectedGender?.name}');
+            print('[EmailVerification] Notification permission from provider: $notificationGranted');
+            print('[EmailVerification] Style direction from provider: $styleDirection');
+            print('[EmailVerification] What you want from provider: $whatYouWant');
+            print('[EmailVerification] Budget from provider: $budget');
+            print('[EmailVerification] Discovery source from provider: ${discoverySource?.name}');
+
+            // Map Gender enum to preferred_gender_filter
+            String? preferredGenderFilter;
+            if (selectedGender != null) {
+              switch (selectedGender) {
+                case Gender.male:
+                  preferredGenderFilter = 'men';
+                  break;
+                case Gender.female:
+                  preferredGenderFilter = 'women';
+                  break;
+                case Gender.other:
+                  preferredGenderFilter = 'all';
+                  break;
+              }
+            }
+
+            // Map DiscoverySource enum to string
+            String? discoverySourceString;
+            if (discoverySource != null) {
+              discoverySourceString = discoverySource.name;
+            }
+
+            // Save ALL preferences to database
+            try {
+              await OnboardingStateService().saveUserPreferences(
+                userId: userId,
+                preferredGenderFilter: preferredGenderFilter,
+                notificationEnabled: notificationGranted,
+                styleDirection: styleDirection.isNotEmpty ? styleDirection : null,
+                whatYouWant: whatYouWant.isNotEmpty ? whatYouWant : null,
+                budget: budget,
+                discoverySource: discoverySourceString,
+              );
+              print('[EmailVerification] All onboarding preferences persisted');
+            } catch (prefError) {
+              print('[EmailVerification] Error persisting preferences: $prefError');
             }
 
             // Check if user has completed onboarding
@@ -131,7 +217,6 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
             final hasCompletedOnboarding = userResponse != null && userResponse['onboarding_state'] == 'completed';
             final subscriptionStatus = userResponse != null ? userResponse['subscription_status'] as String? : null;
             final hasActiveSubscription = subscriptionStatus == 'active';
-            final paymentCompleteState = userResponse != null && userResponse['onboarding_state'] == 'payment_complete';
             print('[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
             print('[EmailVerification] Subscription status: $subscriptionStatus');
 
@@ -151,25 +236,28 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 (route) => false,
               );
             } else {
-              // New user. If they already purchased, mark payment complete and jump to welcome; otherwise start from How It Works.
-              final shouldJumpToWelcome = hasActiveSubscription || paymentCompleteState;
+              // New user - check if they have onboarding selections or active subscription
+              final hasOnboardingData = selectedGender != null;
 
-              if (shouldJumpToWelcome) {
-                try {
-                  await OnboardingStateService().markPaymentComplete(userId);
-                } catch (e) {
-                  print('[EmailVerification] Error marking payment complete: $e');
-                }
+              if (hasOnboardingData || hasActiveSubscription) {
+                // User went through onboarding OR purchased - go to welcome page
+                print('[EmailVerification] User completed onboarding or has subscription - navigating to welcome');
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const WelcomeFreeAnalysisPage(),
+                  ),
+                  (route) => false,
+                );
+              } else {
+                // New user without onboarding data - start from beginning
+                print('[EmailVerification] New user without onboarding data - navigating to onboarding intro');
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const HowItWorksPage(),
+                  ),
+                  (route) => false,
+                );
               }
-
-              print('[EmailVerification] New user - navigating to ${shouldJumpToWelcome ? 'welcome' : 'onboarding intro'}');
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) =>
-                      shouldJumpToWelcome ? const WelcomeFreeAnalysisPage() : const HowItWorksPage(),
-                ),
-                (route) => false,
-              );
             }
           } catch (e) {
             // If check fails, assume new user and route into onboarding entry

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import 'superwall_service.dart';
+import 'revenuecat_service.dart';
 import 'fraud_prevention_service.dart';
 
 /// States of the onboarding process
@@ -50,6 +52,7 @@ class OnboardingStateService {
 
   final _supabase = Supabase.instance.client;
   final _superwall = SuperwallService();
+  final _revenueCat = RevenueCatService();
 
   /// Start onboarding process
   Future<void> startOnboarding(String userId) async {
@@ -92,13 +95,23 @@ class OnboardingStateService {
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', userId);
 
-      // Record trial start if applicable
-      final isInTrial = _superwall.getSubscriptionSnapshot().isInTrialPeriod;
+      // Record trial start if applicable (check RevenueCat)
+      bool isInTrial = false;
+      try {
+        final customerInfo = _revenueCat.currentCustomerInfo ?? await Purchases.getCustomerInfo();
+        final activeEntitlements = customerInfo.entitlements.active.values;
+        final entitlement = (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
+        isInTrial = entitlement?.periodType == PeriodType.trial ||
+                    entitlement?.periodType == PeriodType.intro;
+      } catch (e) {
+        debugPrint('[OnboardingState] Error checking trial status: $e');
+      }
+
       if (isInTrial) {
         await FraudPreventionService.recordTrialStart(userId);
       }
 
-      debugPrint('[OnboardingState] Marked payment complete for user $userId');
+      debugPrint('[OnboardingState] Marked payment complete for user $userId (trial: $isInTrial)');
     } catch (e) {
       debugPrint('[OnboardingState] Error marking payment complete: $e');
       rethrow;
@@ -144,6 +157,10 @@ class OnboardingStateService {
     required String userId,
     String? preferredGenderFilter,
     bool? notificationEnabled,
+    List<String>? styleDirection,
+    List<String>? whatYouWant,
+    String? budget,
+    String? discoverySource,
   }) async {
     try {
       debugPrint('');
@@ -151,6 +168,10 @@ class OnboardingStateService {
       debugPrint('[OnboardingState] User ID: $userId');
       debugPrint('[OnboardingState] Gender filter: $preferredGenderFilter');
       debugPrint('[OnboardingState] Notification enabled: $notificationEnabled');
+      debugPrint('[OnboardingState] Style direction: $styleDirection');
+      debugPrint('[OnboardingState] What you want: $whatYouWant');
+      debugPrint('[OnboardingState] Budget: $budget');
+      debugPrint('[OnboardingState] Discovery source: $discoverySource');
 
       final updates = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
@@ -163,6 +184,22 @@ class OnboardingStateService {
       if (notificationEnabled != null) {
         updates['notification_enabled'] = notificationEnabled;
         debugPrint('[OnboardingState] Adding notification_enabled to updates');
+      }
+      if (styleDirection != null && styleDirection.isNotEmpty) {
+        updates['style_direction'] = styleDirection;
+        debugPrint('[OnboardingState] Adding style_direction to updates');
+      }
+      if (whatYouWant != null && whatYouWant.isNotEmpty) {
+        updates['what_you_want'] = whatYouWant;
+        debugPrint('[OnboardingState] Adding what_you_want to updates');
+      }
+      if (budget != null) {
+        updates['budget'] = budget;
+        debugPrint('[OnboardingState] Adding budget to updates');
+      }
+      if (discoverySource != null) {
+        updates['discovery_source'] = discoverySource;
+        debugPrint('[OnboardingState] Adding discovery_source to updates');
       }
 
       debugPrint('[OnboardingState] Final updates object: $updates');

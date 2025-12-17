@@ -1,22 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// User goals (multi-select)
-final userGoalsProvider = StateProvider<List<String>>((ref) => []);
+// Style direction - "Which styles do you like?" (multi-select)
+// Options: Streetwear, Minimal, Casual, Classic, Bold
+final styleDirectionProvider = StateProvider<List<String>>((ref) => []);
 
-// Age range (single select)
-final ageRangeProvider = StateProvider<String?>((ref) => null);
+// What you want - "What are you mostly looking for?" (multi-select)
+// Options: Outfits, Shoes, Tops, Accessories, Everything
+final whatYouWantProvider = StateProvider<List<String>>((ref) => []);
 
-// Style preferences (multi-select)
-final stylePreferencesProvider = StateProvider<List<String>>((ref) => []);
-
-// Preferred retailers (multi-select)
-final preferredRetailersProvider = StateProvider<List<String>>((ref) => []);
-
-// Price range (single select)
-final priceRangeProvider = StateProvider<String?>((ref) => null);
-
-// Category interests (multi-select)
-final categoryInterestsProvider = StateProvider<List<String>>((ref) => []);
-
-// Shopping frequency (single select)
-final shoppingFrequencyProvider = StateProvider<String?>((ref) => null);
+// Budget - "What price range feels right?" (single select)
+// Options: Affordable, Mid-range, Premium, It varies
+final budgetProvider = StateProvider<String?>((ref) => null);

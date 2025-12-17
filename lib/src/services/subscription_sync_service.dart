@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import 'superwall_service.dart';
+import 'revenuecat_service.dart';
 
-/// Service for syncing subscription data between Superwall and Supabase.
+/// Service for syncing subscription data between RevenueCat and Supabase.
 class SubscriptionSyncService {
   static final SubscriptionSyncService _instance = SubscriptionSyncService._internal();
   factory SubscriptionSyncService() => _instance;
@@ -10,8 +12,9 @@ class SubscriptionSyncService {
 
   final _supabase = Supabase.instance.client;
   final _superwall = SuperwallService();
+  final _revenueCat = RevenueCatService();
 
-  /// Sync subscription data from Superwall to Supabase.
+  /// Sync subscription data from RevenueCat to Supabase.
   /// Call this after:
   /// - Successful paywall flow
   /// - User login
@@ -24,32 +27,49 @@ class SubscriptionSyncService {
         return;
       }
 
-      debugPrint('[SubscriptionSync] Starting sync for user ${user.id}');
+      debugPrint('[SubscriptionSync] Starting RevenueCat sync for user ${user.id}');
 
-      final status = _superwall.getSubscriptionSnapshot();
+      // Get RevenueCat customer info
+      CustomerInfo? customerInfo;
+      try {
+        customerInfo = _revenueCat.currentCustomerInfo ?? await Purchases.getCustomerInfo();
+      } catch (e) {
+        debugPrint('[SubscriptionSync] Error fetching RevenueCat customer info: $e');
+        return;
+      }
+
+      // Parse RevenueCat subscription data
+      final activeEntitlements = customerInfo.entitlements.active.values;
+      final entitlement = (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
+      final hasActiveRevenueCat = entitlement != null;
+      final isTrial = entitlement?.periodType == PeriodType.trial ||
+                      entitlement?.periodType == PeriodType.intro;
+      final expirationDateIso = entitlement?.expirationDate != null
+          ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
+          : null;
+      final productId = entitlement?.productIdentifier;
 
       // Determine subscription status
-      String subscriptionStatus = status.isActive ? 'active' : 'free';
-      final expirationDate = status.expirationDate;
-      final productId = status.productIdentifier;
-
-      if (!status.isActive && expirationDate != null && expirationDate.isBefore(DateTime.now())) {
-        subscriptionStatus = 'expired';
+      String subscriptionStatus = hasActiveRevenueCat ? 'active' : 'free';
+      if (!hasActiveRevenueCat && expirationDateIso != null) {
+        final expirationDate = DateTime.parse(expirationDateIso);
+        if (expirationDate.isBefore(DateTime.now())) {
+          subscriptionStatus = 'expired';
+        }
       }
 
       await _supabase.from('users').upsert({
         'id': user.id,
         'subscription_status': subscriptionStatus,
-        'subscription_expires_at': expirationDate?.toIso8601String(),
-        'billing_user_id': user.id,
+        'subscription_expires_at': expirationDateIso,
         'subscription_product_id': productId,
-        'subscription_provider': 'superwall',
-        'is_trial': status.isInTrialPeriod,
+        'subscription_provider': 'revenuecat',
+        'is_trial': isTrial,
         'subscription_last_synced_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       }, onConflict: 'id');
 
-      debugPrint('[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: ${status.isInTrialPeriod}, Expires: $expirationDate');
+      debugPrint('[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: $isTrial, Expires: $expirationDateIso');
     } catch (e, stackTrace) {
       debugPrint('[SubscriptionSync] Error syncing subscription: $e');
       debugPrint('[SubscriptionSync] Stack trace: $stackTrace');
@@ -95,14 +115,30 @@ class SubscriptionSyncService {
     }
   }
 
-  /// Identify user with Superwall.
-  Future<void> identifyWithSuperwall(String userId) async {
+  /// Identify user with RevenueCat and Superwall.
+  /// This links any anonymous purchases to the identified user.
+  Future<void> identify(String userId) async {
+    debugPrint('[SubscriptionSync] Identifying user $userId with RevenueCat');
+
+    // Identify with RevenueCat - this merges anonymous purchases with the user account
+    await _revenueCat.identify(userId);
+
+    // Also identify with Superwall (for backwards compatibility)
     await _superwall.identify(userId);
+
+    // Sync subscription data to Supabase
     await syncSubscriptionToSupabase();
   }
 
-  /// Reset Superwall identity on logout.
+  /// Identify user with Superwall (deprecated - use identify() instead).
+  @deprecated
+  Future<void> identifyWithSuperwall(String userId) async {
+    await identify(userId);
+  }
+
+  /// Reset RevenueCat and Superwall identity on logout.
   Future<void> resetOnLogout() async {
+    await _revenueCat.logOut();
     await _superwall.reset();
   }
 }

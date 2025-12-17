@@ -15,6 +15,7 @@ import '../widgets/progress_indicator.dart';
 import 'welcome_free_analysis_page.dart';
 import 'how_it_works_page.dart';
 import 'notification_permission_page.dart';
+import 'discovery_source_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
         MainNavigation,
@@ -28,6 +29,7 @@ import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../domain/providers/gender_provider.dart';
+import '../../domain/providers/onboarding_preferences_provider.dart';
 import '../../../../services/revenuecat_service.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
@@ -274,17 +276,15 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
     );
   }
 
-  /// Link Superwall subscription to newly created account
+  /// Link RevenueCat subscription to newly created account
   Future<bool> _linkSubscriptionToAccount(String userId) async {
     try {
-      debugPrint('[AccountCreation] Linking subscription for user $userId via Superwall');
+      debugPrint('[AccountCreation] Linking subscription for user $userId via RevenueCat');
 
-      await SubscriptionSyncService().identifyWithSuperwall(userId);
+      // Identify user with RevenueCat (merges anonymous purchases) and sync to Supabase
+      await SubscriptionSyncService().identify(userId);
 
-      // Also merge the anonymous RevenueCat purchaser into the new account
-      await RevenueCatService().identify(userId);
-
-      // Refresh RevenueCat customer info to capture the purchase
+      // Check if subscription was successfully linked
       CustomerInfo? customerInfo;
       try {
         customerInfo =
@@ -293,33 +293,9 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
         debugPrint('[AccountCreation] Error fetching RevenueCat customer info: $e');
       }
 
-      // Persist subscription details from RevenueCat to Supabase
+      // Check if user has active subscription
       final activeEntitlements = customerInfo?.entitlements.active.values;
-      final entitlement = (activeEntitlements != null && activeEntitlements.isNotEmpty)
-          ? activeEntitlements.first
-          : null;
-      final hasActiveRevenueCat = entitlement != null;
-      final isTrial = entitlement?.periodType == PeriodType.trial ||
-          entitlement?.periodType == PeriodType.intro;
-      final expirationDateIso = entitlement?.expirationDate != null
-          ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
-          : null;
-
-      try {
-        await Supabase.instance.client.from('users').upsert({
-          'id': userId,
-          'subscription_status': hasActiveRevenueCat ? 'active' : 'free',
-          'subscription_expires_at': expirationDateIso,
-          'billing_user_id': userId,
-          'subscription_product_id': entitlement?.productIdentifier,
-          'subscription_provider': 'revenuecat',
-          'is_trial': isTrial,
-          'subscription_last_synced_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        }, onConflict: 'id');
-      } catch (e) {
-        debugPrint('[AccountCreation] Error upserting RevenueCat subscription: $e');
-      }
+      final hasActiveRevenueCat = activeEntitlements != null && activeEntitlements.isNotEmpty;
 
       // Mark onboarding payment complete when RevenueCat shows an active entitlement
       if (hasActiveRevenueCat) {
@@ -366,9 +342,15 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
 
   Future<void> _persistOnboardingSelections(String userId) async {
     try {
+      // Read all onboarding selections from providers
       final selectedGender = ref.read(selectedGenderProvider);
       final notificationGranted = ref.read(notificationPermissionGrantedProvider);
+      final styleDirection = ref.read(styleDirectionProvider);
+      final whatYouWant = ref.read(whatYouWantProvider);
+      final budget = ref.read(budgetProvider);
+      final discoverySource = ref.read(selectedDiscoverySourceProvider);
 
+      // Map Gender enum to preferred_gender_filter
       String? preferredGenderFilter;
       if (selectedGender != null) {
         switch (selectedGender) {
@@ -384,13 +366,24 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
         }
       }
 
-      if (preferredGenderFilter != null || notificationGranted != null) {
-        await OnboardingStateService().saveUserPreferences(
-          userId: userId,
-          preferredGenderFilter: preferredGenderFilter,
-          notificationEnabled: notificationGranted,
-        );
+      // Map DiscoverySource enum to string
+      String? discoverySourceString;
+      if (discoverySource != null) {
+        discoverySourceString = discoverySource.name;
       }
+
+      // Save all preferences to database
+      await OnboardingStateService().saveUserPreferences(
+        userId: userId,
+        preferredGenderFilter: preferredGenderFilter,
+        notificationEnabled: notificationGranted,
+        styleDirection: styleDirection.isNotEmpty ? styleDirection : null,
+        whatYouWant: whatYouWant.isNotEmpty ? whatYouWant : null,
+        budget: budget,
+        discoverySource: discoverySourceString,
+      );
+
+      debugPrint('[AccountCreation] All onboarding selections persisted successfully');
     } catch (e) {
       debugPrint('[AccountCreation] Error persisting onboarding selections: $e');
     }
