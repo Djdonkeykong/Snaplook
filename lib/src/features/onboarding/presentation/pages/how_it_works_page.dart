@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
@@ -251,8 +253,9 @@ class _StepFrame extends StatelessWidget {
         curve: Curves.easeOut,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            // Scale image relative to available width but cap to keep it crisp on tablets.
             final double width =
-                constraints.maxWidth.clamp(0, maxWidth).toDouble();
+                math.min(maxWidth, constraints.maxWidth * 0.9).toDouble();
             return Align(
               alignment: Alignment.center,
               child: ClipRRect(
