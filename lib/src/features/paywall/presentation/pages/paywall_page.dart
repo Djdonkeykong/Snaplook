@@ -100,40 +100,34 @@ class PaywallPage extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(height: spacing.l),
-                        const _HeroMark(),
-                        SizedBox(height: spacing.l),
-                        Center(
-                          child: Column(
-                            children: [
-                              const Text(
-                                'Access all of Snaplook',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
-                                  letterSpacing: -0.9,
-                                  height: 1.25,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                isYearlySelected
-                                    ? 'Start your 3-day free trial and unlock unlimited matches.'
-                                    : 'Unlock unlimited matches, saves, and smart alerts.',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
+                        const Text(
+                          'Access all of Snaplook',
+                          textAlign: TextAlign.start,
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 34,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -1.0,
+                            height: 1.25,
                           ),
                         ),
+                        const SizedBox(height: 10),
+                        Text(
+                          isYearlySelected
+                              ? 'Start your 3-day free trial and unlock unlimited matches.'
+                              : 'Unlock unlimited matches, saves, and smart alerts.',
+                          textAlign: TextAlign.start,
+                          style: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                        SizedBox(height: spacing.l),
+                        const _HeroMark(),
                         SizedBox(height: spacing.xl),
                         const _FeatureItem(
                           icon: Icons.search_rounded,
