@@ -68,8 +68,8 @@ class ProfileReadyPage extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Lottie.asset(
                   'assets/animations/arrow2.json',
-                  height: 220,
-                  repeat: true,
+                  height: 440,
+                  repeat: false,
                 ),
               ),
               SizedBox(height: spacing.xl),
