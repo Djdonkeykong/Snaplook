@@ -81,6 +81,8 @@ Future<void> _precacheSplashLogo() async {
 // Custom LocalStorage implementation using SharedPreferences
 // This avoids flutter_secure_storage crash on iOS 18.6.2
 class SharedPreferencesLocalStorage extends LocalStorage {
+  static const _sessionKey = 'supabaseSession';
+
   @override
   Future<void> initialize() async {
     // No initialization needed for SharedPreferences
@@ -89,25 +91,25 @@ class SharedPreferencesLocalStorage extends LocalStorage {
   @override
   Future<bool> hasAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey('supabase_token');
+    return prefs.containsKey(_sessionKey);
   }
 
   @override
   Future<String?> accessToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('supabase_token');
+    return prefs.getString(_sessionKey);
   }
 
   @override
   Future<void> removePersistedSession() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('supabase_token');
+    await prefs.remove(_sessionKey);
   }
 
   @override
   Future<void> persistSession(String persistSessionString) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('supabase_token', persistSessionString);
+    await prefs.setString(_sessionKey, persistSessionString);
   }
 }
 
