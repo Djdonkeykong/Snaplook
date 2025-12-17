@@ -11,6 +11,7 @@ import Social
 import MobileCoreServices
 import Photos
 import UniformTypeIdentifiers
+import LinkPresentation
 import AVFoundation
 import WebKit
 import TOCropViewController
@@ -4925,6 +4926,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         func activityViewController(_ activityViewController: UIActivityViewController, thumbnailImageForActivityType activityType: UIActivity.ActivityType?, suggestedSize size: CGSize) -> UIImage? {
             return UIImage(contentsOfFile: imageURL.path)
+        }
+
+        @available(iOS 13.0, *)
+        func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
+            let metadata = LPLinkMetadata()
+            metadata.title = imageSubject
+            metadata.originalURL = imageURL
+            metadata.url = imageURL
+            metadata.iconProvider = NSItemProvider(contentsOf: imageURL)
+            metadata.imageProvider = NSItemProvider(contentsOf: imageURL)
+            return metadata
         }
     }
 

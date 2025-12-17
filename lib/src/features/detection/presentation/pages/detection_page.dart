@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:snaplook/src/shared/utils/native_share_helper.dart';
 import 'share_payload.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/widgets/results_bottom_sheet.dart';
@@ -502,12 +503,20 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           imageFile != null ? await _squareImageForShare(imageFile) : null;
 
       if (shareFile != null) {
-        await Share.shareXFiles(
-          [shareFile],
+        final handled = await NativeShareHelper.shareImageFirst(
+          file: shareFile,
           text: message,
           subject: subject,
-          sharePositionOrigin: origin,
+          origin: origin,
         );
+        if (!handled) {
+          await Share.shareXFiles(
+            [shareFile],
+            text: message,
+            subject: subject,
+            sharePositionOrigin: origin,
+          );
+        }
       } else {
         await Share.share(
           message,

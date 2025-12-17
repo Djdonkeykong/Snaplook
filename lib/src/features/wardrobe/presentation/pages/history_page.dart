@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:snaplook/src/shared/utils/native_share_helper.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
@@ -289,12 +290,20 @@ class _HistoryCard extends ConsumerWidget {
     }
 
     if (shareImage != null) {
-      await Share.shareXFiles(
-        [shareImage],
+      final handled = await NativeShareHelper.shareImageFirst(
+        file: shareImage,
         text: payload.message,
         subject: payload.subject,
-        sharePositionOrigin: origin,
+        origin: origin,
       );
+      if (!handled) {
+        await Share.shareXFiles(
+          [shareImage],
+          text: payload.message,
+          subject: payload.subject,
+          sharePositionOrigin: origin,
+        );
+      }
     } else {
       await Share.share(
         payload.message,

@@ -60,6 +60,11 @@ import FirebaseMessaging
         binaryMessenger: controller.binaryMessenger
       )
 
+      let nativeShareChannel = FlutterMethodChannel(
+        name: "snaplook/native_share",
+        binaryMessenger: controller.binaryMessenger
+      )
+
       // Notification channel for triggering APNS registration
       let notificationChannel = FlutterMethodChannel(
         name: "snaplook/notifications",
@@ -251,6 +256,62 @@ import FirebaseMessaging
             defaults.synchronize()
           }
           result(platformType)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
+
+      nativeShareChannel.setMethodCallHandler { [weak self] call, result in
+        guard let _ = self else {
+          result(FlutterError(code: "UNAVAILABLE", message: "AppDelegate released", details: nil))
+          return
+        }
+
+        switch call.method {
+        case "shareImageWithText":
+          guard let args = call.arguments as? [String: Any],
+                let path = args["path"] as? String,
+                let text = args["text"] as? String else {
+            result(FlutterError(code: "INVALID_ARGS", message: "Missing path or text", details: nil))
+            return
+          }
+
+          let subject = (args["subject"] as? String) ?? ""
+          let origin = args["origin"] as? [String: Double]
+          let fileURL = URL(fileURLWithPath: path)
+
+          guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            result(FlutterError(code: "FILE_MISSING", message: "File does not exist at path", details: path))
+            return
+          }
+
+          DispatchQueue.main.async {
+            var items: [Any] = [fileURL]
+            if !text.isEmpty {
+              items.append(text)
+            }
+
+            let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
+            if !subject.isEmpty {
+              activityVC.setValue(subject, forKey: "subject")
+            }
+
+            if let popover = activityVC.popoverPresentationController {
+              popover.sourceView = controller.view
+              if let origin = origin,
+                 let x = origin["x"], let y = origin["y"],
+                 let w = origin["w"], let h = origin["h"] {
+                popover.sourceRect = CGRect(x: x, y: y, width: w, height: h)
+              } else {
+                popover.sourceRect = CGRect(x: controller.view.bounds.midX, y: controller.view.bounds.midY, width: 0, height: 0)
+                popover.permittedArrowDirections = []
+              }
+            }
+
+            controller.present(activityVC, animated: true) {
+              result(nil)
+            }
+          }
         default:
           result(FlutterMethodNotImplemented)
         }

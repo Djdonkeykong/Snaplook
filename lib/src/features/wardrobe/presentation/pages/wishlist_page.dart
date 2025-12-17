@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:easy_refresh/easy_refresh.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:snaplook/src/shared/utils/native_share_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -1004,12 +1005,20 @@ class _HistoryCard extends ConsumerWidget {
     }
 
     if (shareImage != null) {
-      await Share.shareXFiles(
-        [shareImage],
+      final handled = await NativeShareHelper.shareImageFirst(
+        file: shareImage,
         text: payload.message,
         subject: payload.subject,
-        sharePositionOrigin: origin,
+        origin: origin,
       );
+      if (!handled) {
+        await Share.shareXFiles(
+          [shareImage],
+          text: payload.message,
+          subject: payload.subject,
+          sharePositionOrigin: origin,
+        );
+      }
     } else {
       await Share.share(
         payload.message,
