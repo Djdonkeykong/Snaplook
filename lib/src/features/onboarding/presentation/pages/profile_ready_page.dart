@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -60,6 +61,15 @@ class ProfileReadyPage extends StatelessWidget {
                   color: AppColors.textSecondary,
                   fontFamily: 'PlusJakartaSans',
                   height: 1.5,
+                ),
+              ),
+              SizedBox(height: spacing.l),
+              Align(
+                alignment: Alignment.center,
+                child: Lottie.asset(
+                  'assets/animations/arrow.json',
+                  height: 220,
+                  repeat: true,
                 ),
               ),
               SizedBox(height: spacing.xl),
