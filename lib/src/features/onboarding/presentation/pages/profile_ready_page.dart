@@ -53,23 +53,23 @@ class ProfileReadyPage extends StatelessWidget {
                 ),
               ),
               SizedBox(height: spacing.m),
-              const Text(
-                'Your feed is tuned to your taste. Start exploring looks crafted for you and save what you love.',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
-                  fontFamily: 'PlusJakartaSans',
-                  height: 1.5,
-                ),
-              ),
-              SizedBox(height: spacing.l),
               Align(
                 alignment: Alignment.center,
                 child: Lottie.asset(
                   'assets/animations/arrow2.json',
                   height: 440,
                   repeat: false,
+                ),
+              ),
+              SizedBox(height: spacing.m),
+              const Text(
+                'Snaplook has aligned your preferences into a clear style direction',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
+                  fontFamily: 'PlusJakartaSans',
+                  height: 1.5,
                 ),
               ),
               SizedBox(height: spacing.xl),
