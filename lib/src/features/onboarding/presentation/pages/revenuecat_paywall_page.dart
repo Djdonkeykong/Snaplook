@@ -796,7 +796,7 @@ class _TrialTimeline extends StatelessWidget {
             iconAsset: 'assets/icons/iconamoon--lock-off.svg',
             iconColor: Colors.white,
             iconBgColor: const Color(0xFFf2003c),
-            iconSize: 18,
+            iconSize: 20,
             iconVerticalOffset: -1,
             title: 'Today',
             description:
@@ -807,7 +807,7 @@ class _TrialTimeline extends StatelessWidget {
             iconAsset: 'assets/icons/lucide--bell-ring.svg',
             iconColor: Colors.white,
             iconBgColor: const Color(0xFFf2003c),
-            iconSize: 16,
+            iconSize: 18,
             title: 'In 2 Days',
             description: "We'll send you a reminder that your trial is ending soon.",
             isLast: false,
@@ -816,8 +816,8 @@ class _TrialTimeline extends StatelessWidget {
             iconAsset: 'assets/icons/mdi--crown-outline.svg',
             iconColor: Colors.white,
             iconBgColor: AppColors.textPrimary,
-            iconSize: 18,
-            iconVerticalOffset: -2,
+            iconSize: 20,
+            iconVerticalOffset: -1,
             title: 'In 3 Days',
             description:
                 "You'll be charged on $trialEndFormatted unless you cancel anytime before.",
