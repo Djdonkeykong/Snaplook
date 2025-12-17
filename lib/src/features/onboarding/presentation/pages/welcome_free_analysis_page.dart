@@ -13,6 +13,7 @@ import 'notification_permission_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
 import '../widgets/onboarding_bottom_bar.dart';
+import '../../domain/providers/gender_provider.dart';
 
 class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
   const WelcomeFreeAnalysisPage({super.key});

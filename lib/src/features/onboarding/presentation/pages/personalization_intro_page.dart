@@ -6,8 +6,8 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import 'style_direction_page.dart';
 import '../widgets/progress_indicator.dart';
+import 'gender_selection_page.dart';
 
 class PersonalizationIntroPage extends StatefulWidget {
   const PersonalizationIntroPage({super.key});
@@ -181,7 +181,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
               HapticFeedback.mediumImpact();
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const StyleDirectionPage(),
+                  builder: (context) => const GenderSelectionPage(),
                 ),
               );
             },
