@@ -793,7 +793,7 @@ class _TrialTimeline extends StatelessWidget {
       child: Column(
         children: [
           _TimelineItem(
-            icon: Icons.lock_open_rounded,
+            iconAsset: 'assets/icons/iconamoon--lock-off.svg',
             iconColor: const Color(0xFFf2003c),
             iconBgColor: const Color(0xFFf2003c),
             title: 'Today',
@@ -802,7 +802,7 @@ class _TrialTimeline extends StatelessWidget {
             isLast: false,
           ),
           _TimelineItem(
-            icon: Icons.notifications_rounded,
+            iconAsset: 'assets/icons/lucide--bell-ring.svg',
             iconColor: const Color(0xFFf2003c),
             iconBgColor: const Color(0xFFf2003c),
             title: 'In 2 Days',
@@ -810,7 +810,7 @@ class _TrialTimeline extends StatelessWidget {
             isLast: false,
           ),
           _TimelineItem(
-            icon: Icons.workspace_premium_rounded,
+            iconAsset: 'assets/icons/mdi--crown-outline.svg',
             iconColor: Colors.white,
             iconBgColor: AppColors.textPrimary,
             title: 'In 3 Days',
@@ -825,7 +825,7 @@ class _TrialTimeline extends StatelessWidget {
 }
 
 class _TimelineItem extends StatelessWidget {
-  final IconData icon;
+  final String iconAsset;
   final Color iconColor;
   final Color iconBgColor;
   final String title;
@@ -833,7 +833,7 @@ class _TimelineItem extends StatelessWidget {
   final bool isLast;
 
   const _TimelineItem({
-    required this.icon,
+    required this.iconAsset,
     required this.iconColor,
     required this.iconBgColor,
     required this.title,
@@ -856,10 +856,16 @@ class _TimelineItem extends StatelessWidget {
                   color: iconBgColor,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 18,
+                child: Center(
+                  child: SvgPicture.asset(
+                    iconAsset,
+                    width: 18,
+                    height: 18,
+                    colorFilter: ColorFilter.mode(
+                      iconColor,
+                      BlendMode.srcIn,
+                    ),
+                  ),
                 ),
               ),
               if (!isLast)
@@ -882,7 +888,7 @@ class _TimelineItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 1),
+                  const SizedBox(height: 6),
                   Text(
                     title,
                     style: const TextStyle(
