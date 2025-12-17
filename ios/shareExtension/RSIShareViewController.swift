@@ -5873,7 +5873,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         revertCropButton?.removeFromSuperview()
         let revertButton = UIButton(type: .system)
         revertButton.translatesAutoresizingMaskIntoConstraints = false
-        let revertConfig = UIImage.SymbolConfiguration(pointSize: 16, weight: .semibold)
+        let revertConfig = UIImage.SymbolConfiguration(pointSize: 24, weight: .semibold)
         revertButton.setImage(UIImage(systemName: "arrow.uturn.backward", withConfiguration: revertConfig), for: .normal)
         revertButton.tintColor = .white
         revertButton.backgroundColor = UIColor.black.withAlphaComponent(0.6)
