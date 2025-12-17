@@ -754,6 +754,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       _TutorialOptionData(
         label: 'Pinterest',
         source: _TutorialSource.pinterest,
+        isEnabled: false,
+        statusLabel: 'Coming soon',
         iconBuilder: () => SvgPicture.asset(
           'assets/icons/pinterest.svg',
           width: 24,
@@ -763,6 +765,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       _TutorialOptionData(
         label: 'TikTok',
         source: _TutorialSource.tiktok,
+        isEnabled: false,
+        statusLabel: 'Coming soon',
         iconBuilder: () => SvgPicture.asset(
           'assets/icons/4362958_tiktok_logo_social media_icon.svg',
           width: 24,
@@ -772,6 +776,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       _TutorialOptionData(
         label: 'Photos',
         source: _TutorialSource.photos,
+        isEnabled: false,
+        statusLabel: 'Coming soon',
         iconBuilder: () => Image.asset(
           'assets/icons/photos.png',
           width: 24,
@@ -782,6 +788,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       _TutorialOptionData(
         label: 'IMDb',
         source: _TutorialSource.imdb,
+        isEnabled: false,
+        statusLabel: 'Coming soon',
         iconBuilder: () => Image.asset(
           'assets/icons/imdb.png',
           width: 24,
@@ -792,11 +800,15 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       _TutorialOptionData(
         label: 'Web Browsers',
         source: _TutorialSource.safari,
+        isEnabled: false,
+        statusLabel: 'Coming soon',
         iconBuilder: () => const _BrowserIconStack(),
       ),
       _TutorialOptionData(
         label: 'X',
         source: _TutorialSource.x,
+        isEnabled: false,
+        statusLabel: 'Coming soon',
         iconBuilder: () => Image.asset(
           'assets/icons/x-logo.png',
           width: 24,
@@ -874,6 +886,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                                   return _TutorialAppCard(
                                     label: option.label,
                                     iconWidget: option.iconBuilder(),
+                                    isEnabled: option.isEnabled,
+                                    statusLabel: option.statusLabel,
                                     isLoading:
                                         _loadingTutorialSource == option.source,
                                     onTap: () => _onTutorialOptionSelected(
@@ -1889,11 +1903,15 @@ class _TutorialOptionData {
   final String label;
   final _TutorialSource source;
   final Widget Function() iconBuilder;
+  final bool isEnabled;
+  final String? statusLabel;
 
   const _TutorialOptionData({
     required this.label,
     required this.source,
     required this.iconBuilder,
+    this.isEnabled = true,
+    this.statusLabel,
   });
 }
 
@@ -1902,12 +1920,16 @@ class _TutorialAppCard extends StatelessWidget {
   final Widget iconWidget;
   final VoidCallback onTap;
   final bool isLoading;
+  final bool isEnabled;
+  final String? statusLabel;
 
   const _TutorialAppCard({
     required this.label,
     required this.iconWidget,
     required this.onTap,
     this.isLoading = false,
+    this.isEnabled = true,
+    this.statusLabel,
   });
 
   @override
@@ -1915,6 +1937,20 @@ class _TutorialAppCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         if (isLoading) return;
+        if (!isEnabled) {
+          HapticFeedback.lightImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text(
+                statusLabel ?? 'Tutorial coming soon',
+                style: context.snackTextStyle(),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
         HapticFeedback.mediumImpact();
         onTap();
       },
@@ -1946,27 +1982,54 @@ class _TutorialAppCard extends StatelessWidget {
                             valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
                           ),
                         )
-                      : iconWidget,
+                      : Opacity(
+                          opacity: isEnabled ? 1 : 0.5,
+                          child: iconWidget,
+                        ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   isLoading ? 'Preparing your tutorial...' : label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                    color: isEnabled ? Colors.black : Colors.grey.shade500,
                     fontFamily: 'PlusJakartaSans',
                     letterSpacing: -0.2,
                   ),
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey.shade400,
-              ),
+              if (isLoading)
+                const SizedBox.shrink()
+              else if (!isEnabled)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    statusLabel ?? 'Coming soon',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                )
+              else
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey.shade400,
+                ),
             ],
           ),
         ),
