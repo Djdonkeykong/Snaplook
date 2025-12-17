@@ -312,11 +312,14 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
                 ),
                 SizedBox(height: spacing.l),
                 _FeatureItem(
-                  iconBgColor: const Color(0xFFFFE9D6),
-                  icon: SvgPicture.asset(
-                    'assets/icons/meteocons--lightning-bolt.svg',
-                    width: 48,
-                    height: 48,
+                  iconBgColor: const Color(0xFFFFF1E0),
+                  icon: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: SvgPicture.asset(
+                      'assets/icons/meteocons--lightning-bolt.svg',
+                      width: 48,
+                      height: 48,
+                    ),
                   ),
                   title: 'Shop similar pieces instantly',
                   description:
@@ -441,9 +444,9 @@ class _PlanOption extends StatelessWidget {
                       ),
                       child: isSelected
                           ? const Icon(
-                              Icons.check,
+                              Icons.check_rounded,
                               color: Colors.white,
-                              size: 16,
+                              size: 18,
                             )
                           : null,
                     ),

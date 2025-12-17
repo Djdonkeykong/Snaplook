@@ -736,8 +736,8 @@ class _PlanOption extends StatelessWidget {
                   ),
                   child: isSelected
                       ? const Icon(
-                          Icons.check,
-                          size: 16,
+                          Icons.check_rounded,
+                          size: 18,
                           color: Colors.white,
                         )
                       : null,
