@@ -3853,8 +3853,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 NSLayoutConstraint.activate([
                     backButton.leadingAnchor.constraint(equalTo: headerContainerView!.leadingAnchor, constant: 16),
                     backButton.centerYAnchor.constraint(equalTo: headerContainerView!.centerYAnchor),
-                    backButton.widthAnchor.constraint(equalToConstant: 40),
-                    backButton.heightAnchor.constraint(equalToConstant: 40)
+                    backButton.widthAnchor.constraint(equalToConstant: 24),
+                    backButton.heightAnchor.constraint(equalToConstant: 24)
                 ])
 
                 backButtonView = backButton
@@ -3862,20 +3862,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Apply onboarding-style appearance (also when reusing an existing button)
             if let backButton = backButtonView {
-                let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
+                let config = UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
                 let backImage = UIImage(systemName: "chevron.left", withConfiguration: config)
                 backButton.setImage(backImage, for: .normal)
                 backButton.tintColor = UIColor(red: 28/255, green: 28/255, blue: 37/255, alpha: 1.0)
-                backButton.backgroundColor = UIColor(red: 243/255, green: 244/255, blue: 246/255, alpha: 1.0)
-                backButton.layer.cornerRadius = 20
-                backButton.clipsToBounds = true
 
                 // Ensure size matches onboarding style even if constraints already existed
                 backButton.constraints.forEach { constraint in
                     if constraint.firstAttribute == .width {
-                        constraint.constant = 40
+                        constraint.constant = 24
                     } else if constraint.firstAttribute == .height {
-                        constraint.constant = 40
+                        constraint.constant = 24
                     }
                 }
 
