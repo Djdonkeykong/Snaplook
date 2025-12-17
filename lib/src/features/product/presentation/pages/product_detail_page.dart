@@ -479,7 +479,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                                     height: 48,
                                     child: Center(
                                       child: Transform.translate(
-                                        offset: isFavorite ? Offset.zero : const Offset(-1, 1),
+                                        offset: isFavorite ? Offset.zero : const Offset(-1, 0),
                                         child: Icon(
                                           isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
                                           size: isFavorite ? 24 * 0.85 : 24 * 0.75,
