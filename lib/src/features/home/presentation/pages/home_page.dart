@@ -1920,7 +1920,7 @@ class _TutorialAppCard extends StatelessWidget {
       },
       child: Container(
         width: double.infinity,
-        constraints: const BoxConstraints(minHeight: 68),
+        constraints: const BoxConstraints(minHeight: 56),
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
           borderRadius: BorderRadius.circular(16),

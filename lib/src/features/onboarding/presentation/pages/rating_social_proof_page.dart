@@ -185,6 +185,7 @@ class _EncouragementCard extends StatelessWidget {
               fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,
               height: 1.25,
+              fontFamily: 'PlusJakartaSans',
             ),
           ),
         ],
