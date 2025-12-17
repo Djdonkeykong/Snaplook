@@ -186,6 +186,7 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 16,
+                  fontWeight: FontWeight.w500,
                   color: Color(0xFF6B7280),
                   fontFamily: 'PlusJakartaSans',
                   height: 1.5,

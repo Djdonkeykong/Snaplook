@@ -861,10 +861,7 @@ class _TimelineItem extends StatelessWidget {
                     iconAsset,
                     width: 18,
                     height: 18,
-                    colorFilter: ColorFilter.mode(
-                      iconColor,
-                      BlendMode.srcIn,
-                    ),
+                    color: iconColor,
                   ),
                 ),
               ),
