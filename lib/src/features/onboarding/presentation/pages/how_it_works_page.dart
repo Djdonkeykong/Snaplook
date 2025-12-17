@@ -255,7 +255,7 @@ class _StepFrame extends StatelessWidget {
           builder: (context, constraints) {
             // Scale image relative to available width but cap to keep it crisp on tablets.
             final double width =
-                math.min(maxWidth, constraints.maxWidth * 0.9).toDouble();
+                math.min(maxWidth, constraints.maxWidth * 0.97).toDouble();
             return Align(
               alignment: Alignment.center,
               child: ClipRRect(
