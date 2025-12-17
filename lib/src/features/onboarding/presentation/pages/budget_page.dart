@@ -114,7 +114,7 @@ class _BudgetPageState extends State<BudgetPage> with TickerProviderStateMixin {
               ),
               SizedBox(height: spacing.xs),
               const Text(
-                'Pick one',
+                'Pick one that fits',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
