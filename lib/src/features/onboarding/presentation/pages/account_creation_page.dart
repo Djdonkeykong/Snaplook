@@ -13,7 +13,6 @@ import '../../../profile/presentation/widgets/profile_webview_bottom_sheet.dart'
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../widgets/progress_indicator.dart';
 import 'welcome_free_analysis_page.dart';
-import 'gender_selection_page.dart';
 import 'how_it_works_page.dart';
 import 'notification_permission_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
@@ -547,13 +546,13 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                             (route) => false,
                                           );
                                         } else {
-                                          // New user - start onboarding from gender selection
+                                          // New user - start onboarding at How It Works
                                           print(
-                                              '[AccountCreation] Apple - New user - navigating to gender selection');
+                                              '[AccountCreation] Apple - New user - navigating to how it works');
                                           Navigator.of(context).push(
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  const GenderSelectionPage(),
+                                                  const HowItWorksPage(),
                                             ),
                                           );
                                         }
@@ -565,7 +564,7 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                           Navigator.of(context).push(
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  const GenderSelectionPage(),
+                                                  const HowItWorksPage(),
                                             ),
                                           );
                                         }
@@ -710,13 +709,13 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                           (route) => false,
                                         );
                                       } else {
-                                        // New user - start onboarding from gender selection
+                                        // New user - start onboarding at How It Works
                                         print(
-                                            '[AccountCreation] Google - New user - navigating to gender selection');
+                                            '[AccountCreation] Google - New user - navigating to how it works');
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                const GenderSelectionPage(),
+                                                const HowItWorksPage(),
                                           ),
                                         );
                                       }
@@ -728,7 +727,7 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                const GenderSelectionPage(),
+                                                const HowItWorksPage(),
                                           ),
                                         );
                                       }

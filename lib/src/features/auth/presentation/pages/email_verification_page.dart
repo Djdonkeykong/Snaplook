@@ -6,7 +6,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
-import '../../../onboarding/presentation/pages/gender_selection_page.dart';
+import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show MainNavigation, selectedIndexProvider, scrollToTopTriggerProvider, isAtHomeRootProvider;
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -138,22 +138,22 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 (route) => false,
               );
             } else {
-              // New user - start onboarding
+              // New user - follow the same onboarding entry as social sign-in
               print('[EmailVerification] New user - navigating to onboarding');
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
-                  builder: (context) => const GenderSelectionPage(),
+                  builder: (context) => const HowItWorksPage(),
                 ),
                 (route) => false,
               );
             }
           } catch (e) {
-            // If check fails, assume new user
+            // If check fails, assume new user and route into onboarding entry
             print('[EmailVerification] Check error, assuming new user: $e');
             if (mounted) {
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
-                  builder: (context) => const GenderSelectionPage(),
+                  builder: (context) => const HowItWorksPage(),
                 ),
                 (route) => false,
               );

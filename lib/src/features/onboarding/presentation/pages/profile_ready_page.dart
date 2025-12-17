@@ -40,7 +40,7 @@ class ProfileReadyPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: spacing.xl * 1.5),
+              SizedBox(height: spacing.l),
               const Text(
                 'Your style, tuned to you',
                 style: TextStyle(

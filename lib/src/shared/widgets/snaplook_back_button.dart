@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'snaplook_circular_icon_button.dart';
 
@@ -25,8 +26,10 @@ class SnaplookBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color effectiveIconColor = iconColor ?? Colors.black;
-    final VoidCallback tapHandler =
-        onPressed ?? () => Navigator.of(context).maybePop();
+    final VoidCallback tapHandler = () {
+      HapticFeedback.mediumImpact();
+      (onPressed ?? () => Navigator.of(context).maybePop())();
+    };
 
     if (!showBackground) {
       return IconButton(

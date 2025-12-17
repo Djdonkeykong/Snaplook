@@ -20,6 +20,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   final ScrollController _scrollController = ScrollController();
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
+  bool _didPrecacheShareImage = false;
 
   @override
   void initState() {
@@ -31,6 +32,19 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
         _anchorOffset = _scrollController.offset;
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didPrecacheShareImage) return;
+    _didPrecacheShareImage = true;
+
+    // Preload the "Share your style" artwork before navigating to that page to avoid a flash
+    precacheImage(
+      const AssetImage('assets/images/social_media_share_mobile_screen.png'),
+      context,
+    );
   }
 
   @override
@@ -135,9 +149,9 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                     Center(
                       child: _StepFrame(
                         label: '1',
-                        assetPath: 'assets/images/photos_step1.png',
+                        assetPath: 'assets/images/how_it_works.png',
                         maxWidth: 320,
-                        aspectRatio: 0.56,
+                        aspectRatio: 792 / 1285,
                       ),
                     ),
                     SizedBox(height: spacing.l),

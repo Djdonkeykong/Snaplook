@@ -103,82 +103,17 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                 nextPage = const LoginPage();
               }
             } else {
-              // Onboarding not completed - check state and checkpoint
-              if (onboardingStateValue == 'payment_complete') {
-                // Paid but haven't completed onboarding - go to welcome
-                nextPage = const WelcomeFreeAnalysisPage();
-              } else if (onboardingStateValue == 'in_progress') {
-                // Onboarding in progress - resume from last checkpoint
-                final checkpoint = onboardingState['onboarding_checkpoint'] ?? 'gender';
-                debugPrint('[Splash] Resuming onboarding from checkpoint: $checkpoint');
-
-                // Build navigation stack with all previous pages so back button works
-                final needsStackBuilding = checkpoint != 'gender';
-
-                if (!mounted) return;
-
-                if (needsStackBuilding) {
-                  // Replace splash with first page, then push subsequent pages
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => const HowItWorksPage()),
-                  );
-
-                  // Build the rest of the stack based on checkpoint
-                  switch (checkpoint) {
-                    case 'discovery':
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const DiscoverySourcePage()),
-                      );
-                      break;
-                    case 'tutorial':
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const DiscoverySourcePage()),
-                      );
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const AwesomeIntroPage()),
-                      );
-                      break;
-                    case 'account':
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const DiscoverySourcePage()),
-                      );
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const AwesomeIntroPage()),
-                      );
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const AccountCreationPage()),
-                      );
-                      break;
-                    case 'welcome':
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const DiscoverySourcePage()),
-                      );
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const AwesomeIntroPage()),
-                      );
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const AccountCreationPage()),
-                      );
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const WelcomeFreeAnalysisPage()),
-                      );
-                      break;
-                  }
-                  return; // Early return since we've already navigated
-                } else {
-                  // Starting from beginning
-                  nextPage = const HowItWorksPage();
-                }
-              } else {
-                // Not started - go to gender selection
-                nextPage = const HowItWorksPage();
-              }
+              // Onboarding not completed - sign out and return to login
+              debugPrint(
+                  '[Splash] Onboarding state "$onboardingStateValue" not completed - signing out and redirecting to login');
+              await ref.read(authServiceProvider).signOut();
+              nextPage = const LoginPage();
             }
           }
         } catch (e) {
           debugPrint('[Splash] Error determining onboarding state: $e');
           // On error, default to safe behavior
-          nextPage = const HowItWorksPage();
+          nextPage = const LoginPage();
         }
       }
     } else {

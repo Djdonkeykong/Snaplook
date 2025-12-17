@@ -447,7 +447,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       borderColor: const Color(0xFFE5E7EB),
                       onPressed: () async {
                         Navigator.pop(context);
-                        Navigator.of(context).push(
+                        // Give the sheet a moment to finish closing for smoother transition
+                        await Future.delayed(const Duration(milliseconds: 150));
+                        if (!context.mounted) return;
+
+                        navigator.push(
                           MaterialPageRoute(
                             builder: (context) => const EmailSignInPage(),
                           ),

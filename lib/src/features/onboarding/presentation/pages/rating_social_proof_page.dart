@@ -60,17 +60,6 @@ class RatingSocialProofPage extends StatelessWidget {
                         height: 1.3,
                       ),
                     ),
-                    SizedBox(height: 8),
-                    Text(
-                      "We're just getting started.",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                        fontFamily: 'PlusJakartaSans',
-                        height: 1.4,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -104,8 +93,6 @@ class RatingSocialProofPage extends StatelessWidget {
                   await ReviewPromptLogsService.addLog(
                     '[$timestamp] requestReview() invoked successfully',
                   );
-                  // Wait for user to interact with the review dialog before navigating
-                  await Future.delayed(const Duration(seconds: 2));
                 } else {
                   await ReviewPromptLogsService.addLog(
                     '[$timestamp] requestReview() skipped (not available)',
@@ -180,7 +167,7 @@ class _EncouragementCard extends StatelessWidget {
             ),
           ),
           const Text(
-            "You're doing great so far!",
+            "Thanks for giving Snaplook a try!",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 22,

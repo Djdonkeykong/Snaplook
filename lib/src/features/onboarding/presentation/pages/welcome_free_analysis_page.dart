@@ -9,7 +9,6 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import '../../../user/repositories/user_profile_repository.dart';
-import 'gender_selection_page.dart';
 import 'notification_permission_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';

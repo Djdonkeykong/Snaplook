@@ -77,6 +77,15 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
     }
   }
 
+  Future<void> _playExitAnimation() async {
+    await Future.wait(_animationControllers.map(
+      (c) => c.animateBack(
+        0.0,
+        duration: const Duration(milliseconds: 200),
+      ),
+    ));
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -232,11 +241,13 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
         primaryButton: SizedBox(
           width: double.infinity,
           height: 56,
-          child: ElevatedButton(
+            child: ElevatedButton(
             onPressed: selectedRetailers.isEmpty
                 ? null
-                : () {
+                : () async {
                     HapticFeedback.mediumImpact();
+                    await _playExitAnimation();
+                    if (!mounted) return;
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => const PriceRangePage(),

@@ -204,7 +204,7 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
                   color: _isButtonEnabled
                       ? const Color(0xFFf2003c)
                       : const Color(0xFFD1D5DB),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(28),
                 ),
                 child: ElevatedButton(
                   onPressed: _isButtonEnabled ? _handleContinue : null,
@@ -218,7 +218,7 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
                     disabledBackgroundColor: const Color(0xFFD1D5DB),
                     disabledForegroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(28),
                     ),
                   ),
                   child: const Text(

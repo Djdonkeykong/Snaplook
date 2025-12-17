@@ -151,7 +151,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         SizedBox(
-                          width: 220,
+                          width: 190,
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(18),
                             child: AspectRatio(

@@ -75,6 +75,16 @@ class _StylePreferencesPageState extends ConsumerState<StylePreferencesPage>
     }
   }
 
+  Future<void> _playExitAnimation() async {
+    // Reverse all animations together for a quick fade-out
+    await Future.wait(_animationControllers.map(
+      (c) => c.animateBack(
+        0.0,
+        duration: const Duration(milliseconds: 200),
+      ),
+    ));
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -219,11 +229,13 @@ class _StylePreferencesPageState extends ConsumerState<StylePreferencesPage>
         primaryButton: SizedBox(
           width: double.infinity,
           height: 56,
-          child: ElevatedButton(
+            child: ElevatedButton(
             onPressed: selectedStyles.isEmpty
                 ? null
-                : () {
+                : () async {
                     HapticFeedback.mediumImpact();
+                    await _playExitAnimation();
+                    if (!mounted) return;
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => const PreferredRetailersPage(),

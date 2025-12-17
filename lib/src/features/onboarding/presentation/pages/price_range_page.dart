@@ -72,6 +72,15 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
     }
   }
 
+  Future<void> _playExitAnimation() async {
+    await Future.wait(_animationControllers.map(
+      (c) => c.animateBack(
+        0.0,
+        duration: const Duration(milliseconds: 200),
+      ),
+    ));
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -211,8 +220,10 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
           child: ElevatedButton(
             onPressed: selectedPrice == null
                 ? null
-                : () {
+                : () async {
                     HapticFeedback.mediumImpact();
+                    await _playExitAnimation();
+                    if (!mounted) return;
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => const CategoryInterestsPage(),
