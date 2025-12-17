@@ -12,7 +12,7 @@ import '../../domain/providers/gender_provider.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
-import 'age_range_page.dart';
+import 'style_direction_page.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 
@@ -341,7 +341,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                     // Navigate to next page immediately
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const AgeRangePage(),
+                        builder: (context) => const StyleDirectionPage(),
                       ),
                     );
                   }

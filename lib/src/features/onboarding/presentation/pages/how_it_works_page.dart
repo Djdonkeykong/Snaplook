@@ -78,7 +78,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     const double appBarHeight = kToolbarHeight;
 
     final double topInset = MediaQuery.of(context).padding.top;
-    final double bottomPadding = spacing.l;
+    final double bottomPadding = 0;
 
     // ✅ How tall the fade zone is at the very top of the scroll viewport.
     const double topFadeHeight = 36;
