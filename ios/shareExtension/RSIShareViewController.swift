@@ -666,6 +666,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var cancelButtonView: UIButton?
     private var backButtonView: UIButton?
     private var isShowingResults = false
+    private var isShowingPreview = false
     private let bannedKeywordPatterns: [NSRegularExpression] = [
         try! NSRegularExpression(pattern: "\\bwig\\b", options: [.caseInsensitive]),
         try! NSRegularExpression(pattern: "\\bwigs\\b", options: [.caseInsensitive]),
@@ -874,7 +875,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         let cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         cancelButton.addTarget(self, action: #selector(cancelImportTapped), for: .touchUpInside)
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
 
@@ -893,7 +894,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             headerContainer.heightAnchor.constraint(equalToConstant: 48),
 
             // Logo - centered with offset
-            logo.centerXAnchor.constraint(equalTo: headerContainer.centerXAnchor, constant: 13),
+            logo.centerXAnchor.constraint(equalTo: headerContainer.centerXAnchor, constant: 12),
             logo.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
             logo.heightAnchor.constraint(equalToConstant: 28),
             logo.widthAnchor.constraint(equalToConstant: 132),
@@ -3808,7 +3809,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             } else {
                 let button = UIButton(type: .system)
                 button.setTitle("Cancel", for: .normal)
-                button.titleLabel?.font = .systemFont(ofSize: 16)
+                button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
                 button.addTarget(self, action: #selector(cancelImportTapped), for: .touchUpInside)
                 cancelButton = button
             }
@@ -3826,7 +3827,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 container.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
                 container.heightAnchor.constraint(equalToConstant: 48),
 
-                logo.centerXAnchor.constraint(equalTo: container.centerXAnchor, constant: 13),
+                logo.centerXAnchor.constraint(equalTo: container.centerXAnchor, constant: 12),
                 logo.centerYAnchor.constraint(equalTo: container.centerYAnchor),
                 logo.heightAnchor.constraint(equalToConstant: 28),
                 logo.widthAnchor.constraint(equalToConstant: 132),
@@ -3839,8 +3840,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             headerLogoImageView = logo
         }
 
-        // Add/show back button only when showing results
-        if isShowingResults {
+        // Add/show back button when showing results or preview
+        if isShowingResults || isShowingPreview {
             if backButtonView == nil {
                 let backButton = UIButton(type: .system)
                 backButton.translatesAutoresizingMaskIntoConstraints = false
@@ -3851,7 +3852,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 backButton.setImage(backImage, for: .normal)
                 backButton.tintColor = UIColor(red: 28/255, green: 28/255, blue: 37/255, alpha: 1.0)
 
-                backButton.addTarget(self, action: #selector(backToPreviewTapped), for: .touchUpInside)
+                backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
 
                 headerContainerView?.addSubview(backButton)
 
