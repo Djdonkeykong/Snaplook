@@ -112,7 +112,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
             final supabase = Supabase.instance.client;
             final userResponse = await supabase
                 .from('users')
-                .select('onboarding_state')
+                .select('onboarding_state, subscription_status')
                 .eq('id', userId)
                 .maybeSingle();
 
@@ -120,7 +120,11 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
 
             // Check if user has completed onboarding
             final hasCompletedOnboarding = userResponse != null && userResponse['onboarding_state'] == 'completed';
+            final subscriptionStatus = userResponse != null ? userResponse['subscription_status'] as String? : null;
+            final hasActiveSubscription = subscriptionStatus == 'active';
+            final paymentCompleteState = userResponse != null && userResponse['onboarding_state'] == 'payment_complete';
             print('[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
+            print('[EmailVerification] Subscription status: $subscriptionStatus');
 
             if (hasCompletedOnboarding) {
               // Existing user who completed onboarding - go to main app
@@ -138,11 +142,13 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 (route) => false,
               );
             } else {
-              // New user - follow the same onboarding entry as social sign-in
-              print('[EmailVerification] New user - navigating to onboarding');
+              // New user. If they already purchased, jump to welcome; otherwise start from How It Works.
+              final shouldJumpToWelcome = hasActiveSubscription || paymentCompleteState;
+              print('[EmailVerification] New user - navigating to ${shouldJumpToWelcome ? 'welcome' : 'onboarding intro'}');
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
-                  builder: (context) => const HowItWorksPage(),
+                  builder: (context) =>
+                      shouldJumpToWelcome ? const WelcomeFreeAnalysisPage() : const HowItWorksPage(),
                 ),
                 (route) => false,
               );
