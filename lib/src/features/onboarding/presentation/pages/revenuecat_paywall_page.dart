@@ -816,7 +816,7 @@ class _TrialTimeline extends StatelessWidget {
             iconAsset: 'assets/icons/mdi--crown-outline.svg',
             iconColor: Colors.white,
             iconBgColor: AppColors.textPrimary,
-            iconSize: 20,
+            iconSize: 21,
             iconVerticalOffset: -1,
             title: 'In 3 Days',
             description:
