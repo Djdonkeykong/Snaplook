@@ -850,8 +850,8 @@ class _TimelineItem extends StatelessWidget {
           Column(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: iconBgColor,
                   shape: BoxShape.circle,
@@ -859,14 +859,14 @@ class _TimelineItem extends StatelessWidget {
                 child: Icon(
                   icon,
                   color: iconColor,
-                  size: 20,
+                  size: 18,
                 ),
               ),
               if (!isLast)
                 Expanded(
                   child: Container(
                     width: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    margin: const EdgeInsets.symmetric(vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFD1DC),
                       borderRadius: BorderRadius.circular(2),
@@ -875,30 +875,30 @@ class _TimelineItem extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 1),
                   Text(
                     title,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                       letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     description,
                     style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textSecondary,
                       height: 1.4,
