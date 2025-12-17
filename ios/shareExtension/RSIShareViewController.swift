@@ -3846,11 +3846,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 let backButton = UIButton(type: .system)
                 backButton.translatesAutoresizingMaskIntoConstraints = false
 
-                // Create back arrow icon
-                let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
+                // Create back arrow icon styled like the onboarding back button
+                let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold)
                 let backImage = UIImage(systemName: "chevron.left", withConfiguration: config)
                 backButton.setImage(backImage, for: .normal)
                 backButton.tintColor = UIColor(red: 28/255, green: 28/255, blue: 37/255, alpha: 1.0)
+                backButton.backgroundColor = UIColor(red: 243/255, green: 244/255, blue: 246/255, alpha: 1.0)
+                backButton.layer.cornerRadius = 20
+                backButton.clipsToBounds = true
 
                 backButton.addTarget(self, action: #selector(backButtonTapped), for: .touchUpInside)
 
@@ -3859,8 +3862,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 NSLayoutConstraint.activate([
                     backButton.leadingAnchor.constraint(equalTo: headerContainerView!.leadingAnchor, constant: 16),
                     backButton.centerYAnchor.constraint(equalTo: headerContainerView!.centerYAnchor),
-                    backButton.widthAnchor.constraint(equalToConstant: 44),
-                    backButton.heightAnchor.constraint(equalToConstant: 44)
+                    backButton.widthAnchor.constraint(equalToConstant: 40),
+                    backButton.heightAnchor.constraint(equalToConstant: 40)
                 ])
 
                 backButtonView = backButton
