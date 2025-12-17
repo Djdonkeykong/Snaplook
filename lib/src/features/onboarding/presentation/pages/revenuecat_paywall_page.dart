@@ -804,11 +804,10 @@ class _TrialTimeline extends StatelessWidget {
             isLast: false,
           ),
           _TimelineItem(
-            iconAsset: 'assets/icons/mdi--lock-open-outline.svg',
+            iconAsset: 'assets/icons/mdi--bell-ring-outline.svg',
             iconColor: Colors.white,
             iconBgColor: const Color(0xFFf2003c),
             iconSize: 18,
-            flipHorizontally: true,
             title: 'In 2 Days',
             description: "We'll send you a reminder that your trial is ending soon.",
             isLast: false,
