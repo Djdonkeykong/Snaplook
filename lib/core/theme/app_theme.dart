@@ -8,8 +8,9 @@ import 'app_colors.dart';
 class AppTheme {
   static ThemeData get lightTheme {
     const colorScheme = lightColorScheme;
-    final baseSnackTextStyle =
-        AppTextThemes.textTheme.bodyMedium ?? const TextStyle(fontFamily: 'PlusJakartaSans');
+    final baseSnackTextStyle = (AppTextThemes.textTheme.bodyMedium ??
+            const TextStyle())
+        .copyWith(fontFamily: 'PlusJakartaSans');
 
     return ThemeData(
       useMaterial3: true,
