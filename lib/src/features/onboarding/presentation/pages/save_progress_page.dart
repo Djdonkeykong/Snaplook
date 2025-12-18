@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +7,6 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
-import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../../../profile/presentation/widgets/profile_webview_bottom_sheet.dart';
 import '../widgets/progress_indicator.dart';
@@ -356,6 +354,9 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     final targetPlatform = Theme.of(context).platform;
     final isAppleSignInAvailable = targetPlatform == TargetPlatform.iOS ||
         targetPlatform == TargetPlatform.macOS;
+    final bottomPadding = kBottomNavigationBarHeight +
+        spacing.xl +
+        MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -372,7 +373,12 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: spacing.l),
+          padding: EdgeInsets.fromLTRB(
+            spacing.l,
+            0,
+            spacing.l,
+            bottomPadding,
+          ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: MediaQuery.of(context).size.height -
@@ -524,9 +530,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                       ),
                     ),
                   ),
-
-                  // Add bottom spacing to account for bottom navigation bar
-                  SizedBox(height: spacing.xxl * 3),
                 ],
               ),
             ),
