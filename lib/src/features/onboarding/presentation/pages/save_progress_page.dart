@@ -366,7 +366,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                     ),
                   ),
 
-                  SizedBox(height: spacing.xxl * 3),
+                  SizedBox(height: spacing.xxl * 4),
 
                   Center(
                     child: ConstrainedBox(
@@ -487,6 +487,48 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                 await _handleAuthSuccess(context);
                               }
                             },
+                          ),
+
+                          SizedBox(height: spacing.m),
+                          TextButton(
+                            onPressed: () async {
+                              HapticFeedback.mediumImpact();
+                              final result = await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const EmailSignInPage(),
+                                ),
+                              );
+
+                              if (result == true && context.mounted) {
+                                await Future.delayed(
+                                    const Duration(milliseconds: 500));
+                                await _handleAuthSuccess(context);
+                              }
+                            },
+                            child: RichText(
+                              textAlign: TextAlign.center,
+                              text: const TextSpan(
+                                text: 'Already have an account? ',
+                                style: TextStyle(
+                                  color: Color(0xFF6B7280),
+                                  fontSize: 14,
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.5,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: 'Sign In',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'PlusJakartaSans',
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
