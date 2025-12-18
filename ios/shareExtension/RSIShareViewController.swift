@@ -6066,17 +6066,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cropViewController.toolbar.tintColor = .white
         cropViewController.toolbar.doneTextButton.setTitleColor(snaplookRed, for: .normal)
         cropViewController.toolbar.doneTextButton.setTitleColor(snaplookRed.withAlphaComponent(0.8), for: .highlighted)
-        // Add a touch of padding so the titles sit away from the edges without clipping.
-        let toolbarInset: CGFloat = 12
-        let toolbarEdgeInsets = UIEdgeInsets(top: 8, left: toolbarInset, bottom: 8, right: toolbarInset)
-        cropViewController.toolbar.doneTextButton.contentEdgeInsets = toolbarEdgeInsets
-        cropViewController.toolbar.cancelTextButton.contentEdgeInsets = toolbarEdgeInsets
-        cropViewController.toolbar.doneTextButton.titleLabel?.adjustsFontSizeToFitWidth = true
-        cropViewController.toolbar.cancelTextButton.titleLabel?.adjustsFontSizeToFitWidth = true
-        cropViewController.toolbar.doneTextButton.titleLabel?.minimumScaleFactor = 0.7
-        cropViewController.toolbar.cancelTextButton.titleLabel?.minimumScaleFactor = 0.7
-        cropViewController.toolbar.doneTextButton.titleLabel?.lineBreakMode = .byTruncatingTail
-        cropViewController.toolbar.cancelTextButton.titleLabel?.lineBreakMode = .byTruncatingTail
+        // Reset to default sizing: no extra padding or scaling tweaks on the toolbar buttons.
+        cropViewController.toolbar.doneTextButton.contentEdgeInsets = .zero
+        cropViewController.toolbar.cancelTextButton.contentEdgeInsets = .zero
+        cropViewController.toolbar.doneTextButton.titleLabel?.adjustsFontSizeToFitWidth = false
+        cropViewController.toolbar.cancelTextButton.titleLabel?.adjustsFontSizeToFitWidth = false
 
         // Wrap in navigation controller for proper safe area handling in Share Extension
         let navController = UINavigationController(rootViewController: cropViewController)
