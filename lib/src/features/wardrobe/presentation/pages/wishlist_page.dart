@@ -223,36 +223,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     return true;
   }
 
-  void _rescanFavoriteItem(FavoriteItem favorite) {
-    final imageUrl = favorite.imageUrl.trim();
-    if (imageUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'No image available for this item.',
-            style: context.snackTextStyle(
-              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-            ),
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    HapticFeedback.selectionClick();
-
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (context) => DetectionPage(
-          imageUrl: imageUrl,
-          searchType: 'favorite_rescan',
-          sourceUrl: favorite.purchaseUrl,
-        ),
-      ),
-    );
-  }
-
   Widget _buildAllFavoritesTab(bool isInitialLoading, bool hasError,
       List<FavoriteItem> favorites, dynamic spacing) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -346,15 +316,8 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
               key: ValueKey(favorite.id),
               endActionPane: ActionPane(
                 motion: const StretchMotion(),
-                extentRatio: 0.45,
+                extentRatio: 0.25,
                 children: [
-                  SlidableAction(
-                    onPressed: (_) => _rescanFavoriteItem(favorite),
-                    backgroundColor: AppColors.secondary,
-                    foregroundColor: Colors.white,
-                    icon: Icons.search_rounded,
-                    label: 'Search',
-                  ),
                   SlidableAction(
                     onPressed: (_) async {
                       await _removeItem(favorite.productId);
@@ -846,7 +809,6 @@ class _FavoriteCard extends ConsumerWidget {
         await _openProductLink(context, productUrl);
       },
       child: Container(
-        margin: EdgeInsets.only(bottom: spacing.m),
         color: Colors.transparent,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -877,80 +839,53 @@ class _FavoriteCard extends ConsumerWidget {
 
             SizedBox(width: spacing.m),
 
-            // Product Details
+            // Product Details + Actions
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Text(
-                  favorite.brand,
-                  style: textTheme.titleMedium?.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  favorite.productName,
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontSize: 14,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                ],
-              ),
-            ),
-
-            SizedBox(width: spacing.sm),
-
-            // Action Icons (Search & Share)
-            SizedBox(
-              height: 100,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  GestureDetector(
-                    onTap: () => _rescanFavorite(context),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: colorScheme.secondary,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.search_rounded,
-                        color: colorScheme.onSecondary,
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () => _showShareMenu(context),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        border: Border.all(
-                          color: colorScheme.secondary,
-                          width: 1.5,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          favorite.brand,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
-                        Icons.more_horiz,
-                        color: colorScheme.secondary,
-                        size: 18,
+                      const SizedBox(width: 8),
+                      _ActionIcon(
+                        icon: Icons.search_rounded,
+                        backgroundColor: colorScheme.secondary,
+                        iconColor: colorScheme.onSecondary,
+                        onTap: () => _rescanFavorite(context),
                       ),
+                      const SizedBox(width: 8),
+                      _ActionIcon(
+                        icon: Icons.more_horiz,
+                        backgroundColor: Colors.transparent,
+                        iconColor: colorScheme.secondary,
+                        borderColor: colorScheme.secondary,
+                        onTap: () => _showShareMenu(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    favorite.productName,
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontSize: 14,
+                      color: colorScheme.onSurfaceVariant,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -1566,6 +1501,45 @@ class _HistoryCard extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionIcon extends StatelessWidget {
+  final IconData icon;
+  final Color backgroundColor;
+  final Color iconColor;
+  final Color? borderColor;
+  final VoidCallback onTap;
+
+  const _ActionIcon({
+    required this.icon,
+    required this.backgroundColor,
+    required this.iconColor,
+    this.borderColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(10),
+          border: borderColor != null
+              ? Border.all(color: borderColor!, width: 1.3)
+              : null,
+        ),
+        child: Icon(
+          icon,
+          color: iconColor,
+          size: 16,
         ),
       ),
     );
