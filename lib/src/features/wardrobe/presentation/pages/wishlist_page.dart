@@ -313,7 +313,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
             child: Slidable(
               key: ValueKey(favorite.id),
               endActionPane: ActionPane(
-                motion: const StretchMotion(),
+                motion: const ScrollMotion(),
                 extentRatio: 0.25,
                 children: [
                   CustomSlidableAction(
@@ -322,8 +322,8 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                     },
                     backgroundColor: colorScheme.error,
                     padding: EdgeInsets.zero,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minWidth: 78, maxWidth: 90),
+                    child: SizedBox(
+                      width: 86,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -333,16 +333,15 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                             size: 16,
                           ),
                           const SizedBox(height: 4),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              'Delete',
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                color: colorScheme.onError,
-                              ),
+                          Text(
+                            'Delete',
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
+                            style: TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              color: colorScheme.onError,
                             ),
                           ),
                         ],

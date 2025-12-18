@@ -609,7 +609,7 @@ class _HistoryCard extends ConsumerWidget {
       key: ValueKey(search['id'] ?? search['created_at'] ?? cloudinaryUrl ?? UniqueKey()),
       endActionPane: ActionPane(
         extentRatio: 0.45,
-        motion: const StretchMotion(),
+        motion: const ScrollMotion(),
         children: [
           SlidableAction(
             onPressed: (_) => _rescanSearch(context),
@@ -624,8 +624,8 @@ class _HistoryCard extends ConsumerWidget {
             },
             backgroundColor: colorScheme.error,
             padding: EdgeInsets.zero,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 78, maxWidth: 90),
+            child: SizedBox(
+              width: 86,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -635,16 +635,15 @@ class _HistoryCard extends ConsumerWidget {
                     size: 16,
                   ),
                   const SizedBox(height: 4),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      'Delete',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        color: colorScheme.onError,
-                      ),
+                  Text(
+                    'Delete',
+                    softWrap: false,
+                    overflow: TextOverflow.visible,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: colorScheme.onError,
                     ),
                   ),
                 ],
