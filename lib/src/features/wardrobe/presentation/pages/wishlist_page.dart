@@ -20,6 +20,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../shared/services/supabase_service.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
 import '../../../detection/presentation/pages/share_payload.dart';
 
@@ -62,6 +63,127 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     _historyScrollController.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<bool?> _showActionDialog({
+    required String title,
+    required String message,
+    required String confirmLabel,
+    required String cancelLabel,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final spacing = context.spacing;
+    final outlineColor = colorScheme.outline;
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.45),
+      builder: (dialogContext) {
+        return Dialog(
+          clipBehavior: Clip.antiAlias,
+          backgroundColor: colorScheme.surface,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(spacing.l, spacing.l, spacing.l, spacing.l),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    SnaplookCircularIconButton(
+                      icon: Icons.close,
+                      size: 40,
+                      iconSize: 18,
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      semanticLabel: 'Close',
+                    ),
+                  ],
+                ),
+                SizedBox(height: spacing.sm),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                SizedBox(height: spacing.l),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 56,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(false),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(56),
+                            side: BorderSide(color: outlineColor, width: 1.4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            foregroundColor: colorScheme.onSurface,
+                            textStyle: const TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          child: Text(cancelLabel, textAlign: TextAlign.center),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: spacing.sm),
+                    Expanded(
+                      child: SizedBox(
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            minimumSize: const Size.fromHeight(56),
+                            backgroundColor: AppColors.secondary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            textStyle: const TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: Text(confirmLabel, textAlign: TextAlign.center),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -157,47 +279,11 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
   }
 
   Future<bool> _removeItem(String productId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: const Text(
-          'Delete Favorite',
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text(
-          'Are you sure you want to remove this item from your favorites?',
-          style: TextStyle(fontFamily: 'PlusJakartaSans'),
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-              textStyle: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.secondary,
-              textStyle: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await _showActionDialog(
+      title: 'Delete Favorite',
+      message: 'Are you sure you want to remove this item from your favorites?',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
     );
 
     if (confirmed != true) return false;
@@ -1165,47 +1251,11 @@ class _HistoryCard extends ConsumerWidget {
       return false;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: const Text(
-          'Delete Search',
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text(
-          'Are you sure you want to remove this search from your history?',
-          style: TextStyle(fontFamily: 'PlusJakartaSans'),
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-              textStyle: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.secondary,
-              textStyle: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await _showActionDialog(
+      title: 'Delete Search',
+      message: 'Are you sure you want to remove this search from your history?',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
     );
 
     if (confirmed != true) return false;
