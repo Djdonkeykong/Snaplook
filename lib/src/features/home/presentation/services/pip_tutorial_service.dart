@@ -50,6 +50,10 @@ class PipTutorialService {
       return 'assets/videos/pinterest-tutorial.mp4';
     } else if (target == PipTutorialTarget.tiktok) {
       return 'assets/videos/tiktok-tutorial.mp4';
+    } else if (target == PipTutorialTarget.photos) {
+      return 'assets/videos/photos-tutorial.mp4';
+    } else if (target == PipTutorialTarget.imdb) {
+      return 'assets/videos/imdb-tutorial.mp4';
     }
     return 'assets/videos/pip-test.mp4';
   }

@@ -772,8 +772,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       _TutorialOptionData(
         label: 'Photos',
         source: _TutorialSource.photos,
-        isEnabled: false,
-        statusLabel: 'Coming soon',
         iconBuilder: () => Image.asset(
           'assets/icons/photos.png',
           width: 24,
@@ -784,8 +782,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       _TutorialOptionData(
         label: 'IMDb',
         source: _TutorialSource.imdb,
-        isEnabled: false,
-        statusLabel: 'Coming soon',
         iconBuilder: () => Image.asset(
           'assets/icons/imdb.png',
           width: 24,
@@ -934,6 +930,12 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       case _TutorialSource.pinterest:
         target = PipTutorialTarget.pinterest;
         break;
+      case _TutorialSource.photos:
+        target = PipTutorialTarget.photos;
+        break;
+      case _TutorialSource.imdb:
+        target = PipTutorialTarget.imdb;
+        break;
       case _TutorialSource.tiktok:
         target = PipTutorialTarget.tiktok;
         break;
@@ -984,12 +986,16 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       PipTutorialTarget.instagram => 'assets/videos/instagram-tutorial.mp4',
       PipTutorialTarget.pinterest => 'assets/videos/pinterest-tutorial.mp4',
       PipTutorialTarget.tiktok => 'assets/videos/tiktok-tutorial.mp4',
+      PipTutorialTarget.photos => 'assets/videos/photos-tutorial.mp4',
+      PipTutorialTarget.imdb => 'assets/videos/imdb-tutorial.mp4',
       _ => 'assets/videos/pip-test.mp4',
     };
     final deepLink = switch (target) {
       PipTutorialTarget.instagram => instagramDeepLink,
       PipTutorialTarget.pinterest => pinterestDeepLink,
       PipTutorialTarget.tiktok => null,
+      PipTutorialTarget.photos => null,
+      PipTutorialTarget.imdb => null,
       _ => null,
     };
     try {
