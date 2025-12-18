@@ -1451,57 +1451,38 @@ class _HistoryCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getSourceLabel(),
-                            style: textTheme.titleMedium?.copyWith(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
-                              fontFamily: 'PlusJakartaSans',
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _getSourceLabel(),
+                          style: textTheme.titleMedium?.copyWith(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                            fontFamily: 'PlusJakartaSans',
                           ),
-                          const SizedBox(height: 6),
-                          if (hasUsername) ...[
-                            Text(
-                              '@$trimmedUsername',
-                              style: textTheme.bodyMedium?.copyWith(
-                                fontSize: 14,
-                                color: colorScheme.onSurfaceVariant,
-                                fontFamily: 'PlusJakartaSans',
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                          ],
-                          Text(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          [
                             totalResults == 1
                                 ? '1 product found'
                                 : '$totalResults products found',
-                            style: textTheme.bodyMedium?.copyWith(
-                              fontSize: 14,
-                              color: colorScheme.onSurfaceVariant,
-                              fontFamily: 'PlusJakartaSans',
-                            ),
+                            if (createdLabel != null) createdLabel!,
+                          ].join(' • '),
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontSize: 14,
+                            color: colorScheme.onSurfaceVariant,
+                            fontFamily: 'PlusJakartaSans',
                           ),
-                          if (createdLabel != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              createdLabel,
-                              style: textTheme.bodySmall?.copyWith(
-                                fontSize: 12,
-                                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                                fontFamily: 'PlusJakartaSans',
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                     ),
                     const SizedBox(width: 12),
                     Column(
