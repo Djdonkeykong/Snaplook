@@ -321,6 +321,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                       await _removeItem(favorite.productId);
                     },
                     backgroundColor: colorScheme.error,
+                    closeOnTap: false,
                     padding: EdgeInsets.zero,
                     child: SizedBox(
                       width: 86,
@@ -1335,6 +1336,7 @@ class _HistoryCard extends ConsumerWidget {
               await _deleteSearch(context, ref);
             },
             backgroundColor: colorScheme.error,
+            closeOnTap: false,
             padding: EdgeInsets.zero,
             child: SizedBox(
               width: 86,
