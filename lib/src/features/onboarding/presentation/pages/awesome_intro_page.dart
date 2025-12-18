@@ -88,24 +88,20 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
               child: Center(
                 child: Stack(
                   children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: _isHeroReady
-                          ? Transform.scale(
-                              key: const ValueKey('hero-loaded'),
-                              scale: 0.77,
-                              child: Image(
-                                image: _heroImage,
-                                fit: BoxFit.contain,
-                                gaplessPlayback: true,
-                              ),
-                            )
-                          : const AspectRatio(
-                              key: ValueKey('hero-placeholder'),
-                              aspectRatio: 9 / 16,
-                              child: SizedBox.shrink(),
-                            ),
-                    ),
+                    if (_isHeroReady)
+                      Transform.scale(
+                        scale: 0.77,
+                        child: Image(
+                          image: _heroImage,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                        ),
+                      )
+                    else
+                      const AspectRatio(
+                        aspectRatio: 9 / 16,
+                        child: SizedBox.shrink(),
+                      ),
                     // White gradient overlay for fade effect
                     Positioned.fill(
                       child: Container(
