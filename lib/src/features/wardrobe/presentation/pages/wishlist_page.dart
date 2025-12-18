@@ -809,6 +809,7 @@ class _FavoriteCard extends ConsumerWidget {
       child: Container(
         width: double.infinity,
         color: Colors.transparent,
+        padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: spacing.s),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
