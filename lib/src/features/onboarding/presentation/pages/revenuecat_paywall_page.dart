@@ -324,12 +324,9 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
               try {
                 debugPrint('[RevenueCatPaywall] Starting restore purchases...');
 
-                final customerInfo = await RevenueCatService().restorePurchases();
+                final hasActiveSubscription = await RevenueCatService().restorePurchases();
 
                 if (!mounted) return;
-
-                final activeEntitlements = customerInfo.entitlements.active.values;
-                final hasActiveSubscription = activeEntitlements.isNotEmpty;
 
                 if (hasActiveSubscription) {
                   debugPrint('[RevenueCatPaywall] Purchases restored successfully');
