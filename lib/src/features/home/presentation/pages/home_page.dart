@@ -792,15 +792,11 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       _TutorialOptionData(
         label: 'Web Browsers',
         source: _TutorialSource.safari,
-        isEnabled: false,
-        statusLabel: 'Coming soon',
         iconBuilder: () => const _BrowserIconStack(),
       ),
       _TutorialOptionData(
         label: 'X',
         source: _TutorialSource.x,
-        isEnabled: false,
-        statusLabel: 'Coming soon',
         iconBuilder: () => Image.asset(
           'assets/icons/x-logo.png',
           width: 24,
@@ -936,8 +932,14 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       case _TutorialSource.imdb:
         target = PipTutorialTarget.imdb;
         break;
+      case _TutorialSource.safari:
+        target = PipTutorialTarget.safari;
+        break;
       case _TutorialSource.tiktok:
         target = PipTutorialTarget.tiktok;
+        break;
+      case _TutorialSource.x:
+        target = PipTutorialTarget.x;
         break;
       default:
         return; // Other apps still disabled for now
@@ -985,12 +987,17 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     const tiktokDeepLink = 'https://vm.tiktok.com/ZNRYGe1YY/';
     const imdbDeepLink =
         'https://www.imdb.com/name/nm2858875/mediaviewer/rm667585282?ref_=ext_shr_lnk';
+    const xDeepLink =
+        'https://x.com/iamjhud/status/1962314855802651108?s=46'; // specific post
+    const safariDeepLink = 'https://share.google/aPal8bORQGk5dKzan';
     final videoAsset = switch (target) {
       PipTutorialTarget.instagram => 'assets/videos/instagram-tutorial.mp4',
       PipTutorialTarget.pinterest => 'assets/videos/pinterest-tutorial.mp4',
       PipTutorialTarget.tiktok => 'assets/videos/tiktok-tutorial.mp4',
       PipTutorialTarget.photos => 'assets/videos/photos-tutorial.mp4',
       PipTutorialTarget.imdb => 'assets/videos/imdb-tutorial.mp4',
+      PipTutorialTarget.x => 'assets/videos/x-tutorial.mp4',
+      PipTutorialTarget.safari => 'assets/videos/web-tutorial.mp4',
       _ => 'assets/videos/pip-test.mp4',
     };
     final deepLink = switch (target) {
@@ -999,6 +1006,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       PipTutorialTarget.tiktok => tiktokDeepLink,
       PipTutorialTarget.photos => null,
       PipTutorialTarget.imdb => imdbDeepLink,
+      PipTutorialTarget.x => xDeepLink,
+      PipTutorialTarget.safari => safariDeepLink,
       _ => null,
     };
     try {

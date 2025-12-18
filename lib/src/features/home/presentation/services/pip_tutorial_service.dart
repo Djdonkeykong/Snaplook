@@ -54,6 +54,10 @@ class PipTutorialService {
       return 'assets/videos/photos-tutorial.mp4';
     } else if (target == PipTutorialTarget.imdb) {
       return 'assets/videos/imdb-tutorial.mp4';
+    } else if (target == PipTutorialTarget.x) {
+      return 'assets/videos/x-tutorial.mp4';
+    } else if (target == PipTutorialTarget.safari) {
+      return 'assets/videos/web-tutorial.mp4';
     }
     return 'assets/videos/pip-test.mp4';
   }
