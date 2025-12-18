@@ -521,10 +521,13 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         itemCount: searches.length,
         itemBuilder: (context, index) {
           final search = searches[index];
-          return _HistoryCard(
-            search: search,
-            spacing: spacing,
-            radius: radius,
+          return Padding(
+            padding: EdgeInsets.only(bottom: spacing.m),
+            child: _HistoryCard(
+              search: search,
+              spacing: spacing,
+              radius: radius,
+            ),
           );
         },
       ),
@@ -1402,7 +1405,6 @@ class _HistoryCard extends ConsumerWidget {
           );
         },
         child: Container(
-          margin: EdgeInsets.only(bottom: spacing.m),
           height: cardHeight,
           color: Colors.transparent,
           padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: spacing.s * 0.75),
