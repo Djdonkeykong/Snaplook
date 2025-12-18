@@ -120,11 +120,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 52,
+                        height: 58,
                         child: OutlinedButton(
                           onPressed: () => Navigator.of(dialogContext).pop(false),
                           style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(52),
+                            minimumSize: const Size.fromHeight(58),
                             side: BorderSide(color: outlineColor, width: 1.4),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24),
@@ -143,12 +143,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     SizedBox(width: spacing.sm),
                     Expanded(
                       child: SizedBox(
-                        height: 52,
+                        height: 58,
                         child: ElevatedButton(
                           onPressed: () => Navigator.of(dialogContext).pop(true),
                           style: ElevatedButton.styleFrom(
                             elevation: 0,
-                            minimumSize: const Size.fromHeight(52),
+                            minimumSize: const Size.fromHeight(58),
                             backgroundColor: AppColors.secondary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
