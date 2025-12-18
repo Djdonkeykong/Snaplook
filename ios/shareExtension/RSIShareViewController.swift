@@ -5881,8 +5881,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // "Crop" button (secondary style - white with border)
         let cropButton = UIButton(type: .system)
         cropButton.setTitle("Crop", for: .normal)
-        cropButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 16)
-            ?? .systemFont(ofSize: 16, weight: .semibold)
+        cropButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
         cropButton.backgroundColor = .white
         cropButton.setTitleColor(UIColor(red: 28/255, green: 28/255, blue: 37/255, alpha: 1.0), for: .normal)
         cropButton.layer.borderWidth = 1.5
@@ -6067,16 +6067,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
         cropViewController.toolbar.doneTextButton.setTitleColor(snaplookRed, for: .normal)
         cropViewController.toolbar.doneTextButton.setTitleColor(snaplookRed.withAlphaComponent(0.8), for: .highlighted)
         // Add a touch of padding so the titles sit away from the edges without clipping.
-        let toolbarInset: CGFloat = 8
-        let toolbarEdgeInsets = UIEdgeInsets(top: 4, left: toolbarInset, bottom: 4, right: toolbarInset)
+        let toolbarInset: CGFloat = 12
+        let toolbarEdgeInsets = UIEdgeInsets(top: 8, left: toolbarInset, bottom: 8, right: toolbarInset)
         cropViewController.toolbar.doneTextButton.contentEdgeInsets = toolbarEdgeInsets
         cropViewController.toolbar.cancelTextButton.contentEdgeInsets = toolbarEdgeInsets
         cropViewController.toolbar.doneTextButton.titleLabel?.adjustsFontSizeToFitWidth = true
         cropViewController.toolbar.cancelTextButton.titleLabel?.adjustsFontSizeToFitWidth = true
-        cropViewController.toolbar.doneTextButton.titleLabel?.minimumScaleFactor = 0.85
-        cropViewController.toolbar.cancelTextButton.titleLabel?.minimumScaleFactor = 0.85
-        cropViewController.toolbar.doneTextButton.titleLabel?.lineBreakMode = .byClipping
-        cropViewController.toolbar.cancelTextButton.titleLabel?.lineBreakMode = .byClipping
+        cropViewController.toolbar.doneTextButton.titleLabel?.minimumScaleFactor = 0.7
+        cropViewController.toolbar.cancelTextButton.titleLabel?.minimumScaleFactor = 0.7
+        cropViewController.toolbar.doneTextButton.titleLabel?.lineBreakMode = .byTruncatingTail
+        cropViewController.toolbar.cancelTextButton.titleLabel?.lineBreakMode = .byTruncatingTail
 
         // Wrap in navigation controller for proper safe area handling in Share Extension
         let navController = UINavigationController(rootViewController: cropViewController)
