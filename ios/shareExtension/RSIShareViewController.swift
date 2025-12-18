@@ -6639,9 +6639,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             if let application = responder as? UIApplication {
                 application.open(url, options: [:]) { success in
                     if success {
-                        self.shareLog("[SUCCESS] Opened Snaplook from credits modal")
+                        shareLog("[SUCCESS] Opened Snaplook from credits modal")
                     } else {
-                        self.shareLog("[ERROR] Failed to open Snaplook from credits modal")
+                        shareLog("[ERROR] Failed to open Snaplook from credits modal")
                     }
                 }
                 break
