@@ -316,14 +316,38 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                 motion: const StretchMotion(),
                 extentRatio: 0.25,
                 children: [
-                  SlidableAction(
+                  CustomSlidableAction(
                     onPressed: (_) async {
                       await _removeItem(favorite.productId);
                     },
                     backgroundColor: colorScheme.error,
-                    foregroundColor: colorScheme.onError,
-                    icon: SnaplookIcons.trashBin,
-                    label: 'Delete',
+                    padding: EdgeInsets.zero,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minWidth: 78, maxWidth: 90),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            SnaplookIcons.trashBin,
+                            color: colorScheme.onError,
+                            size: 16,
+                          ),
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Delete',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                                color: colorScheme.onError,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
