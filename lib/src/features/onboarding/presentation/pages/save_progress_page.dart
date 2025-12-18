@@ -12,6 +12,7 @@ import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../../../profile/presentation/widgets/profile_webview_bottom_sheet.dart';
 import '../widgets/progress_indicator.dart';
+import '../widgets/onboarding_bottom_bar.dart';
 import 'revenuecat_paywall_page.dart';
 import 'welcome_free_analysis_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
@@ -523,36 +524,33 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                       ),
                     ),
                   ),
-
-                  const Spacer(),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _handleSkip,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.secondary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                      ),
-                      child: const Text(
-                        'Continue',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: spacing.l),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: OnboardingBottomBar(
+        primaryButton: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: _handleSkip,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFf2003c),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
+            child: const Text(
+              'Continue',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'PlusJakartaSans',
+                letterSpacing: -0.2,
               ),
             ),
           ),
