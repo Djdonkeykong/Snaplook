@@ -7,6 +7,7 @@ import 'package:easy_refresh/easy_refresh.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:snaplook/src/shared/utils/native_share_helper.dart';
@@ -604,23 +605,29 @@ class _HistoryCard extends ConsumerWidget {
     final createdLabel = createdDate != null ? timeago.format(createdDate) : null;
     final hasResults = totalResults > 0;
 
-    return Dismissible(
+    return Slidable(
       key: ValueKey(search['id'] ?? search['created_at'] ?? cloudinaryUrl ?? UniqueKey()),
-      direction: DismissDirection.endToStart,
-      confirmDismiss: (_) => _deleteSearch(context, ref),
-      background: Container(
-        margin: EdgeInsets.only(bottom: spacing.m),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: colorScheme.error.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(radius.medium),
-        ),
-        alignment: Alignment.centerRight,
-        child: Icon(
-          SnaplookIcons.trashBin,
-          color: colorScheme.error,
-          size: 20,
-        ),
+      endActionPane: ActionPane(
+        extentRatio: 0.45,
+        motion: const StretchMotion(),
+        children: [
+          SlidableAction(
+            onPressed: (_) => _rescanSearch(context),
+            backgroundColor: AppColors.secondary,
+            foregroundColor: Colors.white,
+            icon: Icons.search_rounded,
+            label: 'Search',
+          ),
+          SlidableAction(
+            onPressed: (_) async {
+              await _deleteSearch(context, ref);
+            },
+            backgroundColor: colorScheme.error,
+            foregroundColor: colorScheme.onError,
+            icon: SnaplookIcons.trashBin,
+            label: 'Delete',
+          ),
+        ],
       ),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

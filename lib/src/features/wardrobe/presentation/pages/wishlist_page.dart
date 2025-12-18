@@ -6,6 +6,7 @@ import 'package:easy_refresh/easy_refresh.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:snaplook/src/shared/utils/native_share_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -309,27 +310,36 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         itemCount: favorites.length,
         itemBuilder: (context, index) {
           final favorite = favorites[index];
-          return Dismissible(
-            key: ValueKey(favorite.id),
-            direction: DismissDirection.endToStart,
-            confirmDismiss: (_) => _removeItem(favorite.productId),
-            background: Container(
-              margin: EdgeInsets.only(bottom: spacing.m),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: colorScheme.error.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(20),
+          return Padding(
+            padding: EdgeInsets.only(bottom: spacing.m),
+            child: Slidable(
+              key: ValueKey(favorite.id),
+              endActionPane: ActionPane(
+                motion: const StretchMotion(),
+                extentRatio: 0.45,
+                children: [
+                  SlidableAction(
+                    onPressed: (_) => _rescanFavorite(context),
+                    backgroundColor: AppColors.secondary,
+                    foregroundColor: Colors.white,
+                    icon: Icons.search_rounded,
+                    label: 'Search',
+                  ),
+                  SlidableAction(
+                    onPressed: (_) async {
+                      await _removeItem(favorite.productId);
+                    },
+                    backgroundColor: colorScheme.error,
+                    foregroundColor: colorScheme.onError,
+                    icon: SnaplookIcons.trashBin,
+                    label: 'Delete',
+                  ),
+                ],
               ),
-              alignment: Alignment.centerRight,
-              child: Icon(
-                SnaplookIcons.trashBin,
-                color: colorScheme.error,
-                size: 20,
+              child: _FavoriteCard(
+                favorite: favorite,
+                spacing: spacing,
               ),
-            ),
-            child: _FavoriteCard(
-              favorite: favorite,
-              spacing: spacing,
             ),
           );
         },
