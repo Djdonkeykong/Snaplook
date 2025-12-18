@@ -12,7 +12,7 @@ import 'feed_preferences_page.dart';
 import 'manage_subscription_page.dart';
 import 'notification_settings_page.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
-import '../../../../../shared/widgets/snaplook_circular_icon_button.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
