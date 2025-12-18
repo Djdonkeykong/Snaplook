@@ -12,6 +12,7 @@ import 'feed_preferences_page.dart';
 import 'manage_subscription_page.dart';
 import 'notification_settings_page.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
+import '../../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -88,20 +89,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         ),
                       ),
                     ),
-                    Material(
-                      color: colorScheme.onSurface.withOpacity(0.06),
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () => Navigator.of(dialogContext).pop(false),
-                        child: const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.close,
-                            size: 18,
-                          ),
-                        ),
-                      ),
+                    SnaplookCircularIconButton(
+                      icon: Icons.close,
+                      size: 40,
+                      iconSize: 18,
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      semanticLabel: 'Close',
                     ),
                   ],
                 ),
