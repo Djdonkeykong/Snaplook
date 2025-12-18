@@ -524,6 +524,9 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                       ),
                     ),
                   ),
+
+                  // Add bottom spacing to account for bottom navigation bar
+                  SizedBox(height: spacing.xxl * 3),
                 ],
               ),
             ),
