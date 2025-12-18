@@ -20,6 +20,8 @@ import FirebaseMessaging
   private let shareLogsKey = "ShareExtensionLogEntries"
   private let authFlagKey = "user_authenticated"
   private let authUserIdKey = "supabase_user_id"
+  private let authSubscriptionKey = "user_has_active_subscription"
+  private let authCreditsKey = "user_available_credits"
   private let pipTutorialChannelName = "pip_tutorial"
   private var pipTutorialManager: PipTutorialManager?
 
@@ -123,17 +125,25 @@ import FirebaseMessaging
           // Store user ID if authenticated
           if let userId = args["userId"] as? String {
             defaults.set(userId, forKey: self.authUserIdKey)
-            NSLog("[Auth] Set auth flag to: \(isAuthenticated), userId: \(userId)")
           } else {
             defaults.removeObject(forKey: self.authUserIdKey)
-            NSLog("[Auth] Set auth flag to: \(isAuthenticated), userId: nil")
           }
+
+          // Store subscription status
+          let hasActiveSubscription = args["hasActiveSubscription"] as? Bool ?? false
+          defaults.set(hasActiveSubscription, forKey: self.authSubscriptionKey)
+
+          // Store available credits
+          let availableCredits = args["availableCredits"] as? Int ?? 0
+          defaults.set(availableCredits, forKey: self.authCreditsKey)
 
           defaults.synchronize()
 
           // Verify it was written
-          let readBack = defaults.string(forKey: self.authUserIdKey)
-          NSLog("[Auth] Verification - read back userId: \(readBack ?? "nil")")
+          let readBackUserId = defaults.string(forKey: self.authUserIdKey)
+          let readBackSubscription = defaults.bool(forKey: self.authSubscriptionKey)
+          let readBackCredits = defaults.integer(forKey: self.authCreditsKey)
+          NSLog("[Auth] Set auth flag to: \(isAuthenticated), userId: \(readBackUserId ?? "nil"), subscription: \(readBackSubscription), credits: \(readBackCredits)")
 
           result(nil)
         default:

@@ -87,6 +87,17 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
 
     if (userId == null) return;
 
+    // CRITICAL: Link any anonymous purchase to this account
+    // This happens when user purchases anonymously then logs into existing account
+    final linkSuccess = await _linkSubscriptionToAccount(userId);
+    if (!linkSuccess) {
+      // Subscription conflict - dialog already shown, user chose action
+      return;
+    }
+
+    // Persist onboarding selections captured during this session
+    await _persistOnboardingSelections(userId);
+
     final userResponse = await supabase
         .from('users')
         .select('onboarding_state, subscription_status, is_trial')
@@ -143,14 +154,28 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
         (route) => false,
       );
     } else {
-      // User hasn't completed onboarding - continue from where they left off
-      debugPrint('[AccountCreation] User has not completed onboarding - continuing flow');
+      // User hasn't completed onboarding
+      final selectedGender = ref.read(selectedGenderProvider);
+      final hasOnboardingData = selectedGender != null;
 
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const HowItWorksPage(),
-        ),
-      );
+      if (hasActiveSubscription || hasOnboardingData) {
+        // User has subscription (just linked) OR went through onboarding - continue to welcome
+        debugPrint('[AccountCreation] User with subscription or onboarding data - going to welcome');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const WelcomeFreeAnalysisPage(),
+          ),
+          (route) => false,
+        );
+      } else {
+        // User has no subscription and no onboarding data - restart onboarding
+        debugPrint('[AccountCreation] User without subscription or onboarding data - restarting onboarding');
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const HowItWorksPage(),
+          ),
+        );
+      }
     }
   }
 

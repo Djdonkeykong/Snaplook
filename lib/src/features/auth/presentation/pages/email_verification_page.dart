@@ -8,6 +8,7 @@ import '../../domain/providers/auth_provider.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../onboarding/presentation/pages/notification_permission_page.dart';
+import '../../../onboarding/presentation/pages/revenuecat_paywall_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show MainNavigation, selectedIndexProvider, scrollToTopTriggerProvider, isAtHomeRootProvider;
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -207,7 +208,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
             final supabase = Supabase.instance.client;
             final userResponse = await supabase
                 .from('users')
-                .select('onboarding_state, subscription_status')
+                .select('onboarding_state, subscription_status, is_trial')
                 .eq('id', userId)
                 .maybeSingle();
 
@@ -216,13 +217,16 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
             // Check if user has completed onboarding
             final hasCompletedOnboarding = userResponse != null && userResponse['onboarding_state'] == 'completed';
             final subscriptionStatus = userResponse != null ? userResponse['subscription_status'] as String? : null;
-            final hasActiveSubscription = subscriptionStatus == 'active';
+            final isTrial = userResponse != null && userResponse['is_trial'] == true;
+            final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
             print('[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
             print('[EmailVerification] Subscription status: $subscriptionStatus');
+            print('[EmailVerification] Is trial: $isTrial');
+            print('[EmailVerification] Has active subscription: $hasActiveSubscription');
 
-            if (hasCompletedOnboarding) {
-              // Existing user who completed onboarding - go to main app
-              print('[EmailVerification] Existing user - navigating to main app');
+            if (hasCompletedOnboarding && hasActiveSubscription) {
+              // Existing user who completed onboarding and has active subscription - go to main app
+              print('[EmailVerification] Existing user with subscription - navigating to main app');
               // Reset to home tab
               ref.read(selectedIndexProvider.notifier).state = 0;
               // Invalidate all providers to refresh state
@@ -235,22 +239,40 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 ),
                 (route) => false,
               );
+            } else if (hasCompletedOnboarding && !hasActiveSubscription) {
+              // Existing user who completed onboarding but NO subscription - go to paywall
+              print('[EmailVerification] Existing user without subscription - navigating to paywall');
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const RevenueCatPaywallPage(),
+                ),
+                (route) => false,
+              );
             } else {
-              // New user - check if they have onboarding selections or active subscription
+              // New user - check onboarding progress
               final hasOnboardingData = selectedGender != null;
 
-              if (hasOnboardingData || hasActiveSubscription) {
-                // User went through onboarding OR purchased - go to welcome page
-                print('[EmailVerification] User completed onboarding or has subscription - navigating to welcome');
+              if (hasActiveSubscription) {
+                // User purchased subscription - skip to welcome page
+                print('[EmailVerification] New user with subscription - navigating to welcome');
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                     builder: (context) => const WelcomeFreeAnalysisPage(),
                   ),
                   (route) => false,
                 );
+              } else if (hasOnboardingData) {
+                // User went through onboarding but no subscription - go to paywall
+                print('[EmailVerification] New user with onboarding data but no subscription - navigating to paywall');
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const RevenueCatPaywallPage(),
+                  ),
+                  (route) => false,
+                );
               } else {
                 // New user without onboarding data - start from beginning
-                print('[EmailVerification] New user without onboarding data - navigating to onboarding intro');
+                print('[EmailVerification] New user without onboarding data - navigating to HowItWorksPage');
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                     builder: (context) => const HowItWorksPage(),

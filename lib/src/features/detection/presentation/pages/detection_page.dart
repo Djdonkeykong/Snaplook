@@ -13,6 +13,7 @@ import 'package:image/image.dart' as img;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:snaplook/src/shared/utils/native_share_helper.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'share_payload.dart';
 import '../../../home/domain/providers/image_provider.dart';
 import '../../../results/presentation/widgets/results_bottom_sheet.dart';
@@ -24,6 +25,7 @@ import '../providers/detection_provider.dart';
 import '../widgets/detection_progress_overlay.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import '../../../../shared/services/supabase_service.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
@@ -1556,12 +1558,44 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         // Trigger haptic feedback when results appear
         HapticFeedback.mediumImpact();
 
-        // Consume credit for successful analysis
+        // Deduct credits based on garment count
         try {
-          await ref.read(creditBalanceProvider.notifier).consumeCredit();
-          print('Credit consumed successfully');
+          // Count unique garments detected (group by detectionLabel)
+          final uniqueGarments = results
+              .map((r) => r.detectionLabel)
+              .where((label) => label != null && label.isNotEmpty)
+              .toSet();
+          final garmentCount = uniqueGarments.isEmpty ? 1 : uniqueGarments.length;
+
+          print('[Credits] Detected $garmentCount unique garments');
+
+          // Call Supabase function to deduct credits
+          final userId = Supabase.instance.client.auth.currentUser?.id;
+          if (userId != null) {
+            final response = await Supabase.instance.client
+                .rpc('deduct_credits', params: {
+              'p_user_id': userId,
+              'p_garment_count': garmentCount,
+            });
+
+            print('[Credits] Deduction response: $response');
+
+            if (response != null && response is List && response.isNotEmpty) {
+              final result = response.first;
+              if (result['success'] == true) {
+                print('[Credits] Successfully deducted $garmentCount credits');
+                print('[Credits] Remaining: free=${result['free_analyses_remaining']}, paid=${result['paid_credits_remaining']}');
+
+                // Re-sync auth state to update credits in iOS share extension
+                await ref.read(authServiceProvider).syncAuthState();
+              } else {
+                print('[Credits] Deduction failed: ${result['message']}');
+              }
+            }
+          }
         } catch (e) {
-          print('Error consuming credit: $e');
+          print('[Credits] Error deducting credits: $e');
+          // Don't block the user from seeing results if credit deduction fails
         }
 
         setState(() {

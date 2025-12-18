@@ -96,6 +96,8 @@ class AuthService {
       }
 
       String? effectiveUserId = userId;
+      bool hasActiveSubscription = false;
+
       if (isAuthenticated) {
         effectiveUserId ??= currentUser?.id;
 
@@ -114,11 +116,46 @@ class AuthService {
               '[Auth] WARNING: Skipping auth sync - userId still null after waiting');
           return;
         }
+
+        // Fetch subscription status and credit balance from database
+        int availableCredits = 0;
+        try {
+          final userResponse = await _supabase
+              .from('users')
+              .select('subscription_status, is_trial, paid_credits_remaining, free_analyses_remaining')
+              .eq('id', effectiveUserId)
+              .maybeSingle()
+              .timeout(const Duration(seconds: 5));
+
+          final subscriptionStatus = userResponse?['subscription_status'] ?? 'free';
+          final isTrial = userResponse?['is_trial'] == true;
+          hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
+
+          // Calculate available credits
+          final paidCredits = userResponse?['paid_credits_remaining'] ?? 0;
+          final freeAnalyses = userResponse?['free_analyses_remaining'] ?? 0;
+
+          // For paid users, use paid_credits_remaining
+          // For free users, convert free_analyses_remaining to credits (1 analysis = up to 5 credits)
+          availableCredits = hasActiveSubscription ? paidCredits : (freeAnalyses > 0 ? 5 : 0);
+
+          print('[Auth]   - subscription_status: $subscriptionStatus');
+          print('[Auth]   - is_trial: $isTrial');
+          print('[Auth]   - hasActiveSubscription: $hasActiveSubscription');
+          print('[Auth]   - paid_credits_remaining: $paidCredits');
+          print('[Auth]   - free_analyses_remaining: $freeAnalyses');
+          print('[Auth]   - availableCredits: $availableCredits');
+        } catch (e) {
+          print('[Auth] WARNING: Failed to fetch subscription and credit status: $e');
+          // Continue with hasActiveSubscription = false and availableCredits = 0
+        }
       }
 
       print('[Auth] Calling setAuthFlag method channel...');
       print('[Auth]   - isAuthenticated: $isAuthenticated');
       print('[Auth]   - userId: $effectiveUserId');
+      print('[Auth]   - hasActiveSubscription: $hasActiveSubscription');
+      print('[Auth]   - availableCredits: $availableCredits');
 
       // IMPORTANT: Always send the current state, even if null
       // This ensures old user_id values are cleared from UserDefaults
@@ -126,16 +163,18 @@ class AuthService {
         'isAuthenticated': isAuthenticated,
         'userId':
             effectiveUserId, // Will be null if not authenticated, clearing old values
+        'hasActiveSubscription': hasActiveSubscription,
+        'availableCredits': availableCredits,
       });
 
       print('[Auth] Method channel call completed, result: $result');
 
       if (isAuthenticated && effectiveUserId != null) {
         print(
-            '[Auth] Synced to share extension - authenticated with userId: $effectiveUserId');
+            '[Auth] Synced to share extension - authenticated with userId: $effectiveUserId, subscription: $hasActiveSubscription, credits: $availableCredits');
       } else {
         print(
-            '[Auth] Synced to share extension - NOT authenticated, cleared user_id');
+            '[Auth] Synced to share extension - NOT authenticated, cleared user_id, subscription, and credits');
       }
     } catch (e) {
       print('[Auth] ERROR calling method channel: $e');

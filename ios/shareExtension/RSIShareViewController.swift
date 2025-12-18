@@ -5983,6 +5983,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     @objc private func analyzeFromPreviewTapped() {
         shareLog("Analyze button tapped from preview")
 
+        // Check if user has available credits
+        if !hasAvailableCredits() {
+            shareLog("User has no credits - showing out of credits modal")
+            showOutOfCreditsModal()
+            return
+        }
+
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
@@ -6289,14 +6296,35 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Check for our custom authentication flag
         // The main app will set this when user logs in
         let isAuthenticated = defaults.bool(forKey: "user_authenticated")
+        let hasActiveSubscription = defaults.bool(forKey: "user_has_active_subscription")
 
-        if isAuthenticated {
-            shareLog("[SUCCESS] User authenticated")
+        if isAuthenticated && hasActiveSubscription {
+            shareLog("[SUCCESS] User authenticated with active subscription")
+            return true
+        } else if isAuthenticated && !hasActiveSubscription {
+            shareLog("[INFO] User authenticated but no active subscription")
+            return false
         } else {
             shareLog("[INFO] User not authenticated")
+            return false
+        }
+    }
+
+    private func hasAvailableCredits() -> Bool {
+        guard let defaults = UserDefaults(suiteName: appGroupId) else {
+            shareLog("[ERROR] Cannot access UserDefaults for credit check")
+            return false
         }
 
-        return isAuthenticated
+        let availableCredits = defaults.integer(forKey: "user_available_credits")
+
+        if availableCredits > 0 {
+            shareLog("[SUCCESS] User has \(availableCredits) credits available")
+            return true
+        } else {
+            shareLog("[INFO] User has 0 credits available")
+            return false
+        }
     }
 
     private func showLoginRequiredModal() {
@@ -6448,6 +6476,190 @@ open class RSIShareViewController: SLComposeServiceViewController {
         ])
 
         shareLog("[SUCCESS] Login required modal displayed")
+    }
+
+    private func showOutOfCreditsModal() {
+        // Haptic feedback
+        let notificationFeedback = UINotificationFeedbackGenerator()
+        notificationFeedback.notificationOccurred(.warning)
+
+        // Use existing blank overlay or create new one
+        let overlay: UIView
+        if let existingOverlay = view.subviews.first(where: { $0.tag == 9999 }) {
+            overlay = existingOverlay
+        } else {
+            overlay = UIView(frame: view.bounds)
+            overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            overlay.backgroundColor = UIColor.systemBackground
+            overlay.tag = 9999
+        }
+
+        // Add logo and cancel button at top
+        let headerContainer = UIView()
+        headerContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        let logo = UIImageView(image: UIImage(named: "logo"))
+        logo.contentMode = .scaleAspectFit
+        logo.translatesAutoresizingMaskIntoConstraints = false
+
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = .systemFont(ofSize: 16)
+        cancelButton.addTarget(self, action: #selector(cancelOutOfCreditsTapped), for: .touchUpInside)
+        cancelButton.translatesAutoresizingMaskIntoConstraints = false
+
+        headerContainer.addSubview(logo)
+        headerContainer.addSubview(cancelButton)
+
+        // Container for centered content
+        let contentContainer = UIView()
+        contentContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        // Title
+        let titleLabel = UILabel()
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.text = "Out of credits"
+        titleLabel.font = .systemFont(ofSize: 22, weight: .bold)
+        titleLabel.textAlignment = .center
+        titleLabel.textColor = .label
+
+        // Message
+        let messageLabel = UILabel()
+        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        messageLabel.text = "You've used all your credits. Upgrade to get 100 credits/month and continue discovering fashion."
+        messageLabel.font = .systemFont(ofSize: 15, weight: .regular)
+        messageLabel.textAlignment = .center
+        messageLabel.textColor = .secondaryLabel
+        messageLabel.numberOfLines = 0
+
+        // Buttons stack
+        let buttonStack = UIStackView()
+        buttonStack.translatesAutoresizingMaskIntoConstraints = false
+        buttonStack.axis = .vertical
+        buttonStack.spacing = 16
+        buttonStack.distribution = .fillEqually
+
+        // "Open Snaplook" button (pill-shaped)
+        let openAppButton = UIButton(type: .system)
+        openAppButton.setTitle("Open Snaplook", for: .normal)
+        openAppButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
+        openAppButton.setTitleColor(.white, for: .normal)
+        openAppButton.backgroundColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+        openAppButton.layer.cornerRadius = 28
+        openAppButton.addTarget(self, action: #selector(openAppFromCreditsModalTapped), for: .touchUpInside)
+
+        // "Cancel" button (pill-shaped with border)
+        let cancelActionButton = UIButton(type: .system)
+        cancelActionButton.setTitle("Cancel", for: .normal)
+        cancelActionButton.titleLabel?.font = UIFont(name: "PlusJakartaSans-Bold", size: 16)
+            ?? .systemFont(ofSize: 16, weight: .bold)
+        cancelActionButton.setTitleColor(.black, for: .normal)
+        cancelActionButton.backgroundColor = .clear
+        cancelActionButton.layer.cornerRadius = 28
+        cancelActionButton.layer.borderWidth = 1.5
+        cancelActionButton.layer.borderColor = UIColor(red: 209/255, green: 213/255, blue: 219/255, alpha: 1.0).cgColor
+        cancelActionButton.addTarget(self, action: #selector(cancelOutOfCreditsTapped), for: .touchUpInside)
+
+        buttonStack.addArrangedSubview(openAppButton)
+        buttonStack.addArrangedSubview(cancelActionButton)
+
+        contentContainer.addSubview(titleLabel)
+        contentContainer.addSubview(messageLabel)
+        contentContainer.addSubview(buttonStack)
+
+        overlay.addSubview(headerContainer)
+        overlay.addSubview(contentContainer)
+
+        // Layout constraints
+        NSLayoutConstraint.activate([
+            // Header at top
+            headerContainer.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 16),
+            headerContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 16),
+            headerContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
+            headerContainer.heightAnchor.constraint(equalToConstant: 44),
+
+            // Logo centered in header
+            logo.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            logo.centerXAnchor.constraint(equalTo: headerContainer.centerXAnchor),
+            logo.heightAnchor.constraint(equalToConstant: 28),
+
+            // Cancel button on right side
+            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            cancelButton.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
+
+            // Center content container
+            contentContainer.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            contentContainer.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
+            contentContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            contentContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
+
+            // Title
+            titleLabel.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+            titleLabel.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+
+            // Message
+            messageLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            messageLabel.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            messageLabel.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+
+            // Button stack
+            buttonStack.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: 32),
+            buttonStack.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            buttonStack.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            buttonStack.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
+
+            // Button heights
+            openAppButton.heightAnchor.constraint(equalToConstant: 56),
+            cancelActionButton.heightAnchor.constraint(equalToConstant: 56),
+        ])
+
+        shareLog("[SUCCESS] Out of credits modal displayed")
+    }
+
+    @objc private func openAppFromCreditsModalTapped() {
+        shareLog("Open App tapped from credits modal")
+
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+
+        // Open app to paywall/subscription page
+        loadIds()
+        guard let url = URL(string: "\(kSchemePrefix)-\(hostAppBundleIdentifier):share") else {
+            shareLog("ERROR: Failed to create app URL")
+            cancelOutOfCreditsTapped()
+            return
+        }
+
+        // Use responder chain to open the app (same as working Analyze in app flow)
+        var responder: UIResponder? = self
+        while responder != nil {
+            if let application = responder as? UIApplication {
+                application.open(url, options: [:]) { success in
+                    if success {
+                        self.shareLog("[SUCCESS] Opened Snaplook from credits modal")
+                    } else {
+                        self.shareLog("[ERROR] Failed to open Snaplook from credits modal")
+                    }
+                }
+                break
+            }
+            responder = responder?.next
+        }
+
+        finishExtensionRequest()
+    }
+
+    @objc private func cancelOutOfCreditsTapped() {
+        shareLog("Cancel tapped from credits modal")
+
+        // Haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+
+        finishExtensionRequest()
     }
 
     @objc private func openAppTapped() {
@@ -6642,6 +6854,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     @objc private func analyzeInAppTapped() {
         shareLog("Analyze in app tapped")
 
+        // Check if user has available credits
+        if !hasAvailableCredits() {
+            shareLog("User has no credits - showing out of credits modal")
+            showOutOfCreditsModal()
+            return
+        }
+
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
@@ -6811,6 +7030,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     @objc private func analyzeNowTapped() {
         shareLog("Analyze now tapped - starting detection")
         shareLog("DEBUG: pendingInstagramUrl=\(pendingInstagramUrl != nil ? "SET" : "NIL"), pendingPlatformType=\(pendingPlatformType ?? "NIL"), sharedMedia.count=\(sharedMedia.count)")
+
+        // Check if user has available credits
+        if !hasAvailableCredits() {
+            shareLog("User has no credits - showing out of credits modal")
+            showOutOfCreditsModal()
+            return
+        }
 
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
