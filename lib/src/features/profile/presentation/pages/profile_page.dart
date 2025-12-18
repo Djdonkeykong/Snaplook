@@ -75,7 +75,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Text(
@@ -127,7 +127,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             minimumSize: const Size.fromHeight(56),
                             side: BorderSide(color: outlineColor, width: 1.4),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28),
+                              borderRadius: BorderRadius.circular(30),
                             ),
                             foregroundColor: colorScheme.onSurface,
                             textStyle: const TextStyle(
@@ -152,7 +152,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             backgroundColor: AppColors.secondary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(28),
+                              borderRadius: BorderRadius.circular(30),
                             ),
                             textStyle: const TextStyle(
                               fontFamily: 'PlusJakartaSans',
