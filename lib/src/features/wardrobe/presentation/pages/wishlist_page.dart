@@ -1300,7 +1300,7 @@ class _HistoryCard extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     // Match favorite card height: 88px image + symmetric padding (spacing.s * 0.75 * 2)
-    final cardHeight = 88 + (spacing.s * 1.5);
+    final double cardHeight = 88.0 + (spacing.s * 1.5);
     final cloudinaryUrl = search['cloudinary_url'] as String?;
     final totalResults = (search['total_results'] as num?)?.toInt() ?? 0;
     final createdAt = search['created_at'] as String?;
