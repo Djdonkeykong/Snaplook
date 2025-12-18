@@ -14,6 +14,7 @@ import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart' show AccountCreationPage;
+import '../../../onboarding/presentation/pages/revenuecat_paywall_page.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../../user/repositories/user_profile_repository.dart';
 import 'email_sign_in_page.dart';
@@ -289,7 +290,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               if (userId != null) {
                                 final userResponse = await supabase
                                     .from('users')
-                                    .select('onboarding_state')
+                                    .select('onboarding_state, subscription_status, is_trial')
                                     .eq('id', userId)
                                     .maybeSingle();
 
@@ -297,14 +298,19 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     '[LoginPage] Apple sign-in - user ID: $userId');
                                 print(
                                     '[LoginPage] User onboarding_state from DB: ${userResponse?['onboarding_state']}');
+                                print(
+                                    '[LoginPage] User subscription_status from DB: ${userResponse?['subscription_status']}');
 
                                 final hasCompletedOnboarding =
                                     userResponse != null &&
                                         userResponse['onboarding_state'] == 'completed';
+                                final subscriptionStatus = userResponse?['subscription_status'] ?? 'free';
+                                final isTrial = userResponse?['is_trial'] == true;
+                                final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
 
-                                if (hasCompletedOnboarding) {
-                                  // NOTE: Device locale/location tracking disabled
-                                  // The user_profiles table doesn't exist in database
+                                if (hasCompletedOnboarding && hasActiveSubscription) {
+                                  // User completed onboarding and has active subscription - go to home
+                                  debugPrint('[LoginPage] User has completed onboarding and active subscription - going to home');
                                   debugPrint('[LoginPage] Skipping device locale setup (user_profiles table not configured)');
 
                                   ref
@@ -320,7 +326,18 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     ),
                                     (route) => false,
                                   );
+                                } else if (hasCompletedOnboarding && !hasActiveSubscription) {
+                                  // User completed onboarding but NO subscription - go to paywall
+                                  debugPrint('[LoginPage] User completed onboarding but no subscription - going to paywall');
+                                  navigator.pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (context) => const RevenueCatPaywallPage(),
+                                    ),
+                                    (route) => false,
+                                  );
                                 } else {
+                                  // User hasn't completed onboarding - continue onboarding flow
+                                  debugPrint('[LoginPage] User hasn\'t completed onboarding - going to HowItWorksPage');
                                   navigator.push(
                                     MaterialPageRoute(
                                       builder: (context) =>
@@ -376,7 +393,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             if (userId != null) {
                               final userResponse = await supabase
                                   .from('users')
-                                  .select('onboarding_state')
+                                  .select('onboarding_state, subscription_status, is_trial')
                                   .eq('id', userId)
                                   .maybeSingle();
 
@@ -384,14 +401,19 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   '[LoginPage] Google sign-in - user ID: $userId');
                               print(
                                   '[LoginPage] User onboarding_state from DB: ${userResponse?['onboarding_state']}');
+                              print(
+                                  '[LoginPage] User subscription_status from DB: ${userResponse?['subscription_status']}');
 
                               final hasCompletedOnboarding =
                                   userResponse != null &&
                                       userResponse['onboarding_state'] == 'completed';
+                              final subscriptionStatus = userResponse?['subscription_status'] ?? 'free';
+                              final isTrial = userResponse?['is_trial'] == true;
+                              final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
 
-                              if (hasCompletedOnboarding) {
-                                // NOTE: Device locale/location tracking disabled
-                                // The user_profiles table doesn't exist in database
+                              if (hasCompletedOnboarding && hasActiveSubscription) {
+                                // User completed onboarding and has active subscription - go to home
+                                debugPrint('[LoginPage] User has completed onboarding and active subscription - going to home');
                                 debugPrint('[LoginPage] Skipping device locale setup (user_profiles table not configured)');
 
                                 ref.read(selectedIndexProvider.notifier).state =
@@ -405,7 +427,18 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   ),
                                   (route) => false,
                                   );
+                                } else if (hasCompletedOnboarding && !hasActiveSubscription) {
+                                  // User completed onboarding but NO subscription - go to paywall
+                                  debugPrint('[LoginPage] User completed onboarding but no subscription - going to paywall');
+                                  navigator.pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (context) => const RevenueCatPaywallPage(),
+                                    ),
+                                    (route) => false,
+                                  );
                                 } else {
+                                  // User hasn't completed onboarding - continue onboarding flow
+                                  debugPrint('[LoginPage] User hasn\'t completed onboarding - going to HowItWorksPage');
                                   navigator.push(
                                     MaterialPageRoute(
                                       builder: (context) =>
