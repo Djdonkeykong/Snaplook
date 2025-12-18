@@ -120,14 +120,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 58,
+                        height: 56,
                         child: OutlinedButton(
                           onPressed: () => Navigator.of(dialogContext).pop(false),
                           style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(58),
+                            minimumSize: const Size.fromHeight(56),
                             side: BorderSide(color: outlineColor, width: 1.4),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
+                              borderRadius: BorderRadius.circular(28),
                             ),
                             foregroundColor: colorScheme.onSurface,
                             textStyle: const TextStyle(
@@ -143,16 +143,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     SizedBox(width: spacing.sm),
                     Expanded(
                       child: SizedBox(
-                        height: 58,
+                        height: 56,
                         child: ElevatedButton(
                           onPressed: () => Navigator.of(dialogContext).pop(true),
                           style: ElevatedButton.styleFrom(
                             elevation: 0,
-                            minimumSize: const Size.fromHeight(58),
+                            minimumSize: const Size.fromHeight(56),
                             backgroundColor: AppColors.secondary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
+                              borderRadius: BorderRadius.circular(28),
                             ),
                             textStyle: const TextStyle(
                               fontFamily: 'PlusJakartaSans',
