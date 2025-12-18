@@ -846,46 +846,56 @@ class _FavoriteCard extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Text(
-                          favorite.brand,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              favorite.brand,
+                              style: textTheme.titleMedium?.copyWith(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              favorite.productName,
+                              style: textTheme.bodyMedium?.copyWith(
+                                fontSize: 14,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      _ActionIcon(
-                        icon: Icons.search_rounded,
-                        backgroundColor: colorScheme.secondary,
-                        iconColor: colorScheme.onSecondary,
-                        onTap: () => _rescanFavorite(context),
-                      ),
-                      const SizedBox(width: 8),
-                      _ActionIcon(
-                        icon: Icons.more_horiz,
-                        backgroundColor: Colors.transparent,
-                        iconColor: colorScheme.secondary,
-                        borderColor: colorScheme.secondary,
-                        onTap: () => _showShareMenu(context),
+                      const SizedBox(width: 12),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _ActionIcon(
+                            icon: Icons.search_rounded,
+                            backgroundColor: colorScheme.secondary,
+                            iconColor: colorScheme.onSecondary,
+                            onTap: () => _rescanFavorite(context),
+                          ),
+                          const SizedBox(height: 8),
+                          _ActionIcon(
+                            icon: Icons.more_horiz,
+                            backgroundColor: Colors.transparent,
+                            iconColor: colorScheme.secondary,
+                            borderColor: colorScheme.secondary,
+                            onTap: () => _showShareMenu(context),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    favorite.productName,
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontSize: 14,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
