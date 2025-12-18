@@ -7,6 +7,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
+import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -14,6 +15,8 @@ import 'revenuecat_paywall_page.dart';
 import 'welcome_free_analysis_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../shared/widgets/bottom_sheet_handle.dart';
+import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -298,6 +301,171 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     await _navigateBasedOnSubscriptionStatus();
   }
 
+  Future<void> _showSignInBottomSheet(BuildContext context) async {
+    final spacing = context.spacing;
+    final platform = Theme.of(context).platform;
+    final isAppleSignInAvailable =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(20),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Stack(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(spacing.l),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      BottomSheetHandle(
+                        margin: EdgeInsets.only(bottom: spacing.m),
+                      ),
+                      const Center(
+                        child: Text(
+                          'Sign In',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontFamily: 'PlusJakartaSans',
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: spacing.xxl),
+                      if (isAppleSignInAvailable) ...[
+                        _AuthButton(
+                          icon: Icons.apple,
+                          iconSize: 32,
+                          label: 'Continue with Apple',
+                          backgroundColor: Colors.black,
+                          textColor: Colors.white,
+                          onPressed: () async {
+                            final authService = ref.read(authServiceProvider);
+                            try {
+                              await authService.signInWithApple();
+                              if (mounted) {
+                                Navigator.pop(sheetContext);
+                                await _handleAuthSuccess(context);
+                              }
+                            } catch (e) {
+                              if (mounted &&
+                                  e != AuthService.authCancelledException) {
+                                Navigator.pop(sheetContext);
+                                ScaffoldMessenger.of(context).clearSnackBars();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      e.toString(),
+                                      style: context.snackTextStyle(
+                                        merge: const TextStyle(
+                                            fontFamily: 'PlusJakartaSans'),
+                                      ),
+                                    ),
+                                    duration:
+                                        const Duration(milliseconds: 2500),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                        SizedBox(height: spacing.m),
+                      ],
+                      _AuthButtonWithSvg(
+                        svgAsset: 'assets/icons/google_logo.svg',
+                        iconSize: 22,
+                        label: 'Continue with Google',
+                        backgroundColor: Colors.white,
+                        textColor: Colors.black,
+                        borderColor: const Color(0xFFE5E7EB),
+                        onPressed: () async {
+                          final authService = ref.read(authServiceProvider);
+                          try {
+                            await authService.signInWithGoogle();
+                            if (mounted) {
+                              Navigator.pop(sheetContext);
+                              await _handleAuthSuccess(context);
+                            }
+                          } catch (e) {
+                            if (mounted &&
+                                e != AuthService.authCancelledException) {
+                              Navigator.pop(sheetContext);
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    e.toString(),
+                                    style: context.snackTextStyle(
+                                      merge: const TextStyle(
+                                          fontFamily: 'PlusJakartaSans'),
+                                    ),
+                                  ),
+                                  duration: const Duration(milliseconds: 2500),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                      SizedBox(height: spacing.m),
+                      _AuthButton(
+                        icon: Icons.email_outlined,
+                        iconSize: 24,
+                        label: 'Continue with Email',
+                        backgroundColor: Colors.white,
+                        textColor: Colors.black,
+                        borderColor: const Color(0xFFE5E7EB),
+                        onPressed: () async {
+                          Navigator.pop(sheetContext);
+                          final result = await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const EmailSignInPage(),
+                            ),
+                          );
+
+                          if (result == true && mounted) {
+                            await Future.delayed(
+                                const Duration(milliseconds: 500));
+                            await _handleAuthSuccess(context);
+                          }
+                        },
+                      ),
+                      SizedBox(height: spacing.xl),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: spacing.l,
+                  right: spacing.l,
+                  child: SnaplookCircularIconButton(
+                    icon: Icons.close,
+                    iconSize: 18,
+                    size: 32,
+                    onPressed: () => Navigator.pop(sheetContext),
+                    tooltip: 'Close',
+                    semanticLabel: 'Close',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Show loading indicator while checking authentication
@@ -493,17 +661,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                           TextButton(
                             onPressed: () async {
                               HapticFeedback.mediumImpact();
-                              final result = await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const EmailSignInPage(),
-                                ),
-                              );
-
-                              if (result == true && context.mounted) {
-                                await Future.delayed(
-                                    const Duration(milliseconds: 500));
-                                await _handleAuthSuccess(context);
-                              }
+                              await _showSignInBottomSheet(context);
                             },
                             child: RichText(
                               textAlign: TextAlign.center,
