@@ -19,13 +19,27 @@ class AwesomeIntroPage extends ConsumerStatefulWidget {
 }
 
 class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
+  late final AssetImage _heroImage;
+  Future<void>? _heroPrecache;
+  bool _isHeroReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _heroImage = const AssetImage('assets/images/social_media_share_mobile_screen.png');
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Precache image for instant loading
-    precacheImage(
-        const AssetImage('assets/images/social_media_share_mobile_screen.png'),
-        context);
+    // Precache image for instant loading and only show once decoded to avoid flicker.
+    _heroPrecache ??= precacheImage(_heroImage, context).then((_) {
+      if (mounted) {
+        setState(() {
+          _isHeroReady = true;
+        });
+      }
+    });
   }
 
   @override
@@ -74,11 +88,21 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
               child: Center(
                 child: Stack(
                   children: [
-                    Image.asset(
-                      'assets/images/social_media_share_mobile_screen.png',
-                      fit: BoxFit.contain,
-                      scale: 0.77,
-                      gaplessPlayback: true,
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: _isHeroReady
+                          ? Image(
+                              key: const ValueKey('hero-loaded'),
+                              image: _heroImage,
+                              fit: BoxFit.contain,
+                              scale: 0.77,
+                              gaplessPlayback: true,
+                            )
+                          : const AspectRatio(
+                              key: ValueKey('hero-placeholder'),
+                              aspectRatio: 9 / 16,
+                              child: SizedBox.shrink(),
+                            ),
                     ),
                     // White gradient overlay for fade effect
                     Positioned.fill(
