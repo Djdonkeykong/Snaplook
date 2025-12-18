@@ -218,7 +218,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         debugPrint(
             '[SaveProgress] No active subscription, navigating to paywall');
         if (mounted) {
-          Navigator.of(context).pushReplacement(
+          Navigator.of(context).push(
             MaterialPageRoute(
                 builder: (context) => const RevenueCatPaywallPage()),
           );
@@ -236,7 +236,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           ),
         );
 
-        Navigator.of(context).pushReplacement(
+        Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => const RevenueCatPaywallPage()),
         );
       }
@@ -246,7 +246,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   Future<void> _handleSkip() async {
     HapticFeedback.mediumImpact();
     debugPrint('[SaveProgress] User skipped account creation');
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const RevenueCatPaywallPage()),
     );
   }
