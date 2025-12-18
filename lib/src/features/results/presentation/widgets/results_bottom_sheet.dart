@@ -229,6 +229,12 @@ class _ProductCard extends StatelessWidget {
                     child: FavoriteButton(
                       product: result,
                       size: 18,
+                      containerSize: 28,
+                      containerOpacity: 0.75,
+                      shadowBlurRadius: 3,
+                      shadowOffset: const Offset(0, 1.5),
+                      iconSize: 12,
+                      translateInactiveIcon: false,
                     ),
                   ),
               ],
