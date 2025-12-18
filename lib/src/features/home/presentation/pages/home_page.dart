@@ -763,8 +763,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       _TutorialOptionData(
         label: 'TikTok',
         source: _TutorialSource.tiktok,
-        isEnabled: false,
-        statusLabel: 'Coming soon',
         iconBuilder: () => SvgPicture.asset(
           'assets/icons/4362958_tiktok_logo_social media_icon.svg',
           width: 24,
@@ -936,6 +934,9 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       case _TutorialSource.pinterest:
         target = PipTutorialTarget.pinterest;
         break;
+      case _TutorialSource.tiktok:
+        target = PipTutorialTarget.tiktok;
+        break;
       default:
         return; // Other apps still disabled for now
     }
@@ -982,11 +983,13 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     final videoAsset = switch (target) {
       PipTutorialTarget.instagram => 'assets/videos/instagram-tutorial.mp4',
       PipTutorialTarget.pinterest => 'assets/videos/pinterest-tutorial.mp4',
+      PipTutorialTarget.tiktok => 'assets/videos/tiktok-tutorial.mp4',
       _ => 'assets/videos/pip-test.mp4',
     };
     final deepLink = switch (target) {
       PipTutorialTarget.instagram => instagramDeepLink,
       PipTutorialTarget.pinterest => pinterestDeepLink,
+      PipTutorialTarget.tiktok => null,
       _ => null,
     };
     try {
