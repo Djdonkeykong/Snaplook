@@ -146,6 +146,26 @@ import FirebaseMessaging
           NSLog("[Auth] Set auth flag to: \(isAuthenticated), userId: \(readBackUserId ?? "nil"), subscription: \(readBackSubscription), credits: \(readBackCredits)")
 
           result(nil)
+        case "getNeedsCreditsFlag":
+          NSLog("[Auth] getNeedsCreditsFlag called from Flutter")
+
+          guard let defaults = self.sharedUserDefaults() else {
+            NSLog("[Auth] ERROR: Could not get sharedUserDefaults")
+            result(false)
+            return
+          }
+
+          let needsCredits = defaults.bool(forKey: "needs_credits_from_share_extension")
+          NSLog("[Auth] needs_credits_from_share_extension: \(needsCredits)")
+
+          // Clear the flag after reading it
+          if needsCredits {
+            defaults.removeObject(forKey: "needs_credits_from_share_extension")
+            defaults.synchronize()
+            NSLog("[Auth] Cleared needs_credits_from_share_extension flag")
+          }
+
+          result(needsCredits)
         default:
           result(FlutterMethodNotImplemented)
         }

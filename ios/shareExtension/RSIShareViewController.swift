@@ -849,12 +849,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Hide default share extension UI immediately
         hideDefaultUI()
 
-        // Check authentication and build complete UI immediately to prevent white flash
+        // Check authentication and credits, then build complete UI immediately to prevent white flash
         if !isUserAuthenticated() {
             shareLog("User not authenticated - building login modal in viewDidLoad")
             showLoginRequiredModal()
+        } else if !hasAvailableCredits() {
+            shareLog("User authenticated but no credits - building out of credits modal in viewDidLoad")
+            showOutOfCreditsModal()
         } else {
-            shareLog("User authenticated - building choice buttons in viewDidLoad")
+            shareLog("User authenticated with credits - building choice buttons in viewDidLoad")
             addLogoAndCancel()
             showChoiceButtons()
         }
@@ -6624,6 +6627,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
+
+        // Set flag to tell Flutter to navigate to paywall/subscription page
+        if let defaults = UserDefaults(suiteName: appGroupId) {
+            defaults.set(true, forKey: "needs_credits_from_share_extension")
+            defaults.synchronize()
+            shareLog("Set needs_credits_from_share_extension flag")
+        }
 
         // Open app to paywall/subscription page
         loadIds()

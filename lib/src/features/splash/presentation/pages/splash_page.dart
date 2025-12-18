@@ -8,6 +8,7 @@ import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
+import '../../../paywall/presentation/pages/revenuecat_paywall_page.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -57,6 +58,9 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       await authService.syncAuthState();
     }
 
+    // Check if user came from share extension needing credits
+    final needsCreditsFromShareExtension = await _checkNeedsCreditsFlag();
+
     // Determine the next page based on auth status, subscription status, and onboarding state
     Widget nextPage;
 
@@ -97,13 +101,26 @@ class _SplashPageState extends ConsumerState<SplashPage> {
             await SubscriptionSyncService().syncSubscriptionToSupabase();
           }
 
-          // Route based on onboarding completion and subscription status
-          if (hasCompletedOnboarding && hasActiveSubscription) {
-            nextPage = const MainNavigation(); // Home
-          } else if (hasCompletedOnboarding && !hasActiveSubscription) {
-            nextPage = const LoginPage(); // Subscription expired/free - send to login so they can renew or switch accounts
+          // Check if user needs credits from share extension
+          if (needsCreditsFromShareExtension) {
+            // User came from share extension with no credits
+            if (hasActiveSubscription) {
+              // Has subscription but ran out of monthly credits - show main app (they can't do more until credits reset)
+              nextPage = const MainNavigation();
+            } else {
+              // No subscription - show paywall to subscribe
+              nextPage = const RevenueCatPaywallPage();
+            }
           } else {
-            nextPage = const HowItWorksPage(); // Continue onboarding from where they left off
+            // Normal routing
+            // Route based on onboarding completion and subscription status
+            if (hasCompletedOnboarding && hasActiveSubscription) {
+              nextPage = const MainNavigation(); // Home
+            } else if (hasCompletedOnboarding && !hasActiveSubscription) {
+              nextPage = const LoginPage(); // Subscription expired/free - send to login so they can renew or switch accounts
+            } else {
+              nextPage = const HowItWorksPage(); // Continue onboarding from where they left off
+            }
           }
         } catch (e) {
           debugPrint('[Splash] Error checking subscription status: $e');
@@ -112,6 +129,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         }
       }
     } else {
+      // Not authenticated - always go to login
       nextPage = const LoginPage();
     }
 
@@ -154,5 +172,17 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         ),
       ),
     );
+  }
+
+  Future<bool> _checkNeedsCreditsFlag() async {
+    try {
+      const platform = MethodChannel('snaplook/auth');
+      final result = await platform.invokeMethod('getNeedsCreditsFlag');
+      debugPrint('[Splash] Needs credits from share extension: $result');
+      return result == true;
+    } catch (e) {
+      debugPrint('[Splash] Error checking needs credits flag: $e');
+      return false;
+    }
   }
 }
