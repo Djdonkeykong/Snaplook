@@ -24,6 +24,128 @@ import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
 import '../../../detection/presentation/pages/share_payload.dart';
 
+Future<bool?> _showWishlistActionDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmLabel,
+  required String cancelLabel,
+}) {
+  final theme = Theme.of(context);
+  final colorScheme = theme.colorScheme;
+  final spacing = context.spacing;
+  final outlineColor = colorScheme.outline;
+
+  return showDialog<bool>(
+    context: context,
+    barrierDismissible: true,
+    barrierColor: Colors.black.withOpacity(0.45),
+    builder: (dialogContext) {
+      return Dialog(
+        clipBehavior: Clip.antiAlias,
+        backgroundColor: colorScheme.surface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(spacing.l, spacing.l, spacing.l, spacing.l),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  SnaplookCircularIconButton(
+                    icon: Icons.close,
+                    size: 40,
+                    iconSize: 18,
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    semanticLabel: 'Close',
+                  ),
+                ],
+              ),
+              SizedBox(height: spacing.sm),
+              Text(
+                message,
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              SizedBox(height: spacing.l),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 56,
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(56),
+                          side: BorderSide(color: outlineColor, width: 1.4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          foregroundColor: colorScheme.onSurface,
+                          textStyle: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        child: Text(cancelLabel, textAlign: TextAlign.center),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: spacing.sm),
+                  Expanded(
+                    child: SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          minimumSize: const Size.fromHeight(56),
+                          backgroundColor: AppColors.secondary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          textStyle: const TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        child: Text(confirmLabel, textAlign: TextAlign.center),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
 final historyProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final supabaseService = SupabaseService();
@@ -65,126 +187,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     super.dispose();
   }
 
-  Future<bool?> _showActionDialog({
-    required String title,
-    required String message,
-    required String confirmLabel,
-    required String cancelLabel,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final spacing = context.spacing;
-    final outlineColor = colorScheme.outline;
-
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.45),
-      builder: (dialogContext) {
-        return Dialog(
-          clipBehavior: Clip.antiAlias,
-          backgroundColor: colorScheme.surface,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(spacing.l, spacing.l, spacing.l, spacing.l),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    SnaplookCircularIconButton(
-                      icon: Icons.close,
-                      size: 40,
-                      iconSize: 18,
-                      onPressed: () => Navigator.of(dialogContext).pop(false),
-                      semanticLabel: 'Close',
-                    ),
-                  ],
-                ),
-                SizedBox(height: spacing.sm),
-                Text(
-                  message,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                SizedBox(height: spacing.l),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 56,
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(false),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(56),
-                            side: BorderSide(color: outlineColor, width: 1.4),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            foregroundColor: colorScheme.onSurface,
-                            textStyle: const TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          child: Text(cancelLabel, textAlign: TextAlign.center),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: spacing.sm),
-                    Expanded(
-                      child: SizedBox(
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(true),
-                          style: ElevatedButton.styleFrom(
-                            elevation: 0,
-                            minimumSize: const Size.fromHeight(56),
-                            backgroundColor: AppColors.secondary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            textStyle: const TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          child: Text(confirmLabel, textAlign: TextAlign.center),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +281,8 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
   }
 
   Future<bool> _removeItem(String productId) async {
-    final confirmed = await _showActionDialog(
+    final confirmed = await _showWishlistActionDialog(
+      context,
       title: 'Delete Favorite',
       message: 'Are you sure you want to remove this item from your favorites?',
       confirmLabel: 'Delete',
@@ -1251,7 +1254,8 @@ class _HistoryCard extends ConsumerWidget {
       return false;
     }
 
-    final confirmed = await _showActionDialog(
+    final confirmed = await _showWishlistActionDialog(
+      context,
       title: 'Delete Search',
       message: 'Are you sure you want to remove this search from your history?',
       confirmLabel: 'Delete',
