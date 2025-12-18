@@ -10,6 +10,12 @@ class FavoriteButton extends ConsumerStatefulWidget {
   final double size;
   final Color? activeColor;
   final Color? inactiveColor;
+  final double? containerSize;
+  final double? containerOpacity;
+  final double? shadowBlurRadius;
+  final Offset? shadowOffset;
+  final double? iconSize;
+  final bool translateInactiveIcon;
 
   const FavoriteButton({
     super.key,
@@ -17,6 +23,12 @@ class FavoriteButton extends ConsumerStatefulWidget {
     this.size = 24,
     this.activeColor,
     this.inactiveColor,
+    this.containerSize,
+    this.containerOpacity,
+    this.shadowBlurRadius,
+    this.shadowOffset,
+    this.iconSize,
+    this.translateInactiveIcon = true,
   });
 
   @override
@@ -96,6 +108,15 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
   @override
   Widget build(BuildContext context) {
     final isFavorite = ref.watch(isFavoriteProvider(widget.product.id));
+    final containerSize = widget.containerSize ?? (widget.size + 16);
+    final containerOpacity = widget.containerOpacity ?? 0.9;
+    final shadowBlur = widget.shadowBlurRadius ?? 8.0;
+    final shadowOffset = widget.shadowOffset ?? const Offset(0, 2);
+    final iconSize = widget.iconSize ??
+        (isFavorite ? widget.size * 0.85 : widget.size * 0.75);
+    final offset = widget.translateInactiveIcon && !isFavorite
+        ? const Offset(-1, 0)
+        : Offset.zero;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -106,26 +127,29 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
           return Transform.scale(
             scale: _scaleAnimation.value,
             child: Container(
-              width: 28,
-              height: 28,
+              width: containerSize,
+              height: containerSize,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.75),
+                color: Colors.white.withOpacity(containerOpacity),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1.5),
+                    blurRadius: shadowBlur,
+                    offset: shadowOffset,
                   ),
                 ],
               ),
               child: Center(
-                child: Icon(
-                  isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
-                  size: 12,
-                  color: isFavorite
-                      ? (widget.activeColor ?? const Color(0xFFf2003c))
-                      : (widget.inactiveColor ?? Colors.black),
+                child: Transform.translate(
+                  offset: offset,
+                  child: Icon(
+                    isFavorite ? SnaplookIcons.heartFilled : SnaplookIcons.heartOutline,
+                    size: iconSize,
+                    color: isFavorite
+                        ? (widget.activeColor ?? const Color(0xFFf2003c))
+                        : (widget.inactiveColor ?? Colors.black),
+                  ),
                 ),
               ),
             ),

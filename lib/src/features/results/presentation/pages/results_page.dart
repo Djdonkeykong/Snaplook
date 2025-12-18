@@ -269,11 +269,11 @@ class _ProductCard extends StatelessWidget {
         child: Row(
           children: [
               // Image
-              Stack(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
+                  Stack(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(radius.small),
                       color: Colors.grey[100],
@@ -283,16 +283,22 @@ class _ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: 4,
-                    right: 4,
-                    child: FavoriteButton(
-                      product: result,
-                      size: 18,
-                    ),
+                      Positioned(
+                        bottom: 4,
+                        right: 4,
+                        child: FavoriteButton(
+                          product: result,
+                          size: 18,
+                          containerSize: 28,
+                          containerOpacity: 0.75,
+                          shadowBlurRadius: 3,
+                          shadowOffset: const Offset(0, 1.5),
+                          iconSize: 12,
+                          translateInactiveIcon: false,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
               SizedBox(width: spacing.m),
               Expanded(
                 child: Column(
