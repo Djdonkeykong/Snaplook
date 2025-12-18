@@ -330,7 +330,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                           Icon(
                             SnaplookIcons.trashBin,
                             color: colorScheme.onError,
-                            size: 16,
+                            size: 18,
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -340,7 +340,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                             style: TextStyle(
                               fontFamily: 'PlusJakartaSans',
                               fontWeight: FontWeight.w600,
-                              fontSize: 12,
+                              fontSize: 13,
                               color: colorScheme.onError,
                             ),
                           ),
