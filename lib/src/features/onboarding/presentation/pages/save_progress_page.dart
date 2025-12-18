@@ -352,7 +352,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: spacing.xl),
+                  SizedBox(height: spacing.l),
 
                   const Text(
                     'Save your progress',
@@ -366,7 +366,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                     ),
                   ),
 
-                  SizedBox(height: spacing.l),
+                  SizedBox(height: spacing.xxl),
 
                   Center(
                     child: ConstrainedBox(
