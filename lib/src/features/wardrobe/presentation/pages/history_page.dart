@@ -841,3 +841,42 @@ class _HistoryCard extends ConsumerWidget {
     );
   }
 }
+
+class _ActionIcon extends StatelessWidget {
+  final IconData icon;
+  final Color backgroundColor;
+  final Color iconColor;
+  final Color? borderColor;
+  final VoidCallback onTap;
+
+  const _ActionIcon({
+    required this.icon,
+    required this.backgroundColor,
+    required this.iconColor,
+    this.borderColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(10),
+          border: borderColor != null
+              ? Border.all(color: borderColor!, width: 1.3)
+              : null,
+        ),
+        child: Icon(
+          icon,
+          color: iconColor,
+          size: 16,
+        ),
+      ),
+    );
+  }
+}
