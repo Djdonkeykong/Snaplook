@@ -16,6 +16,7 @@ import 'welcome_free_analysis_page.dart';
 import 'how_it_works_page.dart';
 import 'notification_permission_page.dart';
 import 'discovery_source_page.dart';
+import 'revenuecat_paywall_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
         MainNavigation,
@@ -88,16 +89,34 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
 
     final userResponse = await supabase
         .from('users')
-        .select('onboarding_state')
+        .select('onboarding_state, subscription_status, is_trial')
         .eq('id', userId)
         .maybeSingle();
 
+    if (userResponse == null) {
+      // New user - start onboarding
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const HowItWorksPage(),
+          ),
+        );
+      }
+      return;
+    }
+
     final hasCompletedOnboarding =
-        userResponse != null && userResponse['onboarding_state'] == 'completed';
+        userResponse['onboarding_state'] == 'completed';
+    final subscriptionStatus = userResponse['subscription_status'] ?? 'free';
+    final isTrial = userResponse['is_trial'] == true;
+    final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
 
     if (!mounted) return;
 
-    if (hasCompletedOnboarding) {
+    if (hasCompletedOnboarding && hasActiveSubscription) {
+      // User completed onboarding AND has active subscription - go to home
+      debugPrint('[AccountCreation] User has completed onboarding and active subscription - going to home');
+
       // Reset to home tab and refresh providers
       ref.read(selectedIndexProvider.notifier).state = 0;
       ref.invalidate(selectedIndexProvider);
@@ -113,7 +132,20 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
         ),
         (route) => false,
       );
+    } else if (hasCompletedOnboarding && !hasActiveSubscription) {
+      // User completed onboarding but NO subscription - go to paywall
+      debugPrint('[AccountCreation] User completed onboarding but no subscription - going to paywall');
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const RevenueCatPaywallPage(),
+        ),
+        (route) => false,
+      );
     } else {
+      // User hasn't completed onboarding - continue from where they left off
+      debugPrint('[AccountCreation] User has not completed onboarding - continuing flow');
+
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => const HowItWorksPage(),

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
-import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
-import '../../../onboarding/presentation/pages/discovery_source_page.dart';
-import '../../../onboarding/presentation/pages/awesome_intro_page.dart';
-import '../../../onboarding/presentation/pages/account_creation_page.dart';
-import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
+import '../../../onboarding/presentation/pages/revenuecat_paywall_page.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -60,13 +58,60 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       await authService.syncAuthState();
     }
 
-    // Determine the next page based on auth status and onboarding state
+    // Determine the next page based on auth status, subscription status, and onboarding state
     Widget nextPage;
 
     if (isAuthenticated) {
       // Trust the Supabase session; avoid signing out on onboarding fetch issues.
       final user = ref.read(authServiceProvider).currentUser;
-      nextPage = user == null ? const LoginPage() : const MainNavigation();
+
+      if (user == null) {
+        nextPage = const LoginPage();
+      } else {
+        // Check subscription status from RevenueCat and onboarding state from Supabase
+        try {
+          // Get subscription status from RevenueCat
+          final customerInfo = await Purchases.getCustomerInfo().timeout(
+            const Duration(seconds: 10),
+          );
+          final hasActiveSubscription = customerInfo.entitlements.active.isNotEmpty;
+
+          // Get onboarding status from Supabase
+          final supabase = Supabase.instance.client;
+          final userResponse = await supabase
+              .from('users')
+              .select('onboarding_state, subscription_status, is_trial')
+              .eq('id', user.id)
+              .maybeSingle()
+              .timeout(const Duration(seconds: 10));
+
+          final hasCompletedOnboarding = userResponse?['onboarding_state'] == 'completed';
+
+          // Sync subscription status if there's a mismatch
+          final dbSubscriptionStatus = userResponse?['subscription_status'] ?? 'free';
+          final dbIsTrial = userResponse?['is_trial'] == true;
+          final dbHasActiveSubscription = dbSubscriptionStatus == 'active' || dbIsTrial;
+
+          if (hasActiveSubscription != dbHasActiveSubscription) {
+            // Subscription status mismatch - sync from RevenueCat to Supabase
+            debugPrint('[Splash] Subscription status mismatch - syncing from RevenueCat to Supabase');
+            await SubscriptionSyncService().syncSubscriptionToSupabase();
+          }
+
+          // Route based on onboarding completion and subscription status
+          if (hasCompletedOnboarding && hasActiveSubscription) {
+            nextPage = const MainNavigation(); // Home
+          } else if (hasCompletedOnboarding && !hasActiveSubscription) {
+            nextPage = const RevenueCatPaywallPage(); // Subscription expired/free - show paywall
+          } else {
+            nextPage = const HowItWorksPage(); // Continue onboarding from where they left off
+          }
+        } catch (e) {
+          debugPrint('[Splash] Error checking subscription status: $e');
+          // On error, default to safe navigation (show login to avoid unauthorized access)
+          nextPage = const LoginPage();
+        }
+      }
     } else {
       nextPage = const LoginPage();
     }
