@@ -8,7 +8,6 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
-import '../../../profile/presentation/widgets/profile_webview_bottom_sheet.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'revenuecat_paywall_page.dart';
@@ -26,30 +25,6 @@ import 'discovery_source_page.dart';
 
 class SaveProgressPage extends ConsumerStatefulWidget {
   const SaveProgressPage({super.key});
-
-  static Future<void> openLegalSheet({
-    required BuildContext context,
-    required String title,
-    required String url,
-  }) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      enableDrag: false,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return FractionallySizedBox(
-          heightFactor: 0.95,
-          child: ProfileWebViewBottomSheet(
-            title: title,
-            initialUrl: url,
-          ),
-        );
-      },
-    );
-  }
 
   @override
   ConsumerState<SaveProgressPage> createState() => _SaveProgressPageState();
@@ -82,19 +57,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         });
       }
     }
-  }
-
-  Future<void> _openLegalDocument({
-    required String title,
-    required String url,
-  }) async {
-    if (!mounted) return;
-
-    await SaveProgressPage.openLegalSheet(
-      context: context,
-      title: title,
-      url: url,
-    );
   }
 
   Future<void> _navigateBasedOnSubscriptionStatus() async {
@@ -404,7 +366,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                     ),
                   ),
 
-                  const Spacer(),
+                  SizedBox(height: spacing.l),
 
                   Center(
                     child: ConstrainedBox(
