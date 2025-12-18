@@ -53,7 +53,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final spacing = context.spacing;
-    final outlineColor = colorScheme.outlineVariant;
+    final outlineColor = colorScheme.outline;
 
     return showDialog<bool>(
       context: context,
@@ -120,11 +120,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 48,
+                        height: 52,
                         child: OutlinedButton(
                           onPressed: () => Navigator.of(dialogContext).pop(false),
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: outlineColor, width: 1.2),
+                            minimumSize: const Size.fromHeight(52),
+                            side: BorderSide(color: outlineColor, width: 1.4),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24),
                             ),
@@ -135,18 +136,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          child: Text(cancelLabel),
+                          child: Text(cancelLabel, textAlign: TextAlign.center),
                         ),
                       ),
                     ),
                     SizedBox(width: spacing.sm),
                     Expanded(
                       child: SizedBox(
-                        height: 48,
+                        height: 52,
                         child: ElevatedButton(
                           onPressed: () => Navigator.of(dialogContext).pop(true),
                           style: ElevatedButton.styleFrom(
                             elevation: 0,
+                            minimumSize: const Size.fromHeight(52),
                             backgroundColor: AppColors.secondary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
@@ -158,7 +160,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          child: Text(confirmLabel),
+                          child: Text(confirmLabel, textAlign: TextAlign.center),
                         ),
                       ),
                     ),
