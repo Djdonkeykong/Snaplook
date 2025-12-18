@@ -19,6 +19,7 @@ class AwesomeIntroPage extends ConsumerStatefulWidget {
 }
 
 class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
+  static const double _heroAspectRatio = 1170 / 2532; // matches asset dimensions
   late final AssetImage _heroImage;
   Future<void>? _heroPrecache;
   bool _isHeroReady = false;
@@ -86,60 +87,65 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
             Expanded(
               flex: 3,
               child: Center(
-                child: Stack(
-                  children: [
-                    if (_isHeroReady)
-                      Transform.scale(
-                        scale: 0.77,
-                        child: Image(
-                          image: _heroImage,
-                          fit: BoxFit.contain,
-                          gaplessPlayback: true,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double targetWidth = constraints.maxWidth * 0.77;
+                    return SizedBox(
+                      width: targetWidth,
+                      child: AspectRatio(
+                        aspectRatio: _heroAspectRatio,
+                        child: Stack(
+                          children: [
+                            if (_isHeroReady)
+                              Image(
+                                image: _heroImage,
+                                fit: BoxFit.contain,
+                                gaplessPlayback: true,
+                              )
+                            else
+                              const SizedBox.expand(),
+                            // White gradient overlay for fade effect
+                            Positioned.fill(
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.center,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.transparent,
+                                      Color(0x10FFFFFF),
+                                      Color(0x20FFFFFF),
+                                      Color(0x30FFFFFF),
+                                      Color(0x50FFFFFF),
+                                      Color(0x70FFFFFF),
+                                      Color(0x90FFFFFF),
+                                      Color(0xB0FFFFFF),
+                                      Color(0xD0FFFFFF),
+                                      Colors.white,
+                                    ],
+                                    stops: [
+                                      0.0,
+                                      0.4,
+                                      0.5,
+                                      0.55,
+                                      0.6,
+                                      0.65,
+                                      0.7,
+                                      0.8,
+                                      0.85,
+                                      0.92,
+                                      1.0
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      )
-                    else
-                      const AspectRatio(
-                        aspectRatio: 9 / 16,
-                        child: SizedBox.shrink(),
                       ),
-                    // White gradient overlay for fade effect
-                    Positioned.fill(
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.center,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.transparent,
-                              Color(0x10FFFFFF),
-                              Color(0x20FFFFFF),
-                              Color(0x30FFFFFF),
-                              Color(0x50FFFFFF),
-                              Color(0x70FFFFFF),
-                              Color(0x90FFFFFF),
-                              Color(0xB0FFFFFF),
-                              Color(0xD0FFFFFF),
-                              Colors.white,
-                            ],
-                            stops: [
-                              0.0,
-                              0.4,
-                              0.5,
-                              0.55,
-                              0.6,
-                              0.65,
-                              0.7,
-                              0.8,
-                              0.85,
-                              0.92,
-                              1.0
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ),
