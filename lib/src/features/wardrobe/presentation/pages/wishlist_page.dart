@@ -283,7 +283,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
   Future<bool> _removeItem(String productId) async {
     final confirmed = await _showWishlistActionDialog(
       context,
-      title: 'Delete Favorite',
+      title: 'Delete favorite',
       message: 'Are you sure you want to remove this item from your favorites?',
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
@@ -409,7 +409,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                     onPressed: (_) async {
                       await _removeItem(favorite.productId);
                     },
-                    backgroundColor: colorScheme.error,
+                    backgroundColor: AppColors.secondary,
                     autoClose: false, // keep open while confirm dialog shows
                     padding: EdgeInsets.zero,
                     child: SizedBox(
@@ -417,22 +417,22 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            SnaplookIcons.trashBin,
-                            color: colorScheme.onError,
-                            size: 18,
-                          ),
+                           Icon(
+                             SnaplookIcons.trashBin,
+                             color: Colors.white,
+                             size: 18,
+                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Delete',
                             softWrap: false,
                             overflow: TextOverflow.visible,
-                            style: TextStyle(
-                              fontFamily: 'PlusJakartaSans',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: colorScheme.onError,
-                            ),
+                             style: TextStyle(
+                               fontFamily: 'PlusJakartaSans',
+                               fontWeight: FontWeight.w600,
+                               fontSize: 13,
+                               color: Colors.white,
+                             ),
                           ),
                         ],
                       ),
@@ -1256,7 +1256,7 @@ class _HistoryCard extends ConsumerWidget {
 
     final confirmed = await _showWishlistActionDialog(
       context,
-      title: 'Delete Search',
+      title: 'Delete search',
       message: 'Are you sure you want to remove this search from your history?',
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
@@ -1389,7 +1389,7 @@ class _HistoryCard extends ConsumerWidget {
             onPressed: (_) async {
               await _deleteSearch(context, ref);
             },
-            backgroundColor: colorScheme.error,
+            backgroundColor: AppColors.secondary,
             autoClose: false, // keep open while confirm dialog shows
             padding: EdgeInsets.zero,
             child: SizedBox(
@@ -1399,7 +1399,7 @@ class _HistoryCard extends ConsumerWidget {
                 children: [
                   Icon(
                     SnaplookIcons.trashBin,
-                    color: colorScheme.onError,
+                    color: Colors.white,
                     size: 18,
                   ),
                   const SizedBox(height: 4),
@@ -1411,7 +1411,7 @@ class _HistoryCard extends ConsumerWidget {
                       fontFamily: 'PlusJakartaSans',
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
-                      color: colorScheme.onError,
+                      color: Colors.white,
                     ),
                   ),
                 ],
