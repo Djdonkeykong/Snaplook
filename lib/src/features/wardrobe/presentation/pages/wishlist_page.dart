@@ -858,6 +858,7 @@ class _FavoriteCard extends ConsumerWidget {
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: colorScheme.onSurface,
+                                fontFamily: 'PlusJakartaSans',
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -868,6 +869,7 @@ class _FavoriteCard extends ConsumerWidget {
                               style: textTheme.bodyMedium?.copyWith(
                                 fontSize: 14,
                                 color: colorScheme.onSurfaceVariant,
+                                fontFamily: 'PlusJakartaSans',
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
