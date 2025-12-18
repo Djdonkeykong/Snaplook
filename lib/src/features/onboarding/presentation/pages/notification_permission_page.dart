@@ -8,7 +8,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
-import 'revenuecat_paywall_page.dart';
+import 'save_progress_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
@@ -186,7 +186,7 @@ class _NotificationPermissionPageState
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const RevenueCatPaywallPage(),
+        builder: (context) => const SaveProgressPage(),
       ),
     );
   }

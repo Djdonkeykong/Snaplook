@@ -281,6 +281,40 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
     try {
       debugPrint('[AccountCreation] Linking subscription for user $userId via RevenueCat');
 
+      // CRITICAL: First check if this account already has an existing subscription in Supabase
+      // This prevents conflicts when user logs into an existing account after making an anonymous purchase
+      final supabase = Supabase.instance.client;
+      final existingUserData = await supabase
+          .from('users')
+          .select('subscription_status, is_trial')
+          .eq('id', userId)
+          .maybeSingle();
+
+      final existingSubscriptionStatus = existingUserData?['subscription_status'] ?? 'free';
+      final existingIsTrial = existingUserData?['is_trial'] == true;
+      final hasExistingSubscription =
+          existingSubscriptionStatus == 'active' || existingIsTrial;
+
+      debugPrint('[AccountCreation] Existing subscription status: $existingSubscriptionStatus, trial: $existingIsTrial');
+
+      // If user already has active subscription, check if there's also an anonymous purchase to link
+      CustomerInfo? preIdentifyCustomerInfo;
+      try {
+        preIdentifyCustomerInfo = await Purchases.getCustomerInfo();
+        final preIdentifyActiveEntitlements = preIdentifyCustomerInfo.entitlements.active.values;
+        final hasAnonymousPurchase = preIdentifyActiveEntitlements.isNotEmpty;
+
+        if (hasExistingSubscription && hasAnonymousPurchase) {
+          debugPrint('[AccountCreation] CONFLICT: User has existing subscription AND made new anonymous purchase');
+          if (mounted) {
+            _showSubscriptionConflictDialog();
+          }
+          return false;
+        }
+      } catch (e) {
+        debugPrint('[AccountCreation] Error checking pre-identify customer info: $e');
+      }
+
       // Identify user with RevenueCat (merges anonymous purchases) and sync to Supabase
       await SubscriptionSyncService().identify(userId);
 
@@ -397,33 +431,127 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          'Subscription Already Exists',
+          'This Account Already Has a Subscription',
           style: TextStyle(
             fontFamily: 'PlusJakartaSans',
             fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
         ),
         content: const Text(
-          'This account already has an active subscription.\n\n'
-          'Your recent purchase will be refunded within 24 hours.\n\n'
-          'Please use the existing subscription or create a new account.',
-          style: TextStyle(fontFamily: 'PlusJakartaSans'),
+          'You just purchased a subscription, but the account you\'re trying to log into already has an active membership.\n\n'
+          'What would you like to do?',
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: 15,
+            height: 1.4,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              // Go back to paywall
-              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Close dialog
+              // User stays on AccountCreationPage to create a new account instead
             },
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.secondary,
+              foregroundColor: AppColors.textSecondary,
               textStyle: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 fontWeight: FontWeight.w600,
               ),
             ),
-            child: const Text('OK'),
+            child: const Text('Create New Account'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop(); // Close dialog
+
+              // Show loading while we process
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                    ),
+                  ),
+                );
+              }
+
+              // Request refund for the anonymous purchase
+              try {
+                // Note: RevenueCat doesn't have a programmatic refund API
+                // The anonymous purchase will need to be refunded manually
+                // or the user can contact support
+                debugPrint('[AccountCreation] User chose to use existing subscription');
+                debugPrint('[AccountCreation] Anonymous purchase needs manual refund');
+              } catch (e) {
+                debugPrint('[AccountCreation] Error: $e');
+              }
+
+              // Navigate to home since they already have a subscription
+              if (context.mounted) {
+                Navigator.of(context).pop(); // Close loading dialog
+
+                // Check if onboarding is complete
+                final authService = ref.read(authServiceProvider);
+                final userId = authService.currentUser?.id;
+
+                if (userId != null) {
+                  try {
+                    final supabase = Supabase.instance.client;
+                    final userResponse = await supabase
+                        .from('users')
+                        .select('onboarding_state')
+                        .eq('id', userId)
+                        .maybeSingle();
+
+                    final hasCompletedOnboarding = userResponse != null &&
+                        userResponse['onboarding_state'] == 'completed';
+
+                    if (hasCompletedOnboarding) {
+                      // Go to home
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const MainNavigation(
+                            key: ValueKey('fresh-main-nav'),
+                          ),
+                        ),
+                        (route) => false,
+                      );
+                    } else {
+                      // Continue onboarding
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const WelcomeFreeAnalysisPage(),
+                        ),
+                        (route) => false,
+                      );
+                    }
+                  } catch (e) {
+                    debugPrint('[AccountCreation] Error checking onboarding: $e');
+                    // Default to home
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => const MainNavigation(
+                          key: ValueKey('fresh-main-nav'),
+                        ),
+                      ),
+                      (route) => false,
+                    );
+                  }
+                }
+              }
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+              textStyle: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            child: const Text('Use Existing Subscription'),
           ),
         ],
       ),

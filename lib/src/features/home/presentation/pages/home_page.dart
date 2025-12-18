@@ -982,6 +982,9 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     const instagramDeepLink =
         'https://www.instagram.com/p/DQSaR_FEsU8/?igsh=MTEyNzJuaXF6cDlmNA==';
     const pinterestDeepLink = 'https://pin.it/Ani6VLsSY';
+    const tiktokDeepLink = 'https://vm.tiktok.com/ZNRYGe1YY/';
+    const imdbDeepLink =
+        'https://www.imdb.com/name/nm2858875/mediaviewer/rm667585282?ref_=ext_shr_lnk';
     final videoAsset = switch (target) {
       PipTutorialTarget.instagram => 'assets/videos/instagram-tutorial.mp4',
       PipTutorialTarget.pinterest => 'assets/videos/pinterest-tutorial.mp4',
@@ -993,9 +996,9 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     final deepLink = switch (target) {
       PipTutorialTarget.instagram => instagramDeepLink,
       PipTutorialTarget.pinterest => pinterestDeepLink,
-      PipTutorialTarget.tiktok => null,
+      PipTutorialTarget.tiktok => tiktokDeepLink,
       PipTutorialTarget.photos => null,
-      PipTutorialTarget.imdb => null,
+      PipTutorialTarget.imdb => imdbDeepLink,
       _ => null,
     };
     try {

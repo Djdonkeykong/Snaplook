@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -13,6 +14,7 @@ import '../../../../services/revenuecat_service.dart';
 import '../../../../services/subscription_sync_service.dart';
 import 'account_creation_page.dart';
 import 'welcome_free_analysis_page.dart';
+import '../../../../../shared/navigation/main_navigation.dart';
 
 enum RevenueCatPaywallPlanType { monthly, yearly }
 
@@ -37,8 +39,96 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
   @override
   void initState() {
     super.initState();
+    _checkIfShouldSkip();
     _loadOfferings();
     _checkTrialEligibility();
+  }
+
+  Future<void> _checkIfShouldSkip() async {
+    final authService = ref.read(authServiceProvider);
+    final isAuthenticated = authService.currentUser != null;
+
+    if (isAuthenticated) {
+      try {
+        CustomerInfo? customerInfo;
+        try {
+          customerInfo = RevenueCatService().currentCustomerInfo ??
+              await Purchases.getCustomerInfo();
+        } catch (e) {
+          debugPrint(
+              '[RevenueCatPaywall] Error fetching customer info on init: $e');
+          return;
+        }
+
+        final activeEntitlements = customerInfo?.entitlements.active.values;
+        final hasActiveSubscription =
+            activeEntitlements != null && activeEntitlements.isNotEmpty;
+
+        if (hasActiveSubscription) {
+          debugPrint(
+              '[RevenueCatPaywall] User already has active subscription, skipping paywall');
+
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (mounted) {
+              // Check if user completed onboarding before
+              try {
+                final userId = authService.currentUser?.id;
+                if (userId != null) {
+                  final supabase = Supabase.instance.client;
+                  final userResponse = await supabase
+                      .from('users')
+                      .select('onboarding_state')
+                      .eq('id', userId)
+                      .maybeSingle();
+
+                  final hasCompletedOnboarding = userResponse != null &&
+                      userResponse['onboarding_state'] == 'completed';
+
+                  if (hasCompletedOnboarding) {
+                    // User already completed onboarding - go to home
+                    debugPrint(
+                        '[RevenueCatPaywall] User completed onboarding previously - going to home');
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => const MainNavigation(
+                          key: ValueKey('fresh-main-nav'),
+                        ),
+                      ),
+                      (route) => false,
+                    );
+                  } else {
+                    // User hasn't completed onboarding - continue the flow
+                    debugPrint(
+                        '[RevenueCatPaywall] User hasn\'t completed onboarding - going to welcome');
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                          builder: (context) => const WelcomeFreeAnalysisPage()),
+                    );
+                  }
+                } else {
+                  // No user ID - continue to welcome
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                        builder: (context) => const WelcomeFreeAnalysisPage()),
+                  );
+                }
+              } catch (e) {
+                debugPrint(
+                    '[RevenueCatPaywall] Error checking onboarding status: $e');
+                // Default to continuing onboarding
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                      builder: (context) => const WelcomeFreeAnalysisPage()),
+                );
+              }
+            }
+          });
+        }
+      } catch (e) {
+        debugPrint(
+            '[RevenueCatPaywall] Error checking subscription on init: $e');
+      }
+    }
   }
 
   String _formatPriceFloor(double value) {
@@ -232,21 +322,103 @@ class _RevenueCatPaywallPageState extends ConsumerState<RevenueCatPaywallPage> {
           TextButton(
             onPressed: () async {
               try {
-                await RevenueCatService().restorePurchases();
-                if (mounted) {
+                debugPrint('[RevenueCatPaywall] Starting restore purchases...');
+
+                final customerInfo = await RevenueCatService().restorePurchases();
+
+                if (!mounted) return;
+
+                final activeEntitlements = customerInfo.entitlements.active.values;
+                final hasActiveSubscription = activeEntitlements.isNotEmpty;
+
+                if (hasActiveSubscription) {
+                  debugPrint('[RevenueCatPaywall] Purchases restored successfully');
+
+                  final authService = ref.read(authServiceProvider);
+                  final isAuthenticated = authService.currentUser != null;
+
+                  if (isAuthenticated) {
+                    try {
+                      await SubscriptionSyncService().syncSubscriptionToSupabase();
+                      await OnboardingStateService()
+                          .markPaymentComplete(authService.currentUser!.id);
+                      debugPrint('[RevenueCatPaywall] Subscription synced after restore');
+                    } catch (e) {
+                      debugPrint(
+                          '[RevenueCatPaywall] Error syncing after restore: $e');
+                    }
+
+                    // Check if user completed onboarding before
+                    try {
+                      final userId = authService.currentUser?.id;
+                      if (userId != null) {
+                        final supabase = Supabase.instance.client;
+                        final userResponse = await supabase
+                            .from('users')
+                            .select('onboarding_state')
+                            .eq('id', userId)
+                            .maybeSingle();
+
+                        final hasCompletedOnboarding = userResponse != null &&
+                            userResponse['onboarding_state'] == 'completed';
+
+                        if (hasCompletedOnboarding) {
+                          // User already completed onboarding - go to home
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const MainNavigation(
+                                key: ValueKey('fresh-main-nav'),
+                              ),
+                            ),
+                            (route) => false,
+                          );
+                        } else {
+                          // User hasn't completed onboarding - continue the flow
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                                builder: (context) => const WelcomeFreeAnalysisPage()),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      debugPrint(
+                          '[RevenueCatPaywall] Error checking onboarding status after restore: $e');
+                      // Default to continuing onboarding
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                            builder: (context) => const WelcomeFreeAnalysisPage()),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Purchases restored! Please create an account to continue.',
+                        ),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                          builder: (context) => const AccountCreationPage()),
+                    );
+                  }
+                } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Purchases restored successfully'),
+                      content: Text('No purchases to restore'),
                       duration: Duration(seconds: 2),
                     ),
                   );
                 }
               } catch (e) {
+                debugPrint('[RevenueCatPaywall] Error restoring purchases: $e');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('No purchases to restore'),
-                      duration: Duration(seconds: 2),
+                    SnackBar(
+                      content: Text('Error restoring purchases: ${e.toString()}'),
+                      duration: const Duration(seconds: 3),
                     ),
                   );
                 }
