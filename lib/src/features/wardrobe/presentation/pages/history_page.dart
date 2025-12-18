@@ -696,152 +696,140 @@ class _HistoryCard extends ConsumerWidget {
         child: Container(
           margin: EdgeInsets.only(bottom: spacing.m),
           color: Colors.transparent,
+          padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: spacing.s),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(radius.medium),
-                child: cloudinaryUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: cloudinaryUrl,
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
+                child: SizedBox(
+                  width: 88,
+                  height: 88,
+                  child: cloudinaryUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: cloudinaryUrl,
+                          width: 88,
+                          height: 88,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: colorScheme.surfaceVariant,
+                            width: 88,
+                            height: 88,
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: colorScheme.surfaceVariant,
+                            width: 88,
+                            height: 88,
+                            child: Icon(
+                              Icons.image,
+                              color: colorScheme.onSurfaceVariant,
+                              size: 24,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          width: 88,
+                          height: 88,
                           color: colorScheme.surfaceVariant,
-                          width: 100,
-                          height: 100,
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: colorScheme.surfaceVariant,
-                          width: 100,
-                          height: 100,
                           child: Icon(
                             Icons.image,
                             color: colorScheme.onSurfaceVariant,
                             size: 24,
                           ),
                         ),
-                      )
-                    : Container(
-                        width: 100,
-                        height: 100,
-                        color: colorScheme.surfaceVariant,
-                        child: Icon(
-                          Icons.image,
-                          color: colorScheme.onSurfaceVariant,
-                          size: 24,
-                        ),
-                      ),
+                ),
               ),
               SizedBox(width: spacing.m),
               Expanded(
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _getSourceLabel(),
-                            style: textTheme.titleMedium?.copyWith(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _getSourceLabel(),
+                                  style: textTheme.titleMedium?.copyWith(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                    fontFamily: 'PlusJakartaSans',
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isSaved) ...[
+                                const SizedBox(width: 6),
+                                Icon(
+                                  Icons.bookmark,
+                                  size: 16,
+                                  color: colorScheme.secondary,
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          if (hasUsername) ...[
+                            Text(
+                              '@$trimmedUsername',
+                              style: textTheme.bodyMedium?.copyWith(
+                                fontSize: 14,
+                                color: colorScheme.onSurfaceVariant,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            const SizedBox(height: 6),
+                          ],
+                          Text(
+                            totalResults == 1
+                                ? '1 product found'
+                                : '$totalResults products found',
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              color: colorScheme.onSurfaceVariant,
+                              fontFamily: 'PlusJakartaSans',
+                            ),
                           ),
-                        ),
-                        if (isSaved) ...[
-                          const SizedBox(width: 6),
-                          Icon(
-                            Icons.bookmark,
-                            size: 16,
-                            color: colorScheme.secondary,
-                          ),
+                          if (createdLabel != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              createdLabel,
+                              style: textTheme.bodySmall?.copyWith(
+                                fontSize: 12,
+                                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+                          ],
                         ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _ActionIcon(
+                          icon: Icons.search_rounded,
+                          backgroundColor: colorScheme.secondary,
+                          iconColor: colorScheme.onSecondary,
+                          onTap: () => _rescanSearch(context),
+                        ),
+                        const SizedBox(height: 8),
+                        _ActionIcon(
+                          icon: Icons.share_outlined,
+                          backgroundColor: Colors.transparent,
+                          iconColor: colorScheme.secondary,
+                          borderColor: colorScheme.secondary,
+                          onTap: () => _shareSearch(context),
+                        ),
                       ],
-                    ),
-                    const SizedBox(height: 4),
-                    if (hasUsername) ...[
-                      Text(
-                        '@$trimmedUsername',
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontSize: 14,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                    ],
-                    Text(
-                      totalResults == 1
-                          ? '1 product found'
-                          : '$totalResults products found',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    if (createdLabel != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        createdLabel,
-                        style: textTheme.bodySmall?.copyWith(
-                          fontSize: 12,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              SizedBox(width: spacing.sm),
-              SizedBox(
-                height: 100,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    GestureDetector(
-                      onTap: () => _rescanSearch(context),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: colorScheme.secondary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.search_rounded,
-                          color: colorScheme.onSecondary,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () => _shareSearch(context),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          border: Border.all(
-                            color: colorScheme.secondary,
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.share_outlined,
-                          color: colorScheme.secondary,
-                          size: 14,
-                        ),
-                      ),
                     ),
                   ],
                 ),
