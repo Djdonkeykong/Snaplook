@@ -115,7 +115,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
               ),
               child: ListView.builder(
                 controller: _scrollController,
-                padding: EdgeInsets.all(spacing.m),
+                padding: EdgeInsets.only(
+                  top: spacing.m,
+                  bottom: spacing.m,
+                ),
                 itemCount: searches.length,
                 itemBuilder: (context, index) {
                   final search = searches[index];
