@@ -57,6 +57,8 @@ class SaveProgressPage extends ConsumerStatefulWidget {
 }
 
 class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
+  bool _isCheckingAuth = true;
+
   @override
   void initState() {
     super.initState();
@@ -69,9 +71,17 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
     if (isAuthenticated) {
       debugPrint('[SaveProgress] User already authenticated, skipping to next step');
+      // Don't set _isCheckingAuth to false, just navigate
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _navigateBasedOnSubscriptionStatus();
       });
+    } else {
+      // User is not authenticated, show the page
+      if (mounted) {
+        setState(() {
+          _isCheckingAuth = false;
+        });
+      }
     }
   }
 
@@ -329,6 +339,18 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Show loading indicator while checking authentication
+    if (_isCheckingAuth) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+          ),
+        ),
+      );
+    }
+
     final spacing = context.spacing;
     final targetPlatform = Theme.of(context).platform;
     final isAppleSignInAvailable = targetPlatform == TargetPlatform.iOS ||
@@ -497,37 +519,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                               }
                             },
                           ),
-
-                          SizedBox(height: spacing.l),
-
-                          SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: ElevatedButton(
-                              onPressed: _handleSkip,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.surfaceVariant,
-                                foregroundColor: AppColors.textPrimary,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(28),
-                                  side: const BorderSide(
-                                    color: AppColors.outline,
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
-                              child: const Text(
-                                'Continue without account',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'PlusJakartaSans',
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -535,77 +526,32 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
                   const Spacer(),
 
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: spacing.xl),
-                    child: RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(
-                        text: 'By continuing you agree to Snaplook\'s ',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF6B7280),
-                          fontFamily: 'PlusJakartaSans',
-                          height: 1.5,
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _handleSkip,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.secondary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
                         ),
-                        children: [
-                          TextSpan(
-                            text: 'Terms of Conditions',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.black,
-                              fontFamily: 'PlusJakartaSans',
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                              decorationColor: Colors.black,
-                              decorationThickness: 1.5,
-                              height: 1.5,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                HapticFeedback.selectionClick();
-                                _openLegalDocument(
-                                  title: 'Terms of Service',
-                                  url:
-                                      'https://truefindr.com/terms-of-service/',
-                                );
-                              },
-                          ),
-                          const TextSpan(
-                            text: ' and ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF6B7280),
-                              fontFamily: 'PlusJakartaSans',
-                              height: 1.5,
-                            ),
-                          ),
-                          TextSpan(
-                            text: 'Privacy Policy',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.black,
-                              fontFamily: 'PlusJakartaSans',
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                              decorationColor: Colors.black,
-                              decorationThickness: 1.5,
-                              height: 1.5,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                HapticFeedback.selectionClick();
-                                _openLegalDocument(
-                                  title: 'Privacy Policy',
-                                  url: 'https://truefindr.com/privacy-policy/',
-                                );
-                              },
-                          ),
-                        ],
+                      ),
+                      child: const Text(
+                        'Continue',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -0.2,
+                        ),
                       ),
                     ),
                   ),
 
-                  SizedBox(height: spacing.xl),
+                  SizedBox(height: spacing.l),
                 ],
               ),
             ),
