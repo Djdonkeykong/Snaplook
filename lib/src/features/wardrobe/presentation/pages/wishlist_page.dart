@@ -44,10 +44,9 @@ class WishlistPage extends ConsumerStatefulWidget {
 }
 
 class _WishlistPageState extends ConsumerState<WishlistPage>
-    with TickerProviderStateMixin {
+  with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   final ScrollController _historyScrollController = ScrollController();
-  final Map<String, AnimationController> _removeControllers = {};
   late TabController _tabController;
 
   @override
@@ -61,9 +60,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     _scrollController.dispose();
     _historyScrollController.dispose();
     _tabController.dispose();
-    for (var controller in _removeControllers.values) {
-      controller.dispose();
-    }
     super.dispose();
   }
 
@@ -138,6 +134,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
       body: SafeArea(
         child: TabBarView(
           controller: _tabController,
+          physics: const NeverScrollableScrollPhysics(),
           children: [
             _buildAllFavoritesTab(
               isInitialLoading,
@@ -158,7 +155,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     );
   }
 
-  Future<void> _removeItem(String productId) async {
+  Future<bool> _removeItem(String productId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -202,37 +199,15 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true) return false;
 
     HapticFeedback.mediumImpact();
 
-    final controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    controller.value = 1.0;
-
-    setState(() {
-      _removeControllers[productId] = controller;
-    });
-
-    await controller.reverse();
-
-    if (!mounted) return;
-
     await ref.read(favoritesProvider.notifier).removeFavorite(productId);
 
-    if (!mounted) return;
-
-    setState(() {
-      _removeControllers.remove(productId);
-    });
-    controller.dispose();
+    if (!mounted) return true;
 
     ScaffoldMessenger.of(context).clearSnackBars();
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -244,6 +219,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         duration: const Duration(milliseconds: 2500),
       ),
     );
+    return true;
   }
 
   Widget _buildAllFavoritesTab(bool isInitialLoading, bool hasError,
@@ -333,27 +309,29 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
         itemCount: favorites.length,
         itemBuilder: (context, index) {
           final favorite = favorites[index];
-          final controller = _removeControllers[favorite.productId];
-
-          Widget card = _FavoriteCard(
-            favorite: favorite,
-            spacing: spacing,
-            onDelete: () {
-              _removeItem(favorite.productId);
-            },
-          );
-
-          if (controller != null) {
-            return SizeTransition(
-              sizeFactor: controller,
-              child: FadeTransition(
-                opacity: controller,
-                child: card,
+          return Dismissible(
+            key: ValueKey(favorite.id),
+            direction: DismissDirection.endToStart,
+            confirmDismiss: (_) => _removeItem(favorite.productId),
+            background: Container(
+              margin: EdgeInsets.only(bottom: spacing.m),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: colorScheme.error.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(20),
               ),
-            );
-          }
-
-          return card;
+              alignment: Alignment.centerRight,
+              child: Icon(
+                SnaplookIcons.trashBin,
+                color: colorScheme.error,
+                size: 20,
+              ),
+            ),
+            child: _FavoriteCard(
+              favorite: favorite,
+              spacing: spacing,
+            ),
+          );
         },
       ),
     );
@@ -611,12 +589,10 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
 class _FavoriteCard extends ConsumerWidget {
   final FavoriteItem favorite;
   final dynamic spacing;
-  final VoidCallback? onDelete;
 
   const _FavoriteCard({
     required this.favorite,
     required this.spacing,
-    this.onDelete,
   });
 
   Future<void> _openProductLink(BuildContext context, String productUrl) async {
@@ -771,6 +747,36 @@ class _FavoriteCard extends ConsumerWidget {
     );
   }
 
+  void _rescanFavorite(BuildContext context) {
+    final imageUrl = favorite.imageUrl.trim();
+    if (imageUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No image available for this item.',
+            style: context.snackTextStyle(
+              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    HapticFeedback.selectionClick();
+
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => DetectionPage(
+          imageUrl: imageUrl,
+          searchType: 'favorite_rescan',
+          sourceUrl: favorite.purchaseUrl,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final radius = context.radius;
@@ -863,14 +869,14 @@ class _FavoriteCard extends ConsumerWidget {
 
             SizedBox(width: spacing.sm),
 
-            // Action Icons (Delete & Share)
+            // Action Icons (Search & Share)
             SizedBox(
               height: 100,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   GestureDetector(
-                    onTap: onDelete,
+                    onTap: () => _rescanFavorite(context),
                     child: Container(
                       width: 38,
                       height: 38,
@@ -879,9 +885,9 @@ class _FavoriteCard extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        SnaplookIcons.trashBin,
+                        Icons.search_rounded,
                         color: colorScheme.onSecondary,
-                        size: 14,
+                        size: 16,
                       ),
                     ),
                   ),
@@ -1140,11 +1146,11 @@ class _HistoryCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _deleteSearch(BuildContext context, WidgetRef ref) async {
+  Future<bool> _deleteSearch(BuildContext context, WidgetRef ref) async {
     final searchId = search['id'] as String?;
     if (searchId == null) {
       _showToast(context, 'Unable to delete this search.');
-      return;
+      return false;
     }
 
     final confirmed = await showDialog<bool>(
@@ -1190,7 +1196,7 @@ class _HistoryCard extends ConsumerWidget {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true) return false;
 
     HapticFeedback.mediumImpact();
 
@@ -1202,11 +1208,33 @@ class _HistoryCard extends ConsumerWidget {
       if (context.mounted) {
         _showToast(context, 'Search deleted from history');
       }
+      return true;
     } else {
       if (context.mounted) {
         _showToast(context, 'Failed to delete search');
       }
+      return false;
     }
+  }
+
+  Future<void> _rescanSearch(BuildContext context) async {
+    final cloudinaryUrl = search['cloudinary_url'] as String?;
+    if (cloudinaryUrl == null || cloudinaryUrl.isEmpty) {
+      _showToast(context, 'No image available for re-search.');
+      return;
+    }
+
+    HapticFeedback.selectionClick();
+
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => DetectionPage(
+          imageUrl: cloudinaryUrl,
+          searchType: 'history_rescan',
+          sourceUrl: search['source_url'] as String?,
+        ),
+      ),
+    );
   }
 
   String _getSourceLabel() {
@@ -1283,201 +1311,221 @@ class _HistoryCard extends ConsumerWidget {
     final createdLabel = createdDate != null ? timeago.format(createdDate) : null;
     final hasResults = totalResults > 0;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () async {
-        if (!hasResults) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'No results to show for this search.',
-                style: context.snackTextStyle(
-                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-                ),
-              ),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          return;
-        }
-
-        final searchId = search['id'] as String?;
-        if (searchId == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Unable to load search results',
-                style: context.snackTextStyle(
-                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-                ),
-              ),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-          return;
-        }
-
-        // Navigate to detection page with search results
-        Navigator.of(context, rootNavigator: true).push(
-          MaterialPageRoute(
-            builder: (context) => DetectionPage(searchId: searchId),
-          ),
-        );
-      },
-      child: Container(
+    return Dismissible(
+      key: ValueKey(search['id'] ?? search['created_at'] ?? cloudinaryUrl ?? UniqueKey()),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) => _deleteSearch(context, ref),
+      background: Container(
         margin: EdgeInsets.only(bottom: spacing.m),
-        color: Colors.transparent,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(radius.medium),
-              child: cloudinaryUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: cloudinaryUrl,
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: colorScheme.surfaceVariant,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: colorScheme.error.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(radius.medium),
+        ),
+        alignment: Alignment.centerRight,
+        child: Icon(
+          SnaplookIcons.trashBin,
+          color: colorScheme.error,
+          size: 20,
+        ),
+      ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () async {
+          if (!hasResults) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'No results to show for this search.',
+                  style: context.snackTextStyle(
+                    merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                  ),
+                ),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            return;
+          }
+
+          final searchId = search['id'] as String?;
+          if (searchId == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Unable to load search results',
+                  style: context.snackTextStyle(
+                    merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                  ),
+                ),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            return;
+          }
+
+          // Navigate to detection page with search results
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (context) => DetectionPage(searchId: searchId),
+            ),
+          );
+        },
+        child: Container(
+          margin: EdgeInsets.only(bottom: spacing.m),
+          color: Colors.transparent,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(radius.medium),
+                child: cloudinaryUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: cloudinaryUrl,
                         width: 100,
                         height: 100,
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: colorScheme.surfaceVariant,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: colorScheme.surfaceVariant,
+                          width: 100,
+                          height: 100,
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: colorScheme.surfaceVariant,
+                          width: 100,
+                          height: 100,
+                          child: Icon(
+                            Icons.image,
+                            color: colorScheme.onSurfaceVariant,
+                            size: 24,
+                          ),
+                        ),
+                      )
+                    : Container(
                         width: 100,
                         height: 100,
+                        color: colorScheme.surfaceVariant,
                         child: Icon(
                           Icons.image,
                           color: colorScheme.onSurfaceVariant,
                           size: 24,
                         ),
                       ),
-                    )
-                  : Container(
-                      width: 100,
-                      height: 100,
-                      color: colorScheme.surfaceVariant,
-                      child: Icon(
-                        Icons.image,
-                        color: colorScheme.onSurfaceVariant,
-                        size: 24,
-                      ),
-                    ),
-            ),
-            SizedBox(width: spacing.m),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _getSourceLabel(),
-                          style: textTheme.titleMedium?.copyWith(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
+              ),
+              SizedBox(width: spacing.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _getSourceLabel(),
+                            style: textTheme.titleMedium?.copyWith(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      if (isSaved) ...[
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.bookmark,
-                          size: 16,
-                          color: colorScheme.secondary,
-                        ),
+                        if (isSaved) ...[
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.bookmark,
+                            size: 16,
+                            color: colorScheme.secondary,
+                          ),
+                        ],
                       ],
+                    ),
+                    const SizedBox(height: 4),
+                    if (hasUsername) ...[
+                      Text(
+                        '@$trimmedUsername',
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontSize: 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
                     ],
-                  ),
-                  const SizedBox(height: 4),
-                  if (hasUsername) ...[
                     Text(
-                      '@$trimmedUsername',
+                      totalResults == 1
+                          ? '1 product found'
+                          : '$totalResults products found',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                  ],
-                  Text(
-                    totalResults == 1
-                        ? '1 product found'
-                        : '$totalResults products found',
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontSize: 14,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (createdLabel != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      createdLabel,
-                      style: textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            SizedBox(width: spacing.sm),
-            SizedBox(
-              height: 100,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: () => _deleteSearch(context, ref),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: colorScheme.secondary,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        SnaplookIcons.trashBin,
-                        color: colorScheme.onSecondary,
-                        size: 14,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () => _shareSearch(context),
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        border: Border.all(
-                          color: colorScheme.secondary,
-                          width: 1.5,
+                    if (createdLabel != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        createdLabel,
+                        style: textTheme.bodySmall?.copyWith(
+                          fontSize: 12,
+                          color:
+                              colorScheme.onSurfaceVariant.withOpacity(0.7),
                         ),
-                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
-                        Icons.share_outlined,
-                        color: colorScheme.secondary,
-                        size: 14,
+                    ],
+                  ],
+                ),
+              ),
+              SizedBox(width: spacing.sm),
+              SizedBox(
+                height: 100,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () => _rescanSearch(context),
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: colorScheme.secondary,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.search_rounded,
+                          color: colorScheme.onSecondary,
+                          size: 16,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => _shareSearch(context),
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          border: Border.all(
+                            color: colorScheme.secondary,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.share_outlined,
+                          color: colorScheme.secondary,
+                          size: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
