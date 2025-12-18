@@ -329,11 +329,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 } else if (hasCompletedOnboarding && !hasActiveSubscription) {
                                   // User completed onboarding but NO subscription - go to paywall
                                   debugPrint('[LoginPage] User completed onboarding but no subscription - going to paywall');
-                                  navigator.pushAndRemoveUntil(
+                                  navigator.push(
                                     MaterialPageRoute(
                                       builder: (context) => const RevenueCatPaywallPage(),
                                     ),
-                                    (route) => false,
                                   );
                                 } else {
                                   // User hasn't completed onboarding - continue onboarding flow
@@ -430,11 +429,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 } else if (hasCompletedOnboarding && !hasActiveSubscription) {
                                   // User completed onboarding but NO subscription - go to paywall
                                   debugPrint('[LoginPage] User completed onboarding but no subscription - going to paywall');
-                                  navigator.pushAndRemoveUntil(
+                                  navigator.push(
                                     MaterialPageRoute(
                                       builder: (context) => const RevenueCatPaywallPage(),
                                     ),
-                                    (route) => false,
                                   );
                                 } else {
                                   // User hasn't completed onboarding - continue onboarding flow
