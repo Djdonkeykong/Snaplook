@@ -366,7 +366,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                     ),
                   ),
 
-                  SizedBox(height: spacing.xxl),
+                  SizedBox(height: spacing.xxl * 3),
 
                   Center(
                     child: ConstrainedBox(
