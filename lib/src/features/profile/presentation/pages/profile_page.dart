@@ -44,48 +44,140 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  Future<void> _handleLogout() async {
-    final confirmed = await showDialog<bool>(
+  Future<bool?> _showActionDialog({
+    required String title,
+    required String message,
+    required String confirmLabel,
+    required String cancelLabel,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final spacing = context.spacing;
+    final outlineColor = colorScheme.outlineVariant;
+
+    return showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: const Text(
-          'Logout',
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontWeight: FontWeight.bold,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.45),
+      builder: (dialogContext) {
+        return Dialog(
+          clipBehavior: Clip.antiAlias,
+          backgroundColor: colorScheme.surface,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
           ),
-        ),
-        content: const Text(
-          'Are you sure you want to logout?',
-          style: TextStyle(fontFamily: 'PlusJakartaSans'),
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-              textStyle: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontWeight: FontWeight.w600,
-              ),
+          child: Padding(
+            padding:
+                EdgeInsets.fromLTRB(spacing.l, spacing.l, spacing.l, spacing.l),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    Material(
+                      color: colorScheme.onSurface.withOpacity(0.06),
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => Navigator.of(dialogContext).pop(false),
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.close,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: spacing.sm),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                SizedBox(height: spacing.l),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(false),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: outlineColor, width: 1.2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            foregroundColor: colorScheme.onSurface,
+                            textStyle: const TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          child: Text(cancelLabel),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: spacing.sm),
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            backgroundColor: AppColors.secondary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            textStyle: const TextStyle(
+                              fontFamily: 'PlusJakartaSans',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: Text(confirmLabel),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            child: const Text('Cancel'),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.secondary,
-              textStyle: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await _showActionDialog(
+      title: 'Log out?',
+      message: 'Are you sure you want to log out?',
+      confirmLabel: 'Log out',
+      cancelLabel: 'Cancel',
     );
 
     if (confirmed == true && mounted) {
@@ -115,6 +207,30 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         );
       }
       }
+    }
+  }
+
+  Future<void> _handleDeleteAccount() async {
+    final confirmed = await _showActionDialog(
+      title: 'Delete Account?',
+      message:
+          'Are you sure you want to permanently delete your account? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+    );
+
+    if (confirmed == true && mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Account deletion is not available yet.',
+            style: context.snackTextStyle(
+              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+          ),
+        ),
+      );
     }
   }
 
@@ -340,7 +456,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 _SimpleSettingItem(
                   title: 'Delete Account',
                   textColor: AppColors.secondary,
-                  onTap: () {},
+                  onTap: _handleDeleteAccount,
                 ),
 
                 SizedBox(height: spacing.xl),
