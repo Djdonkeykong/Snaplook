@@ -223,6 +223,36 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     return true;
   }
 
+  void _rescanFavoriteItem(FavoriteItem favorite) {
+    final imageUrl = favorite.imageUrl.trim();
+    if (imageUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No image available for this item.',
+            style: context.snackTextStyle(
+              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    HapticFeedback.selectionClick();
+
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => DetectionPage(
+          imageUrl: imageUrl,
+          searchType: 'favorite_rescan',
+          sourceUrl: favorite.purchaseUrl,
+        ),
+      ),
+    );
+  }
+
   Widget _buildAllFavoritesTab(bool isInitialLoading, bool hasError,
       List<FavoriteItem> favorites, dynamic spacing) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -319,7 +349,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
                 extentRatio: 0.45,
                 children: [
                   SlidableAction(
-                    onPressed: (_) => _rescanFavorite(context),
+                    onPressed: (_) => _rescanFavoriteItem(favorite),
                     backgroundColor: AppColors.secondary,
                     foregroundColor: Colors.white,
                     icon: Icons.search_rounded,
