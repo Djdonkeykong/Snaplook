@@ -809,7 +809,7 @@ class _FavoriteCard extends ConsumerWidget {
       child: Container(
         width: double.infinity,
         color: Colors.transparent,
-        padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: spacing.s),
+        padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: spacing.s * 0.75),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -817,8 +817,8 @@ class _FavoriteCard extends ConsumerWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(radius.medium),
               child: SizedBox(
-                width: 100,
-                height: 100,
+                width: 88,
+                height: 88,
                 child: CachedNetworkImage(
                   imageUrl: favorite.imageUrl,
                   fit: BoxFit.cover,
