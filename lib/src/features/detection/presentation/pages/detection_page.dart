@@ -1560,10 +1560,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
         // Deduct credits based on garment count
         try {
-          // Count unique garments detected (group by detectionLabel)
+          // Count unique garments detected (group by category)
           final uniqueGarments = results
-              .map((r) => r.detectionLabel)
-              .where((label) => label != null && label.isNotEmpty)
+              .map((r) => r.category)
+              .where((category) => category.isNotEmpty)
               .toSet();
           final garmentCount = uniqueGarments.isEmpty ? 1 : uniqueGarments.length;
 

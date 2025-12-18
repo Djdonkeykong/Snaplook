@@ -97,6 +97,7 @@ class AuthService {
 
       String? effectiveUserId = userId;
       bool hasActiveSubscription = false;
+      int availableCredits = 0;
 
       if (isAuthenticated) {
         effectiveUserId ??= currentUser?.id;
@@ -118,7 +119,6 @@ class AuthService {
         }
 
         // Fetch subscription status and credit balance from database
-        int availableCredits = 0;
         try {
           final userResponse = await _supabase
               .from('users')
