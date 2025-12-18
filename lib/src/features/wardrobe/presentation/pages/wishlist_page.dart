@@ -1466,13 +1466,23 @@ class _HistoryCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 6),
+                        if (hasUsername) ...[
+                          Text(
+                            '@$trimmedUsername',
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              color: colorScheme.onSurfaceVariant,
+                              fontFamily: 'PlusJakartaSans',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                        ],
                         Text(
-                          [
-                            totalResults == 1
-                                ? '1 product found'
-                                : '$totalResults products found',
-                            if (createdLabel != null) createdLabel!,
-                          ].join(' • '),
+                          totalResults == 1
+                              ? '1 product found'
+                              : '$totalResults products found',
                           style: textTheme.bodyMedium?.copyWith(
                             fontSize: 14,
                             color: colorScheme.onSurfaceVariant,
@@ -1481,6 +1491,19 @@ class _HistoryCard extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (createdLabel != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            createdLabel,
+                            style: textTheme.bodySmall?.copyWith(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                              fontFamily: 'PlusJakartaSans',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
                     ),
                     ),
