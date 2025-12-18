@@ -809,6 +809,7 @@ class _FavoriteCard extends ConsumerWidget {
         await _openProductLink(context, productUrl);
       },
       child: Container(
+        width: double.infinity,
         color: Colors.transparent,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
