@@ -91,12 +91,14 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
                       child: _isHeroReady
-                          ? Image(
+                          ? Transform.scale(
                               key: const ValueKey('hero-loaded'),
-                              image: _heroImage,
-                              fit: BoxFit.contain,
                               scale: 0.77,
-                              gaplessPlayback: true,
+                              child: Image(
+                                image: _heroImage,
+                                fit: BoxFit.contain,
+                                gaplessPlayback: true,
+                              ),
                             )
                           : const AspectRatio(
                               key: ValueKey('hero-placeholder'),
