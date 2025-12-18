@@ -1299,6 +1299,8 @@ class _HistoryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    // Match favorite card height: 88px image + symmetric padding (spacing.s * 0.75 * 2)
+    final cardHeight = 88 + (spacing.s * 1.5);
     final cloudinaryUrl = search['cloudinary_url'] as String?;
     final totalResults = (search['total_results'] as num?)?.toInt() ?? 0;
     final createdAt = search['created_at'] as String?;
@@ -1401,6 +1403,7 @@ class _HistoryCard extends ConsumerWidget {
         },
         child: Container(
           margin: EdgeInsets.only(bottom: spacing.m),
+          height: cardHeight,
           color: Colors.transparent,
           padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: spacing.s * 0.75),
           child: Row(
