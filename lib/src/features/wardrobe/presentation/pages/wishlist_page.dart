@@ -514,11 +514,9 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
       ),
       child: ListView.builder(
         controller: _historyScrollController,
-        padding: EdgeInsets.fromLTRB(
-          spacing.m,
-          spacing.m,
-          spacing.m,
-          spacing.m,
+        padding: EdgeInsets.only(
+          top: spacing.m,
+          bottom: spacing.m,
         ),
         itemCount: searches.length,
         itemBuilder: (context, index) {
