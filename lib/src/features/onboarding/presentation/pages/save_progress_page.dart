@@ -366,8 +366,13 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                     } catch (e) {
                                       debugPrint(
                                           '[SaveProgress] Apple sign in error: $e');
-                                      if (authService.currentUser == null &&
-                                          context.mounted) {
+
+                                      if (e == AuthService.authCancelledException) {
+                                        // User cancelled - do nothing
+                                        return;
+                                      }
+
+                                      if (context.mounted) {
                                         ScaffoldMessenger.of(context)
                                             .clearSnackBars();
                                         ScaffoldMessenger.of(context)
