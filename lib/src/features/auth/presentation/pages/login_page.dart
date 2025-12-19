@@ -14,6 +14,13 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
+import '../../../onboarding/presentation/pages/gender_selection_page.dart';
+import '../../../onboarding/presentation/pages/discovery_source_page.dart';
+import '../../../onboarding/presentation/pages/tutorial_image_analysis_page.dart';
+import '../../../onboarding/presentation/pages/notification_permission_page.dart';
+import '../../../onboarding/presentation/pages/trial_intro_page.dart';
+import '../../../onboarding/presentation/pages/save_progress_page.dart';
+import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../../user/repositories/user_profile_repository.dart';
@@ -21,6 +28,7 @@ import 'email_sign_in_page.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../../services/subscription_sync_service.dart';
+import '../../../../services/revenuecat_service.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -305,13 +313,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 // Check onboarding status from database
                                 final userResponse = await supabase
                                     .from('users')
-                                    .select('onboarding_state')
+                                    .select('onboarding_state, onboarding_checkpoint')
                                     .eq('id', userId)
                                     .maybeSingle();
 
                                 print('[LoginPage] Apple sign-in - user ID: $userId');
                                 print('[LoginPage] Database response: $userResponse');
                                 print('[LoginPage] Onboarding state from DB: ${userResponse?['onboarding_state']}');
+                                print('[LoginPage] Onboarding checkpoint from DB: ${userResponse?['onboarding_checkpoint']}');
 
                                 final hasCompletedOnboarding =
                                     userResponse != null &&
@@ -362,14 +371,82 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     ),
                                   );
                                 } else {
-                                  // User hasn't completed onboarding - continue onboarding flow
-                                  debugPrint('[LoginPage] User hasn\'t completed onboarding - going to HowItWorksPage');
-                                  navigator.push(
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const HowItWorksPage(),
-                                    ),
-                                  );
+                                  // User hasn't completed onboarding - resume where they left off
+                                  final checkpoint = userResponse?['onboarding_checkpoint'];
+                                  debugPrint('[LoginPage] User hasn\'t completed onboarding - checkpoint: $checkpoint');
+
+                                  // Check trial eligibility for trial/paywall checkpoints
+                                  bool isEligibleForTrial = true;
+                                  if (checkpoint == 'trial' || checkpoint == 'paywall' ||
+                                      checkpoint == 'save_progress' || checkpoint == 'account' ||
+                                      checkpoint == 'welcome') {
+                                    try {
+                                      isEligibleForTrial = await RevenueCatService().isEligibleForTrial();
+                                      debugPrint('[LoginPage] Trial eligibility check: $isEligibleForTrial');
+                                    } catch (e) {
+                                      debugPrint('[LoginPage] Error checking trial eligibility: $e');
+                                    }
+                                  }
+
+                                  // Route to the appropriate page based on checkpoint
+                                  Widget nextPage;
+                                  switch (checkpoint) {
+                                    case 'gender':
+                                      debugPrint('[LoginPage] Resuming at gender selection');
+                                      nextPage = const GenderSelectionPage();
+                                      break;
+                                    case 'discovery':
+                                      debugPrint('[LoginPage] Resuming at discovery source');
+                                      nextPage = const DiscoverySourcePage();
+                                      break;
+                                    case 'tutorial':
+                                      debugPrint('[LoginPage] Resuming at tutorial');
+                                      nextPage = const TutorialImageAnalysisPage();
+                                      break;
+                                    case 'notification':
+                                      debugPrint('[LoginPage] Resuming at notification permission');
+                                      nextPage = const NotificationPermissionPage();
+                                      break;
+                                    case 'trial':
+                                      debugPrint('[LoginPage] Resuming at trial - eligible: $isEligibleForTrial');
+                                      nextPage = isEligibleForTrial
+                                          ? const TrialIntroPage()
+                                          : const PaywallPage();
+                                      break;
+                                    case 'save_progress':
+                                      debugPrint('[LoginPage] Already authenticated - checking trial/subscription');
+                                      nextPage = hasActiveSubscription
+                                          ? const MainNavigation(key: ValueKey('fresh-main-nav'))
+                                          : (isEligibleForTrial ? const TrialIntroPage() : const PaywallPage());
+                                      break;
+                                    case 'paywall':
+                                    case 'account':
+                                      debugPrint('[LoginPage] Resuming at paywall/account - has subscription: $hasActiveSubscription');
+                                      nextPage = hasActiveSubscription
+                                          ? const MainNavigation(key: ValueKey('fresh-main-nav'))
+                                          : (isEligibleForTrial ? const TrialIntroPage() : const PaywallPage());
+                                      break;
+                                    case 'welcome':
+                                      debugPrint('[LoginPage] Resuming at welcome');
+                                      nextPage = const WelcomeFreeAnalysisPage();
+                                      break;
+                                    default:
+                                      debugPrint('[LoginPage] No checkpoint or unknown - starting from beginning');
+                                      nextPage = const HowItWorksPage();
+                                  }
+
+                                  if (nextPage is MainNavigation) {
+                                    ref.read(selectedIndexProvider.notifier).state = 0;
+                                    ref.invalidate(inspirationProvider);
+                                    navigator.pushAndRemoveUntil(
+                                      MaterialPageRoute(builder: (context) => nextPage),
+                                      (route) => false,
+                                    );
+                                  } else {
+                                    navigator.push(
+                                      MaterialPageRoute(builder: (context) => nextPage),
+                                    );
+                                  }
                                 }
                               }
                             }
@@ -435,13 +512,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               // Check onboarding status from database
                               final userResponse = await supabase
                                   .from('users')
-                                  .select('onboarding_state')
+                                  .select('onboarding_state, onboarding_checkpoint')
                                   .eq('id', userId)
                                   .maybeSingle();
 
                               print('[LoginPage] Google sign-in - user ID: $userId');
                               print('[LoginPage] Database response: $userResponse');
                               print('[LoginPage] Onboarding state from DB: ${userResponse?['onboarding_state']}');
+                              print('[LoginPage] Onboarding checkpoint from DB: ${userResponse?['onboarding_checkpoint']}');
 
                               final hasCompletedOnboarding =
                                   userResponse != null &&
@@ -490,14 +568,82 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     ),
                                   );
                                 } else {
-                                  // User hasn't completed onboarding - continue onboarding flow
-                                  debugPrint('[LoginPage] User hasn\'t completed onboarding - going to HowItWorksPage');
-                                  navigator.push(
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const HowItWorksPage(),
-                                    ),
-                                  );
+                                  // User hasn't completed onboarding - resume where they left off
+                                  final checkpoint = userResponse?['onboarding_checkpoint'];
+                                  debugPrint('[LoginPage] User hasn\'t completed onboarding - checkpoint: $checkpoint');
+
+                                  // Check trial eligibility for trial/paywall checkpoints
+                                  bool isEligibleForTrial = true;
+                                  if (checkpoint == 'trial' || checkpoint == 'paywall' ||
+                                      checkpoint == 'save_progress' || checkpoint == 'account' ||
+                                      checkpoint == 'welcome') {
+                                    try {
+                                      isEligibleForTrial = await RevenueCatService().isEligibleForTrial();
+                                      debugPrint('[LoginPage] Trial eligibility check: $isEligibleForTrial');
+                                    } catch (e) {
+                                      debugPrint('[LoginPage] Error checking trial eligibility: $e');
+                                    }
+                                  }
+
+                                  // Route to the appropriate page based on checkpoint
+                                  Widget nextPage;
+                                  switch (checkpoint) {
+                                    case 'gender':
+                                      debugPrint('[LoginPage] Resuming at gender selection');
+                                      nextPage = const GenderSelectionPage();
+                                      break;
+                                    case 'discovery':
+                                      debugPrint('[LoginPage] Resuming at discovery source');
+                                      nextPage = const DiscoverySourcePage();
+                                      break;
+                                    case 'tutorial':
+                                      debugPrint('[LoginPage] Resuming at tutorial');
+                                      nextPage = const TutorialImageAnalysisPage();
+                                      break;
+                                    case 'notification':
+                                      debugPrint('[LoginPage] Resuming at notification permission');
+                                      nextPage = const NotificationPermissionPage();
+                                      break;
+                                    case 'trial':
+                                      debugPrint('[LoginPage] Resuming at trial - eligible: $isEligibleForTrial');
+                                      nextPage = isEligibleForTrial
+                                          ? const TrialIntroPage()
+                                          : const PaywallPage();
+                                      break;
+                                    case 'save_progress':
+                                      debugPrint('[LoginPage] Already authenticated - checking trial/subscription');
+                                      nextPage = hasActiveSubscription
+                                          ? const MainNavigation(key: ValueKey('fresh-main-nav'))
+                                          : (isEligibleForTrial ? const TrialIntroPage() : const PaywallPage());
+                                      break;
+                                    case 'paywall':
+                                    case 'account':
+                                      debugPrint('[LoginPage] Resuming at paywall/account - has subscription: $hasActiveSubscription');
+                                      nextPage = hasActiveSubscription
+                                          ? const MainNavigation(key: ValueKey('fresh-main-nav'))
+                                          : (isEligibleForTrial ? const TrialIntroPage() : const PaywallPage());
+                                      break;
+                                    case 'welcome':
+                                      debugPrint('[LoginPage] Resuming at welcome');
+                                      nextPage = const WelcomeFreeAnalysisPage();
+                                      break;
+                                    default:
+                                      debugPrint('[LoginPage] No checkpoint or unknown - starting from beginning');
+                                      nextPage = const HowItWorksPage();
+                                  }
+
+                                  if (nextPage is MainNavigation) {
+                                    ref.read(selectedIndexProvider.notifier).state = 0;
+                                    ref.invalidate(inspirationProvider);
+                                    navigator.pushAndRemoveUntil(
+                                      MaterialPageRoute(builder: (context) => nextPage),
+                                      (route) => false,
+                                    );
+                                  } else {
+                                    navigator.push(
+                                      MaterialPageRoute(builder: (context) => nextPage),
+                                    );
+                                  }
                                 }
                               }
                             }

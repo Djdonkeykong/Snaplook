@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -11,6 +12,7 @@ import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_reminder_page.dart';
 import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../services/revenuecat_service.dart';
+import '../../../../services/onboarding_state_service.dart';
 
 class TrialIntroPage extends ConsumerStatefulWidget {
   const TrialIntroPage({super.key});
@@ -31,6 +33,19 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Update checkpoint for authenticated users
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId != null) {
+        try {
+          await OnboardingStateService().updateCheckpoint(
+            userId,
+            OnboardingCheckpoint.trial,
+          );
+        } catch (e) {
+          debugPrint('[TrialIntro] Error updating checkpoint: $e');
+        }
+      }
+
       // Check trial eligibility first
       await _checkTrialEligibility();
 

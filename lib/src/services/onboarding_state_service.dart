@@ -29,6 +29,7 @@ enum OnboardingCheckpoint {
   discovery('discovery'),
   tutorial('tutorial'),
   notification('notification'),
+  trial('trial'),
   saveProgress('save_progress'),
   paywall('paywall'),
   account('account'),
