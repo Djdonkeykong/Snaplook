@@ -490,7 +490,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
             ),
           ),
         ),
-      ),
     );
   }
 }
