@@ -6,9 +6,6 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
-import '../../../../services/subscription_sync_service.dart';
-import '../../../onboarding/presentation/pages/how_it_works_page.dart';
-import '../../../paywall/presentation/pages/paywall_page.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -61,17 +58,17 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     // Check if user came from share extension needing credits
     final needsCreditsFromShareExtension = await _checkNeedsCreditsFlag();
 
-    // Determine the next page based on auth status, subscription status, and onboarding state
+    // Determine the next page based on auth status and subscription status
     Widget nextPage;
 
     if (isAuthenticated) {
-      // Trust the Supabase session; avoid signing out on onboarding fetch issues.
       final user = ref.read(authServiceProvider).currentUser;
 
       if (user == null) {
+        // No user - go to login
         nextPage = const LoginPage();
       } else {
-        // Check subscription status from RevenueCat and onboarding state from Supabase
+        // User is authenticated - check subscription status
         try {
           // Get subscription status from RevenueCat
           final customerInfo = await Purchases.getCustomerInfo().timeout(
@@ -79,51 +76,27 @@ class _SplashPageState extends ConsumerState<SplashPage> {
           );
           final hasActiveSubscription = customerInfo.entitlements.active.isNotEmpty;
 
-          // Get onboarding status from Supabase
-          final supabase = Supabase.instance.client;
-          final userResponse = await supabase
-              .from('users')
-              .select('onboarding_state, subscription_status, is_trial')
-              .eq('id', user.id)
-              .maybeSingle()
-              .timeout(const Duration(seconds: 10));
-
-          final hasCompletedOnboarding = userResponse?['onboarding_state'] == 'completed';
-
-          // Sync subscription status if there's a mismatch
-          final dbSubscriptionStatus = userResponse?['subscription_status'] ?? 'free';
-          final dbIsTrial = userResponse?['is_trial'] == true;
-          final dbHasActiveSubscription = dbSubscriptionStatus == 'active' || dbIsTrial;
-
-          if (hasActiveSubscription != dbHasActiveSubscription) {
-            // Subscription status mismatch - sync from RevenueCat to Supabase
-            debugPrint('[Splash] Subscription status mismatch - syncing from RevenueCat to Supabase');
-            await SubscriptionSyncService().syncSubscriptionToSupabase();
-          }
+          debugPrint('[Splash] User authenticated. Has active subscription: $hasActiveSubscription');
 
           // Check if user needs credits from share extension
           if (needsCreditsFromShareExtension) {
             // User came from share extension with no credits - send to login page
             nextPage = const LoginPage();
+          } else if (hasActiveSubscription) {
+            // Logged in + active subscription -> Home
+            nextPage = const MainNavigation();
           } else {
-            // Normal routing
-            // Route based on onboarding completion and subscription status
-            if (hasCompletedOnboarding && hasActiveSubscription) {
-              nextPage = const MainNavigation(); // Home
-            } else if (hasCompletedOnboarding && !hasActiveSubscription) {
-              nextPage = const LoginPage(); // Subscription expired/free - send to login so they can renew or switch accounts
-            } else {
-              nextPage = const HowItWorksPage(); // Continue onboarding from where they left off
-            }
+            // Logged in + NO subscription -> Login page
+            nextPage = const LoginPage();
           }
         } catch (e) {
           debugPrint('[Splash] Error checking subscription status: $e');
-          // On error, default to safe navigation (show login to avoid unauthorized access)
+          // On error, default to login page
           nextPage = const LoginPage();
         }
       }
     } else {
-      // Not authenticated - always go to login
+      // Not authenticated - go to login
       nextPage = const LoginPage();
     }
 

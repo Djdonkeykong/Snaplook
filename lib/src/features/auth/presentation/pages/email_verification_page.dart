@@ -253,11 +253,15 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               final hasOnboardingData = selectedGender != null;
 
               if (hasActiveSubscription) {
-                // User purchased subscription - skip to welcome page
-                print('[EmailVerification] New user with subscription - navigating to welcome');
+                // User purchased subscription - go straight to home
+                print('[EmailVerification] New user with subscription - navigating to home');
+                ref.read(selectedIndexProvider.notifier).state = 0;
+                ref.invalidate(selectedIndexProvider);
+                ref.invalidate(scrollToTopTriggerProvider);
+                ref.invalidate(isAtHomeRootProvider);
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (context) => const WelcomeFreeAnalysisPage(),
+                    builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
                   ),
                   (route) => false,
                 );

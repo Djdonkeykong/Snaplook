@@ -10,13 +10,10 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../widgets/progress_indicator.dart';
-import 'welcome_free_analysis_page.dart';
 import 'trial_intro_page.dart';
 import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
-import '../../../../shared/widgets/bottom_sheet_handle.dart';
-import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -34,33 +31,6 @@ class SaveProgressPage extends ConsumerStatefulWidget {
 }
 
 class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
-  bool _isCheckingAuth = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkIfShouldSkip();
-  }
-
-  Future<void> _checkIfShouldSkip() async {
-    final authService = ref.read(authServiceProvider);
-    final isAuthenticated = authService.currentUser != null;
-
-    if (isAuthenticated) {
-      debugPrint('[SaveProgress] User already authenticated, skipping to next step');
-      // Don't set _isCheckingAuth to false, just navigate
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _navigateBasedOnSubscriptionStatus();
-      });
-    } else {
-      // User is not authenticated, show the page
-      if (mounted) {
-        setState(() {
-          _isCheckingAuth = false;
-        });
-      }
-    }
-  }
 
   Future<void> _navigateBasedOnSubscriptionStatus() async {
     if (!mounted) return;
@@ -69,183 +39,113 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     final userId = authService.currentUser?.id;
 
     if (userId == null) {
-      // Check trial eligibility before showing trial pages
-      final isEligibleForTrial = await _checkTrialEligibility();
-
-      if (isEligibleForTrial) {
-        debugPrint('[SaveProgress] No user found, eligible for trial, navigating to trial intro');
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const TrialIntroPage()),
-        );
-      } else {
-        debugPrint('[SaveProgress] No user found, NOT eligible for trial, navigating to paywall');
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const PaywallPage()),
-        );
-      }
+      debugPrint('[SaveProgress] ERROR: No user found after auth');
       return;
     }
 
     try {
-      debugPrint('[SaveProgress] Checking subscription status for user $userId');
+      debugPrint('[SaveProgress] Checking onboarding and subscription status for user $userId');
 
-      CustomerInfo? customerInfo;
-      int retryCount = 0;
-      const maxRetries = 3;
+      // Check if user has completed onboarding
+      final supabase = Supabase.instance.client;
+      final userResponse = await supabase
+          .from('users')
+          .select('onboarding_state')
+          .eq('id', userId)
+          .maybeSingle();
 
-      while (retryCount < maxRetries) {
-        try {
-          customerInfo = RevenueCatService().currentCustomerInfo ??
-              await Purchases.getCustomerInfo()
-                  .timeout(const Duration(seconds: 10));
-          break;
-        } catch (e) {
-          retryCount++;
-          debugPrint(
-              '[SaveProgress] Error fetching customer info (attempt $retryCount/$maxRetries): $e');
+      final hasCompletedOnboarding = userResponse != null &&
+          userResponse['onboarding_state'] == 'completed';
 
-          if (retryCount >= maxRetries) {
-            debugPrint(
-                '[SaveProgress] Max retries reached, continuing without subscription check');
+      debugPrint('[SaveProgress] Has completed onboarding: $hasCompletedOnboarding');
 
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Network error checking subscription. Continuing to paywall.',
-                  ),
-                  duration: Duration(seconds: 3),
-                ),
-              );
-            }
+      if (hasCompletedOnboarding) {
+        // Existing user who completed onboarding - check subscription
+        debugPrint('[SaveProgress] User completed onboarding, checking subscription status');
+
+        // Get subscription status from RevenueCat with retry logic
+        CustomerInfo? customerInfo;
+        int retryCount = 0;
+        const maxRetries = 3;
+
+        while (retryCount < maxRetries) {
+          try {
+            customerInfo = RevenueCatService().currentCustomerInfo ??
+                await Purchases.getCustomerInfo()
+                    .timeout(const Duration(seconds: 10));
             break;
+          } catch (e) {
+            retryCount++;
+            debugPrint(
+                '[SaveProgress] Error fetching customer info (attempt $retryCount/$maxRetries): $e');
+
+            if (retryCount >= maxRetries) {
+              debugPrint(
+                  '[SaveProgress] Max retries reached, defaulting to paywall');
+              break;
+            }
+
+            await Future.delayed(Duration(seconds: retryCount));
+          }
+        }
+
+        final activeEntitlements = customerInfo?.entitlements.active.values;
+        final hasActiveSubscription =
+            activeEntitlements != null && activeEntitlements.isNotEmpty;
+
+        debugPrint('[SaveProgress] Has active subscription: $hasActiveSubscription');
+
+        if (hasActiveSubscription) {
+          // Completed onboarding + subscription → Home
+          debugPrint('[SaveProgress] User has subscription - going to home');
+
+          // Sync subscription to Supabase
+          try {
+            await SubscriptionSyncService()
+                .syncSubscriptionToSupabase()
+                .timeout(const Duration(seconds: 10));
+          } catch (e) {
+            debugPrint('[SaveProgress] Error syncing subscription: $e');
           }
 
-          await Future.delayed(Duration(seconds: retryCount));
-        }
-      }
-
-      final activeEntitlements = customerInfo?.entitlements.active.values;
-      final hasActiveSubscription =
-          activeEntitlements != null && activeEntitlements.isNotEmpty;
-
-      debugPrint(
-          '[SaveProgress] Has active subscription: $hasActiveSubscription');
-
-      if (hasActiveSubscription) {
-        debugPrint(
-            '[SaveProgress] User has active subscription, syncing and checking onboarding status');
-
-        try {
-          await SubscriptionSyncService()
-              .syncSubscriptionToSupabase()
-              .timeout(const Duration(seconds: 10));
-          await OnboardingStateService()
-              .markPaymentComplete(userId)
-              .timeout(const Duration(seconds: 10));
-        } catch (e) {
-          debugPrint('[SaveProgress] Error syncing subscription: $e');
-        }
-
-        if (mounted) {
-          // Check if user has completed onboarding before
-          try {
-            final supabase = Supabase.instance.client;
-            final userResponse = await supabase
-                .from('users')
-                .select('onboarding_state')
-                .eq('id', userId)
-                .maybeSingle();
-
-            final hasCompletedOnboarding = userResponse != null &&
-                userResponse['onboarding_state'] == 'completed';
-
-            if (hasCompletedOnboarding) {
-              // User already completed onboarding - go to home
-              debugPrint('[SaveProgress] User completed onboarding previously - going to home');
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(
-                    key: ValueKey('fresh-main-nav'),
-                  ),
-                ),
-                (route) => false,
-              );
-            } else {
-              // User hasn't completed onboarding - continue the flow
-              debugPrint('[SaveProgress] User hasn\'t completed onboarding - going to welcome');
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                    builder: (context) => const WelcomeFreeAnalysisPage()),
-              );
-            }
-          } catch (e) {
-            debugPrint('[SaveProgress] Error checking onboarding status: $e');
-            // Default to continuing onboarding
-            Navigator.of(context).pushReplacement(
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(
-                  builder: (context) => const WelcomeFreeAnalysisPage()),
+                builder: (context) => const MainNavigation(
+                  key: ValueKey('fresh-main-nav'),
+                ),
+              ),
+              (route) => false,
+            );
+          }
+        } else {
+          // Completed onboarding + NO subscription → Paywall
+          debugPrint('[SaveProgress] User has no subscription - going to paywall');
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const PaywallPage()),
             );
           }
         }
       } else {
-        // Check trial eligibility for users without subscription
-        final isEligibleForTrial = await _checkTrialEligibility();
-
-        if (isEligibleForTrial) {
-          debugPrint(
-              '[SaveProgress] No active subscription, eligible for trial, navigating to trial intro');
-          if (mounted) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (context) => const TrialIntroPage()),
-            );
-          }
-        } else {
-          debugPrint(
-              '[SaveProgress] No active subscription, NOT eligible for trial, navigating to paywall');
-          if (mounted) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (context) => const PaywallPage()),
-            );
-          }
+        // New user (hasn't completed onboarding) → TrialIntroPage
+        debugPrint('[SaveProgress] New user - navigating to trial intro');
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const TrialIntroPage()),
+          );
         }
       }
     } catch (e, stackTrace) {
-      debugPrint('[SaveProgress] Error checking subscription status: $e');
+      debugPrint('[SaveProgress] Error checking status: $e');
       debugPrint('[SaveProgress] Stack trace: $stackTrace');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-
-        // Check trial eligibility on error
-        final isEligibleForTrial = await _checkTrialEligibility();
-
-        Navigator.of(context).push(
-          MaterialPageRoute(
-              builder: (context) => isEligibleForTrial
-                  ? const TrialIntroPage()
-                  : const PaywallPage()),
+        // On error, default to trial flow
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const TrialIntroPage()),
         );
       }
-    }
-  }
-
-  Future<bool> _checkTrialEligibility() async {
-    try {
-      final isEligible = await RevenueCatService().isEligibleForTrial();
-      debugPrint('[SaveProgress] Trial eligibility check result: $isEligible');
-      return isEligible;
-    } catch (e) {
-      debugPrint('[SaveProgress] Error checking trial eligibility: $e');
-      // Default to showing trial if check fails
-      return true;
     }
   }
 
@@ -335,185 +235,9 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     await _navigateBasedOnSubscriptionStatus();
   }
 
-  Future<void> _showSignInBottomSheet(BuildContext context) async {
-    final spacing = context.spacing;
-    final platform = Theme.of(context).platform;
-    final isAppleSignInAvailable =
-        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
-
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(20),
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Stack(
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(spacing.l),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      BottomSheetHandle(
-                        margin: EdgeInsets.only(bottom: spacing.m),
-                      ),
-                      const Center(
-                        child: Text(
-                          'Sign In',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                            fontFamily: 'PlusJakartaSans',
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: spacing.xxl),
-                      if (isAppleSignInAvailable) ...[
-                        _AuthButton(
-                          icon: Icons.apple,
-                          iconSize: 32,
-                          label: 'Continue with Apple',
-                          backgroundColor: Colors.black,
-                          textColor: Colors.white,
-                          onPressed: () async {
-                            final authService = ref.read(authServiceProvider);
-                            try {
-                              await authService.signInWithApple();
-                              if (mounted) {
-                                Navigator.pop(sheetContext);
-                                await _handleAuthSuccess(context);
-                              }
-                            } catch (e) {
-                              if (mounted &&
-                                  e != AuthService.authCancelledException) {
-                                Navigator.pop(sheetContext);
-                                ScaffoldMessenger.of(context).clearSnackBars();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      e.toString(),
-                                      style: context.snackTextStyle(
-                                        merge: const TextStyle(
-                                            fontFamily: 'PlusJakartaSans'),
-                                      ),
-                                    ),
-                                    duration:
-                                        const Duration(milliseconds: 2500),
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                        ),
-                        SizedBox(height: spacing.m),
-                      ],
-                      _AuthButtonWithSvg(
-                        svgAsset: 'assets/icons/google_logo.svg',
-                        iconSize: 22,
-                        label: 'Continue with Google',
-                        backgroundColor: Colors.white,
-                        textColor: Colors.black,
-                        borderColor: const Color(0xFFE5E7EB),
-                        onPressed: () async {
-                          final authService = ref.read(authServiceProvider);
-                          try {
-                            await authService.signInWithGoogle();
-                            if (mounted) {
-                              Navigator.pop(sheetContext);
-                              await _handleAuthSuccess(context);
-                            }
-                          } catch (e) {
-                            if (mounted &&
-                                e != AuthService.authCancelledException) {
-                              Navigator.pop(sheetContext);
-                              ScaffoldMessenger.of(context).clearSnackBars();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    e.toString(),
-                                    style: context.snackTextStyle(
-                                      merge: const TextStyle(
-                                          fontFamily: 'PlusJakartaSans'),
-                                    ),
-                                  ),
-                                  duration: const Duration(milliseconds: 2500),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                      SizedBox(height: spacing.m),
-                      _AuthButton(
-                        icon: Icons.email_outlined,
-                        iconSize: 24,
-                        label: 'Continue with Email',
-                        backgroundColor: Colors.white,
-                        textColor: Colors.black,
-                        borderColor: const Color(0xFFE5E7EB),
-                        onPressed: () async {
-                          Navigator.pop(sheetContext);
-                          final result = await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const EmailSignInPage(),
-                            ),
-                          );
-
-                          if (result == true && mounted) {
-                            await Future.delayed(
-                                const Duration(milliseconds: 500));
-                            await _handleAuthSuccess(context);
-                          }
-                        },
-                      ),
-                      SizedBox(height: spacing.xl),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: spacing.l,
-                  right: spacing.l,
-                  child: SnaplookCircularIconButton(
-                    icon: Icons.close,
-                    iconSize: 18,
-                    size: 32,
-                    onPressed: () => Navigator.pop(sheetContext),
-                    tooltip: 'Close',
-                    semanticLabel: 'Close',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    // Show loading indicator while checking authentication
-    if (_isCheckingAuth) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
-          ),
-        ),
-      );
-    }
-
     final spacing = context.spacing;
     final targetPlatform = Theme.of(context).platform;
     final isAppleSignInAvailable = targetPlatform == TargetPlatform.iOS ||
@@ -635,10 +359,22 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
                               try {
                                 await authService.signInWithGoogle();
+
+                                await Future.delayed(
+                                    const Duration(milliseconds: 500));
+
+                                if (context.mounted) {
+                                  await _handleAuthSuccess(context);
+                                }
                               } catch (e) {
                                 debugPrint('[SaveProgress] Sign in error: $e');
-                                if (authService.currentUser == null &&
-                                    context.mounted) {
+
+                                if (e == AuthService.authCancelledException) {
+                                  // User cancelled - do nothing
+                                  return;
+                                }
+
+                                if (context.mounted) {
                                   ScaffoldMessenger.of(context)
                                       .clearSnackBars();
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -654,15 +390,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                           const Duration(milliseconds: 2500),
                                     ),
                                   );
-                                  return;
                                 }
-                              }
-
-                              await Future.delayed(
-                                  const Duration(milliseconds: 500));
-
-                              if (context.mounted) {
-                                await _handleAuthSuccess(context);
                               }
                             },
                           ),
@@ -689,38 +417,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                 await _handleAuthSuccess(context);
                               }
                             },
-                          ),
-
-                          SizedBox(height: spacing.m),
-                          TextButton(
-                            onPressed: () async {
-                              HapticFeedback.mediumImpact();
-                              await _showSignInBottomSheet(context);
-                            },
-                            child: RichText(
-                              textAlign: TextAlign.center,
-                              text: const TextSpan(
-                                text: 'Already have an account? ',
-                                style: TextStyle(
-                                  color: Color(0xFF6B7280),
-                                  fontSize: 14,
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontWeight: FontWeight.w400,
-                                  height: 1.5,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: 'Sign In',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'PlusJakartaSans',
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ),
                         ],
                       ),

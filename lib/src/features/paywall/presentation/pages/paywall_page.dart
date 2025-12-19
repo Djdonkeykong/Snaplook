@@ -258,19 +258,52 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
     }
   }
 
-  void _navigateNext(bool didPurchase) {
+  Future<void> _navigateNext(bool didPurchase) async {
     if (!mounted) return;
 
-    final hasAccount = ref.read(authServiceProvider).currentUser != null;
-    debugPrint(
-        '[RevenueCatPaywall] Navigating after purchase: $didPurchase, hasAccount: $hasAccount');
+    final userId = ref.read(authServiceProvider).currentUser?.id;
 
-    final nextPage =
-        hasAccount ? const WelcomeFreeAnalysisPage() : const SaveProgressPage();
+    if (userId == null) {
+      // Should never happen since auth is required before paywall
+      debugPrint('[RevenueCatPaywall] WARNING: No user found after purchase');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const SaveProgressPage()),
+      );
+      return;
+    }
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => nextPage),
-    );
+    try {
+      // Check if user has completed onboarding before
+      final supabase = Supabase.instance.client;
+      final userResponse = await supabase
+          .from('users')
+          .select('onboarding_state')
+          .eq('id', userId)
+          .maybeSingle();
+
+      final hasCompletedOnboarding = userResponse?['onboarding_state'] == 'completed';
+
+      debugPrint(
+          '[RevenueCatPaywall] Navigating after purchase: hasCompletedOnboarding=$hasCompletedOnboarding');
+
+      final nextPage = hasCompletedOnboarding
+          ? const MainNavigation()
+          : const WelcomeFreeAnalysisPage();
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => nextPage),
+        );
+      }
+    } catch (e) {
+      debugPrint('[RevenueCatPaywall] Error checking onboarding status: $e');
+      // Default to continuing onboarding
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const WelcomeFreeAnalysisPage()),
+        );
+      }
+    }
   }
 
   @override
@@ -390,7 +423,7 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Purchases restored! Please create an account to continue.',
+                          'Purchases restored! Please sign in to continue.',
                         ),
                         duration: Duration(seconds: 3),
                       ),
