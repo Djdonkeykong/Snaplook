@@ -847,7 +847,7 @@ class _PlanSelectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x33000000),
+            color: Color(0x26000000),
             blurRadius: 32,
             offset: Offset(0, 0),
             spreadRadius: 8,
