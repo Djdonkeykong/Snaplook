@@ -14,7 +14,7 @@ import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart' show AccountCreationPage;
-import '../../../onboarding/presentation/pages/revenuecat_paywall_page.dart';
+import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../../user/repositories/user_profile_repository.dart';
 import 'email_sign_in_page.dart';
@@ -331,7 +331,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   debugPrint('[LoginPage] User completed onboarding but no subscription - going to paywall');
                                   navigator.push(
                                     MaterialPageRoute(
-                                      builder: (context) => const RevenueCatPaywallPage(),
+                                      builder: (context) => const PaywallPage(),
                                     ),
                                   );
                                 } else {
@@ -431,7 +431,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   debugPrint('[LoginPage] User completed onboarding but no subscription - going to paywall');
                                   navigator.push(
                                     MaterialPageRoute(
-                                      builder: (context) => const RevenueCatPaywallPage(),
+                                      builder: (context) => const PaywallPage(),
                                     ),
                                   );
                                 } else {

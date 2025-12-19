@@ -8,7 +8,7 @@ import '../../domain/providers/auth_provider.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../onboarding/presentation/pages/notification_permission_page.dart';
-import '../../../onboarding/presentation/pages/revenuecat_paywall_page.dart';
+import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show MainNavigation, selectedIndexProvider, scrollToTopTriggerProvider, isAtHomeRootProvider;
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -244,7 +244,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               print('[EmailVerification] Existing user without subscription - navigating to paywall');
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
-                  builder: (context) => const RevenueCatPaywallPage(),
+                  builder: (context) => const PaywallPage(),
                 ),
                 (route) => false,
               );
@@ -266,7 +266,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 print('[EmailVerification] New user with onboarding data but no subscription - navigating to paywall');
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (context) => const RevenueCatPaywallPage(),
+                    builder: (context) => const PaywallPage(),
                   ),
                   (route) => false,
                 );

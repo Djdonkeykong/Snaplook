@@ -1,506 +1,704 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../onboarding/presentation/widgets/progress_indicator.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
+import '../../../../services/onboarding_state_service.dart';
+import '../../../../services/revenuecat_service.dart';
+import '../../../../services/subscription_sync_service.dart';
 import '../../../onboarding/presentation/pages/account_creation_page.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
-import '../../../auth/domain/providers/auth_provider.dart';
-import '../../providers/credit_provider.dart';
-import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
+import '../../../../../shared/navigation/main_navigation.dart';
 
 enum PaywallPlanType { monthly, yearly }
 
-final selectedPlanProvider = StateProvider<PaywallPlanType>(
-  (ref) => PaywallPlanType.yearly,
-);
-final isPurchasingProvider = StateProvider<bool>((ref) => false);
+final selectedPlanProvider =
+    StateProvider<PaywallPlanType?>(
+        (ref) => PaywallPlanType.yearly);
 
-class PaywallPage extends ConsumerWidget {
-  final double maxHeightFactor;
-  final bool isFullScreen;
-
-  const PaywallPage({
-    super.key,
-    this.maxHeightFactor = 1.0,
-    this.isFullScreen = false,
-  });
+class PaywallPage extends ConsumerStatefulWidget {
+  const PaywallPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selectedPlan = ref.watch(selectedPlanProvider);
-    final isYearlySelected = selectedPlan == PaywallPlanType.yearly;
-    final spacing = context.spacing;
-    final isPurchasing = ref.watch(isPurchasingProvider);
-    final maxSheetHeight = MediaQuery.of(context).size.height * maxHeightFactor;
-    final trialEndDate = DateTime.now().add(const Duration(days: 3));
-    final trialEndFormatted = DateFormat('MMM d').format(trialEndDate);
+  ConsumerState<PaywallPage> createState() =>
+      _PaywallPageState();
+}
 
-    return Container(
-      constraints:
-          isFullScreen ? null : BoxConstraints(maxHeight: maxSheetHeight),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: isFullScreen
-            ? BorderRadius.zero
-            : const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: SafeArea(
-        child: SizedBox(
-          height: isFullScreen ? null : maxSheetHeight,
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              if (!isFullScreen)
-                Container(
-                  margin: const EdgeInsets.only(top: 8, bottom: 10),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SnaplookCircularIconButton(
-                      icon: Icons.close,
-                      iconSize: 20,
-                      onPressed: () => Navigator.of(context).pop(),
-                      tooltip: 'Close',
-                      semanticLabel: 'Close',
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: isPurchasing
-                          ? null
-                          : () => _handleRestore(context, ref),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.black87,
-                        textStyle: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+class _PaywallPageState extends ConsumerState<PaywallPage> {
+  Offerings? _offerings;
+  bool _isLoading = true;
+  bool _isPurchasing = false;
+  bool _isEligibleForTrial = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfShouldSkip();
+    _loadOfferings();
+    _checkTrialEligibility();
+  }
+
+  Future<void> _checkIfShouldSkip() async {
+    final authService = ref.read(authServiceProvider);
+    final isAuthenticated = authService.currentUser != null;
+
+    if (isAuthenticated) {
+      try {
+        CustomerInfo? customerInfo;
+        try {
+          customerInfo = RevenueCatService().currentCustomerInfo ??
+              await Purchases.getCustomerInfo();
+        } catch (e) {
+          debugPrint(
+              '[RevenueCatPaywall] Error fetching customer info on init: $e');
+          return;
+        }
+
+        final activeEntitlements = customerInfo?.entitlements.active.values;
+        final hasActiveSubscription =
+            activeEntitlements != null && activeEntitlements.isNotEmpty;
+
+        if (hasActiveSubscription) {
+          debugPrint(
+              '[RevenueCatPaywall] User already has active subscription, skipping paywall');
+
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (mounted) {
+              // Check if user completed onboarding before
+              try {
+                final userId = authService.currentUser?.id;
+                if (userId != null) {
+                  final supabase = Supabase.instance.client;
+                  final userResponse = await supabase
+                      .from('users')
+                      .select('onboarding_state')
+                      .eq('id', userId)
+                      .maybeSingle();
+
+                  final hasCompletedOnboarding = userResponse != null &&
+                      userResponse['onboarding_state'] == 'completed';
+
+                  if (hasCompletedOnboarding) {
+                    // User already completed onboarding - go to home
+                    debugPrint(
+                        '[RevenueCatPaywall] User completed onboarding previously - going to home');
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => const MainNavigation(
+                          key: ValueKey('fresh-main-nav'),
                         ),
                       ),
-                      child: const Text('Restore'),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: spacing.l),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: spacing.l),
-                        const Text(
-                          'Access all of Snaplook',
-                          textAlign: TextAlign.start,
-                          style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 34,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                            letterSpacing: -1.0,
-                            height: 1.25,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          isYearlySelected
-                              ? 'Start your 3-day free trial and unlock unlimited matches.'
-                              : 'Unlock unlimited matches, saves, and smart alerts.',
-                          textAlign: TextAlign.start,
-                          style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
-                            height: 1.4,
-                          ),
-                        ),
-                        SizedBox(height: spacing.l),
-                        const _HeroMark(),
-                        SizedBox(height: spacing.xl),
-                        const _FeatureItem(
-                          icon: Icons.search_rounded,
-                          iconColor: AppColors.tertiary,
-                          title: 'Turn photos into matches',
-                          subtitle:
-                              'Get instant matches from photos, screenshots, or social posts.',
-                        ),
-                        SizedBox(height: spacing.l),
-                        const _FeatureItem(
-                          icon: Icons.favorite_rounded,
-                          iconColor: AppColors.secondary,
-                          title: 'Save the looks you love',
-                          subtitle:
-                              'Keep styles in one place and come back to them anytime.',
-                        ),
-                        SizedBox(height: spacing.l),
-                        const _FeatureItem(
-                          icon: Icons.bolt_rounded,
-                          iconColor: Colors.amber,
-                          title: 'Shop similar pieces instantly',
-                          subtitle:
-                              'Discover similar items from trusted retailers in seconds.',
-                        ),
-                        SizedBox(height: spacing.l),
-                        const _FeatureItem(
-                          icon: Icons.widgets_rounded,
-                          iconColor: Colors.indigo,
-                          title: 'Never miss a match',
-                          subtitle:
-                              'Receive alerts when we find similar pieces you’ll like.',
-                        ),
-                        SizedBox(height: spacing.xl),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: spacing.l),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 18),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(26),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: AppColors.shadow,
-                            blurRadius: 28,
-                            offset: Offset(0, 18),
-                          ),
-                        ],
-                        border: Border.all(color: AppColors.outlineVariant),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.secondary.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.star_rounded,
-                                        size: 16, color: AppColors.secondary),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'Save 20%',
-                                      style: TextStyle(
-                                        fontFamily: 'PlusJakartaSans',
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 12,
-                                        color: AppColors.secondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Spacer(),
-                              Text(
-                                isYearlySelected
-                                    ? 'Best value'
-                                    : 'Choose a plan',
-                                style: const TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _PlanOption(
-                                  title: 'Yearly',
-                                  price: '\$59.99',
-                                  cadence: '\$4.99/mo after trial',
-                                  helper: '3-day free trial',
-                                  isSelected: isYearlySelected,
-                                  onTap: () => ref
-                                      .read(selectedPlanProvider.notifier)
-                                      .state = PaywallPlanType.yearly,
-                                  isPopular: true,
-                                ),
-                              ),
-                              SizedBox(width: spacing.m),
-                              Expanded(
-                                child: _PlanOption(
-                                  title: 'Monthly',
-                                  price: '\$7.99',
-                                  cadence: 'Billed monthly',
-                                  helper: 'Cancel anytime',
-                                  isSelected:
-                                      selectedPlan == PaywallPlanType.monthly,
-                                  onTap: () => ref
-                                      .read(selectedPlanProvider.notifier)
-                                      .state = PaywallPlanType.monthly,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          Center(
-                            child: Text(
-                              isYearlySelected
-                                  ? 'Nothing due today'
-                                  : 'Starts immediately, cancel anytime',
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: isYearlySelected
-                                    ? AppColors.secondary
-                                    : AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: spacing.l),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: isPurchasing
-                            ? null
-                            : () => _handlePurchase(
-                                  context,
-                                  ref,
-                                ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.secondary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          disabledBackgroundColor: Colors.grey.shade300,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                        ),
-                        child: isPurchasing
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : const Text(
-                                'Continue',
-                                style: TextStyle(
-                                  fontFamily: 'PlusJakartaSans',
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                      ),
-                    ),
-                    SizedBox(height: spacing.m),
-                    Center(
-                      child: Text(
-                        isYearlySelected
-                            ? '3-day free trial. Then \$59.99/year starting $trialEndFormatted.'
-                            : 'Billed \$7.99 today. Cancel anytime.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 14,
-                          color: Color(0xFF6B7280),
-                          fontWeight: FontWeight.w500,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: spacing.m),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+                      (route) => false,
+                    );
+                  } else {
+                    // User hasn't completed onboarding - continue the flow
+                    debugPrint(
+                        '[RevenueCatPaywall] User hasn\'t completed onboarding - going to welcome');
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                          builder: (context) => const WelcomeFreeAnalysisPage()),
+                    );
+                  }
+                } else {
+                  // No user ID - continue to welcome
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                        builder: (context) => const WelcomeFreeAnalysisPage()),
+                  );
+                }
+              } catch (e) {
+                debugPrint(
+                    '[RevenueCatPaywall] Error checking onboarding status: $e');
+                // Default to continuing onboarding
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                      builder: (context) => const WelcomeFreeAnalysisPage()),
+                );
+              }
+            }
+          });
+        }
+      } catch (e) {
+        debugPrint(
+            '[RevenueCatPaywall] Error checking subscription on init: $e');
+      }
+    }
+  }
+
+  String _formatPriceFloor(double value) {
+    final cents = (value * 100).floor();
+    return (cents / 100).toStringAsFixed(2);
+  }
+
+  Future<void> _checkTrialEligibility() async {
+    try {
+      final isEligible = await RevenueCatService().isEligibleForTrial();
+      if (mounted) {
+        setState(() {
+          _isEligibleForTrial = isEligible;
+        });
+      }
+    } catch (e) {
+      debugPrint('[RevenueCatPaywall] Error checking trial eligibility: $e');
+      if (mounted) {
+        setState(() {
+          _isEligibleForTrial = true;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadOfferings() async {
+    try {
+      final offerings = await RevenueCatService()
+          .getOfferings()
+          .timeout(const Duration(seconds: 10));
+      if (mounted) {
+        setState(() {
+          _offerings = offerings;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[RevenueCatPaywall] Error loading offerings: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Show error message
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Unable to load subscription plans. You can skip for now.'),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _handleContinue() async {
+    if (_isPurchasing) return;
+
+    // If offerings failed to load, just navigate to next step
+    if (_offerings?.current == null) {
+      _navigateNext(false);
+      return;
+    }
+
+    final selectedPlan = ref.read(selectedPlanProvider);
+    if (selectedPlan == null) return;
+
+    setState(() {
+      _isPurchasing = true;
+    });
+
+    HapticFeedback.mediumImpact();
+
+    try {
+      debugPrint('[RevenueCatPaywall] Starting purchase...');
+
+      // Get the selected package
+      Package? package;
+      if (selectedPlan == PaywallPlanType.yearly) {
+        package = _offerings!.current!.annual;
+      } else {
+        package = _offerings!.current!.monthly;
+      }
+
+      if (package == null) {
+        debugPrint('[RevenueCatPaywall] Package not found for selected plan');
+        _navigateNext(false);
+        return;
+      }
+
+      // Purchase the package
+      final didPurchase = await RevenueCatService().purchasePackage(package);
+
+      if (!mounted) return;
+
+      debugPrint('[RevenueCatPaywall] Purchase result: $didPurchase');
+
+      // Check if user is authenticated
+      final authService = ref.read(authServiceProvider);
+      final isAuthenticated = authService.currentUser != null;
+
+      // If user purchased and has account, sync subscription to Supabase
+      if (didPurchase && isAuthenticated) {
+        try {
+          debugPrint('[RevenueCatPaywall] Syncing subscription to Supabase...');
+          await SubscriptionSyncService().syncSubscriptionToSupabase();
+          await OnboardingStateService()
+              .markPaymentComplete(authService.currentUser!.id);
+          debugPrint('[RevenueCatPaywall] Subscription synced successfully');
+        } catch (e) {
+          debugPrint('[RevenueCatPaywall] Error syncing subscription: $e');
+        }
+      }
+
+      _navigateNext(didPurchase);
+    } catch (e) {
+      debugPrint('[RevenueCatPaywall] Error during purchase: $e');
+      _navigateNext(false);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPurchasing = false;
+        });
+      }
+    }
+  }
+
+  void _navigateNext(bool didPurchase) {
+    if (!mounted) return;
+
+    final hasAccount = ref.read(authServiceProvider).currentUser != null;
+    debugPrint(
+        '[RevenueCatPaywall] Navigating after purchase: $didPurchase, hasAccount: $hasAccount');
+
+    final nextPage =
+        hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage();
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => nextPage),
     );
   }
 
-  Future<void> _handlePurchase(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    try {
-      HapticFeedback.mediumImpact();
+  @override
+  Widget build(BuildContext context) {
+    final selectedPlan = ref.watch(selectedPlanProvider);
+    final selectedPlanValue = selectedPlan ?? PaywallPlanType.yearly;
+    final spacing = context.spacing;
+    final viewPadding = MediaQuery.of(context).padding;
 
-      final selectedPlan = ref.read(selectedPlanProvider);
-      final purchaseController = ref.read(purchaseControllerProvider);
-
-      ref.read(isPurchasingProvider.notifier).state = true;
-
-      final success = await purchaseController.showPaywall(
-        // Use a single Superwall placement for both monthly/yearly options.
-        placement: 'onboarding_paywall',
-      );
-
-      ref.read(isPurchasingProvider.notifier).state = false;
-
-      if (success) {
-        HapticFeedback.mediumImpact();
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Subscription activated! Enjoy unlimited access.',
-                style: TextStyle(fontFamily: 'PlusJakartaSans'),
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-
-          final authService = ref.read(authServiceProvider);
-          final hasAccount = authService.currentUser != null;
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => hasAccount
-                  ? const WelcomeFreeAnalysisPage()
-                  : const AccountCreationPage(),
-            ),
-          );
-        }
-      } else {
-        if (context.mounted) {
-          _showErrorDialog(
-            context,
-            'Purchase was not completed. Please try again.',
-          );
-        }
-      }
-    } on PlatformException catch (e) {
-      ref.read(isPurchasingProvider.notifier).state = false;
-
-      if (context.mounted) {
-        _showErrorDialog(
-          context,
-          e.message ?? 'Purchase failed. Please try again.',
-        );
-      }
-    } catch (e) {
-      ref.read(isPurchasingProvider.notifier).state = false;
-
-      if (context.mounted) {
-        _showErrorDialog(context, 'An error occurred. Please try again.');
-      }
-    }
-  }
-
-  Future<void> _handleRestore(BuildContext context, WidgetRef ref) async {
-    try {
-      HapticFeedback.mediumImpact();
-
-      ref.read(isPurchasingProvider.notifier).state = true;
-
-      final purchaseController = ref.read(purchaseControllerProvider);
-      final success = await purchaseController.restorePurchases();
-
-      ref.read(isPurchasingProvider.notifier).state = false;
-
-      if (success) {
-        HapticFeedback.mediumImpact();
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Purchases restored successfully!',
-                style: TextStyle(fontFamily: 'PlusJakartaSans'),
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-
-          final authService = ref.read(authServiceProvider);
-          final hasAccount = authService.currentUser != null;
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => hasAccount
-                  ? const WelcomeFreeAnalysisPage()
-                  : const AccountCreationPage(),
-            ),
-          );
-        }
-      } else {
-        if (context.mounted) {
-          _showErrorDialog(context, 'No purchases found to restore.');
-        }
-      }
-    } catch (e) {
-      ref.read(isPurchasingProvider.notifier).state = false;
-
-      if (context.mounted) {
-        _showErrorDialog(
-          context,
-          'Failed to restore purchases. Please try again.',
-        );
-      }
-    }
-  }
-
-  void _showErrorDialog(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          'Error',
-          style: TextStyle(
-            fontFamily: 'PlusJakartaSans',
-            fontWeight: FontWeight.bold,
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFf2003c)),
           ),
         ),
-        content: Text(
-          message,
-          style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+      );
+    }
+
+    final currentOffering = _offerings?.current;
+    final yearlyPackage = currentOffering?.annual;
+    final monthlyPackage = currentOffering?.monthly;
+    final trialEndDate = DateTime.now().add(const Duration(days: 3));
+    final trialEndFormatted =
+        '${trialEndDate.month}/${trialEndDate.day}/${trialEndDate.year}';
+    final double? yearlyMonthlyEquivalentValue =
+        yearlyPackage != null ? yearlyPackage.storeProduct.price / 12 : null;
+    final yearlyMonthlyEquivalent = yearlyMonthlyEquivalentValue != null
+        ? _formatPriceFloor(yearlyMonthlyEquivalentValue)
+        : null;
+    final hasPlans = yearlyPackage != null && monthlyPackage != null;
+    final bottomScrollPadding =
+        (hasPlans ? 360.0 : spacing.l * 2) + viewPadding.bottom;
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: const SnaplookBackButton(),
+        centerTitle: true,
+        title: const OnboardingProgressIndicator(
+          currentStep: 14,
+          totalSteps: 14,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () async {
+              try {
+                debugPrint('[RevenueCatPaywall] Starting restore purchases...');
+
+                final hasActiveSubscription = await RevenueCatService().restorePurchases();
+
+                if (!mounted) return;
+
+                if (hasActiveSubscription) {
+                  debugPrint('[RevenueCatPaywall] Purchases restored successfully');
+
+                  final authService = ref.read(authServiceProvider);
+                  final isAuthenticated = authService.currentUser != null;
+
+                  if (isAuthenticated) {
+                    try {
+                      await SubscriptionSyncService().syncSubscriptionToSupabase();
+                      await OnboardingStateService()
+                          .markPaymentComplete(authService.currentUser!.id);
+                      debugPrint('[RevenueCatPaywall] Subscription synced after restore');
+                    } catch (e) {
+                      debugPrint(
+                          '[RevenueCatPaywall] Error syncing after restore: $e');
+                    }
+
+                    // Check if user completed onboarding before
+                    try {
+                      final userId = authService.currentUser?.id;
+                      if (userId != null) {
+                        final supabase = Supabase.instance.client;
+                        final userResponse = await supabase
+                            .from('users')
+                            .select('onboarding_state')
+                            .eq('id', userId)
+                            .maybeSingle();
+
+                        final hasCompletedOnboarding = userResponse != null &&
+                            userResponse['onboarding_state'] == 'completed';
+
+                        if (hasCompletedOnboarding) {
+                          // User already completed onboarding - go to home
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const MainNavigation(
+                                key: ValueKey('fresh-main-nav'),
+                              ),
+                            ),
+                            (route) => false,
+                          );
+                        } else {
+                          // User hasn't completed onboarding - continue the flow
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                                builder: (context) => const WelcomeFreeAnalysisPage()),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      debugPrint(
+                          '[RevenueCatPaywall] Error checking onboarding status after restore: $e');
+                      // Default to continuing onboarding
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                            builder: (context) => const WelcomeFreeAnalysisPage()),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Purchases restored! Please create an account to continue.',
+                        ),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                          builder: (context) => const AccountCreationPage()),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No purchases to restore'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              } catch (e) {
+                debugPrint('[RevenueCatPaywall] Error restoring purchases: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error restoring purchases: ${e.toString()}'),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              }
+            },
             child: const Text(
-              'OK',
+              'Restore',
               style: TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 14,
                 fontFamily: 'PlusJakartaSans',
-                color: Color(0xFFf2003c),
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              spacing.l,
+              0,
+              spacing.l,
+              bottomScrollPadding,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: spacing.l),
+                Text(
+                  _isEligibleForTrial
+                      ? 'Start your 3-day FREE trial to continue'
+                      : 'Access all of Snaplook',
+                  textAlign: TextAlign.start,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -1.0,
+                    height: 1.2,
+                  ),
+                ),
+                SizedBox(height: spacing.xl + spacing.s),
+                if (_isEligibleForTrial && selectedPlan == PaywallPlanType.yearly)
+                  _TrialTimeline(trialEndFormatted: trialEndFormatted)
+                else ...[
+                  _FeatureItem(
+                    iconBgColor: AppColors.tertiary.withOpacity(0.12),
+                    icon: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.tertiary,
+                      size: 18,
+                    ),
+                    title: 'Turn photos into matches',
+                    description:
+                        'Get instant matches from photos, screenshots, or social posts',
+                  ),
+                  SizedBox(height: spacing.l),
+                  _FeatureItem(
+                    iconBgColor: const Color(0xFFf2003c).withOpacity(0.1),
+                    icon: const Icon(
+                      Icons.favorite_rounded,
+                      color: Color(0xFFf2003c),
+                      size: 18,
+                    ),
+                    title: 'Save the looks you love',
+                    description:
+                        'Keep styles in one place and come back to them anytime',
+                  ),
+                  SizedBox(height: spacing.l),
+                  _FeatureItem(
+                    iconBgColor: const Color(0xFFFFF1E0),
+                    icon: Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: SvgPicture.asset(
+                        'assets/icons/meteocons--lightning-bolt.svg',
+                        width: 48,
+                        height: 48,
+                      ),
+                    ),
+                    title: 'Shop similar pieces instantly',
+                    description:
+                        'Discover similar items from trusted retailers in seconds',
+                  ),
+                  SizedBox(height: spacing.l),
+                  _FeatureItem(
+                    iconBgColor: const Color(0xFFEFF2FF),
+                    icon: SvgPicture.asset(
+                      'assets/icons/lets-icons--bell-pin.svg',
+                      width: 18,
+                      height: 18,
+                    ),
+                    title: 'Never miss a match',
+                    description:
+                        "Receive alerts when we find similar pieces you'll like",
+                  ),
+                  SizedBox(height: spacing.l * 2),
+                ],
+              ],
+            ),
+          ),
+          if (hasPlans)
+            Positioned(
+              left: spacing.l,
+              right: spacing.l,
+              bottom: spacing.l + viewPadding.bottom,
+              child: _PlanSelectionCard(
+                yearlyPackage: yearlyPackage!,
+                monthlyPackage: monthlyPackage!,
+                yearlyMonthlyEquivalent: yearlyMonthlyEquivalent,
+                yearlyMonthlyEquivalentValue: yearlyMonthlyEquivalentValue!,
+                selectedPlan: selectedPlanValue,
+                isEligibleForTrial: _isEligibleForTrial,
+                isPurchasing: _isPurchasing,
+                trialEndFormatted: trialEndFormatted,
+                onSelectPlan: (plan) => ref
+                    .read(selectedPlanProvider.notifier)
+                    .state = plan,
+                onContinue: _handleContinue,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanOption extends StatelessWidget {
+  final PaywallPlanType plan;
+  final String title;
+  final String price;
+  final String? cadence;
+  final String? helper;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final String? badgeLabel;
+
+  const _PlanOption({
+    required this.plan,
+    required this.title,
+    required this.price,
+    this.cadence,
+    this.helper,
+    required this.isSelected,
+    required this.onTap,
+    this.badgeLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color borderColor =
+        isSelected ? AppColors.secondary : AppColors.outline;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding:
+                EdgeInsets.fromLTRB(12, badgeLabel != null ? 22 : 12, 12, 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: borderColor,
+                width: 2.0,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSelected ? AppColors.secondary : Colors.white,
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.secondary
+                              : AppColors.outline,
+                          width: 2,
+                        ),
+                      ),
+                      child: isSelected
+                          ? const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            )
+                          : null,
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    if (cadence != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        cadence!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                    ],
+                    if (helper != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        helper!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected
+                              ? AppColors.secondary
+                              : AppColors.textSecondary,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (badgeLabel != null)
+            Positioned(
+              top: -12,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    badgeLabel!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -512,51 +710,230 @@ class _HeroMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Stack(
-        alignment: Alignment.center,
+    return const SizedBox.shrink();
+  }
+}
+
+class _FeatureItem extends StatelessWidget {
+  final Widget icon;
+  final Color iconBgColor;
+  final String title;
+  final String description;
+
+  const _FeatureItem({
+    required this.icon,
+    required this.iconBgColor,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: iconBgColor,
+            shape: BoxShape.circle,
+          ),
+          child: icon,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.3,
+              height: 1.1,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlanSelectionCard extends StatelessWidget {
+  final Package yearlyPackage;
+  final Package monthlyPackage;
+  final String? yearlyMonthlyEquivalent;
+  final double yearlyMonthlyEquivalentValue;
+  final PaywallPlanType selectedPlan;
+  final bool isEligibleForTrial;
+  final bool isPurchasing;
+  final String trialEndFormatted;
+  final ValueChanged<PaywallPlanType> onSelectPlan;
+  final VoidCallback onContinue;
+
+  const _PlanSelectionCard({
+    required this.yearlyPackage,
+    required this.monthlyPackage,
+    required this.yearlyMonthlyEquivalent,
+    required this.yearlyMonthlyEquivalentValue,
+    required this.selectedPlan,
+    required this.isEligibleForTrial,
+    required this.isPurchasing,
+    required this.trialEndFormatted,
+    required this.onSelectPlan,
+    required this.onContinue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double monthlyPriceValue = monthlyPackage.storeProduct.price;
+    final int? yearlySavingsPercent = monthlyPriceValue > 0
+        ? ((1 - (yearlyMonthlyEquivalentValue / monthlyPriceValue)) * 100)
+            .round()
+            .clamp(0, 100)
+        : null;
+    final String? badgeLabel = isEligibleForTrial
+        ? '3-day FREE'
+        : (yearlySavingsPercent != null ? 'Save $yearlySavingsPercent%' : null);
+    final String footnote = selectedPlan == PaywallPlanType.monthly
+        ? 'Billed ${monthlyPackage.storeProduct.priceString} today.'
+        : isEligibleForTrial
+            ? '3-day free trial, then ${yearlyPackage.storeProduct.priceString} per year'
+            : 'Just ${yearlyPackage.storeProduct.priceString} per year'
+                '${yearlyMonthlyEquivalent != null ? ' (\$$yearlyMonthlyEquivalent/mo)' : ''}';
+    const double planOptionHeight = 120;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 28,
+            offset: Offset(0, 18),
+          ),
+        ],
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 140,
-            height: 140,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.secondary.withOpacity(0.16),
-                  AppColors.secondaryLight.withOpacity(0.08),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: planOptionHeight,
+                  child: _PlanOption(
+                    plan: PaywallPlanType.monthly,
+                    title: 'Monthly',
+                    price: monthlyPackage.storeProduct.priceString,
+                    isSelected:
+                        selectedPlan == PaywallPlanType.monthly,
+                    onTap: () =>
+                        onSelectPlan(PaywallPlanType.monthly),
+                  ),
+                ),
               ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.secondary.withOpacity(0.18),
-                  blurRadius: 32,
-                  offset: const Offset(0, 18),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: planOptionHeight,
+                  child: _PlanOption(
+                    plan: PaywallPlanType.yearly,
+                    title: 'Yearly',
+                    price: yearlyPackage.storeProduct.priceString,
+                    cadence: yearlyMonthlyEquivalent != null
+                        ? '\$$yearlyMonthlyEquivalent/mo'
+                        : 'Billed annually',
+                    isSelected:
+                        selectedPlan == PaywallPlanType.yearly,
+                    onTap: () => onSelectPlan(PaywallPlanType.yearly),
+                    badgeLabel: badgeLabel,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isEligibleForTrial && selectedPlan == PaywallPlanType.yearly) ...[
+                  const Icon(
+                    Icons.check_rounded,
+                    color: AppColors.textPrimary,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  isEligibleForTrial && selectedPlan == PaywallPlanType.yearly
+                      ? 'No payment due now'
+                      : 'Starts immediately, cancel anytime',
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ],
             ),
           ),
-          Container(
-            width: 104,
-            height: 104,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: AppColors.outlineVariant),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 16,
-                  offset: const Offset(0, 10),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: isPurchasing ? null : onContinue,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
                 ),
-              ],
+              ),
+              child: isPurchasing
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      isEligibleForTrial && selectedPlan == PaywallPlanType.yearly
+                          ? 'Continue for free'
+                          : 'Subscribe now',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -0.2,
+                      ),
+                    ),
             ),
-            child: const Icon(
-              Icons.auto_awesome,
-              size: 48,
-              color: AppColors.secondary,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            footnote,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 12,
+              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w500,
+              height: 1.5,
             ),
           ),
         ],
@@ -565,216 +942,154 @@ class _HeroMark extends StatelessWidget {
   }
 }
 
-class _FeatureItem extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
+class _TrialTimeline extends StatelessWidget {
+  final String trialEndFormatted;
 
-  const _FeatureItem({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-  });
+  const _TrialTimeline({required this.trialEndFormatted});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.12),
-            shape: BoxShape.circle,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        children: [
+          _TimelineItem(
+            iconAsset: 'assets/icons/uil--unlock-alt.svg',
+            iconColor: Colors.white,
+            iconBgColor: const Color(0xFFf2003c),
+            iconSize: 20,
+            iconVerticalOffset: -1,
+            title: 'Today',
+            description:
+                "Unlock all the app's features like AI fashion analysis and more.",
+            isLast: false,
           ),
-          child: Icon(icon, color: iconColor, size: 22),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-              ),
-            ],
+          _TimelineItem(
+            iconAsset: 'assets/icons/mdi--bell-ring-outline.svg',
+            iconColor: Colors.white,
+            iconBgColor: const Color(0xFFf2003c),
+            iconSize: 18,
+            title: 'In 2 Days',
+            description: "We'll send you a reminder that your trial is ending soon.",
+            isLast: false,
           ),
-        ),
-      ],
+          _TimelineItem(
+            iconAsset: 'assets/icons/mdi--crown-outline.svg',
+            iconColor: Colors.white,
+            iconBgColor: AppColors.textPrimary,
+            iconSize: 21,
+            iconVerticalOffset: -1,
+            title: 'In 3 Days',
+            description:
+                "You'll be charged on $trialEndFormatted unless you cancel anytime before.",
+            isLast: true,
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _PlanOption extends StatelessWidget {
+class _TimelineItem extends StatelessWidget {
+  final String iconAsset;
+  final Color iconColor;
+  final Color iconBgColor;
+  final double iconSize;
+  final double iconVerticalOffset;
+  final bool flipHorizontally;
   final String title;
-  final String price;
-  final String cadence;
-  final String? helper;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final bool isPopular;
+  final String description;
+  final bool isLast;
 
-  const _PlanOption({
+  const _TimelineItem({
+    required this.iconAsset,
+    required this.iconColor,
+    required this.iconBgColor,
+    this.iconSize = 18,
+    this.iconVerticalOffset = 0,
+    this.flipHorizontally = false,
     required this.title,
-    required this.price,
-    required this.cadence,
-    this.helper,
-    required this.isSelected,
-    required this.onTap,
-    this.isPopular = false,
+    required this.description,
+    required this.isLast,
   });
 
   @override
   Widget build(BuildContext context) {
-    final Color borderColor =
-        isSelected ? AppColors.secondary : AppColors.outline;
-    final Color backgroundColor =
-        isSelected ? AppColors.secondary.withOpacity(0.06) : Colors.white;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: borderColor,
-            width: isSelected ? 1.6 : 1.1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.secondary.withOpacity(0.18),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isPopular)
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.secondary.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(999),
+                  color: iconBgColor,
+                  shape: BoxShape.circle,
                 ),
-                child: const Text(
-                  'Best value',
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.secondary,
-                  ),
-                ),
-              ),
-            if (isPopular) const SizedBox(height: 10),
-            Row(
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const Spacer(),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isSelected ? AppColors.secondary : Colors.white,
-                    border: Border.all(
-                      color:
-                          isSelected ? AppColors.secondary : AppColors.outline,
-                      width: 2,
+                child: Center(
+                  child: Transform.translate(
+                    offset: Offset(0, iconVerticalOffset),
+                    child: Transform.flip(
+                      flipX: flipHorizontally,
+                      child: SvgPicture.asset(
+                        iconAsset,
+                        width: iconSize,
+                        height: iconSize,
+                        color: iconColor,
+                      ),
                     ),
                   ),
-                  child: isSelected
-                      ? const Icon(
-                          Icons.check_rounded,
-                          size: 18,
-                          color: Colors.white,
-                        )
-                      : null,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              price,
-              style: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.4,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              cadence,
-              style: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            if (helper != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                helper!,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected
-                      ? AppColors.secondary
-                      : AppColors.textSecondary,
                 ),
               ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD1DC),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
             ],
-          ],
-        ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 6),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

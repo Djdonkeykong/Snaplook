@@ -16,7 +16,7 @@ import 'welcome_free_analysis_page.dart';
 import 'how_it_works_page.dart';
 import 'notification_permission_page.dart';
 import 'discovery_source_page.dart';
-import 'revenuecat_paywall_page.dart';
+import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
         MainNavigation,
@@ -149,7 +149,7 @@ class _AccountCreationPageState extends ConsumerState<AccountCreationPage> {
 
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (context) => const RevenueCatPaywallPage(),
+          builder: (context) => const PaywallPage(),
         ),
         (route) => false,
       );

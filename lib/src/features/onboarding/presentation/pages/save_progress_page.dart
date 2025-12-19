@@ -11,8 +11,9 @@ import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import 'revenuecat_paywall_page.dart';
 import 'welcome_free_analysis_page.dart';
+import 'trial_intro_page.dart';
+import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
@@ -69,10 +70,20 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     final userId = authService.currentUser?.id;
 
     if (userId == null) {
-      debugPrint('[SaveProgress] No user found, navigating to paywall');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const RevenueCatPaywallPage()),
-      );
+      // Check trial eligibility before showing trial pages
+      final isEligibleForTrial = await _checkTrialEligibility();
+
+      if (isEligibleForTrial) {
+        debugPrint('[SaveProgress] No user found, eligible for trial, navigating to trial intro');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const TrialIntroPage()),
+        );
+      } else {
+        debugPrint('[SaveProgress] No user found, NOT eligible for trial, navigating to paywall');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const PaywallPage()),
+        );
+      }
       return;
     }
 
@@ -179,13 +190,27 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           }
         }
       } else {
-        debugPrint(
-            '[SaveProgress] No active subscription, navigating to paywall');
-        if (mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-                builder: (context) => const RevenueCatPaywallPage()),
-          );
+        // Check trial eligibility for users without subscription
+        final isEligibleForTrial = await _checkTrialEligibility();
+
+        if (isEligibleForTrial) {
+          debugPrint(
+              '[SaveProgress] No active subscription, eligible for trial, navigating to trial intro');
+          if (mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (context) => const TrialIntroPage()),
+            );
+          }
+        } else {
+          debugPrint(
+              '[SaveProgress] No active subscription, NOT eligible for trial, navigating to paywall');
+          if (mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (context) => const PaywallPage()),
+            );
+          }
         }
       }
     } catch (e, stackTrace) {
@@ -200,18 +225,43 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           ),
         );
 
+        // Check trial eligibility on error
+        final isEligibleForTrial = await _checkTrialEligibility();
+
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const RevenueCatPaywallPage()),
+          MaterialPageRoute(
+              builder: (context) => isEligibleForTrial
+                  ? const TrialIntroPage()
+                  : const PaywallPage()),
         );
       }
+    }
+  }
+
+  Future<bool> _checkTrialEligibility() async {
+    try {
+      final isEligible = await RevenueCatService().isEligibleForTrial();
+      debugPrint('[SaveProgress] Trial eligibility check result: $isEligible');
+      return isEligible;
+    } catch (e) {
+      debugPrint('[SaveProgress] Error checking trial eligibility: $e');
+      // Default to showing trial if check fails
+      return true;
     }
   }
 
   Future<void> _handleSkip() async {
     HapticFeedback.mediumImpact();
     debugPrint('[SaveProgress] User skipped account creation');
+
+    // Check trial eligibility before navigating
+    final isEligibleForTrial = await _checkTrialEligibility();
+
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const RevenueCatPaywallPage()),
+      MaterialPageRoute(
+          builder: (context) => isEligibleForTrial
+              ? const TrialIntroPage()
+              : const PaywallPage()),
     );
   }
 

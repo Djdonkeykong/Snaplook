@@ -7,7 +7,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import 'revenuecat_paywall_page.dart';
+import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../services/revenuecat_service.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
@@ -186,7 +186,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                   // Navigate to RevenueCat paywall
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const RevenueCatPaywallPage(),
+                      builder: (context) => const PaywallPage(),
                     ),
                   );
                 },

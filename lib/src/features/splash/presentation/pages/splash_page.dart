@@ -8,7 +8,7 @@ import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
-import '../../../onboarding/presentation/pages/revenuecat_paywall_page.dart';
+import '../../../paywall/presentation/pages/paywall_page.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -103,14 +103,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
           // Check if user needs credits from share extension
           if (needsCreditsFromShareExtension) {
-            // User came from share extension with no credits
-            if (hasActiveSubscription) {
-              // Has subscription but ran out of monthly credits - show main app (they can't do more until credits reset)
-              nextPage = const MainNavigation();
-            } else {
-              // No subscription - show paywall to subscribe
-              nextPage = const RevenueCatPaywallPage();
-            }
+            // User came from share extension with no credits - send to login page
+            nextPage = const LoginPage();
           } else {
             // Normal routing
             // Route based on onboarding completion and subscription status
