@@ -12,10 +12,12 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import 'save_progress_page.dart';
+import 'trial_intro_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
+import '../../../../services/revenuecat_service.dart';
 import '../../../paywall/presentation/pages/paywall_page.dart';
 
 // Provider to store notification permission choice
@@ -189,7 +191,7 @@ class _NotificationPermissionPageState
   Future<void> _navigateToNextStep() async {
     if (!mounted) return;
 
-    // Check if user is already authenticated
+    // Check if user is already authenticated (works for Apple, Google, and Email)
     final user = ref.read(authServiceProvider).currentUser;
 
     if (user != null) {
@@ -231,20 +233,43 @@ class _NotificationPermissionPageState
             );
           }
         } else {
-          // No subscription - go to paywall
-          debugPrint('[NotificationPermission] Navigating to paywall');
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const PaywallPage()),
-            );
+          // No subscription - check trial eligibility
+          debugPrint('[NotificationPermission] No subscription - checking trial eligibility');
+
+          bool isEligibleForTrial = false;
+          try {
+            isEligibleForTrial = await RevenueCatService().isEligibleForTrial();
+            debugPrint('[NotificationPermission] Trial eligible: $isEligibleForTrial');
+          } catch (e) {
+            debugPrint('[NotificationPermission] Error checking trial eligibility: $e');
+            // Default to eligible on error
+            isEligibleForTrial = true;
+          }
+
+          if (isEligibleForTrial) {
+            // Eligible for trial - go to TrialIntroPage
+            debugPrint('[NotificationPermission] Navigating to trial intro');
+            if (mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const TrialIntroPage()),
+              );
+            }
+          } else {
+            // Not eligible for trial - go to paywall
+            debugPrint('[NotificationPermission] Not eligible for trial - navigating to paywall');
+            if (mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => const PaywallPage()),
+              );
+            }
           }
         }
       } catch (e) {
         debugPrint('[NotificationPermission] Error in routing: $e');
-        // On error, default to paywall
+        // On error, default to trial flow
         if (mounted) {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const PaywallPage()),
+            MaterialPageRoute(builder: (context) => const TrialIntroPage()),
           );
         }
       }
