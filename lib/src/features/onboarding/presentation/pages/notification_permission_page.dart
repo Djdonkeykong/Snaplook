@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:io' show Platform;
@@ -9,9 +12,11 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import 'save_progress_page.dart';
+import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
+import '../../../paywall/presentation/pages/paywall_page.dart';
 
 // Provider to store notification permission choice
 final notificationPermissionGrantedProvider =
@@ -170,7 +175,7 @@ class _NotificationPermissionPageState
   Future<void> _handleDontAllow() async {
     HapticFeedback.mediumImpact();
 
-    print('[NotificationPermission] User declined permission');
+    debugPrint('[NotificationPermission] User declined permission');
 
     // Store that permission was denied
     ref.read(notificationPermissionGrantedProvider.notifier).state = false;
@@ -181,14 +186,77 @@ class _NotificationPermissionPageState
     _navigateToNextStep();
   }
 
-  void _navigateToNextStep() {
+  Future<void> _navigateToNextStep() async {
     if (!mounted) return;
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const SaveProgressPage(),
-      ),
-    );
+    // Check if user is already authenticated
+    final user = ref.read(authServiceProvider).currentUser;
+
+    if (user != null) {
+      // User is authenticated - skip SaveProgressPage and route based on subscription
+      debugPrint('[NotificationPermission] User authenticated - skipping SaveProgressPage');
+
+      try {
+        // Update checkpoint
+        unawaited(OnboardingStateService().updateCheckpoint(
+          user.id,
+          OnboardingCheckpoint.notification,
+        ));
+
+        // Check subscription status from RevenueCat
+        CustomerInfo? customerInfo;
+        try {
+          customerInfo = await Purchases.getCustomerInfo();
+        } catch (e) {
+          debugPrint('[NotificationPermission] Error fetching customer info: $e');
+        }
+
+        final activeEntitlements = customerInfo?.entitlements.active.values;
+        final hasActiveSubscription =
+            activeEntitlements != null && activeEntitlements.isNotEmpty;
+
+        debugPrint('[NotificationPermission] Has active subscription: $hasActiveSubscription');
+
+        if (hasActiveSubscription) {
+          // User has subscription - go to home
+          debugPrint('[NotificationPermission] Navigating to home');
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => const MainNavigation(
+                  key: ValueKey('fresh-main-nav'),
+                ),
+              ),
+              (route) => false,
+            );
+          }
+        } else {
+          // No subscription - go to paywall
+          debugPrint('[NotificationPermission] Navigating to paywall');
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const PaywallPage()),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('[NotificationPermission] Error in routing: $e');
+        // On error, default to paywall
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const PaywallPage()),
+          );
+        }
+      }
+    } else {
+      // User NOT authenticated - show SaveProgressPage to create account
+      debugPrint('[NotificationPermission] User not authenticated - showing SaveProgressPage');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const SaveProgressPage(),
+        ),
+      );
+    }
   }
 
   @override
@@ -214,9 +282,9 @@ class _NotificationPermissionPageState
           child: Column(
             children: [
               SizedBox(height: spacing.l),
-              Align(
+              const Align(
                 alignment: Alignment.centerLeft,
-                child: const Text(
+                child: Text(
                   'Get reminders to find\nyour next look',
                   textAlign: TextAlign.left,
                   style: TextStyle(
@@ -242,9 +310,9 @@ class _NotificationPermissionPageState
                   clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 32, horizontal: 24),
+                      const Padding(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 32, horizontal: 24),
                         child: Text(
                           'Snaplook Would Like To\nSend You Notifications',
                           textAlign: TextAlign.center,

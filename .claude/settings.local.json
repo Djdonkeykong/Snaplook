@@ -40,7 +40,9 @@
       "mcp__revenuecat__mcp_RC_create_price",
       "mcp__revenuecat__mcp_RC_list_product_prices",
       "mcp__plugin_supabase_supabase__list_projects",
-      "mcp__plugin_supabase_supabase__execute_sql"
+      "mcp__plugin_supabase_supabase__execute_sql",
+      "mcp__plugin_supabase_supabase__list_tables",
+      "mcp__plugin_supabase_supabase__apply_migration"
     ]
   },
   "enableAllProjectMcpServers": true,

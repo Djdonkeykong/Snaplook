@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -104,11 +106,11 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
       // Update checkpoint to 'welcome' to mark this stage of onboarding
       debugPrint('[WelcomePage] Updating checkpoint to welcome...');
       try {
-        await OnboardingStateService().updateCheckpoint(
+        unawaited(OnboardingStateService().updateCheckpoint(
           userId,
           OnboardingCheckpoint.welcome,
-        );
-        debugPrint('[WelcomePage] Checkpoint updated to welcome');
+        ));
+        debugPrint('[WelcomePage] Checkpoint update dispatched');
       } catch (checkpointError) {
         debugPrint('[WelcomePage] Error updating checkpoint: $checkpointError');
         // Non-critical - continue

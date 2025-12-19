@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +12,6 @@ import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import 'awesome_intro_page.dart';
 import 'personalization_intro_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
@@ -368,10 +369,10 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
 
                     final user = ref.read(authServiceProvider).currentUser;
                     if (user != null) {
-                      await OnboardingStateService().updateCheckpoint(
+                      unawaited(OnboardingStateService().updateCheckpoint(
                         user.id,
                         OnboardingCheckpoint.discovery,
-                      );
+                      ));
                     }
 
                     if (!context.mounted) return;

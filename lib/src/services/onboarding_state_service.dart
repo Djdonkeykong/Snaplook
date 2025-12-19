@@ -28,6 +28,7 @@ enum OnboardingCheckpoint {
   gender('gender'),
   discovery('discovery'),
   tutorial('tutorial'),
+  notification('notification'),
   saveProgress('save_progress'),
   paywall('paywall'),
   account('account'),

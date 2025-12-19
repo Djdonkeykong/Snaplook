@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,7 +8,6 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
-import 'discovery_source_page.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
@@ -153,10 +154,10 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
 
               final user = ref.read(authServiceProvider).currentUser;
               if (user != null) {
-                await OnboardingStateService().updateCheckpoint(
+                unawaited(OnboardingStateService().updateCheckpoint(
                   user.id,
                   OnboardingCheckpoint.tutorial,
-                );
+                ));
               }
 
               if (!context.mounted) return;
