@@ -311,7 +311,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 }
 
                                 // Check onboarding status from database
-                                print('[LoginPage] ====== NEW CHECKPOINT CODE IS RUNNING ======');
                                 final userResponse = await supabase
                                     .from('users')
                                     .select('onboarding_state, onboarding_checkpoint')
@@ -511,7 +510,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               }
 
                               // Check onboarding status from database
-                              print('[LoginPage] ====== NEW CHECKPOINT CODE IS RUNNING ======');
                               final userResponse = await supabase
                                   .from('users')
                                   .select('onboarding_state, onboarding_checkpoint')
