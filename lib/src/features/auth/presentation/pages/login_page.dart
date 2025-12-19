@@ -279,14 +279,18 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         textColor: Colors.white,
                         onPressed: () async {
                           try {
+                            print('[LoginPage] Apple sign-in button clicked');
                             final authService = ref.read(authServiceProvider);
                             await authService.signInWithApple();
+                            print('[LoginPage] Apple sign-in completed');
 
                             if (context.mounted) {
+                              print('[LoginPage] Context is mounted, closing bottom sheet');
                               Navigator.pop(context);
 
                               final supabase = Supabase.instance.client;
                               final userId = supabase.auth.currentUser?.id;
+                              print('[LoginPage] Current user ID: $userId');
 
                               if (userId != null) {
                                 // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
@@ -364,7 +368,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               }
                             }
                           } catch (e) {
+                            print('[LoginPage] Apple sign-in error caught: $e');
                             if (context.mounted) {
+                              print('[LoginPage] Context mounted in catch block, closing sheet');
                               Navigator.pop(context);
                               if (e != AuthService.authCancelledException) {
                                 ScaffoldMessenger.of(context).clearSnackBars();
@@ -397,14 +403,18 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       borderColor: const Color(0xFFE5E7EB),
                       onPressed: () async {
                         try {
+                          print('[LoginPage] Google sign-in button clicked');
                           final authService = ref.read(authServiceProvider);
                           await authService.signInWithGoogle();
+                          print('[LoginPage] Google sign-in completed');
 
                           if (context.mounted) {
+                            print('[LoginPage] Context is mounted, closing bottom sheet');
                             Navigator.pop(context);
 
                             final supabase = Supabase.instance.client;
                             final userId = supabase.auth.currentUser?.id;
+                            print('[LoginPage] Current user ID: $userId');
 
                             if (userId != null) {
                               // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
@@ -480,7 +490,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               }
                             }
                           } catch (e) {
+                          print('[LoginPage] Google sign-in error caught: $e');
                           if (context.mounted) {
+                            print('[LoginPage] Context mounted in catch block, closing sheet');
                             Navigator.pop(context);
                             if (e != AuthService.authCancelledException) {
                               ScaffoldMessenger.of(context).clearSnackBars();
