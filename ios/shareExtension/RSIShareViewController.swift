@@ -5986,6 +5986,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     @objc private func analyzeFromPreviewTapped() {
         shareLog("Analyze button tapped from preview")
 
+        // Check if user is authenticated first
+        if !isUserAuthenticated() {
+            shareLog("User not authenticated - showing login required modal")
+            showLoginRequiredModal()
+            return
+        }
+
         // Check if user has available credits
         if !hasAvailableCredits() {
             shareLog("User has no credits - showing out of credits modal")
@@ -6863,6 +6870,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     @objc private func analyzeInAppTapped() {
         shareLog("Analyze in app tapped")
 
+        // Check if user is authenticated first
+        if !isUserAuthenticated() {
+            shareLog("User not authenticated - showing login required modal")
+            showLoginRequiredModal()
+            return
+        }
+
         // Check if user has available credits
         if !hasAvailableCredits() {
             shareLog("User has no credits - showing out of credits modal")
@@ -7039,6 +7053,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     @objc private func analyzeNowTapped() {
         shareLog("Analyze now tapped - starting detection")
         shareLog("DEBUG: pendingInstagramUrl=\(pendingInstagramUrl != nil ? "SET" : "NIL"), pendingPlatformType=\(pendingPlatformType ?? "NIL"), sharedMedia.count=\(sharedMedia.count)")
+
+        // Check if user is authenticated first
+        if !isUserAuthenticated() {
+            shareLog("User not authenticated - showing login required modal")
+            showLoginRequiredModal()
+            return
+        }
 
         // Check if user has available credits
         if !hasAvailableCredits() {
