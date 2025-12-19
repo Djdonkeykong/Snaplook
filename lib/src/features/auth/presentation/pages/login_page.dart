@@ -13,7 +13,6 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
-import '../../../onboarding/presentation/pages/account_creation_page.dart' show AccountCreationPage;
 import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../../user/repositories/user_profile_repository.dart';

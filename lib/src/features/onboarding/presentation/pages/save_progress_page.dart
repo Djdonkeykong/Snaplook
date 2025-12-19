@@ -10,7 +10,6 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../widgets/progress_indicator.dart';
-import '../widgets/onboarding_bottom_bar.dart';
 import 'welcome_free_analysis_page.dart';
 import 'trial_intro_page.dart';
 import '../../../paywall/presentation/pages/paywall_page.dart';
@@ -248,21 +247,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
       // Default to showing trial if check fails
       return true;
     }
-  }
-
-  Future<void> _handleSkip() async {
-    HapticFeedback.mediumImpact();
-    debugPrint('[SaveProgress] User skipped account creation');
-
-    // Check trial eligibility before navigating
-    final isEligibleForTrial = await _checkTrialEligibility();
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-          builder: (context) => isEligibleForTrial
-              ? const TrialIntroPage()
-              : const PaywallPage()),
-    );
   }
 
   Future<void> _persistOnboardingSelections(String userId) async {
@@ -743,32 +727,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: OnboardingBottomBar(
-        primaryButton: SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            onPressed: _handleSkip,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
-              ),
-            ),
-            child: const Text(
-              'Continue',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -0.2,
               ),
             ),
           ),

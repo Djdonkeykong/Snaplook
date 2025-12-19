@@ -12,7 +12,7 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/subscription_sync_service.dart';
-import '../../../onboarding/presentation/pages/account_creation_page.dart';
+import '../../../onboarding/presentation/pages/save_progress_page.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 
@@ -266,7 +266,7 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
         '[RevenueCatPaywall] Navigating after purchase: $didPurchase, hasAccount: $hasAccount');
 
     final nextPage =
-        hasAccount ? const WelcomeFreeAnalysisPage() : const AccountCreationPage();
+        hasAccount ? const WelcomeFreeAnalysisPage() : const SaveProgressPage();
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => nextPage),
@@ -398,7 +398,7 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
 
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(
-                          builder: (context) => const AccountCreationPage()),
+                          builder: (context) => const SaveProgressPage()),
                     );
                   }
                 } else {
