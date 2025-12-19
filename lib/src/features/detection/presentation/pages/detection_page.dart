@@ -24,6 +24,7 @@ import '../../../detection/domain/models/detection_result.dart';
 import '../providers/detection_provider.dart';
 import '../widgets/detection_progress_overlay.dart';
 import '../../../paywall/providers/credit_provider.dart';
+import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../shared/services/supabase_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
@@ -802,6 +803,27 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(40),
           onTap: () async {
+            // Check if user has credits before starting detection
+            final creditBalance = ref.read(creditBalanceProvider);
+            final hasCredits = creditBalance.whenOrNull(
+              data: (balance) => balance.availableCredits > 0,
+            ) ?? false;
+
+            if (!hasCredits) {
+              // User has no credits - navigate to paywall
+              print('[Detection] User has no credits - showing paywall');
+              HapticFeedback.mediumImpact();
+
+              if (mounted) {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const PaywallPage(),
+                  ),
+                );
+              }
+              return;
+            }
+
             _startDetection();
           },
           child: Center(
