@@ -223,6 +223,16 @@ class AuthService {
     } catch (e) {
       print('Google sign in error: $e');
       if (e == authCancelledException) rethrow;
+
+      // Check if user cancelled the sign-in
+      final errorString = e.toString().toLowerCase();
+      if (errorString.contains('cancel') ||
+          errorString.contains('12501') ||  // Google's user cancellation error code
+          errorString.contains('user_cancelled') ||
+          errorString.contains('sign_in_cancelled')) {
+        throw authCancelledException;
+      }
+
       throw Exception(_friendlyGenericError);
     }
   }
@@ -257,6 +267,15 @@ class AuthService {
     } catch (e) {
       print('Apple sign in error: $e');
       if (e == authCancelledException) rethrow;
+
+      // Check if user cancelled the sign-in
+      final errorString = e.toString().toLowerCase();
+      if (errorString.contains('cancel') ||
+          errorString.contains('1001') ||  // Apple's cancellation error code
+          errorString.contains('user_cancelled')) {
+        throw authCancelledException;
+      }
+
       throw Exception(_friendlyGenericError);
     }
   }
