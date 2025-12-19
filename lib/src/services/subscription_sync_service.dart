@@ -63,7 +63,6 @@ class SubscriptionSyncService {
         'subscription_status': subscriptionStatus,
         'subscription_expires_at': expirationDateIso,
         'subscription_product_id': productId,
-        'subscription_provider': 'revenuecat',
         'is_trial': isTrial,
         'subscription_last_synced_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),

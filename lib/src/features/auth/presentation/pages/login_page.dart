@@ -309,17 +309,23 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     .eq('id', userId)
                                     .maybeSingle();
 
+                                print('[LoginPage] Apple sign-in - user ID: $userId');
+                                print('[LoginPage] Database response: $userResponse');
+                                print('[LoginPage] Onboarding state from DB: ${userResponse?['onboarding_state']}');
+
                                 final hasCompletedOnboarding =
                                     userResponse != null &&
                                         userResponse['onboarding_state'] == 'completed';
 
-                                print('[LoginPage] Apple sign-in - user ID: $userId');
                                 print('[LoginPage] Has completed onboarding: $hasCompletedOnboarding');
 
                                 // Check subscription status from RevenueCat (source of truth)
                                 CustomerInfo? customerInfo;
                                 try {
                                   customerInfo = await Purchases.getCustomerInfo();
+                                  print('[LoginPage] RevenueCat customer info fetched successfully');
+                                  print('[LoginPage] All entitlements: ${customerInfo.entitlements.all.keys.toList()}');
+                                  print('[LoginPage] Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
                                 } catch (e) {
                                   debugPrint('[LoginPage] Error fetching RevenueCat customer info: $e');
                                 }
@@ -433,17 +439,23 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   .eq('id', userId)
                                   .maybeSingle();
 
+                              print('[LoginPage] Google sign-in - user ID: $userId');
+                              print('[LoginPage] Database response: $userResponse');
+                              print('[LoginPage] Onboarding state from DB: ${userResponse?['onboarding_state']}');
+
                               final hasCompletedOnboarding =
                                   userResponse != null &&
                                       userResponse['onboarding_state'] == 'completed';
 
-                              print('[LoginPage] Google sign-in - user ID: $userId');
                               print('[LoginPage] Has completed onboarding: $hasCompletedOnboarding');
 
                               // Check subscription status from RevenueCat (source of truth)
                               CustomerInfo? customerInfo;
                               try {
                                 customerInfo = await Purchases.getCustomerInfo();
+                                print('[LoginPage] RevenueCat customer info fetched successfully');
+                                print('[LoginPage] All entitlements: ${customerInfo.entitlements.all.keys.toList()}');
+                                print('[LoginPage] Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
                               } catch (e) {
                                 debugPrint('[LoginPage] Error fetching RevenueCat customer info: $e');
                               }
