@@ -285,7 +285,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     final bottomPadding = kBottomNavigationBarHeight +
         spacing.xl +
         MediaQuery.of(context).padding.bottom;
-    const double topFadeHeight = 36;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -310,26 +309,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
             }
             return false;
           },
-          child: ShaderMask(
-            blendMode: BlendMode.dstIn,
-            shaderCallback: (Rect rect) {
-              final double fadeStop =
-                  (topFadeHeight / rect.height).clamp(0.0, 1.0);
-
-              return LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: const [
-                  Colors.transparent,
-                  Colors.black,
-                ],
-                stops: [
-                  0.0,
-                  fadeStop,
-                ],
-              ).createShader(rect);
-            },
-            child: SingleChildScrollView(
+          child: SingleChildScrollView(
               controller: _scrollController,
               physics: const BouncingScrollPhysics(),
               padding: EdgeInsets.fromLTRB(
