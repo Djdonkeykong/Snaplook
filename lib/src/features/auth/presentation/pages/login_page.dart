@@ -20,6 +20,7 @@ import '../../../user/repositories/user_profile_repository.dart';
 import 'email_sign_in_page.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../domain/services/auth_service.dart';
+import '../../../../services/subscription_sync_service.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -288,6 +289,15 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               final userId = supabase.auth.currentUser?.id;
 
                               if (userId != null) {
+                                // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
+                                print('[LoginPage] Linking RevenueCat subscription to Apple account...');
+                                try {
+                                  await SubscriptionSyncService().identify(userId);
+                                  print('[LoginPage] RevenueCat subscription linked and synced');
+                                } catch (linkError) {
+                                  print('[LoginPage] Error linking RevenueCat subscription: $linkError');
+                                }
+
                                 // Check onboarding status from database
                                 final userResponse = await supabase
                                     .from('users')
@@ -397,6 +407,15 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             final userId = supabase.auth.currentUser?.id;
 
                             if (userId != null) {
+                              // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
+                              print('[LoginPage] Linking RevenueCat subscription to Google account...');
+                              try {
+                                await SubscriptionSyncService().identify(userId);
+                                print('[LoginPage] RevenueCat subscription linked and synced');
+                              } catch (linkError) {
+                                print('[LoginPage] Error linking RevenueCat subscription: $linkError');
+                              }
+
                               // Check onboarding status from database
                               final userResponse = await supabase
                                   .from('users')
