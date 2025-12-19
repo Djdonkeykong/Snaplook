@@ -287,25 +287,32 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               final userId = supabase.auth.currentUser?.id;
 
                               if (userId != null) {
+                                // Check onboarding status from database
                                 final userResponse = await supabase
                                     .from('users')
-                                    .select('onboarding_state, subscription_status, is_trial')
+                                    .select('onboarding_state')
                                     .eq('id', userId)
                                     .maybeSingle();
-
-                                print(
-                                    '[LoginPage] Apple sign-in - user ID: $userId');
-                                print(
-                                    '[LoginPage] User onboarding_state from DB: ${userResponse?['onboarding_state']}');
-                                print(
-                                    '[LoginPage] User subscription_status from DB: ${userResponse?['subscription_status']}');
 
                                 final hasCompletedOnboarding =
                                     userResponse != null &&
                                         userResponse['onboarding_state'] == 'completed';
-                                final subscriptionStatus = userResponse?['subscription_status'] ?? 'free';
-                                final isTrial = userResponse?['is_trial'] == true;
-                                final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
+
+                                print('[LoginPage] Apple sign-in - user ID: $userId');
+                                print('[LoginPage] Has completed onboarding: $hasCompletedOnboarding');
+
+                                // Check subscription status from RevenueCat (source of truth)
+                                CustomerInfo? customerInfo;
+                                try {
+                                  customerInfo = await Purchases.getCustomerInfo();
+                                } catch (e) {
+                                  debugPrint('[LoginPage] Error fetching RevenueCat customer info: $e');
+                                }
+
+                                final activeEntitlements = customerInfo?.entitlements.active.values;
+                                final hasActiveSubscription = activeEntitlements != null && activeEntitlements.isNotEmpty;
+
+                                print('[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');
 
                                 if (hasCompletedOnboarding && hasActiveSubscription) {
                                   // User completed onboarding and has active subscription - go to home
@@ -389,25 +396,32 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             final userId = supabase.auth.currentUser?.id;
 
                             if (userId != null) {
+                              // Check onboarding status from database
                               final userResponse = await supabase
                                   .from('users')
-                                  .select('onboarding_state, subscription_status, is_trial')
+                                  .select('onboarding_state')
                                   .eq('id', userId)
                                   .maybeSingle();
-
-                              print(
-                                  '[LoginPage] Google sign-in - user ID: $userId');
-                              print(
-                                  '[LoginPage] User onboarding_state from DB: ${userResponse?['onboarding_state']}');
-                              print(
-                                  '[LoginPage] User subscription_status from DB: ${userResponse?['subscription_status']}');
 
                               final hasCompletedOnboarding =
                                   userResponse != null &&
                                       userResponse['onboarding_state'] == 'completed';
-                              final subscriptionStatus = userResponse?['subscription_status'] ?? 'free';
-                              final isTrial = userResponse?['is_trial'] == true;
-                              final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
+
+                              print('[LoginPage] Google sign-in - user ID: $userId');
+                              print('[LoginPage] Has completed onboarding: $hasCompletedOnboarding');
+
+                              // Check subscription status from RevenueCat (source of truth)
+                              CustomerInfo? customerInfo;
+                              try {
+                                customerInfo = await Purchases.getCustomerInfo();
+                              } catch (e) {
+                                debugPrint('[LoginPage] Error fetching RevenueCat customer info: $e');
+                              }
+
+                              final activeEntitlements = customerInfo?.entitlements.active.values;
+                              final hasActiveSubscription = activeEntitlements != null && activeEntitlements.isNotEmpty;
+
+                              print('[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');
 
                               if (hasCompletedOnboarding && hasActiveSubscription) {
                                 // User completed onboarding and has active subscription - go to home

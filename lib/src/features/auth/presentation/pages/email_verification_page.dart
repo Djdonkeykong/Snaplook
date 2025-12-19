@@ -204,25 +204,30 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               print('[EmailVerification] Error persisting preferences: $prefError');
             }
 
-            // Check if user has completed onboarding
+            // Check if user has completed onboarding from database
             final supabase = Supabase.instance.client;
             final userResponse = await supabase
                 .from('users')
-                .select('onboarding_state, subscription_status, is_trial')
+                .select('onboarding_state')
                 .eq('id', userId)
                 .maybeSingle();
 
             print('[EmailVerification] User record found: ${userResponse != null}');
 
-            // Check if user has completed onboarding
             final hasCompletedOnboarding = userResponse != null && userResponse['onboarding_state'] == 'completed';
-            final subscriptionStatus = userResponse != null ? userResponse['subscription_status'] as String? : null;
-            final isTrial = userResponse != null && userResponse['is_trial'] == true;
-            final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
             print('[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
-            print('[EmailVerification] Subscription status: $subscriptionStatus');
-            print('[EmailVerification] Is trial: $isTrial');
-            print('[EmailVerification] Has active subscription: $hasActiveSubscription');
+
+            // Check subscription status from RevenueCat (source of truth)
+            CustomerInfo? customerInfo;
+            try {
+              customerInfo = await Purchases.getCustomerInfo();
+            } catch (e) {
+              debugPrint('[EmailVerification] Error fetching RevenueCat customer info: $e');
+            }
+
+            final activeEntitlements = customerInfo?.entitlements.active.values;
+            final hasActiveSubscription = activeEntitlements != null && activeEntitlements.isNotEmpty;
+            print('[EmailVerification] Has active subscription (RevenueCat): $hasActiveSubscription');
 
             if (hasCompletedOnboarding && hasActiveSubscription) {
               // Existing user who completed onboarding and has active subscription - go to main app
