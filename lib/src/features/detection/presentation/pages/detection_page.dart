@@ -805,9 +805,11 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           onTap: () async {
             // Check if user has credits before starting detection
             final creditBalance = ref.read(creditBalanceProvider);
-            final hasCredits = creditBalance.whenOrNull(
+            final hasCredits = creditBalance.when(
               data: (balance) => balance.availableCredits > 0,
-            ) ?? false;
+              loading: () => true, // Assume credits available while loading
+              error: (_, __) => false,
+            );
 
             if (!hasCredits) {
               // User has no credits - show snackbar
