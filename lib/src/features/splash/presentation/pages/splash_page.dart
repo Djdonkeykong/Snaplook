@@ -6,6 +6,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
+import '../../../../shared/services/image_preloader.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -27,6 +28,9 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   Future<void> _precacheAndNavigate() async {
     await precacheImage(const AssetImage(_assetPath), context);
+
+    // Preload onboarding images to prevent white flash
+    await ImagePreloader.instance.preloadSocialMediaShareImage(context);
 
     // Wait for auth state to be ready (with minimum 1.0s splash time)
     // CRITICAL: Wait for actual auth state data, not just the provider to be available

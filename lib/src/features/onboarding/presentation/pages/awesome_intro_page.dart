@@ -21,15 +21,6 @@ class AwesomeIntroPage extends ConsumerStatefulWidget {
 
 class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Precache image for instant loading
-    precacheImage(
-        const AssetImage('assets/images/social_media_share_mobile_screen.png'),
-        context);
-  }
-
-  @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
