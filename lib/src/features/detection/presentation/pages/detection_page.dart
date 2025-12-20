@@ -1615,7 +1615,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               final result = response.first;
               if (result['success'] == true) {
                 print('[Credits] Successfully deducted $garmentCount credits');
-                print('[Credits] Remaining: free=${result['free_analyses_remaining']}, paid=${result['paid_credits_remaining']}');
+                print('[Credits] Remaining: ${result['paid_credits_remaining']}');
 
                 // Re-sync auth state to update credits in iOS share extension
                 await ref.read(authServiceProvider).syncAuthState();

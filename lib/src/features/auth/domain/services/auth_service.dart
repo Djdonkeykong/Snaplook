@@ -122,7 +122,7 @@ class AuthService {
         try {
           final userResponse = await _supabase
               .from('users')
-              .select('subscription_status, is_trial, paid_credits_remaining, free_analyses_remaining')
+              .select('subscription_status, is_trial, paid_credits_remaining')
               .eq('id', effectiveUserId)
               .maybeSingle()
               .timeout(const Duration(seconds: 5));
@@ -131,19 +131,14 @@ class AuthService {
           final isTrial = userResponse?['is_trial'] == true;
           hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
 
-          // Calculate available credits
+          // Get available credits
           final paidCredits = userResponse?['paid_credits_remaining'] ?? 0;
-          final freeAnalyses = userResponse?['free_analyses_remaining'] ?? 0;
-
-          // For paid users, use paid_credits_remaining
-          // For free users, convert free_analyses_remaining to credits (1 analysis = up to 5 credits)
-          availableCredits = hasActiveSubscription ? paidCredits : (freeAnalyses > 0 ? 5 : 0);
+          availableCredits = paidCredits;
 
           print('[Auth]   - subscription_status: $subscriptionStatus');
           print('[Auth]   - is_trial: $isTrial');
           print('[Auth]   - hasActiveSubscription: $hasActiveSubscription');
           print('[Auth]   - paid_credits_remaining: $paidCredits');
-          print('[Auth]   - free_analyses_remaining: $freeAnalyses');
           print('[Auth]   - availableCredits: $availableCredits');
         } catch (e) {
           print('[Auth] WARNING: Failed to fetch subscription and credit status: $e');
