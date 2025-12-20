@@ -766,23 +766,48 @@ class _FavoriteCard extends ConsumerWidget {
     return '';
   }
 
+  Rect _shareOriginForContext(BuildContext context) {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox != null && renderBox.hasSize) {
+      return renderBox.localToGlobal(Offset.zero) & renderBox.size;
+    }
+    final mediaSize = MediaQuery.of(context).size;
+    return Rect.fromCenter(
+      center: Offset(mediaSize.width / 2, mediaSize.height / 2),
+      width: 1,
+      height: 1,
+    );
+  }
+
+  Future<void> _shareProductUrl(BuildContext context) async {
+    final productUrl = _resolveProductUrl();
+    if (productUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Product link unavailable',
+            style: context.snackTextStyle(
+              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final shareOrigin = _shareOriginForContext(context);
+    await Share.share(
+      productUrl,
+      subject: favorite.productName.isNotEmpty ? favorite.productName : null,
+      sharePositionOrigin: shareOrigin,
+    );
+  }
+
   void _showShareMenu(BuildContext context) {
     final productBrand = favorite.brand;
     final productTitle = favorite.productName;
     final productUrl = _resolveProductUrl();
-
-    Rect _shareOriginForContext(BuildContext context) {
-      final renderBox = context.findRenderObject() as RenderBox?;
-      if (renderBox != null && renderBox.hasSize) {
-        return renderBox.localToGlobal(Offset.zero) & renderBox.size;
-      }
-      final mediaSize = MediaQuery.of(context).size;
-      return Rect.fromCenter(
-        center: Offset(mediaSize.width / 2, mediaSize.height / 2),
-        width: 1,
-        height: 1,
-      );
-    }
 
     showModalBottomSheet(
       context: context,
@@ -996,10 +1021,12 @@ class _FavoriteCard extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _ActionIcon(
-                            icon: Icons.search_rounded,
-                            backgroundColor: colorScheme.secondary,
-                            iconColor: colorScheme.onSecondary,
-                            onTap: () => _rescanFavorite(context),
+                            icon: Icons.share_outlined,
+                            backgroundColor: Colors.black,
+                            iconColor: Colors.white,
+                            borderColor: null,
+                            iconOffset: const Offset(-1, 0),
+                            onTap: () => _shareProductUrl(context),
                           ),
                           const SizedBox(height: 8),
                           _ActionIcon(
@@ -1584,6 +1611,7 @@ class _HistoryCard extends ConsumerWidget {
                           backgroundColor: Colors.transparent,
                           iconColor: colorScheme.secondary,
                           borderColor: colorScheme.secondary,
+                          iconOffset: const Offset(-1, 0), // nudge icon only 1px left
                           onTap: () => _shareSearch(context),
                         ),
                       ],
@@ -1605,12 +1633,14 @@ class _ActionIcon extends StatelessWidget {
   final Color iconColor;
   final Color? borderColor;
   final VoidCallback onTap;
+  final Offset iconOffset;
 
   const _ActionIcon({
     required this.icon,
     required this.backgroundColor,
     required this.iconColor,
     this.borderColor,
+    this.iconOffset = Offset.zero,
     required this.onTap,
   });
 
@@ -1628,10 +1658,13 @@ class _ActionIcon extends StatelessWidget {
               ? Border.all(color: borderColor!, width: 1.3)
               : null,
         ),
-        child: Icon(
-          icon,
-          color: iconColor,
-          size: 16,
+        child: Transform.translate(
+          offset: iconOffset,
+          child: Icon(
+            icon,
+            color: iconColor,
+            size: 16,
+          ),
         ),
       ),
     );

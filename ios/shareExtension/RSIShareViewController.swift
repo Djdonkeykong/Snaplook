@@ -667,6 +667,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var headerLogoImageView: UIImageView?
     private var cancelButtonView: UIButton?
     private var backButtonView: UIButton?
+    private var imageComparisonContainerView: UIView?
+    private var imageComparisonThumbnailImageView: UIImageView?
+    private var imageComparisonFullImageView: UIImageView?
+    private var isImageComparisonExpanded = false
     private var isShowingResults = false
     private var isShowingPreview = false
     private let bannedKeywordPatterns: [NSRegularExpression] = [
@@ -3617,7 +3621,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 "Checking retailers...",
                 "Finalizing results..."
             ]
-            startStatusRotation(messages: searchMessages, interval: 2.0, stopAtLast: false)
+            startStatusRotation(messages: searchMessages, interval: 2.0, stopAtLast: true)
         }
 
         // Determine search type based on source
@@ -4320,17 +4324,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         let headerView = addResultsHeaderIfNeeded()
-        let filterTopAnchor: NSLayoutYAxisAnchor
-        let filterTopPadding: CGFloat
+
+        // Create image comparison view
+        let imageComparisonView = createImageComparisonView()
+
+        let comparisonTopAnchor: NSLayoutYAxisAnchor
+        let comparisonTopPadding: CGFloat
         if let headerView = headerView {
-            filterTopAnchor = headerView.bottomAnchor
-            filterTopPadding = 12
+            comparisonTopAnchor = headerView.bottomAnchor
+            comparisonTopPadding = 12
         } else {
-            filterTopAnchor = loadingView.safeAreaLayoutGuide.topAnchor
-            filterTopPadding = 0
+            comparisonTopAnchor = loadingView.safeAreaLayoutGuide.topAnchor
+            comparisonTopPadding = 0
         }
 
         // Add all views to loadingView
+        loadingView.addSubview(imageComparisonView)
         loadingView.addSubview(filterView)
         loadingView.addSubview(tableView)
         loadingView.addSubview(bottomBarContainer)
@@ -4339,7 +4348,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         NSLayoutConstraint.activate([
-            filterView.topAnchor.constraint(equalTo: filterTopAnchor, constant: filterTopPadding),
+            // Image comparison view
+            imageComparisonView.topAnchor.constraint(equalTo: comparisonTopAnchor, constant: comparisonTopPadding),
+            imageComparisonView.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 16),
+            imageComparisonView.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -16),
+            imageComparisonView.heightAnchor.constraint(equalToConstant: 80),
+
+            // Filter view (now below image comparison view)
+            filterView.topAnchor.constraint(equalTo: imageComparisonView.bottomAnchor, constant: 12),
             filterView.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
             filterView.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
             filterView.heightAnchor.constraint(equalToConstant: 60),
@@ -4368,6 +4384,150 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         tableView.reloadData()
         shareLog("Results UI successfully displayed")
+    }
+
+    private func createImageComparisonView() -> UIView {
+        let container = UIView()
+        container.backgroundColor = UIColor.systemGray6
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.layer.cornerRadius = 12
+        container.clipsToBounds = true
+
+        // Add tap gesture
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison))
+        container.addGestureRecognizer(tapGesture)
+        container.isUserInteractionEnabled = true
+
+        // Collapsed state UI - thumbnail + text + icon
+        let collapsedStackView = UIStackView()
+        collapsedStackView.axis = .horizontal
+        collapsedStackView.spacing = 12
+        collapsedStackView.alignment = .center
+        collapsedStackView.translatesAutoresizingMaskIntoConstraints = false
+        collapsedStackView.tag = 1001 // Tag for easy reference
+
+        // Thumbnail image view
+        let thumbnailImageView = UIImageView()
+        thumbnailImageView.contentMode = .scaleAspectFill
+        thumbnailImageView.clipsToBounds = true
+        thumbnailImageView.layer.cornerRadius = 8
+        thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false
+        if let data = pendingImageData, let image = UIImage(data: data) {
+            thumbnailImageView.image = image
+        }
+        imageComparisonThumbnailImageView = thumbnailImageView
+
+        // Text label
+        let textLabel = UILabel()
+        textLabel.text = "Compare with original"
+        textLabel.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 15)
+            ?? .systemFont(ofSize: 15, weight: .semibold)
+        textLabel.textColor = .label
+        textLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        // Expand/collapse icon
+        let iconImageView = UIImageView()
+        let iconConfig = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
+        iconImageView.image = UIImage(systemName: "chevron.down", withConfiguration: iconConfig)
+        iconImageView.tintColor = .secondaryLabel
+        iconImageView.contentMode = .scaleAspectFit
+        iconImageView.translatesAutoresizingMaskIntoConstraints = false
+        iconImageView.tag = 1002 // Tag for rotation animation
+
+        collapsedStackView.addArrangedSubview(thumbnailImageView)
+        collapsedStackView.addArrangedSubview(textLabel)
+        collapsedStackView.addArrangedSubview(UIView()) // Spacer
+        collapsedStackView.addArrangedSubview(iconImageView)
+
+        // Expanded state UI - full image
+        let fullImageView = UIImageView()
+        fullImageView.contentMode = .scaleAspectFill
+        fullImageView.clipsToBounds = true
+        fullImageView.layer.cornerRadius = 12
+        fullImageView.translatesAutoresizingMaskIntoConstraints = false
+        fullImageView.alpha = 0 // Hidden initially
+        fullImageView.tag = 1003
+        if let data = pendingImageData, let image = UIImage(data: data) {
+            fullImageView.image = image
+        }
+        imageComparisonFullImageView = fullImageView
+
+        container.addSubview(collapsedStackView)
+        container.addSubview(fullImageView)
+
+        NSLayoutConstraint.activate([
+            // Thumbnail constraints
+            thumbnailImageView.widthAnchor.constraint(equalToConstant: 56),
+            thumbnailImageView.heightAnchor.constraint(equalToConstant: 56),
+
+            // Icon constraints
+            iconImageView.widthAnchor.constraint(equalToConstant: 16),
+            iconImageView.heightAnchor.constraint(equalToConstant: 16),
+
+            // Collapsed stack view
+            collapsedStackView.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+            collapsedStackView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            collapsedStackView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            collapsedStackView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -12),
+
+            // Full image view (takes full container when expanded)
+            fullImageView.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+            fullImageView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            fullImageView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            fullImageView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -12),
+        ])
+
+        imageComparisonContainerView = container
+        return container
+    }
+
+    @objc private func toggleImageComparison() {
+        guard let container = imageComparisonContainerView else { return }
+
+        isImageComparisonExpanded.toggle()
+
+        let collapsedView = container.viewWithTag(1001)
+        let fullImageView = container.viewWithTag(1003) as? UIImageView
+        let iconView = container.viewWithTag(1002) as? UIImageView
+
+        // Calculate expanded height based on image aspect ratio
+        let expandedHeight: CGFloat
+        if let image = fullImageView?.image {
+            let containerWidth = container.frame.width - 32 // Account for padding
+            let aspectRatio = image.size.height / image.size.width
+            // Calculate height maintaining aspect ratio, with max height of 400
+            let calculatedHeight = (containerWidth * aspectRatio) + 24 // Add padding
+            expandedHeight = min(calculatedHeight, 400)
+        } else {
+            expandedHeight = 300 // Default fallback
+        }
+
+        UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut) {
+            if self.isImageComparisonExpanded {
+                // Expand: hide collapsed view, show full image
+                collapsedView?.alpha = 0
+                fullImageView?.alpha = 1
+                iconView?.transform = CGAffineTransform(rotationAngle: .pi)
+            } else {
+                // Collapse: show collapsed view, hide full image
+                collapsedView?.alpha = 1
+                fullImageView?.alpha = 0
+                iconView?.transform = .identity
+            }
+        }
+
+        // Update height constraint with animation
+        if let heightConstraint = container.constraints.first(where: { $0.firstAttribute == .height }) {
+            heightConstraint.isActive = false
+        }
+
+        let newHeight: CGFloat = isImageComparisonExpanded ? expandedHeight : 80
+        let heightConstraint = container.heightAnchor.constraint(equalToConstant: newHeight)
+        heightConstraint.isActive = true
+
+        UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut) {
+            container.superview?.layoutIfNeeded()
+        }
     }
 
     private func createCategoryFilters() -> UIView {
@@ -6098,7 +6258,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 "Checking retailers...",
                 "Finalizing results..."
             ]
-            self.startStatusRotation(messages: rotatingMessages, interval: 2.0, stopAtLast: false)
+            self.startStatusRotation(messages: rotatingMessages, interval: 2.0, stopAtLast: true)
         }
 
         shareLog("Starting detection from preview with \(imageData.count) bytes")
@@ -6913,6 +7073,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Remove category filter view
         categoryFilterView?.removeFromSuperview()
         categoryFilterView = nil
+
+        // Remove image comparison view
+        imageComparisonContainerView?.removeFromSuperview()
+        imageComparisonContainerView = nil
+        imageComparisonThumbnailImageView = nil
+        imageComparisonFullImageView = nil
+        isImageComparisonExpanded = false
 
         // Remove all subviews from loading view except header
         if let loadingView = loadingView {
