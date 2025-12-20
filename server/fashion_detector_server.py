@@ -341,7 +341,14 @@ RELEVANCE_BANNED_TERMS = [
     'jewelry', 'jewellery', 'necklace', 'bracelet', 'earring', 'earrings', 'ring',
     'rings', 'anklet', 'anklets', 'brooch', 'brooches', 'pendant', 'pendants',
     'choker', 'chokers', 'cufflinks', 'tiara', 'tiaras', 'hair pin', 'hairpin',
-    'hair clip', 'hairclip', 'hair comb', 'haircomb'
+    'hair clip', 'hairclip', 'hair comb', 'haircomb',
+    # Hair-related products (non-fashion)
+    'hair transplant', 'hair restoration', 'hair loss', 'hair growth', 'hair regrowth',
+    'hair treatment', 'hair care', 'hair oil', 'hair serum', 'hair mask', 'hair spray',
+    'hair gel', 'hair wax', 'hair pomade', 'hair dye', 'hair color', 'hair bleach',
+    'wig', 'wigs', 'hairpiece', 'hair piece', 'toupee', 'hair extension', 'hair extensions',
+    'hair weave', 'hair system', 'shampoo', 'conditioner', 'hair dryer', 'hairdryer',
+    'straightener', 'curling iron', 'hair iron', 'hair brush', 'hairbrush', 'comb'
 ]
 
 # Fashion keywords for relevance detection
