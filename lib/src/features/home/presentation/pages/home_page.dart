@@ -1330,7 +1330,10 @@ class _InfoBottomSheetContentState extends ConsumerState<_InfoBottomSheetContent
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const CircularProgressIndicator(),
+                        const CircularProgressIndicator(
+                          color: Color(0xFFf2003c),
+                          strokeWidth: 2,
+                        ),
                         SizedBox(height: spacing.m),
                         Text(
                           'Loading...',
