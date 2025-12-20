@@ -11,6 +11,7 @@ class SnaplookBackButton extends StatelessWidget {
   final double size;
   final double iconSize;
   final EdgeInsetsGeometry? margin;
+  final bool enableHaptics;
 
   const SnaplookBackButton({
     super.key,
@@ -21,13 +22,16 @@ class SnaplookBackButton extends StatelessWidget {
     this.size = 40,
     this.iconSize = 20,
     this.margin,
+    this.enableHaptics = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final Color effectiveIconColor = iconColor ?? Colors.black;
     final VoidCallback tapHandler = () {
-      HapticFeedback.mediumImpact();
+      if (enableHaptics) {
+        HapticFeedback.mediumImpact();
+      }
       (onPressed ?? () => Navigator.of(context).maybePop())();
     };
 
