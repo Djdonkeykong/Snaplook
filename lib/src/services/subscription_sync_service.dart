@@ -105,10 +105,7 @@ class SubscriptionSyncService {
           'updated_at': DateTime.now().toIso8601String(),
         }, onConflict: 'id');
 
-        debugPrint('[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: $isTrial, Expires: $expirationDateIso');
       }
-
-      debugPrint('[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: $isTrial, Expires: $expirationDateIso');
     } catch (e, stackTrace) {
       debugPrint('[SubscriptionSync] Error syncing subscription: $e');
       debugPrint('[SubscriptionSync] Stack trace: $stackTrace');
