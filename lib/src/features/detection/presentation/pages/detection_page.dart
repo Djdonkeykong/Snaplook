@@ -807,7 +807,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
             final creditBalance = ref.read(creditBalanceProvider);
             final hasCredits = creditBalance.when(
               data: (balance) => balance.availableCredits > 0,
-              loading: () => true, // Assume credits available while loading
+              loading: () => false,
               error: (_, __) => false,
             );
 

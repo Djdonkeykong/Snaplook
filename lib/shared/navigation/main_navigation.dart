@@ -15,6 +15,7 @@ import '../../src/features/favorites/domain/providers/favorites_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../../core/theme/snaplook_icons.dart';
+import '../../src/features/paywall/providers/credit_provider.dart';
 
 final selectedIndexProvider = StateProvider<int>((ref) => 0);
 final scrollToTopTriggerProvider = StateProvider<int>((ref) => 0);
@@ -36,6 +37,14 @@ class MainNavigation extends ConsumerStatefulWidget {
 
 class _MainNavigationState extends ConsumerState<MainNavigation> {
   final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize credit balance provider eagerly to avoid loading state race condition
+    // This triggers the provider to fetch credits from Supabase on app startup
+    Future.microtask(() => ref.read(creditBalanceProvider));
+  }
 
   void _handleTabTap(int index) {
     final currentIndex = ref.read(selectedIndexProvider);
