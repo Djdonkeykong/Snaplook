@@ -1351,21 +1351,34 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
 
+        shareLog("[Apify] Making request to: \(endpoint.absoluteString)")
+        if let bodyString = String(data: body, encoding: .utf8) {
+            shareLog("[Apify] Request body: \(bodyString)")
+        }
+
         let session = URLSession(configuration: .ephemeral)
         session.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
             if let error = error {
-                shareLog("Apify Instagram fetch error: \(error.localizedDescription)")
+                shareLog("[Apify] Instagram fetch error: \(error.localizedDescription)")
                 completion(.failure(self.makeDownloadError("instagram", "Apify request failed")))
                 return
+            }
+
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            shareLog("[Apify] Received response with status: \(status)")
+
+            if let data = data {
+                shareLog("[Apify] Response data size: \(data.count) bytes")
+            } else {
+                shareLog("[Apify] No response data received")
             }
 
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode),
                   let data = data else {
-                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-                shareLog("Apify Instagram fetch non-200 status: \(status)")
+                shareLog("[Apify] Instagram fetch non-200 status: \(status)")
                 completion(.failure(self.makeDownloadError("instagram", "Apify returned status \(status)")))
                 return
             }
@@ -1387,6 +1400,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func parseApifyInstagramUrls(from data: Data) -> [String] {
         // Apify run-sync returns an array of items; each item may have displayUrl and images[]
+
+        // Debug: log raw data
+        shareLog("[Apify] Received \(data.count) bytes of data")
+        if let rawString = String(data: data, encoding: .utf8) {
+            shareLog("[Apify] Raw response: \(rawString.prefix(1000))...")
+        } else {
+            shareLog("[Apify] Failed to decode response as UTF-8 string")
+        }
+
         guard let json = try? JSONSerialization.jsonObject(with: data) else {
             shareLog("[Apify] Failed to parse JSON from response data")
             return []
