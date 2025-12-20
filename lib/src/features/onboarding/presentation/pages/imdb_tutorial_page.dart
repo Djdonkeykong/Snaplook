@@ -161,7 +161,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             currentStep == ImdbTutorialStep.tapDone ||
             currentStep == ImdbTutorialStep.tapDoneLast;
     final baseImageAsset =
-        useSecondBase ? 'assets/images/imdb-2.png' : 'assets/images/imdb-1.png';
+        useSecondBase ? 'assets/images/imdb-step-2.png' : 'assets/images/imdb-1.png';
 
     return Scaffold(
       backgroundColor: Colors.black,
