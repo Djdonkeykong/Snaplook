@@ -66,52 +66,11 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
               child: Center(
                 child: FractionallySizedBox(
                   widthFactor: 1.3,
-                  child: Stack(
-                    children: [
-                      Image.asset(
-                        'assets/images/social_media_share_mobile_screen.png',
-                        fit: BoxFit.contain,
-                        gaplessPlayback: true,
-                      ),
-                    // White gradient overlay for fade effect
-                    Positioned.fill(
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.center,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.transparent,
-                              Color(0x10FFFFFF),
-                              Color(0x20FFFFFF),
-                              Color(0x30FFFFFF),
-                              Color(0x50FFFFFF),
-                              Color(0x70FFFFFF),
-                              Color(0x90FFFFFF),
-                              Color(0xB0FFFFFF),
-                              Color(0xD0FFFFFF),
-                              Colors.white,
-                            ],
-                            stops: [
-                              0.0,
-                              0.4,
-                              0.5,
-                              0.55,
-                              0.6,
-                              0.65,
-                              0.7,
-                              0.8,
-                              0.85,
-                              0.92,
-                              1.0
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  child: Image.asset(
+                    'assets/images/social_media_share_mobile_screen.png',
+                    fit: BoxFit.contain,
+                    gaplessPlayback: true,
+                  ),
                 ),
               ),
             ),
