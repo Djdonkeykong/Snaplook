@@ -15,196 +15,138 @@ class InstagramService {
   static const String _userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-  // ScrapingBee API configuration
-  static const String _scrapingBeeApiUrl =
-      'https://app.scrapingbee.com/api/v1/';
-
   static const String _jinaProxyBase = 'https://r.jina.ai/';
 
-  static const _ScrapingBeeAttempt _defaultScrapingBeeAttempt =
-      _ScrapingBeeAttempt(
-    waitMilliseconds: 2000,
-    timeout: Duration(seconds: 8),
-  );
-
-  static const _ScrapingBeeAttempt _premiumScrapingBeeAttempt =
-      _ScrapingBeeAttempt(
-    waitMilliseconds: 3500,
-    timeout: Duration(seconds: 14),
-    usePremiumProxy: true,
-  );
-
-  /// ScrapingBee Instagram scraper with smart image quality detection.
-  /// Returns a single high-quality image to match the iOS share extension behaviour.
-  static Future<List<XFile>> _scrapingBeeInstagramScraper(
+  /// Apify Instagram scraper - Returns a single high-quality image
+  static Future<List<XFile>> _apifyInstagramScraper(
     String instagramUrl,
   ) async {
-    print('Attempting ScrapingBee Instagram scraper for URL: $instagramUrl');
+    print('Attempting Apify Instagram scraper for URL: $instagramUrl');
 
-    final uri = Uri.parse(_scrapingBeeApiUrl);
+    final apifyToken = AppConstants.apifyApiToken;
+    if (apifyToken.isEmpty) {
+      print('Apify API token not configured');
+      return [];
+    }
 
-    // Standard proxy only (5 credits) - no premium retry
-    final queryParams = {
-      'api_key': AppConstants.scrapingBeeApiKey,
-      'url': instagramUrl,
-      'render_js': 'true',
-      'wait': '1500',
+    // Apify Instagram Post Scraper actor
+    final uri = Uri.parse(
+      'https://api.apify.com/v2/acts/nH2AHrwxeTRJoN5hX/run-sync-get-dataset-items'
+      '?token=$apifyToken&timeout=60',
+    );
+
+    final payload = {
+      'resultsLimit': 1,
+      'skipPinnedPosts': false,
+      'username': [instagramUrl],
     };
 
-    final requestUri = uri.replace(queryParameters: queryParams);
-    print('ScrapingBee Instagram request (wait=1500ms, timeout=20s)');
+    print('Apify Instagram request (timeout=60s)');
 
     http.Response response;
     try {
-      response =
-          await http.get(requestUri).timeout(const Duration(seconds: 20));
+      response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 65));
     } on TimeoutException {
-      print('ScrapingBee Instagram request timed out');
+      print('Apify Instagram request timed out');
       return [];
     } catch (error) {
-      print('ScrapingBee Instagram request error: ${error.toString()}');
+      print('Apify Instagram request error: ${error.toString()}');
       return [];
     }
 
-    if (response.statusCode != 200) {
-      print('ScrapingBee Instagram failed with status ${response.statusCode}');
-      print('Response: ${response.body}');
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      print('Apify Instagram failed with status ${response.statusCode}');
       return [];
     }
-
-    final htmlContent = response.body;
-    print(
-        'ScrapingBee Instagram response received, HTML length: ${htmlContent.length} chars');
 
     final result =
-        await _extractImagesFromInstagramHtml(htmlContent, instagramUrl);
+        await _extractImagesFromApifyResponse(response.body, instagramUrl);
     if (result.isNotEmpty) {
       return result;
     }
 
-    print('No image URL found in ScrapingBee results');
+    print('No image URL found in Apify results');
     return [];
   }
 
-  static Future<List<XFile>> _extractImagesFromInstagramHtml(
-    String htmlContent,
+  static Future<List<XFile>> _extractImagesFromApifyResponse(
+    String responseBody,
     String instagramUrl,
   ) async {
-    final seenUrls = <String>{};
-    String? extractedImageUrl;
+    try {
+      final List<dynamic> items = jsonDecode(responseBody) as List<dynamic>;
 
-    Future<XFile?> tryDownload(String? url, {String label = ''}) async {
-      if (url == null || url.isEmpty) return null;
-      final sanitized = _sanitizeInstagramUrl(url);
-      if (sanitized.isEmpty ||
-          seenUrls.contains(sanitized) ||
-          sanitized.contains('150x150') ||
-          sanitized.contains('profile')) {
-        return null;
+      if (items.isEmpty) {
+        print('Apify returned empty results array');
+        return [];
       }
-      seenUrls.add(sanitized);
-      if (label.isNotEmpty) {
-        print('$label: ${_previewUrl(sanitized)}');
-      }
-      final result = await _downloadImage(sanitized);
-      if (result != null) {
-        extractedImageUrl = sanitized; // Save for caching
-      }
-      return result;
-    }
 
-    // Fast path: first ig_cache_key in JSON
-    final cacheKeyMatch = RegExp(
-      r'"src":"(https:\\/\\/scontent[^"]+?ig_cache_key[^"]*)"',
-    ).firstMatch(htmlContent);
-    final cacheDownload = await tryDownload(cacheKeyMatch?.group(1),
-        label: 'Found ig_cache_key URL (priority)');
-    if (cacheDownload != null) {
-      if (extractedImageUrl != null) {
-        await _saveToInstagramCache(
-            instagramUrl, extractedImageUrl!, 'scrapingbee_cache_key');
-      }
-      return [cacheDownload];
-    }
+      // Get first item from results
+      final item = items.first as Map<String, dynamic>;
 
-    // Fast path: first display_url
-    final displayMatch = RegExp(
-      r'"display_url"\s*:\s*"([^"]+)"',
-    ).firstMatch(htmlContent);
-    final displayDownload =
-        await tryDownload(displayMatch?.group(1), label: 'Found display_url');
-    if (displayDownload != null) {
-      if (extractedImageUrl != null) {
-        await _saveToInstagramCache(
-            instagramUrl, extractedImageUrl!, 'scrapingbee_display_url');
-      }
-      return [displayDownload];
-    }
+      // Try displayUrl first (highest quality)
+      String? imageUrl = item['displayUrl'] as String?;
 
-    // img tags (limit to first 5 matches) - only take ig_cache_key variants to avoid low-quality/blocked URLs
-    final imgPattern = RegExp(
-      r'<img[^>]+src="([^"]+)"',
-      caseSensitive: false,
-    );
-    final imgMatches = imgPattern.allMatches(htmlContent).take(5).toList();
-    for (final match in imgMatches) {
-      final url = match.group(1);
-      final isCache = url != null && url.contains('ig_cache_key');
-      if (!isCache) continue;
-      final download = await tryDownload(
-        url,
-        label: 'Found img ig_cache_key URL (priority)',
-      );
-      if (download != null) {
-        if (extractedImageUrl != null) {
-          await _saveToInstagramCache(
-              instagramUrl, extractedImageUrl!, 'scrapingbee_img_cache_key');
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        print('Found Instagram displayUrl from Apify: ${_previewUrl(imageUrl)}');
+
+        final downloadedImage = await _downloadImage(imageUrl);
+        if (downloadedImage != null) {
+          // Save to cache for future requests
+          await _saveToInstagramCache(instagramUrl, imageUrl, 'apify_display_url');
+          return [downloadedImage];
         }
-        return [download];
       }
-    }
 
-    // Pattern 4: og:image meta tag (fallback, matches iOS)
-    final ogImagePattern = RegExp(
-      r'<meta property="og:image" content="([^"]+)"',
-      caseSensitive: false,
-    );
-    final ogMatch = ogImagePattern.firstMatch(htmlContent);
-    if (ogMatch != null) {
-      final url = ogMatch.group(1);
-      final download =
-          await tryDownload(url, label: 'Found og:image (fallback)');
-      if (download != null) {
-        if (extractedImageUrl != null) {
-          await _saveToInstagramCache(
-              instagramUrl, extractedImageUrl!, 'scrapingbee_og_image');
+      // Fallback: try images array if displayUrl failed
+      final images = item['images'] as List<dynamic>?;
+      if (images != null && images.isNotEmpty) {
+        for (final img in images) {
+          if (img is String && img.isNotEmpty) {
+            print('Found Instagram image from Apify images array: ${_previewUrl(img)}');
+            final downloadedImage = await _downloadImage(img);
+            if (downloadedImage != null) {
+              await _saveToInstagramCache(instagramUrl, img, 'apify_images_array');
+              return [downloadedImage];
+            }
+          }
         }
-        return [download];
       }
-    }
 
-    return [];
+      // Fallback: check childPosts for carousel posts
+      final childPosts = item['childPosts'] as List<dynamic>?;
+      if (childPosts != null && childPosts.isNotEmpty) {
+        for (final child in childPosts) {
+          if (child is Map<String, dynamic>) {
+            final childDisplayUrl = child['displayUrl'] as String?;
+            if (childDisplayUrl != null && childDisplayUrl.isNotEmpty) {
+              print('Found Instagram childPost displayUrl from Apify: ${_previewUrl(childDisplayUrl)}');
+              final downloadedImage = await _downloadImage(childDisplayUrl);
+              if (downloadedImage != null) {
+                await _saveToInstagramCache(instagramUrl, childDisplayUrl, 'apify_child_display_url');
+                return [downloadedImage];
+              }
+            }
+          }
+        }
+      }
+
+      print('No valid image URLs found in Apify response');
+      return [];
+    } catch (e) {
+      print('Error parsing Apify response: $e');
+      return [];
+    }
   }
 
   static String _previewUrl(String url) {
     return url.length <= 80 ? url : '${url.substring(0, 80)}...';
-  }
-
-  static String _sanitizeInstagramUrl(String value) {
-    var sanitized = value
-        .replaceAll('\\u0026', '&')
-        .replaceAll('\\/', '/')
-        .replaceAll('&amp;', '&')
-        .trim();
-    if (sanitized.isEmpty) {
-      return '';
-    }
-
-    if (sanitized.contains('ig_cache_key')) {
-      return sanitized;
-    }
-
-    return _normalizeInstagramCdnUrl(sanitized);
   }
 
   static String _sanitizeTikTokUrl(String value) {
@@ -213,14 +155,6 @@ class InstagramService {
         .replaceAll('\\/', '/')
         .replaceAll('&amp;', '&')
         .trim();
-  }
-
-  static String _normalizeInstagramCdnUrl(String url) {
-    var normalized = url;
-    normalized = normalized.replaceAll('c288.0.864.864a_', '');
-    normalized = normalized.replaceAll('s640x640_', '');
-    normalized = normalized.replaceAll(RegExp(r'_s\d+x\d+'), '');
-    return normalized;
   }
 
   /// Download image from URL and return as XFile
@@ -408,42 +342,36 @@ class InstagramService {
       print('Fetching Instagram post: $instagramUrl');
       lastDownloadWasCacheHit = false;
 
-      final apiKey = AppConstants.scrapingBeeApiKey;
-      if (apiKey.isEmpty ||
-          apiKey.startsWith('your_') ||
-          apiKey.contains('***')) {
-        print('❌ ScrapingBee API key not configured');
+      final apifyToken = AppConstants.apifyApiToken;
+      if (apifyToken.isEmpty) {
+        print('❌ Apify API token not configured');
         return [];
       }
 
       // Check cache first
       final cachedImageUrl = await _checkInstagramCache(instagramUrl);
       if (cachedImageUrl != null) {
-        print('📦 Using cached image URL - saving 5 credits!');
+        print('📦 Using cached image URL - saving Apify credits!');
         lastDownloadWasCacheHit = true;
         final cachedImage = await _downloadImage(cachedImageUrl);
         if (cachedImage != null) {
           return [cachedImage];
         }
-        print('⚠️ Cached image download failed, falling back to scraping');
+        print('⚠️ Cached image download failed, falling back to Apify');
         lastDownloadWasCacheHit = false;
       }
 
-      // Cache miss or failed - scrape Instagram
-      print('Fetching from ScrapingBee API (5 credits)...');
-      final result = await _scrapingBeeInstagramScraper(instagramUrl);
+      // Cache miss or failed - scrape Instagram via Apify
+      print('Fetching from Apify API...');
+      final result = await _apifyInstagramScraper(instagramUrl);
       if (result.isNotEmpty) {
         print(
-          '✅ Successfully extracted ${result.length} image(s) using ScrapingBee!',
+          '✅ Successfully extracted ${result.length} image(s) using Apify!',
         );
-
-        // Save to cache for future requests
-        // Note: We need to extract the image URL that was used
-        // For now, we'll save after successful extraction in _scrapingBeeInstagramScraper
         return result;
       }
 
-      print('❌ ScrapingBee failed to extract images');
+      print('❌ Apify failed to extract images');
       return [];
     } catch (e) {
       print('❌ Error downloading Instagram images: $e');
@@ -1770,16 +1698,4 @@ class InstagramService {
 
     return results.toList();
   }
-}
-
-class _ScrapingBeeAttempt {
-  const _ScrapingBeeAttempt({
-    required this.waitMilliseconds,
-    required this.timeout,
-    this.usePremiumProxy = false,
-  });
-
-  final int waitMilliseconds;
-  final Duration timeout;
-  final bool usePremiumProxy;
 }
