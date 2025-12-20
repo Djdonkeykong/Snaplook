@@ -4477,16 +4477,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         collapsedStackView.addArrangedSubview(spacer)
         collapsedStackView.addArrangedSubview(iconImageView)
 
-        // Expanded state UI - full image
+        // Expanded state UI - full image (exactly like preview page)
         let fullImageView = UIImageView()
-        fullImageView.contentMode = .scaleAspectFill // Same as preview page
+        fullImageView.contentMode = .scaleAspectFill
         fullImageView.clipsToBounds = true
         fullImageView.layer.cornerRadius = 12
         fullImageView.translatesAutoresizingMaskIntoConstraints = false
         fullImageView.alpha = 0 // Hidden initially
         fullImageView.tag = 1003
-        // Match container background to prevent white flash during fade
-        fullImageView.backgroundColor = UIColor(red: 249/255, green: 249/255, blue: 249/255, alpha: 1.0)
 
         // Load image from pendingImageData or analyzedImageData
         if let data = pendingImageData ?? analyzedImageData, let image = UIImage(data: data) {
