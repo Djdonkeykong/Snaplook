@@ -3146,6 +3146,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let statusCode = httpResponse.statusCode
             guard (200...299).contains(statusCode),
                   let data = data else {
+                shareLog("Generic link fetch failed (status \(statusCode)) for \(url.absoluteString.prefix(120))")
                 completion([])
                 return
             }
@@ -3238,12 +3239,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func looksLikeImageUrl(_ urlString: String) -> Bool {
         let lower = urlString.lowercased()
 
-        // Squarespace CDN often serves images without an extension
         if let components = URLComponents(string: urlString),
-           let host = components.host?.lowercased(),
-           host.contains("squarespace-cdn.com"),
-           components.path.contains("/content/") {
-            return true
+           let host = components.host?.lowercased() {
+            // Squarespace CDN often serves images without an extension
+            if host.contains("squarespace-cdn.com"),
+               components.path.contains("/content/") {
+                return true
+            }
+            // Inspogroup CDN transforms images with extensionless paths
+            if host.contains("inspogroup.net") || host.contains("cdn.inspogroup.net") {
+                return true
+            }
         }
 
         return lower.hasSuffix(".jpg") ||
