@@ -4479,7 +4479,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Expanded state UI - full image
         let fullImageView = UIImageView()
-        fullImageView.contentMode = .scaleAspectFit // Center image without cropping
+        fullImageView.contentMode = .scaleAspectFill // Same as preview page
         fullImageView.clipsToBounds = true
         fullImageView.layer.cornerRadius = 12
         fullImageView.translatesAutoresizingMaskIntoConstraints = false
