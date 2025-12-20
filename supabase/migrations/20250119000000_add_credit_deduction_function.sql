@@ -37,17 +37,16 @@ BEGIN
 
   -- Deduct credits per garment
   IF v_paid_credits >= p_garment_count THEN
-    -- Sufficient credits - deduct them
+    -- Calculate new credit balance
+    v_paid_credits := v_paid_credits - p_garment_count;
+
+    -- Update user record
     UPDATE users
     SET
-      paid_credits_remaining = paid_credits_remaining - p_garment_count,
+      paid_credits_remaining = v_paid_credits,
       total_analyses_performed = total_analyses_performed + 1,
       updated_at = NOW()
-    WHERE id = p_user_id
-    RETURNING
-      users.paid_credits_remaining
-    INTO
-      v_paid_credits;
+    WHERE id = p_user_id;
 
     RETURN QUERY SELECT
       true AS success,
