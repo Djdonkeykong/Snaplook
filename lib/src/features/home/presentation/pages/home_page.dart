@@ -1065,7 +1065,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                       data: (balance) {
                         final membershipType =
                             balance.hasActiveSubscription ? 'Premium' : 'Free';
-                        const maxCredits =
+                        final maxCredits =
                             SubscriptionPlan.monthly.creditsPerMonth;
                         final creditsRemaining =
                             balance.availableCredits.clamp(0, maxCredits).toInt();
