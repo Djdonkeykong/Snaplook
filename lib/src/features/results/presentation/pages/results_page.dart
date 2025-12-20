@@ -540,7 +540,7 @@ class _ResultFavoriteButtonState extends ConsumerState<_ResultFavoriteButton>
               ),
               child: Center(
                 child: Transform.translate(
-                  offset: isFavorite ? Offset.zero : const Offset(-1, 0),
+                  offset: Offset.zero,
                   child: Icon(
                     isFavorite
                         ? SnaplookIcons.heartFilled
