@@ -1387,16 +1387,27 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func parseApifyInstagramUrls(from data: Data) -> [String] {
         // Apify run-sync returns an array of items; each item may have displayUrl and images[]
-        guard let json = try? JSONSerialization.jsonObject(with: data) else { return [] }
+        guard let json = try? JSONSerialization.jsonObject(with: data) else {
+            shareLog("[Apify] Failed to parse JSON from response data")
+            return []
+        }
+
+        // Debug: log the response structure
+        if let jsonData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            shareLog("[Apify] Response JSON: \(jsonString.prefix(500))...")
+        }
 
         var urls: [String] = []
 
         func addUrl(_ value: Any?) {
             guard let raw = value as? String, !raw.isEmpty else { return }
+            shareLog("[Apify] Found URL: \(raw.prefix(80))...")
             urls.append(raw)
         }
 
         if let array = json as? [[String: Any]] {
+            shareLog("[Apify] Parsing array with \(array.count) items")
             for item in array {
                 addUrl(item["displayUrl"])
                 if let images = item["images"] as? [Any] {
@@ -1416,7 +1427,29 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     }
                 }
             }
+        } else {
+            shareLog("[Apify] Response is not an array, type: \(type(of: json))")
+
+            // Try to handle if response is wrapped in an object
+            if let dict = json as? [String: Any] {
+                shareLog("[Apify] Response is a dictionary with keys: \(dict.keys.joined(separator: ", "))")
+
+                // Check common wrapper keys
+                if let results = dict["data"] as? [[String: Any]] {
+                    shareLog("[Apify] Found data array with \(results.count) items")
+                    for item in results {
+                        addUrl(item["displayUrl"])
+                    }
+                } else if let results = dict["results"] as? [[String: Any]] {
+                    shareLog("[Apify] Found results array with \(results.count) items")
+                    for item in results {
+                        addUrl(item["displayUrl"])
+                    }
+                }
+            }
         }
+
+        shareLog("[Apify] Total URLs extracted: \(urls.count)")
 
         // Deduplicate while preserving order
         var seen = Set<String>()
