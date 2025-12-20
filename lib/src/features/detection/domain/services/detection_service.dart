@@ -26,8 +26,10 @@ class DetectionService {
   final bool strictMode;
   final UserProfileRepository _userProfileRepo;
   bool _lastResponseFromCache = false;
+  int _lastGarmentsSearched = 0;
 
   bool get lastResponseFromCache => _lastResponseFromCache;
+  int get lastGarmentsSearched => _lastGarmentsSearched;
 
   static const int _maxGarments = 5;
   static const int _maxResultsPerGarment =
@@ -190,6 +192,10 @@ class DetectionService {
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     _lastResponseFromCache = data['cached'] == true;
+    _lastGarmentsSearched = (data['garments_searched'] as int?) ?? 0;
+
+    debugPrint('[DetectionService] Server response: garments_searched=$_lastGarmentsSearched');
+
     if (data['success'] != true) {
       final message = (data['message'] as String?) ?? 'Unknown detector error';
       throw Exception('Detector pipeline failed: $message');

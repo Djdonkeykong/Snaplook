@@ -2051,6 +2051,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 'score': round(filtered[0]['score'], 3),
                 'bbox': filtered[0].get('expanded_bbox', filtered[0]['bbox'])
             },
+            'garments_searched': len(crops_with_urls),
             'total_results': len(deduped_results),
             'results': deduped_results,
             'search_id': search_id
