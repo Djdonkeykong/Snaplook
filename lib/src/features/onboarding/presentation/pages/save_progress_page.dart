@@ -361,7 +361,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                     ),
                     SizedBox(height: spacing.xs),
                     const Text(
-                      'Sign in to keep your picks safe and continue from any device.',
+                      'Sign in to keep your picks safe and continue from any device',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,

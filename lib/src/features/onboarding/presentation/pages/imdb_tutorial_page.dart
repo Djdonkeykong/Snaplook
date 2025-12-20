@@ -155,6 +155,13 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
+    final useSecondBase =
+        currentStep == ImdbTutorialStep.tapEdit ||
+            currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
+            currentStep == ImdbTutorialStep.tapDone ||
+            currentStep == ImdbTutorialStep.tapDoneLast;
+    final baseImageAsset =
+        useSecondBase ? 'assets/images/imdb-2.png' : 'assets/images/imdb-1.png';
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -163,7 +170,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
           // Base screenshot (ALWAYS visible)
           Positioned.fill(
             child: Image.asset(
-              'assets/images/imdb-1.png',
+              baseImageAsset,
               fit: BoxFit.cover,
               gaplessPlayback: true,
             ),
