@@ -22,7 +22,6 @@ let kUserDefaultsMessageKey = "ShareMessageKey"
 let kAppGroupIdKey = "AppGroupId"
 let kProcessingStatusKey = "ShareProcessingStatus"
 let kProcessingSessionKey = "ShareProcessingSession"
-let kScrapingBeeApiKey = "ScrapingBeeApiKey"
 let kSerpApiKey = "SerpApiKey"
 let kDetectorEndpoint = "DetectorEndpoint"
 let kShareExtensionLogKey = "ShareExtensionLogEntries"
@@ -1102,106 +1101,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         maybeFinalizeShare()
     }
 
-    private func performInstagramScrape(
-        instagramUrl: String,
-        apiKey: String,
-        attempt: Int,
-        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
-    ) {
-        guard attempt <= maxInstagramScrapeAttempts else {
-            completion(.failure(makeDownloadError("instagram", "Exceeded Instagram scrape attempts")))
-            return
-        }
-
-        guard var components = URLComponents(string: "https://app.scrapingbee.com/api/v1/") else {
-            completion(.failure(makeDownloadError("instagram", "Invalid ScrapingBee URL")))
-            return
-        }
-
-        components.queryItems = [
-            URLQueryItem(name: "api_key", value: apiKey),
-            URLQueryItem(name: "url", value: instagramUrl),
-            URLQueryItem(name: "render_js", value: "true"),
-            URLQueryItem(name: "wait", value: "1500")
-        ]
-
-        guard let requestURL = components.url else {
-            completion(.failure(makeDownloadError("instagram", "Failed to build ScrapingBee request URL")))
-            return
-        }
-
-        shareLog("Fetching Instagram HTML via ScrapingBee (attempt \(attempt + 1)) for \(instagramUrl)")
-
-        var request = URLRequest(url: requestURL)
-        request.timeoutInterval = 12.0
-
-        let session = URLSession(configuration: .ephemeral)
-        let deliver: (Result<[SharedMediaFile], Error>) -> Void = { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                switch result {
-                case .success:
-                    completion(result)
-                case .failure(let error):
-                    if attempt < self.maxInstagramScrapeAttempts {
-                        shareLog("WARNING: ScrapingBee attempt \(attempt + 1) failed (\(error.localizedDescription)) - retrying")
-                        self.performInstagramScrape(
-                            instagramUrl: instagramUrl,
-                            apiKey: apiKey,
-                            attempt: attempt + 1,
-                            completion: completion
-                        )
-                    } else {
-                        shareLog("ERROR: ScrapingBee failed after \(attempt + 1) attempts - \(error.localizedDescription)")
-                        completion(.failure(error))
-                    }
-                }
-            }
-        }
-
-        session.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-            if let error = error {
-                session.invalidateAndCancel()
-                deliver(.failure(error))
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeDownloadError("instagram", "Missing HTTP response")))
-                return
-            }
-
-            guard httpResponse.statusCode == 200 else {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeDownloadError("instagram", "ScrapingBee returned status \(httpResponse.statusCode)", code: httpResponse.statusCode)))
-                return
-            }
-
-            guard let data = data,
-                  let html = String(data: data, encoding: .utf8) else {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeDownloadError("instagram", "Unable to decode ScrapingBee response body")))
-                return
-            }
-
-            let imageUrls = self.extractInstagramImageUrls(from: html)
-            if imageUrls.isEmpty {
-                session.invalidateAndCancel()
-                deliver(.failure(self.makeDownloadError("instagram", "No image URLs found in Instagram response")))
-                return
-            }
-
-            self.downloadInstagramImages(
-                imageUrls,
-                originalURL: instagramUrl,
-                session: session,
-                completion: deliver
-            )
-        }.resume()
-    }
-
     open override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         hideDefaultUI()
@@ -1352,35 +1251,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
 
-        shareLog("[Apify] Making request to: \(endpoint.absoluteString)")
-        if let bodyString = String(data: body, encoding: .utf8) {
-            shareLog("[Apify] Request body: \(bodyString)")
-        }
-
         let session = URLSession(configuration: .ephemeral)
         session.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
             if let error = error {
-                shareLog("[Apify] Instagram fetch error: \(error.localizedDescription)")
-                completion(.failure(self.makeDownloadError("instagram", "Apify request failed")))
+                completion(.failure(self.makeDownloadError("instagram", "Instagram scraping failed")))
                 return
-            }
-
-            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-            shareLog("[Apify] Received response with status: \(status)")
-
-            if let data = data {
-                shareLog("[Apify] Response data size: \(data.count) bytes")
-            } else {
-                shareLog("[Apify] No response data received")
             }
 
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode),
                   let data = data else {
-                shareLog("[Apify] Instagram fetch non-200 status: \(status)")
-                completion(.failure(self.makeDownloadError("instagram", "Apify returned status \(status)")))
+                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+                completion(.failure(self.makeDownloadError("instagram", "Instagram scraping returned status \(status)")))
                 return
             }
 
@@ -1400,37 +1284,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func parseApifyInstagramUrls(from data: Data) -> [String] {
-        // Apify run-sync returns an array of items; each item may have displayUrl and images[]
-
-        // Debug: log raw data
-        shareLog("[Apify] Received \(data.count) bytes of data")
-        if let rawString = String(data: data, encoding: .utf8) {
-            shareLog("[Apify] Raw response: \(rawString.prefix(1000))...")
-        } else {
-            shareLog("[Apify] Failed to decode response as UTF-8 string")
-        }
-
+        // Apify run-sync-get-dataset-items returns an array of items; each item may have displayUrl and images[]
         guard let json = try? JSONSerialization.jsonObject(with: data) else {
-            shareLog("[Apify] Failed to parse JSON from response data")
             return []
-        }
-
-        // Debug: log the response structure
-        if let jsonData = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
-            shareLog("[Apify] Response JSON: \(jsonString.prefix(500))...")
         }
 
         var urls: [String] = []
 
         func addUrl(_ value: Any?) {
             guard let raw = value as? String, !raw.isEmpty else { return }
-            shareLog("[Apify] Found URL: \(raw.prefix(80))...")
             urls.append(raw)
         }
 
         if let array = json as? [[String: Any]] {
-            shareLog("[Apify] Parsing array with \(array.count) items")
             for item in array {
                 addUrl(item["displayUrl"])
                 if let images = item["images"] as? [Any] {
@@ -1450,29 +1316,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     }
                 }
             }
-        } else {
-            shareLog("[Apify] Response is not an array, type: \(type(of: json))")
-
+        } else if let dict = json as? [String: Any] {
             // Try to handle if response is wrapped in an object
-            if let dict = json as? [String: Any] {
-                shareLog("[Apify] Response is a dictionary with keys: \(dict.keys.joined(separator: ", "))")
-
-                // Check common wrapper keys
-                if let results = dict["data"] as? [[String: Any]] {
-                    shareLog("[Apify] Found data array with \(results.count) items")
-                    for item in results {
-                        addUrl(item["displayUrl"])
-                    }
-                } else if let results = dict["results"] as? [[String: Any]] {
-                    shareLog("[Apify] Found results array with \(results.count) items")
-                    for item in results {
-                        addUrl(item["displayUrl"])
-                    }
+            if let results = dict["data"] as? [[String: Any]] {
+                for item in results {
+                    addUrl(item["displayUrl"])
+                }
+            } else if let results = dict["results"] as? [[String: Any]] {
+                for item in results {
+                    addUrl(item["displayUrl"])
                 }
             }
         }
-
-        shareLog("[Apify] Total URLs extracted: \(urls.count)")
 
         // Deduplicate while preserving order
         var seen = Set<String>()
@@ -2018,23 +1873,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
     // Legacy function for backward compatibility
     private func isSocialMediaShareCandidate(_ value: String) -> Bool {
         return isInstagramShareCandidate(value) || isTikTokShareCandidate(value)
-    }
-
-    private func scrapingBeeApiKey() -> String? {
-        if let defaults = UserDefaults(suiteName: appGroupId) {
-            if let key = defaults.string(forKey: kScrapingBeeApiKey), !key.isEmpty {
-                shareLog("Using ScrapingBee key from shared defaults")
-                return key
-            }
-        }
-
-        if let infoKey = Bundle.main.object(forInfoDictionaryKey: "ScrapingBeeApiKey") as? String,
-           !infoKey.isEmpty {
-            shareLog("Using ScrapingBee key from Info.plist fallback")
-            return infoKey
-        }
-
-        return nil
     }
 
     private func apifyApiToken() -> String? {
