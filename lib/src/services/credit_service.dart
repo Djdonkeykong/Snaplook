@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/paywall/models/credit_balance.dart';
 import '../features/paywall/models/subscription_plan.dart';
 import 'superwall_service.dart';
@@ -19,77 +20,57 @@ class CreditService {
 
   CreditBalance? _cachedBalance;
 
-  /// Get current credit balance
+  /// Get current credit balance from Supabase
   Future<CreditBalance> getCreditBalance() async {
+    // Return cached balance if available
     if (_cachedBalance != null) {
+      debugPrint('[CreditService] Returning cached balance: ${_cachedBalance!.availableCredits} credits');
       return _cachedBalance!;
     }
 
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final userId = Supabase.instance.client.auth.currentUser?.id;
 
-      // Check if user has used free trial
-      final hasUsedFreeTrial = prefs.getBool(_freeTrialUsedKey) ?? false;
-
-      // Get subscription status from Superwall
-      final subscriptionStatus = _superwallService.getSubscriptionSnapshot();
-
-      // If user has never used free trial and has no subscription, give 1 free credit
-      if (!hasUsedFreeTrial && !subscriptionStatus.isActive) {
-        _cachedBalance = CreditBalance.initial();
-        await _saveCreditBalance(_cachedBalance!);
-        return _cachedBalance!;
+      if (userId == null) {
+        debugPrint('[CreditService] No authenticated user');
+        return CreditBalance.empty();
       }
 
-      // Load saved credit balance
-      final savedBalance = prefs.getString(_creditBalanceKey);
-      if (savedBalance != null) {
-        final jsonData = jsonDecode(savedBalance) as Map<String, dynamic>;
-        _cachedBalance = CreditBalance.fromJson(jsonData);
+      // Fetch credits from Supabase users table
+      final userResponse = await Supabase.instance.client
+          .from('users')
+          .select('paid_credits_remaining, subscription_status, is_trial')
+          .eq('id', userId)
+          .maybeSingle()
+          .timeout(const Duration(seconds: 5));
 
-        // Update subscription status
-        _cachedBalance = _cachedBalance!.copyWith(
-          hasActiveSubscription: subscriptionStatus.isActive,
-          subscriptionPlanId: subscriptionStatus.productIdentifier,
-        );
-
-        // Check if credits need to be refilled
-        if (subscriptionStatus.isActive) {
-          _cachedBalance = await _checkAndRefillCredits(_cachedBalance!);
-        }
-
-        await _saveCreditBalance(_cachedBalance!);
-        return _cachedBalance!;
+      if (userResponse == null) {
+        debugPrint('[CreditService] User not found in database');
+        return CreditBalance.empty();
       }
 
-      // No saved balance - create appropriate initial state
-      if (subscriptionStatus.isActive) {
-        // User has subscription - give full credits
-        final plan = SubscriptionPlan.getPlanByProductId(
-              subscriptionStatus.productIdentifier ?? SubscriptionPlan.yearly.productId) ??
-            SubscriptionPlan.yearly;
-        final credits = plan?.creditsPerMonth ?? 100;
+      final paidCredits = userResponse['paid_credits_remaining'] ?? 0;
+      final subscriptionStatus = userResponse['subscription_status'] ?? 'free';
+      final isTrial = userResponse['is_trial'] == true;
+      final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
 
-        _cachedBalance = CreditBalance(
-          availableCredits: credits,
-          totalCredits: credits,
-          hasActiveSubscription: true,
-          hasUsedFreeTrial: true,
-          nextRefillDate: _calculateNextRefillDate(),
-          subscriptionPlanId: subscriptionStatus.productIdentifier,
-        );
-      } else {
-        // No subscription and no saved data
-        _cachedBalance = hasUsedFreeTrial
-            ? CreditBalance.empty()
-            : CreditBalance.initial();
-      }
+      // Get subscription status from Superwall for product ID
+      final superwallStatus = _superwallService.getSubscriptionSnapshot();
 
-      await _saveCreditBalance(_cachedBalance!);
+      _cachedBalance = CreditBalance(
+        availableCredits: paidCredits,
+        totalCredits: paidCredits,
+        hasActiveSubscription: hasActiveSubscription,
+        hasUsedFreeTrial: true, // All users are now paid users
+        nextRefillDate: _calculateNextRefillDate(),
+        subscriptionPlanId: superwallStatus.productIdentifier,
+      );
+
+      debugPrint('[CreditService] Loaded balance from Supabase: $paidCredits credits, active: $hasActiveSubscription');
       return _cachedBalance!;
     } catch (e) {
-      debugPrint('Error getting credit balance: $e');
-      return CreditBalance.initial();
+      debugPrint('[CreditService] Error getting credit balance: $e');
+      return CreditBalance.empty();
     }
   }
 
@@ -260,5 +241,6 @@ class CreditService {
   /// Clear cached balance (force reload on next access)
   void clearCache() {
     _cachedBalance = null;
+    debugPrint('[CreditService] Cache cleared');
   }
 }
