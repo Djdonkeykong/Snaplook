@@ -64,14 +64,15 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
             Expanded(
               flex: 3,
               child: Center(
-                child: Stack(
-                  children: [
-                    Image.asset(
-                      'assets/images/social_media_share_mobile_screen.png',
-                      fit: BoxFit.contain,
-                      scale: 0.77,
-                      gaplessPlayback: true,
-                    ),
+                child: FractionallySizedBox(
+                  widthFactor: 1.3,
+                  child: Stack(
+                    children: [
+                      Image.asset(
+                        'assets/images/social_media_share_mobile_screen.png',
+                        fit: BoxFit.contain,
+                        gaplessPlayback: true,
+                      ),
                     // White gradient overlay for fade effect
                     Positioned.fill(
                       child: Container(
@@ -110,6 +111,7 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
                       ),
                     ),
                   ],
+                ),
                 ),
               ),
             ),
