@@ -28,10 +28,12 @@ class TutorialImageAnalysisPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<TutorialImageAnalysisPage> createState() => _TutorialImageAnalysisPageState();
+  ConsumerState<TutorialImageAnalysisPage> createState() =>
+      _TutorialImageAnalysisPageState();
 }
 
-class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysisPage> {
+class _TutorialImageAnalysisPageState
+    extends ConsumerState<TutorialImageAnalysisPage> {
   // Instruction state
   bool _showInstruction = true;
 
@@ -100,10 +102,12 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
                           ),
                         );
                       } else {
-                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Navigator.of(context)
+                            .popUntil((route) => route.isFirst);
                       }
                     },
-                    icon: const Icon(Icons.check, color: Colors.black, size: 18),
+                    icon:
+                        const Icon(Icons.check, color: Colors.black, size: 18),
                   ),
                 ),
               ]
@@ -177,8 +181,7 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
               ),
             ),
           ],
-          if (_showCongratulations)
-            _buildCongratulationsOverlay(),
+          if (_showCongratulations) _buildCongratulationsOverlay(),
 
           // Instruction overlay (shows on page load)
           if (_showInstruction)
@@ -199,8 +202,8 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
     if (!_isResultsSheetVisible) return 0;
     final range = _resultsMaxExtent - _resultsMinExtent;
     if (range <= 0) return 0.7;
-    final normalized = ((_currentResultsExtent - _resultsMinExtent) / range)
-        .clamp(0.0, 1.0);
+    final normalized =
+        ((_currentResultsExtent - _resultsMinExtent) / range).clamp(0.0, 1.0);
     return 0.15 + (0.55 * normalized);
   }
 
@@ -234,7 +237,7 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
 
   Widget _buildTutorialImage() {
     final alignment = widget.scenario == 'X'
-        ? const Alignment(0.4, 0.0)  // Nudge right for X tutorial
+        ? const Alignment(0.4, 0.0) // Nudge right for X tutorial
         : Alignment.center;
 
     if (_isNetworkImage) {
@@ -350,7 +353,8 @@ class _TutorialImageAnalysisPageState extends ConsumerState<TutorialImageAnalysi
 
     // Load tutorial products
     try {
-      final results = await _tutorialService.getTutorialProducts(scenario: widget.scenario);
+      final results =
+          await _tutorialService.getTutorialProducts(scenario: widget.scenario);
 
       await Future.delayed(const Duration(milliseconds: 2500));
 
@@ -573,7 +577,8 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
     _completeWithFade(fadeDuration: const Duration(milliseconds: 200));
   }
 
-  void _completeWithFade({Duration fadeDuration = const Duration(milliseconds: 800)}) {
+  void _completeWithFade(
+      {Duration fadeDuration = const Duration(milliseconds: 800)}) {
     if (_hasCompleted) return;
     _hasCompleted = true;
 

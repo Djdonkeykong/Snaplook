@@ -15,12 +15,12 @@ class StylePreferencesPage extends ConsumerStatefulWidget {
   const StylePreferencesPage({super.key});
 
   @override
-  ConsumerState<StylePreferencesPage> createState() => _StylePreferencesPageState();
+  ConsumerState<StylePreferencesPage> createState() =>
+      _StylePreferencesPageState();
 }
 
 class _StylePreferencesPageState extends ConsumerState<StylePreferencesPage>
     with TickerProviderStateMixin, RouteAware {
-
   static const List<String> _styleOptions = [
     'Minimalist & Classic',
     'Streetwear & Urban',
@@ -130,7 +130,7 @@ class _StylePreferencesPageState extends ConsumerState<StylePreferencesPage>
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 4,
@@ -199,13 +199,18 @@ class _StylePreferencesPageState extends ConsumerState<StylePreferencesPage>
                                     isSelected: isSelected,
                                     onTap: () {
                                       if (isSelected) {
-                                        ref.read(stylePreferencesProvider.notifier).state =
-                                            selectedStyles.where((s) => s != label).toList();
+                                        ref
+                                                .read(stylePreferencesProvider
+                                                    .notifier)
+                                                .state =
+                                            selectedStyles
+                                                .where((s) => s != label)
+                                                .toList();
                                       } else {
-                                        ref.read(stylePreferencesProvider.notifier).state = [
-                                          ...selectedStyles,
-                                          label
-                                        ];
+                                        ref
+                                            .read(stylePreferencesProvider
+                                                .notifier)
+                                            .state = [...selectedStyles, label];
                                       }
                                     },
                                   ),
@@ -215,7 +220,6 @@ class _StylePreferencesPageState extends ConsumerState<StylePreferencesPage>
                           ),
                         );
                       }).toList(),
-
                       SizedBox(height: spacing.xl),
                     ],
                   ),
@@ -229,7 +233,7 @@ class _StylePreferencesPageState extends ConsumerState<StylePreferencesPage>
         primaryButton: SizedBox(
           width: double.infinity,
           height: 56,
-            child: ElevatedButton(
+          child: ElevatedButton(
             onPressed: selectedStyles.isEmpty
                 ? null
                 : () async {

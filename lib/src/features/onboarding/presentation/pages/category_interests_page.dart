@@ -15,12 +15,12 @@ class CategoryInterestsPage extends ConsumerStatefulWidget {
   const CategoryInterestsPage({super.key});
 
   @override
-  ConsumerState<CategoryInterestsPage> createState() => _CategoryInterestsPageState();
+  ConsumerState<CategoryInterestsPage> createState() =>
+      _CategoryInterestsPageState();
 }
 
 class _CategoryInterestsPageState extends ConsumerState<CategoryInterestsPage>
     with TickerProviderStateMixin, RouteAware {
-
   static const List<String> _categoryOptions = [
     'Tops & Shirts',
     'Bottoms & Jeans',
@@ -119,7 +119,7 @@ class _CategoryInterestsPageState extends ConsumerState<CategoryInterestsPage>
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 7,
@@ -188,10 +188,18 @@ class _CategoryInterestsPageState extends ConsumerState<CategoryInterestsPage>
                                     isSelected: isSelected,
                                     onTap: () {
                                       if (isSelected) {
-                                        ref.read(categoryInterestsProvider.notifier).state =
-                                            selectedCategories.where((c) => c != label).toList();
+                                        ref
+                                                .read(categoryInterestsProvider
+                                                    .notifier)
+                                                .state =
+                                            selectedCategories
+                                                .where((c) => c != label)
+                                                .toList();
                                       } else {
-                                        ref.read(categoryInterestsProvider.notifier).state = [
+                                        ref
+                                            .read(categoryInterestsProvider
+                                                .notifier)
+                                            .state = [
                                           ...selectedCategories,
                                           label
                                         ];
@@ -204,7 +212,6 @@ class _CategoryInterestsPageState extends ConsumerState<CategoryInterestsPage>
                           ),
                         );
                       }).toList(),
-
                       SizedBox(height: spacing.xl),
                     ],
                   ),

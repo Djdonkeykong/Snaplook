@@ -20,7 +20,6 @@ class AgeRangePage extends ConsumerStatefulWidget {
 
 class _AgeRangePageState extends ConsumerState<AgeRangePage>
     with TickerProviderStateMixin, RouteAware {
-
   static const List<String> _ageOptions = [
     'Under 18',
     '18-24',
@@ -118,7 +117,7 @@ class _AgeRangePageState extends ConsumerState<AgeRangePage>
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 3,
@@ -186,7 +185,9 @@ class _AgeRangePageState extends ConsumerState<AgeRangePage>
                                     label: age,
                                     isSelected: isSelected,
                                     onTap: () {
-                                      ref.read(ageRangeProvider.notifier).state = age;
+                                      ref
+                                          .read(ageRangeProvider.notifier)
+                                          .state = age;
                                     },
                                   ),
                                 ),
@@ -195,7 +196,6 @@ class _AgeRangePageState extends ConsumerState<AgeRangePage>
                           ),
                         );
                       }).toList(),
-
                       SizedBox(height: spacing.xl),
                     ],
                   ),

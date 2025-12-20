@@ -39,7 +39,7 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 2,

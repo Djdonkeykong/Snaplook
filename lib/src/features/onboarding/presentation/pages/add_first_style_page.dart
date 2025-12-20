@@ -133,7 +133,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
         backgroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 3,

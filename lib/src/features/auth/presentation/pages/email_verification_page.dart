@@ -101,7 +101,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
       String code = _controllers.map((c) => c.text).join();
       // Give the keyboard a moment to close before verifying
       FocusScope.of(context).unfocus();
-      await Future.delayed(const Duration(milliseconds: 250));
+      await Future.delayed(const Duration(milliseconds: 150));
       if (!mounted) return;
       await _verifyCode(code);
     }

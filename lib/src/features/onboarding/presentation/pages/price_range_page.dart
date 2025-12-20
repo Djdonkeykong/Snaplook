@@ -20,7 +20,6 @@ class PriceRangePage extends ConsumerStatefulWidget {
 
 class _PriceRangePageState extends ConsumerState<PriceRangePage>
     with TickerProviderStateMixin, RouteAware {
-
   static const List<String> _priceOptions = [
     'Budget-friendly (Under \$50)',
     'Moderate (\$50 - \$150)',
@@ -126,7 +125,7 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 6,
@@ -194,7 +193,9 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
                                     label: label,
                                     isSelected: isSelected,
                                     onTap: () {
-                                      ref.read(priceRangeProvider.notifier).state = label;
+                                      ref
+                                          .read(priceRangeProvider.notifier)
+                                          .state = label;
                                     },
                                   ),
                                 ),
@@ -203,7 +204,6 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
                           ),
                         );
                       }).toList(),
-
                       SizedBox(height: spacing.xl),
                     ],
                   ),

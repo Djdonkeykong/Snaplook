@@ -70,8 +70,10 @@ enum XTutorialPhase {
   waitingForAction,
 }
 
-final xTutorialStepProvider = StateProvider<XTutorialStep>((ref) => XTutorialStep.step1);
-final xTutorialPhaseProvider = StateProvider<XTutorialPhase>((ref) => XTutorialPhase.showingInstruction);
+final xTutorialStepProvider =
+    StateProvider<XTutorialStep>((ref) => XTutorialStep.step1);
+final xTutorialPhaseProvider =
+    StateProvider<XTutorialPhase>((ref) => XTutorialPhase.showingInstruction);
 final xHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class XTutorialPage extends ConsumerStatefulWidget {
@@ -92,7 +94,8 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(xTutorialStepProvider.notifier).state = XTutorialStep.step1;
-      ref.read(xTutorialPhaseProvider.notifier).state = XTutorialPhase.showingInstruction;
+      ref.read(xTutorialPhaseProvider.notifier).state =
+          XTutorialPhase.showingInstruction;
       ref.read(xHasUserTappedProvider.notifier).state = false;
     });
   }
@@ -120,19 +123,21 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
 
   bool _isOneTimeSetupStep(XTutorialStep step) {
     return step == XTutorialStep.tapMore ||
-           step == XTutorialStep.tapEdit ||
-           step == XTutorialStep.tapSnaplookShortcut ||
-           step == XTutorialStep.tapDone ||
-           step == XTutorialStep.tapDoneLast;
+        step == XTutorialStep.tapEdit ||
+        step == XTutorialStep.tapSnaplookShortcut ||
+        step == XTutorialStep.tapDone ||
+        step == XTutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
-    ref.read(xTutorialPhaseProvider.notifier).state = XTutorialPhase.waitingForAction;
+    ref.read(xTutorialPhaseProvider.notifier).state =
+        XTutorialPhase.waitingForAction;
   }
 
   void _onActionComplete(XTutorialStep nextStep) {
     ref.read(xTutorialStepProvider.notifier).state = nextStep;
-    ref.read(xTutorialPhaseProvider.notifier).state = XTutorialPhase.showingInstruction;
+    ref.read(xTutorialPhaseProvider.notifier).state =
+        XTutorialPhase.showingInstruction;
 
     Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
@@ -164,13 +169,14 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
           ),
 
           // Dark overlay when popup appears
-          if (hasUserTapped && (currentStep == XTutorialStep.tapShareVia ||
-              currentStep == XTutorialStep.tapMore ||
-              currentStep == XTutorialStep.tapEdit ||
-              currentStep == XTutorialStep.tapSnaplookShortcut ||
-              currentStep == XTutorialStep.tapDone ||
-              currentStep == XTutorialStep.tapDoneLast ||
-              currentStep == XTutorialStep.step2))
+          if (hasUserTapped &&
+              (currentStep == XTutorialStep.tapShareVia ||
+                  currentStep == XTutorialStep.tapMore ||
+                  currentStep == XTutorialStep.tapEdit ||
+                  currentStep == XTutorialStep.tapSnaplookShortcut ||
+                  currentStep == XTutorialStep.tapDone ||
+                  currentStep == XTutorialStep.tapDoneLast ||
+                  currentStep == XTutorialStep.step2))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -269,7 +275,8 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
             ),
 
           // Tap area for step1 - share button
-          if (currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.step1)
+          if (currentPhase == XTutorialPhase.waitingForAction &&
+              currentStep == XTutorialStep.step1)
             Positioned(
               bottom: screenHeight * _step1BottomFraction,
               left: screenWidth * _step1LeftFraction,
@@ -282,15 +289,21 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
                   width: screenWidth * _step1WidthFraction,
                   height: screenHeight * _step1HeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapShareVia - Share via button
-          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapShareVia)
+          if (hasUserTapped &&
+              currentPhase == XTutorialPhase.waitingForAction &&
+              currentStep == XTutorialStep.tapShareVia)
             Positioned(
               bottom: screenHeight * _tapShareViaBottomFraction,
               left: screenWidth * _tapShareViaLeftFraction,
@@ -303,15 +316,21 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
                   width: screenWidth * _tapShareViaWidthFraction,
                   height: screenHeight * _tapShareViaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapMore - More button (scroll right)
-          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapMore)
+          if (hasUserTapped &&
+              currentPhase == XTutorialPhase.waitingForAction &&
+              currentStep == XTutorialStep.tapMore)
             Positioned(
               bottom: screenHeight * _tapMoreBottomFraction,
               left: screenWidth * _tapMoreLeftFraction,
@@ -324,15 +343,21 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
                   width: screenWidth * _tapMoreWidthFraction,
                   height: screenHeight * _tapMoreHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapEdit - Edit button
-          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapEdit)
+          if (hasUserTapped &&
+              currentPhase == XTutorialPhase.waitingForAction &&
+              currentStep == XTutorialStep.tapEdit)
             Positioned(
               bottom: screenHeight * _tapEditBottomFraction,
               right: screenWidth * _tapEditRightFraction,
@@ -345,15 +370,21 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
                   width: screenWidth * _tapEditWidthFraction,
                   height: screenHeight * _tapEditHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapSnaplookShortcut - Snaplook icon
-          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentPhase == XTutorialPhase.waitingForAction &&
+              currentStep == XTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
               left: screenWidth * _tapSnaplookShortcutLeftFraction,
@@ -366,17 +397,24 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
                   width: screenWidth * _tapSnaplookShortcutWidthFraction,
                   height: screenHeight * _tapSnaplookShortcutHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapDone - Done button
-          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapDone)
+          if (hasUserTapped &&
+              currentPhase == XTutorialPhase.waitingForAction &&
+              currentStep == XTutorialStep.tapDone)
             Positioned(
-              top: MediaQuery.of(context).padding.top + screenHeight * _tapDoneTopFraction,
+              top: MediaQuery.of(context).padding.top +
+                  screenHeight * _tapDoneTopFraction,
               right: screenWidth * _tapDoneRightFraction,
               child: GestureDetector(
                 onTap: () {
@@ -387,17 +425,24 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
                   width: screenWidth * _tapDoneWidthFraction,
                   height: screenHeight * _tapDoneHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapDoneLast - second Done button
-          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.tapDoneLast)
+          if (hasUserTapped &&
+              currentPhase == XTutorialPhase.waitingForAction &&
+              currentStep == XTutorialStep.tapDoneLast)
             Positioned(
-              top: MediaQuery.of(context).padding.top + screenHeight * _tapDoneLastTopFraction,
+              top: MediaQuery.of(context).padding.top +
+                  screenHeight * _tapDoneLastTopFraction,
               right: screenWidth * _tapDoneLastRightFraction,
               child: GestureDetector(
                 onTap: () {
@@ -408,15 +453,21 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
                   width: screenWidth * _tapDoneLastWidthFraction,
                   height: screenHeight * _tapDoneLastHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for step2 - final Snaplook selection
-          if (hasUserTapped && currentPhase == XTutorialPhase.waitingForAction && currentStep == XTutorialStep.step2)
+          if (hasUserTapped &&
+              currentPhase == XTutorialPhase.waitingForAction &&
+              currentStep == XTutorialStep.step2)
             Positioned(
               bottom: screenHeight * _finalSelectBottomFraction,
               left: screenWidth * _finalSelectLeftFraction,
@@ -442,8 +493,12 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
                   width: screenWidth * _finalSelectWidthFraction,
                   height: screenHeight * _finalSelectHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
@@ -464,9 +519,11 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 14.0),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -581,7 +638,8 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
     _completeWithFade(fadeDuration: const Duration(milliseconds: 200));
   }
 
-  void _completeWithFade({Duration fadeDuration = const Duration(milliseconds: 800)}) {
+  void _completeWithFade(
+      {Duration fadeDuration = const Duration(milliseconds: 800)}) {
     if (_hasCompleted) return;
     _hasCompleted = true;
 

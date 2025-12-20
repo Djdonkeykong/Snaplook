@@ -196,7 +196,8 @@ class _NotificationPermissionPageState
 
     if (user != null) {
       // User is authenticated - skip SaveProgressPage and route based on subscription
-      debugPrint('[NotificationPermission] User authenticated - skipping SaveProgressPage');
+      debugPrint(
+          '[NotificationPermission] User authenticated - skipping SaveProgressPage');
 
       try {
         // Update checkpoint
@@ -210,14 +211,16 @@ class _NotificationPermissionPageState
         try {
           customerInfo = await Purchases.getCustomerInfo();
         } catch (e) {
-          debugPrint('[NotificationPermission] Error fetching customer info: $e');
+          debugPrint(
+              '[NotificationPermission] Error fetching customer info: $e');
         }
 
         final activeEntitlements = customerInfo?.entitlements.active.values;
         final hasActiveSubscription =
             activeEntitlements != null && activeEntitlements.isNotEmpty;
 
-        debugPrint('[NotificationPermission] Has active subscription: $hasActiveSubscription');
+        debugPrint(
+            '[NotificationPermission] Has active subscription: $hasActiveSubscription');
 
         if (hasActiveSubscription) {
           // User has subscription - go to home
@@ -234,14 +237,17 @@ class _NotificationPermissionPageState
           }
         } else {
           // No subscription - check trial eligibility
-          debugPrint('[NotificationPermission] No subscription - checking trial eligibility');
+          debugPrint(
+              '[NotificationPermission] No subscription - checking trial eligibility');
 
           bool isEligibleForTrial = false;
           try {
             isEligibleForTrial = await RevenueCatService().isEligibleForTrial();
-            debugPrint('[NotificationPermission] Trial eligible: $isEligibleForTrial');
+            debugPrint(
+                '[NotificationPermission] Trial eligible: $isEligibleForTrial');
           } catch (e) {
-            debugPrint('[NotificationPermission] Error checking trial eligibility: $e');
+            debugPrint(
+                '[NotificationPermission] Error checking trial eligibility: $e');
             // Default to eligible on error
             isEligibleForTrial = true;
           }
@@ -256,7 +262,8 @@ class _NotificationPermissionPageState
             }
           } else {
             // Not eligible for trial - go to paywall
-            debugPrint('[NotificationPermission] Not eligible for trial - navigating to paywall');
+            debugPrint(
+                '[NotificationPermission] Not eligible for trial - navigating to paywall');
             if (mounted) {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => const PaywallPage()),
@@ -275,7 +282,8 @@ class _NotificationPermissionPageState
       }
     } else {
       // User NOT authenticated - show SaveProgressPage to create account
-      debugPrint('[NotificationPermission] User not authenticated - showing SaveProgressPage');
+      debugPrint(
+          '[NotificationPermission] User not authenticated - showing SaveProgressPage');
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => const SaveProgressPage(),
@@ -294,7 +302,7 @@ class _NotificationPermissionPageState
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 13,

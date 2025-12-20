@@ -70,8 +70,10 @@ enum TutorialPhase {
   waitingForAction,
 }
 
-final pinterestTutorialStepProvider = StateProvider<PinterestTutorialStep>((ref) => PinterestTutorialStep.step1);
-final pinterestTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
+final pinterestTutorialStepProvider =
+    StateProvider<PinterestTutorialStep>((ref) => PinterestTutorialStep.step1);
+final pinterestTutorialPhaseProvider =
+    StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
 final pinterestHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class PinterestTutorialPage extends ConsumerStatefulWidget {
@@ -83,7 +85,8 @@ class PinterestTutorialPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<PinterestTutorialPage> createState() => _PinterestTutorialPageState();
+  ConsumerState<PinterestTutorialPage> createState() =>
+      _PinterestTutorialPageState();
 }
 
 class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
@@ -92,8 +95,10 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
     super.initState();
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(pinterestTutorialStepProvider.notifier).state = PinterestTutorialStep.step1;
-      ref.read(pinterestTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+      ref.read(pinterestTutorialStepProvider.notifier).state =
+          PinterestTutorialStep.step1;
+      ref.read(pinterestTutorialPhaseProvider.notifier).state =
+          TutorialPhase.showingInstruction;
       ref.read(pinterestHasUserTappedProvider.notifier).state = false;
     });
   }
@@ -121,21 +126,23 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
 
   bool _isOneTimeSetupStep(PinterestTutorialStep step) {
     return step == PinterestTutorialStep.tapMore ||
-           step == PinterestTutorialStep.tapEdit ||
-           step == PinterestTutorialStep.tapSnaplookShortcut ||
-           step == PinterestTutorialStep.tapDone ||
-           step == PinterestTutorialStep.tapDoneLast;
+        step == PinterestTutorialStep.tapEdit ||
+        step == PinterestTutorialStep.tapSnaplookShortcut ||
+        step == PinterestTutorialStep.tapDone ||
+        step == PinterestTutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
-    ref.read(pinterestTutorialPhaseProvider.notifier).state = TutorialPhase.waitingForAction;
+    ref.read(pinterestTutorialPhaseProvider.notifier).state =
+        TutorialPhase.waitingForAction;
     // Don't reset hasUserTapped here - we want to keep popups visible
   }
 
   void _onActionComplete(PinterestTutorialStep nextStep) {
     // Show instruction overlay first
     ref.read(pinterestTutorialStepProvider.notifier).state = nextStep;
-    ref.read(pinterestTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+    ref.read(pinterestTutorialPhaseProvider.notifier).state =
+        TutorialPhase.showingInstruction;
 
     // Then show popup image after a brief delay (150ms) so overlay appears first
     Future.delayed(const Duration(milliseconds: 150), () {
@@ -168,13 +175,14 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
           ),
 
           // Dark overlay when popup appears
-          if (hasUserTapped && (currentStep == PinterestTutorialStep.step2 ||
-              currentStep == PinterestTutorialStep.tapMore ||
-              currentStep == PinterestTutorialStep.tapEdit ||
-              currentStep == PinterestTutorialStep.tapSnaplookShortcut ||
-              currentStep == PinterestTutorialStep.tapDone ||
-              currentStep == PinterestTutorialStep.tapDoneLast ||
-              currentStep == PinterestTutorialStep.step3))
+          if (hasUserTapped &&
+              (currentStep == PinterestTutorialStep.step2 ||
+                  currentStep == PinterestTutorialStep.tapMore ||
+                  currentStep == PinterestTutorialStep.tapEdit ||
+                  currentStep == PinterestTutorialStep.tapSnaplookShortcut ||
+                  currentStep == PinterestTutorialStep.tapDone ||
+                  currentStep == PinterestTutorialStep.tapDoneLast ||
+                  currentStep == PinterestTutorialStep.step3))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.3),
@@ -221,7 +229,8 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
             ),
 
           // Tap Snaplook Shortcut overlay
-          if (hasUserTapped && currentStep == PinterestTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentStep == PinterestTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: 0,
               left: 0,
@@ -273,7 +282,8 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
             ),
 
           // Step 1 tap area (tap share button)
-          if (currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.step1)
+          if (currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PinterestTutorialStep.step1)
             Positioned(
               top: screenHeight * _step1TapAreaTopFraction,
               left: screenWidth * _step1TapAreaLeftFraction,
@@ -286,15 +296,21 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
                   width: screenWidth * _step1TapAreaWidthFraction,
                   height: screenHeight * _step1TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Step 2 tap area (tap Share option) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.step2)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PinterestTutorialStep.step2)
             Positioned(
               top: screenHeight * _step2TapAreaTopFraction,
               left: screenWidth * _step2TapAreaLeftFraction,
@@ -307,15 +323,21 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
                   width: screenWidth * _step2TapAreaWidthFraction,
                   height: screenHeight * _step2TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap More area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.tapMore)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PinterestTutorialStep.tapMore)
             Positioned(
               bottom: screenHeight * _tapMoreBottomFraction,
               left: screenWidth * _tapMoreLeftFraction,
@@ -328,15 +350,21 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
                   width: screenWidth * _tapMoreWidthFraction,
                   height: screenHeight * _tapMoreHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Edit area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.tapEdit)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PinterestTutorialStep.tapEdit)
             Positioned(
               bottom: screenHeight * _tapEditBottomFraction,
               left: screenWidth * _tapEditLeftFraction,
@@ -349,15 +377,21 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
                   width: screenWidth * _tapEditWidthFraction,
                   height: screenHeight * _tapEditHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Snaplook Shortcut area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PinterestTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
               left: screenWidth * _tapSnaplookShortcutLeftFraction,
@@ -370,15 +404,21 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
                   width: screenWidth * _tapSnaplookShortcutWidthFraction,
                   height: screenHeight * _tapSnaplookShortcutHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Done area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.tapDone)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PinterestTutorialStep.tapDone)
             Positioned(
               top: screenHeight * _tapDoneTopFraction,
               right: screenWidth * _tapDoneRightFraction,
@@ -391,15 +431,21 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
                   width: screenWidth * _tapDoneWidthFraction,
                   height: screenHeight * _tapDoneHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.tapDoneLast)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PinterestTutorialStep.tapDoneLast)
             Positioned(
               top: screenHeight * _tapDoneLastTopFraction,
               right: screenWidth * _tapDoneLastRightFraction,
@@ -412,15 +458,21 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
                   width: screenWidth * _tapDoneLastWidthFraction,
                   height: screenHeight * _tapDoneLastHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Step 8 tap area (tap Snaplook) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PinterestTutorialStep.step3)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PinterestTutorialStep.step3)
             Positioned(
               top: screenHeight * _step3TapAreaTopFraction,
               left: screenWidth * _step3TapAreaLeftFraction,
@@ -448,8 +500,12 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
                   width: screenWidth * _step3TapAreaWidthFraction,
                   height: screenHeight * _step3TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
@@ -470,9 +526,11 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 14.0),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -587,7 +645,8 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
     _completeWithFade(fadeDuration: const Duration(milliseconds: 200));
   }
 
-  void _completeWithFade({Duration fadeDuration = const Duration(milliseconds: 800)}) {
+  void _completeWithFade(
+      {Duration fadeDuration = const Duration(milliseconds: 800)}) {
     if (_hasCompleted) return;
     _hasCompleted = true;
 

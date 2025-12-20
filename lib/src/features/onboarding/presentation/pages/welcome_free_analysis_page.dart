@@ -23,10 +23,12 @@ class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
   const WelcomeFreeAnalysisPage({super.key});
 
   @override
-  ConsumerState<WelcomeFreeAnalysisPage> createState() => _WelcomeFreeAnalysisPageState();
+  ConsumerState<WelcomeFreeAnalysisPage> createState() =>
+      _WelcomeFreeAnalysisPageState();
 }
 
-class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPage>
+class _WelcomeFreeAnalysisPageState
+    extends ConsumerState<WelcomeFreeAnalysisPage>
     with SingleTickerProviderStateMixin {
   Future<void>? _initializationFuture;
   bool _isInitialized = false;
@@ -122,7 +124,8 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
 
       // Read ALL preferences from providers
       final selectedGender = ref.read(selectedGenderProvider);
-      final notificationGranted = ref.read(notificationPermissionGrantedProvider);
+      final notificationGranted =
+          ref.read(notificationPermissionGrantedProvider);
       final styleDirection = ref.read(styleDirectionProvider);
       final whatYouWant = ref.read(whatYouWantProvider);
       final budget = ref.read(budgetProvider);
@@ -131,11 +134,14 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
       debugPrint('');
       debugPrint('[WelcomePage] ===== CHECKING ALL PROVIDERS =====');
       debugPrint('[WelcomePage] Gender from provider: ${selectedGender?.name}');
-      debugPrint('[WelcomePage] Notification permission from provider: $notificationGranted');
-      debugPrint('[WelcomePage] Style direction from provider: $styleDirection');
+      debugPrint(
+          '[WelcomePage] Notification permission from provider: $notificationGranted');
+      debugPrint(
+          '[WelcomePage] Style direction from provider: $styleDirection');
       debugPrint('[WelcomePage] What you want from provider: $whatYouWant');
       debugPrint('[WelcomePage] Budget from provider: $budget');
-      debugPrint('[WelcomePage] Discovery source from provider: ${discoverySource?.name}');
+      debugPrint(
+          '[WelcomePage] Discovery source from provider: ${discoverySource?.name}');
       debugPrint('[WelcomePage] ================================');
 
       // Map Gender enum to preferred_gender_filter
@@ -152,7 +158,8 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
             preferredGenderFilter = 'all';
             break;
         }
-        debugPrint('[WelcomePage] Mapped gender ${selectedGender.name} to filter: $preferredGenderFilter');
+        debugPrint(
+            '[WelcomePage] Mapped gender ${selectedGender.name} to filter: $preferredGenderFilter');
       }
 
       // Map DiscoverySource enum to string
@@ -163,7 +170,8 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
 
       // Save ALL preferences to database
       debugPrint('');
-      debugPrint('[WelcomePage] ===== SAVING ALL PREFERENCES TO DATABASE =====');
+      debugPrint(
+          '[WelcomePage] ===== SAVING ALL PREFERENCES TO DATABASE =====');
       debugPrint('[WelcomePage] User ID: $userId');
       try {
         await OnboardingStateService().saveUserPreferences(
@@ -189,13 +197,16 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
       if (notificationGranted == true) {
         debugPrint('');
         debugPrint('[WelcomePage] ===== INITIALIZING FCM =====');
-        debugPrint('[WelcomePage] Notification permission was granted, initializing FCM...');
+        debugPrint(
+            '[WelcomePage] Notification permission was granted, initializing FCM...');
         try {
           await NotificationService().initialize();
-          debugPrint('[WelcomePage] FCM initialized, now registering token for user...');
+          debugPrint(
+              '[WelcomePage] FCM initialized, now registering token for user...');
           // Also explicitly register token for the new user
           await NotificationService().registerTokenForUser();
-          debugPrint('[WelcomePage] SUCCESS: FCM initialized and token registered');
+          debugPrint(
+              '[WelcomePage] SUCCESS: FCM initialized and token registered');
           debugPrint('[WelcomePage] ==============================');
         } catch (fcmError, stackTrace) {
           debugPrint('[WelcomePage] ERROR initializing FCM: $fcmError');
@@ -204,7 +215,8 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
           // Non-critical - allow user to continue
         }
       } else {
-        debugPrint('[WelcomePage] Skipping FCM initialization (notification permission not granted or null)');
+        debugPrint(
+            '[WelcomePage] Skipping FCM initialization (notification permission not granted or null)');
       }
 
       // Mark onboarding as completed
@@ -220,7 +232,8 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
       // NOTE: Device locale/location tracking disabled
       // The user_profiles table doesn't exist in database
       // Location detection can be added later if needed
-      debugPrint('[WelcomePage] Skipping device locale setup (user_profiles table not configured)');
+      debugPrint(
+          '[WelcomePage] Skipping device locale setup (user_profiles table not configured)');
 
       // Initialize credits (auto-initialized when first accessed)
       print('[WelcomePage] Initializing credits...');
@@ -325,9 +338,11 @@ class _WelcomeFreeAnalysisPageState extends ConsumerState<WelcomeFreeAnalysisPag
 
               // Wait for initialization to complete before navigating
               if (_initializationFuture != null) {
-                print('[WelcomePage] Waiting for initialization to complete...');
+                print(
+                    '[WelcomePage] Waiting for initialization to complete...');
                 await _initializationFuture;
-                print('[WelcomePage] Initialization finished, navigating to app');
+                print(
+                    '[WelcomePage] Initialization finished, navigating to app');
               }
 
               if (mounted) {

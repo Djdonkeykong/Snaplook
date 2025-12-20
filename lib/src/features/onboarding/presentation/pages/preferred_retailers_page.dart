@@ -15,12 +15,12 @@ class PreferredRetailersPage extends ConsumerStatefulWidget {
   const PreferredRetailersPage({super.key});
 
   @override
-  ConsumerState<PreferredRetailersPage> createState() => _PreferredRetailersPageState();
+  ConsumerState<PreferredRetailersPage> createState() =>
+      _PreferredRetailersPageState();
 }
 
 class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
     with TickerProviderStateMixin, RouteAware {
-
   static const List<String> _retailerOptions = [
     'Fast fashion',
     'Streetwear',
@@ -141,7 +141,7 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 5,
@@ -200,21 +200,29 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
                           padding: EdgeInsets.only(bottom: spacing.m),
                           child: AnimatedBuilder(
                             animation: _animationControllers[index],
-                    builder: (context, child) {
-                      return FadeTransition(
-                        opacity: _fadeAnimations[index],
-                        child: ScaleTransition(
-                          scale: _scaleAnimations[index],
-                          child: OptionCard(
-                            label: retailer,
-                            sublabel: sublabels[retailer],
-                            isSelected: isSelected,
-                            onTap: () {
-                              if (isSelected) {
-                                ref.read(preferredRetailersProvider.notifier).state =
-                                    selectedRetailers.where((r) => r != retailer).toList();
+                            builder: (context, child) {
+                              return FadeTransition(
+                                opacity: _fadeAnimations[index],
+                                child: ScaleTransition(
+                                  scale: _scaleAnimations[index],
+                                  child: OptionCard(
+                                    label: retailer,
+                                    sublabel: sublabels[retailer],
+                                    isSelected: isSelected,
+                                    onTap: () {
+                                      if (isSelected) {
+                                        ref
+                                                .read(preferredRetailersProvider
+                                                    .notifier)
+                                                .state =
+                                            selectedRetailers
+                                                .where((r) => r != retailer)
+                                                .toList();
                                       } else {
-                                        ref.read(preferredRetailersProvider.notifier).state = [
+                                        ref
+                                            .read(preferredRetailersProvider
+                                                .notifier)
+                                            .state = [
                                           ...selectedRetailers,
                                           retailer
                                         ];
@@ -227,7 +235,6 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
                           ),
                         );
                       }).toList(),
-
                       SizedBox(height: spacing.xl),
                     ],
                   ),
@@ -241,7 +248,7 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
         primaryButton: SizedBox(
           width: double.infinity,
           height: 56,
-            child: ElevatedButton(
+          child: ElevatedButton(
             onPressed: selectedRetailers.isEmpty
                 ? null
                 : () async {

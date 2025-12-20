@@ -106,8 +106,10 @@ class _StyleDirectionPageState extends ConsumerState<StyleDirectionPage>
       ref.read(styleDirectionProvider.notifier).state =
           currentSelection.where((item) => item != value).toList();
     } else {
-      ref.read(styleDirectionProvider.notifier).state =
-          [...currentSelection, value];
+      ref.read(styleDirectionProvider.notifier).state = [
+        ...currentSelection,
+        value
+      ];
     }
   }
 
@@ -123,6 +125,7 @@ class _StyleDirectionPageState extends ConsumerState<StyleDirectionPage>
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: SnaplookBackButton(
+          enableHaptics: true,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,

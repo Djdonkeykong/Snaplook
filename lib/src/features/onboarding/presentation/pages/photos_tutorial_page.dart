@@ -63,8 +63,10 @@ enum TutorialPhase {
   waitingForAction,
 }
 
-final photosTutorialStepProvider = StateProvider<PhotosTutorialStep>((ref) => PhotosTutorialStep.step1);
-final photosTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
+final photosTutorialStepProvider =
+    StateProvider<PhotosTutorialStep>((ref) => PhotosTutorialStep.step1);
+final photosTutorialPhaseProvider =
+    StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
 final photosHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class PhotosTutorialPage extends ConsumerStatefulWidget {
@@ -85,8 +87,10 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
     super.initState();
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(photosTutorialStepProvider.notifier).state = PhotosTutorialStep.step1;
-      ref.read(photosTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+      ref.read(photosTutorialStepProvider.notifier).state =
+          PhotosTutorialStep.step1;
+      ref.read(photosTutorialPhaseProvider.notifier).state =
+          TutorialPhase.showingInstruction;
       ref.read(photosHasUserTappedProvider.notifier).state = false;
     });
   }
@@ -112,21 +116,23 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
 
   bool _isOneTimeSetupStep(PhotosTutorialStep step) {
     return step == PhotosTutorialStep.tapMore ||
-           step == PhotosTutorialStep.tapEdit ||
-           step == PhotosTutorialStep.tapSnaplookShortcut ||
-           step == PhotosTutorialStep.tapDone ||
-           step == PhotosTutorialStep.tapDoneLast;
+        step == PhotosTutorialStep.tapEdit ||
+        step == PhotosTutorialStep.tapSnaplookShortcut ||
+        step == PhotosTutorialStep.tapDone ||
+        step == PhotosTutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
-    ref.read(photosTutorialPhaseProvider.notifier).state = TutorialPhase.waitingForAction;
+    ref.read(photosTutorialPhaseProvider.notifier).state =
+        TutorialPhase.waitingForAction;
     // Don't reset hasUserTapped here - we want to keep popups visible
   }
 
   void _onActionComplete(PhotosTutorialStep nextStep) {
     // Show instruction overlay first
     ref.read(photosTutorialStepProvider.notifier).state = nextStep;
-    ref.read(photosTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+    ref.read(photosTutorialPhaseProvider.notifier).state =
+        TutorialPhase.showingInstruction;
 
     // Then show popup image after a brief delay (150ms) so overlay appears first
     Future.delayed(const Duration(milliseconds: 150), () {
@@ -159,12 +165,13 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
           ),
 
           // Dark overlay when popup appears
-          if (hasUserTapped && (currentStep == PhotosTutorialStep.tapMore ||
-              currentStep == PhotosTutorialStep.tapEdit ||
-              currentStep == PhotosTutorialStep.tapSnaplookShortcut ||
-              currentStep == PhotosTutorialStep.tapDone ||
-              currentStep == PhotosTutorialStep.tapDoneLast ||
-              currentStep == PhotosTutorialStep.step2))
+          if (hasUserTapped &&
+              (currentStep == PhotosTutorialStep.tapMore ||
+                  currentStep == PhotosTutorialStep.tapEdit ||
+                  currentStep == PhotosTutorialStep.tapSnaplookShortcut ||
+                  currentStep == PhotosTutorialStep.tapDone ||
+                  currentStep == PhotosTutorialStep.tapDoneLast ||
+                  currentStep == PhotosTutorialStep.step2))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.3),
@@ -198,7 +205,8 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
             ),
 
           // Step 4 popup overlay (after tapping Edit - shows Snaplook shortcut)
-          if (hasUserTapped && currentStep == PhotosTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentStep == PhotosTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: 0,
               left: 0,
@@ -250,7 +258,8 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
             ),
 
           // Step 1 tap area (tap on photo)
-          if (currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.step1)
+          if (currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PhotosTutorialStep.step1)
             Positioned(
               top: screenHeight * _step1TapAreaTopFraction,
               left: screenWidth * _step1TapAreaLeftFraction,
@@ -263,15 +272,21 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
                   width: screenWidth * _step1TapAreaWidthFraction,
                   height: screenHeight * _step1TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap More area (tapMore step) - centered bottom tap area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.tapMore)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PhotosTutorialStep.tapMore)
             Positioned(
               bottom: screenHeight * _tapMoreBottomFraction,
               left: screenWidth * _tapMoreLeftFraction,
@@ -284,15 +299,21 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
                   width: screenWidth * _tapMoreWidthFraction,
                   height: screenHeight * _tapMoreHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Edit area (tapEdit step) - centered bottom tap area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.tapEdit)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PhotosTutorialStep.tapEdit)
             Positioned(
               bottom: screenHeight * _tapEditBottomFraction,
               left: screenWidth * _tapEditLeftFraction,
@@ -305,15 +326,21 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
                   width: screenWidth * _tapEditWidthFraction,
                   height: screenHeight * _tapEditHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Snaplook Shortcut area (tapSnaplookShortcut step) - centered tap area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PhotosTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
               left: screenWidth * _tapSnaplookShortcutLeftFraction,
@@ -326,15 +353,21 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
                   width: screenWidth * _tapSnaplookShortcutWidthFraction,
                   height: screenHeight * _tapSnaplookShortcutHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Done area (tapDone step) - top right
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.tapDone)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PhotosTutorialStep.tapDone)
             Positioned(
               top: screenHeight * _tapDoneTopFraction,
               right: screenWidth * _tapDoneRightFraction,
@@ -347,15 +380,21 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
                   width: screenWidth * _tapDoneWidthFraction,
                   height: screenHeight * _tapDoneHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.tapDoneLast)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PhotosTutorialStep.tapDoneLast)
             Positioned(
               top: screenHeight * _tapDoneLastTopFraction,
               right: screenWidth * _tapDoneLastRightFraction,
@@ -368,15 +407,21 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
                   width: screenWidth * _tapDoneLastWidthFraction,
                   height: screenHeight * _tapDoneLastHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Step 8 tap area (tap share button) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == PhotosTutorialStep.step2)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == PhotosTutorialStep.step2)
             Positioned(
               top: screenHeight * _step2TapAreaTopFraction,
               left: screenWidth * _step2TapAreaLeftFraction,
@@ -404,8 +449,12 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
                   width: screenWidth * _step2TapAreaWidthFraction,
                   height: screenHeight * _step2TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
@@ -426,9 +475,11 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 14.0),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -543,7 +594,8 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
     _completeWithFade(fadeDuration: const Duration(milliseconds: 200));
   }
 
-  void _completeWithFade({Duration fadeDuration = const Duration(milliseconds: 800)}) {
+  void _completeWithFade(
+      {Duration fadeDuration = const Duration(milliseconds: 800)}) {
     if (_hasCompleted) return;
     _hasCompleted = true;
 

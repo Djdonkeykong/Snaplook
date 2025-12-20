@@ -70,8 +70,10 @@ enum TutorialPhase {
   waitingForAction,
 }
 
-final tiktokTutorialStepProvider = StateProvider<TikTokTutorialStep>((ref) => TikTokTutorialStep.step1);
-final tiktokTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
+final tiktokTutorialStepProvider =
+    StateProvider<TikTokTutorialStep>((ref) => TikTokTutorialStep.step1);
+final tiktokTutorialPhaseProvider =
+    StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
 final tiktokHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class TikTokTutorialPage extends ConsumerStatefulWidget {
@@ -92,8 +94,10 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
     super.initState();
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(tiktokTutorialStepProvider.notifier).state = TikTokTutorialStep.step1;
-      ref.read(tiktokTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+      ref.read(tiktokTutorialStepProvider.notifier).state =
+          TikTokTutorialStep.step1;
+      ref.read(tiktokTutorialPhaseProvider.notifier).state =
+          TutorialPhase.showingInstruction;
       ref.read(tiktokHasUserTappedProvider.notifier).state = false;
     });
   }
@@ -121,21 +125,23 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
 
   bool _isOneTimeSetupStep(TikTokTutorialStep step) {
     return step == TikTokTutorialStep.tapMore ||
-           step == TikTokTutorialStep.tapEdit ||
-           step == TikTokTutorialStep.tapSnaplookShortcut ||
-           step == TikTokTutorialStep.tapDone ||
-           step == TikTokTutorialStep.tapDoneLast;
+        step == TikTokTutorialStep.tapEdit ||
+        step == TikTokTutorialStep.tapSnaplookShortcut ||
+        step == TikTokTutorialStep.tapDone ||
+        step == TikTokTutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
-    ref.read(tiktokTutorialPhaseProvider.notifier).state = TutorialPhase.waitingForAction;
+    ref.read(tiktokTutorialPhaseProvider.notifier).state =
+        TutorialPhase.waitingForAction;
     // Don't reset hasUserTapped here - we want to keep popups visible
   }
 
   void _onActionComplete(TikTokTutorialStep nextStep) {
     // Show instruction overlay first
     ref.read(tiktokTutorialStepProvider.notifier).state = nextStep;
-    ref.read(tiktokTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+    ref.read(tiktokTutorialPhaseProvider.notifier).state =
+        TutorialPhase.showingInstruction;
 
     // Then show popup image after a brief delay (150ms) so overlay appears first
     Future.delayed(const Duration(milliseconds: 150), () {
@@ -168,13 +174,14 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
           ),
 
           // Dark overlay when popup appears
-          if (hasUserTapped && (currentStep == TikTokTutorialStep.step2 ||
-              currentStep == TikTokTutorialStep.tapMore ||
-              currentStep == TikTokTutorialStep.tapEdit ||
-              currentStep == TikTokTutorialStep.tapSnaplookShortcut ||
-              currentStep == TikTokTutorialStep.tapDone ||
-              currentStep == TikTokTutorialStep.tapDoneLast ||
-              currentStep == TikTokTutorialStep.step3))
+          if (hasUserTapped &&
+              (currentStep == TikTokTutorialStep.step2 ||
+                  currentStep == TikTokTutorialStep.tapMore ||
+                  currentStep == TikTokTutorialStep.tapEdit ||
+                  currentStep == TikTokTutorialStep.tapSnaplookShortcut ||
+                  currentStep == TikTokTutorialStep.tapDone ||
+                  currentStep == TikTokTutorialStep.tapDoneLast ||
+                  currentStep == TikTokTutorialStep.step3))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.3),
@@ -221,7 +228,8 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Tap Snaplook Shortcut overlay
-          if (hasUserTapped && currentStep == TikTokTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentStep == TikTokTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: 0,
               left: 0,
@@ -273,7 +281,8 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Step 1 tap area (tap share button)
-          if (currentPhase == TutorialPhase.waitingForAction && currentStep == TikTokTutorialStep.step1)
+          if (currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TikTokTutorialStep.step1)
             Positioned(
               top: screenHeight * _step1TapAreaTopFraction,
               left: screenWidth * _step1TapAreaLeftFraction,
@@ -286,15 +295,21 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
                   width: screenWidth * _step1TapAreaWidthFraction,
                   height: screenHeight * _step1TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Step 2 tap area (tap Share option) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TikTokTutorialStep.step2)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TikTokTutorialStep.step2)
             Positioned(
               top: screenHeight * _step2TapAreaTopFraction,
               left: screenWidth * _step2TapAreaLeftFraction,
@@ -307,15 +322,21 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
                   width: screenWidth * _step2TapAreaWidthFraction,
                   height: screenHeight * _step2TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap More area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TikTokTutorialStep.tapMore)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TikTokTutorialStep.tapMore)
             Positioned(
               bottom: screenHeight * _tapMoreBottomFraction,
               left: screenWidth * _tapMoreLeftFraction,
@@ -328,15 +349,21 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
                   width: screenWidth * _tapMoreWidthFraction,
                   height: screenHeight * _tapMoreHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Edit area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TikTokTutorialStep.tapEdit)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TikTokTutorialStep.tapEdit)
             Positioned(
               bottom: screenHeight * _tapEditBottomFraction,
               left: screenWidth * _tapEditLeftFraction,
@@ -349,15 +376,21 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
                   width: screenWidth * _tapEditWidthFraction,
                   height: screenHeight * _tapEditHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Snaplook Shortcut area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TikTokTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TikTokTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
               left: screenWidth * _tapSnaplookShortcutLeftFraction,
@@ -370,15 +403,21 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
                   width: screenWidth * _tapSnaplookShortcutWidthFraction,
                   height: screenHeight * _tapSnaplookShortcutHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Done area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TikTokTutorialStep.tapDone)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TikTokTutorialStep.tapDone)
             Positioned(
               top: screenHeight * _tapDoneTopFraction,
               right: screenWidth * _tapDoneRightFraction,
@@ -391,15 +430,21 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
                   width: screenWidth * _tapDoneWidthFraction,
                   height: screenHeight * _tapDoneHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TikTokTutorialStep.tapDoneLast)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TikTokTutorialStep.tapDoneLast)
             Positioned(
               top: screenHeight * _tapDoneLastTopFraction,
               right: screenWidth * _tapDoneLastRightFraction,
@@ -412,15 +457,21 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
                   width: screenWidth * _tapDoneLastWidthFraction,
                   height: screenHeight * _tapDoneLastHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Step 8 tap area (tap Snaplook) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TikTokTutorialStep.step3)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TikTokTutorialStep.step3)
             Positioned(
               top: screenHeight * _step3TapAreaTopFraction,
               left: screenWidth * _step3TapAreaLeftFraction,
@@ -448,8 +499,12 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
                   width: screenWidth * _step3TapAreaWidthFraction,
                   height: screenHeight * _step3TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
@@ -470,9 +525,11 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 14.0),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -587,7 +644,8 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
     _completeWithFade(fadeDuration: const Duration(milliseconds: 200));
   }
 
-  void _completeWithFade({Duration fadeDuration = const Duration(milliseconds: 800)}) {
+  void _completeWithFade(
+      {Duration fadeDuration = const Duration(milliseconds: 800)}) {
     if (_hasCompleted) return;
     _hasCompleted = true;
 

@@ -74,6 +74,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: SnaplookBackButton(
+          enableHaptics: true,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,

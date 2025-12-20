@@ -57,7 +57,7 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
     try {
       // Give the keyboard a moment to close before navigating forward
       FocusScope.of(context).unfocus();
-      await Future.delayed(const Duration(milliseconds: 250));
+      await Future.delayed(const Duration(milliseconds: 150));
       if (!mounted) return;
 
       final authService = ref.read(authServiceProvider);

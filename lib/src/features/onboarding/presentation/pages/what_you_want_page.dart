@@ -106,8 +106,10 @@ class _WhatYouWantPageState extends ConsumerState<WhatYouWantPage>
       ref.read(whatYouWantProvider.notifier).state =
           currentSelection.where((item) => item != value).toList();
     } else {
-      ref.read(whatYouWantProvider.notifier).state =
-          [...currentSelection, value];
+      ref.read(whatYouWantProvider.notifier).state = [
+        ...currentSelection,
+        value
+      ];
     }
   }
 
@@ -123,6 +125,7 @@ class _WhatYouWantPageState extends ConsumerState<WhatYouWantPage>
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: SnaplookBackButton(
+          enableHaptics: true,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,

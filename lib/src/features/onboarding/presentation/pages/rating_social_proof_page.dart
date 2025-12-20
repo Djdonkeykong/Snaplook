@@ -31,7 +31,7 @@ class RatingSocialProofPage extends StatelessWidget {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: OnboardingProgressIndicator(
           currentStep: currentStep,

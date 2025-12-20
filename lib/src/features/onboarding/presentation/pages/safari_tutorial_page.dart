@@ -70,8 +70,10 @@ enum TutorialPhase {
   waitingForAction,
 }
 
-final safariTutorialStepProvider = StateProvider<SafariTutorialStep>((ref) => SafariTutorialStep.step1);
-final safariTutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
+final safariTutorialStepProvider =
+    StateProvider<SafariTutorialStep>((ref) => SafariTutorialStep.step1);
+final safariTutorialPhaseProvider =
+    StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
 final safariHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class SafariTutorialPage extends ConsumerStatefulWidget {
@@ -92,8 +94,10 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
     super.initState();
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(safariTutorialStepProvider.notifier).state = SafariTutorialStep.step1;
-      ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+      ref.read(safariTutorialStepProvider.notifier).state =
+          SafariTutorialStep.step1;
+      ref.read(safariTutorialPhaseProvider.notifier).state =
+          TutorialPhase.showingInstruction;
       ref.read(safariHasUserTappedProvider.notifier).state = false;
     });
   }
@@ -121,21 +125,23 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
 
   bool _isOneTimeSetupStep(SafariTutorialStep step) {
     return step == SafariTutorialStep.tapMore ||
-           step == SafariTutorialStep.tapEdit ||
-           step == SafariTutorialStep.tapSnaplookShortcut ||
-           step == SafariTutorialStep.tapDone ||
-           step == SafariTutorialStep.tapDoneLast;
+        step == SafariTutorialStep.tapEdit ||
+        step == SafariTutorialStep.tapSnaplookShortcut ||
+        step == SafariTutorialStep.tapDone ||
+        step == SafariTutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
-    ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.waitingForAction;
+    ref.read(safariTutorialPhaseProvider.notifier).state =
+        TutorialPhase.waitingForAction;
     // Don't reset hasUserTapped here - we want to keep popups visible
   }
 
   void _onActionComplete(SafariTutorialStep nextStep) {
     // Show instruction overlay first
     ref.read(safariTutorialStepProvider.notifier).state = nextStep;
-    ref.read(safariTutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+    ref.read(safariTutorialPhaseProvider.notifier).state =
+        TutorialPhase.showingInstruction;
 
     // Then show popup image after a brief delay (150ms) so overlay appears first
     Future.delayed(const Duration(milliseconds: 150), () {
@@ -178,11 +184,12 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
             ),
 
           // Dark overlay for new popup steps
-          if (hasUserTapped && (currentStep == SafariTutorialStep.tapMore ||
-              currentStep == SafariTutorialStep.tapEdit ||
-              currentStep == SafariTutorialStep.tapSnaplookShortcut ||
-              currentStep == SafariTutorialStep.tapDone ||
-              currentStep == SafariTutorialStep.tapDoneLast))
+          if (hasUserTapped &&
+              (currentStep == SafariTutorialStep.tapMore ||
+                  currentStep == SafariTutorialStep.tapEdit ||
+                  currentStep == SafariTutorialStep.tapSnaplookShortcut ||
+                  currentStep == SafariTutorialStep.tapDone ||
+                  currentStep == SafariTutorialStep.tapDoneLast))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -216,7 +223,8 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
             ),
 
           // Tap Snaplook Shortcut overlay
-          if (hasUserTapped && currentStep == SafariTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentStep == SafariTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: 0,
               left: 0,
@@ -265,7 +273,8 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
             ),
 
           // Step 1 tap area (long press on image)
-          if (currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.step1)
+          if (currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == SafariTutorialStep.step1)
             Positioned(
               top: screenHeight * _step1TapAreaTopFraction,
               left: screenWidth * _step1TapAreaLeftFraction,
@@ -278,15 +287,21 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
                   width: screenWidth * _step1TapAreaWidthFraction,
                   height: screenHeight * _step1TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Step 2 tap area (tap Share option) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.step2)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == SafariTutorialStep.step2)
             Positioned(
               top: screenHeight * _step2TapAreaTopFraction,
               left: screenWidth * _step2TapAreaLeftFraction,
@@ -299,15 +314,21 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
                   width: screenWidth * _step2TapAreaWidthFraction,
                   height: screenHeight * _step2TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap More area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.tapMore)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == SafariTutorialStep.tapMore)
             Positioned(
               bottom: screenHeight * _tapMoreBottomFraction,
               left: screenWidth * _tapMoreLeftFraction,
@@ -320,15 +341,21 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
                   width: screenWidth * _tapMoreWidthFraction,
                   height: screenHeight * _tapMoreHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Edit area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.tapEdit)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == SafariTutorialStep.tapEdit)
             Positioned(
               bottom: screenHeight * _tapEditBottomFraction,
               left: screenWidth * _tapEditLeftFraction,
@@ -341,15 +368,21 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
                   width: screenWidth * _tapEditWidthFraction,
                   height: screenHeight * _tapEditHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Snaplook Shortcut area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == SafariTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
               left: screenWidth * _tapSnaplookShortcutLeftFraction,
@@ -362,15 +395,21 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
                   width: screenWidth * _tapSnaplookShortcutWidthFraction,
                   height: screenHeight * _tapSnaplookShortcutHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Done area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.tapDone)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == SafariTutorialStep.tapDone)
             Positioned(
               top: screenHeight * _tapDoneTopFraction,
               right: screenWidth * _tapDoneRightFraction,
@@ -383,15 +422,21 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
                   width: screenWidth * _tapDoneWidthFraction,
                   height: screenHeight * _tapDoneHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.tapDoneLast)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == SafariTutorialStep.tapDoneLast)
             Positioned(
               top: screenHeight * _tapDoneLastTopFraction,
               right: screenWidth * _tapDoneLastRightFraction,
@@ -404,15 +449,21 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
                   width: screenWidth * _tapDoneLastWidthFraction,
                   height: screenHeight * _tapDoneLastHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Step 8 tap area (tap Snaplook) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == SafariTutorialStep.step3)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == SafariTutorialStep.step3)
             Positioned(
               top: screenHeight * _step3TapAreaTopFraction,
               left: screenWidth * _step3TapAreaLeftFraction,
@@ -440,8 +491,12 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
                   width: screenWidth * _step3TapAreaWidthFraction,
                   height: screenHeight * _step3TapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
@@ -462,9 +517,11 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 14.0),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -579,7 +636,8 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
     _completeWithFade(fadeDuration: const Duration(milliseconds: 200));
   }
 
-  void _completeWithFade({Duration fadeDuration = const Duration(milliseconds: 800)}) {
+  void _completeWithFade(
+      {Duration fadeDuration = const Duration(milliseconds: 800)}) {
     if (_hasCompleted) return;
     _hasCompleted = true;
 

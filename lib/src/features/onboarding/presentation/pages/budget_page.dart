@@ -110,6 +110,7 @@ class _BudgetPageState extends ConsumerState<BudgetPage>
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: SnaplookBackButton(
+          enableHaptics: true,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,

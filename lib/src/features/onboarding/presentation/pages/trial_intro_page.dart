@@ -62,15 +62,14 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
 
   Future<void> _checkTrialEligibility() async {
     try {
-      final isEligible = await RevenueCatService()
-          .isEligibleForTrial()
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              debugPrint('[TrialIntro] Trial eligibility check timed out - defaulting to eligible');
-              return true;
-            },
-          );
+      final isEligible = await RevenueCatService().isEligibleForTrial().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint(
+              '[TrialIntro] Trial eligibility check timed out - defaulting to eligible');
+          return true;
+        },
+      );
       if (mounted) {
         setState(() {
           _isEligibleForTrial = isEligible;
@@ -124,7 +123,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 7,

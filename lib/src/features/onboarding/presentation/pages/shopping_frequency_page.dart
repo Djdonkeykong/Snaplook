@@ -15,12 +15,12 @@ class ShoppingFrequencyPage extends ConsumerStatefulWidget {
   const ShoppingFrequencyPage({super.key});
 
   @override
-  ConsumerState<ShoppingFrequencyPage> createState() => _ShoppingFrequencyPageState();
+  ConsumerState<ShoppingFrequencyPage> createState() =>
+      _ShoppingFrequencyPageState();
 }
 
 class _ShoppingFrequencyPageState extends ConsumerState<ShoppingFrequencyPage>
     with TickerProviderStateMixin, RouteAware {
-
   static const List<String> _frequencyOptions = [
     'Weekly',
     'Monthly',
@@ -117,7 +117,7 @@ class _ShoppingFrequencyPageState extends ConsumerState<ShoppingFrequencyPage>
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
+        leading: const SnaplookBackButton(enableHaptics: true),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 8,
@@ -185,7 +185,10 @@ class _ShoppingFrequencyPageState extends ConsumerState<ShoppingFrequencyPage>
                                     label: frequency,
                                     isSelected: isSelected,
                                     onTap: () {
-                                      ref.read(shoppingFrequencyProvider.notifier).state = frequency;
+                                      ref
+                                          .read(shoppingFrequencyProvider
+                                              .notifier)
+                                          .state = frequency;
                                     },
                                   ),
                                 ),
@@ -194,7 +197,6 @@ class _ShoppingFrequencyPageState extends ConsumerState<ShoppingFrequencyPage>
                           ),
                         );
                       }).toList(),
-
                       SizedBox(height: spacing.xl),
                     ],
                   ),

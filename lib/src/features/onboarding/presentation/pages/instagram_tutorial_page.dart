@@ -24,7 +24,7 @@ const double _tapMoreLeftFraction = 0.72;
 const double _tapMoreWidthFraction = 0.3;
 const double _tapMoreHeightFraction = 0.15;
 
-// Step 4 (tapEdit) - centered bottom tap area  
+// Step 4 (tapEdit) - centered bottom tap area
 const double _tapEditBottomFraction = 0.82;
 const double _tapEditLeftFraction = 0.8;
 const double _tapEditWidthFraction = 0.2;
@@ -70,8 +70,10 @@ enum TutorialPhase {
   waitingForAction,
 }
 
-final tutorialStepProvider = StateProvider<TutorialStep>((ref) => TutorialStep.tapShare);
-final tutorialPhaseProvider = StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
+final tutorialStepProvider =
+    StateProvider<TutorialStep>((ref) => TutorialStep.tapShare);
+final tutorialPhaseProvider =
+    StateProvider<TutorialPhase>((ref) => TutorialPhase.showingInstruction);
 final hasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class InstagramTutorialPage extends ConsumerStatefulWidget {
@@ -83,7 +85,8 @@ class InstagramTutorialPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<InstagramTutorialPage> createState() => _InstagramTutorialPageState();
+  ConsumerState<InstagramTutorialPage> createState() =>
+      _InstagramTutorialPageState();
 }
 
 class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
@@ -93,7 +96,8 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tutorialStepProvider.notifier).state = TutorialStep.tapShare;
-      ref.read(tutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+      ref.read(tutorialPhaseProvider.notifier).state =
+          TutorialPhase.showingInstruction;
       ref.read(hasUserTappedProvider.notifier).state = false;
     });
   }
@@ -121,21 +125,23 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
 
   bool _isOneTimeSetupStep(TutorialStep step) {
     return step == TutorialStep.tapMore ||
-           step == TutorialStep.tapEdit ||
-           step == TutorialStep.tapSnaplookShortcut ||
-           step == TutorialStep.tapDone ||
-           step == TutorialStep.tapDoneLast;
+        step == TutorialStep.tapEdit ||
+        step == TutorialStep.tapSnaplookShortcut ||
+        step == TutorialStep.tapDone ||
+        step == TutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
-    ref.read(tutorialPhaseProvider.notifier).state = TutorialPhase.waitingForAction;
+    ref.read(tutorialPhaseProvider.notifier).state =
+        TutorialPhase.waitingForAction;
     // Don't reset hasUserTapped here - we want to keep popups visible
   }
 
   void _onActionComplete(TutorialStep nextStep) {
     // Show instruction overlay first
     ref.read(tutorialStepProvider.notifier).state = nextStep;
-    ref.read(tutorialPhaseProvider.notifier).state = TutorialPhase.showingInstruction;
+    ref.read(tutorialPhaseProvider.notifier).state =
+        TutorialPhase.showingInstruction;
 
     // Then show popup image after a brief delay (150ms) so overlay appears first
     Future.delayed(const Duration(milliseconds: 150), () {
@@ -168,13 +174,14 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
           ),
 
           // Dark overlay when popup appears
-          if (hasUserTapped && (currentStep == TutorialStep.selectSnaplook ||
-              currentStep == TutorialStep.tapMore ||
-              currentStep == TutorialStep.tapEdit ||
-              currentStep == TutorialStep.tapSnaplookShortcut ||
-              currentStep == TutorialStep.tapDone ||
-              currentStep == TutorialStep.tapDoneLast ||
-              currentStep == TutorialStep.confirmShare))
+          if (hasUserTapped &&
+              (currentStep == TutorialStep.selectSnaplook ||
+                  currentStep == TutorialStep.tapMore ||
+                  currentStep == TutorialStep.tapEdit ||
+                  currentStep == TutorialStep.tapSnaplookShortcut ||
+                  currentStep == TutorialStep.tapDone ||
+                  currentStep == TutorialStep.tapDoneLast ||
+                  currentStep == TutorialStep.confirmShare))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -273,7 +280,8 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
             ),
 
           // Share button tap area (tapShare step)
-          if (currentPhase == TutorialPhase.waitingForAction && currentStep == TutorialStep.tapShare)
+          if (currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TutorialStep.tapShare)
             Positioned(
               bottom: screenHeight * _shareTapAreaBottomFraction,
               left: screenWidth * _shareTapAreaLeftFraction,
@@ -286,15 +294,21 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   width: screenWidth * _shareTapAreaWidthFraction,
                   height: screenHeight * _shareTapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Snaplook selection tap area (selectSnaplook step) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TutorialStep.selectSnaplook)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TutorialStep.selectSnaplook)
             Positioned(
               bottom: screenHeight * _selectTapAreaBottomFraction,
               left: screenWidth * _selectTapAreaLeftFraction,
@@ -307,15 +321,21 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   width: screenWidth * _selectTapAreaWidthFraction,
                   height: screenHeight * _selectTapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap More area (tapMore step) - centered bottom tap area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TutorialStep.tapMore)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TutorialStep.tapMore)
             Positioned(
               bottom: screenHeight * _tapMoreBottomFraction,
               left: screenWidth * _tapMoreLeftFraction,
@@ -328,15 +348,21 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   width: screenWidth * _tapMoreWidthFraction,
                   height: screenHeight * _tapMoreHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Edit area (tapEdit step) - centered bottom tap area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TutorialStep.tapEdit)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TutorialStep.tapEdit)
             Positioned(
               bottom: screenHeight * _tapEditBottomFraction,
               left: screenWidth * _tapEditLeftFraction,
@@ -349,15 +375,21 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   width: screenWidth * _tapEditWidthFraction,
                   height: screenHeight * _tapEditHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Snaplook Shortcut area (tapSnaplookShortcut step) - centered tap area
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
               left: screenWidth * _tapSnaplookShortcutLeftFraction,
@@ -370,15 +402,21 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   width: screenWidth * _tapSnaplookShortcutWidthFraction,
                   height: screenHeight * _tapSnaplookShortcutHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Done area (tapDone step) - top right
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TutorialStep.tapDone)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TutorialStep.tapDone)
             Positioned(
               top: screenHeight * _tapDoneTopFraction,
               right: screenWidth * _tapDoneRightFraction,
@@ -391,15 +429,21 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   width: screenWidth * _tapDoneWidthFraction,
                   height: screenHeight * _tapDoneHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TutorialStep.tapDoneLast)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TutorialStep.tapDoneLast)
             Positioned(
               top: screenHeight * _tapDoneLastTopFraction,
               right: screenWidth * _tapDoneLastRightFraction,
@@ -412,15 +456,21 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   width: screenWidth * _tapDoneLastWidthFraction,
                   height: screenHeight * _tapDoneLastHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Confirm share tap area (confirmShare step) - only active when popup is visible
-          if (hasUserTapped && currentPhase == TutorialPhase.waitingForAction && currentStep == TutorialStep.confirmShare)
+          if (hasUserTapped &&
+              currentPhase == TutorialPhase.waitingForAction &&
+              currentStep == TutorialStep.confirmShare)
             Positioned(
               bottom: screenHeight * _confirmTapAreaBottomFraction,
               right: screenWidth * _confirmTapAreaRightFraction,
@@ -429,7 +479,8 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   HapticFeedback.mediumImpact();
                   // Precache the image before navigating
                   await precacheImage(
-                    const AssetImage('assets/images/tutorial_analysis_image_2.jpg'),
+                    const AssetImage(
+                        'assets/images/tutorial_analysis_image_2.jpg'),
                     context,
                   );
                   if (!mounted) return;
@@ -447,8 +498,12 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   width: screenWidth * _confirmTapAreaWidthFraction,
                   height: screenHeight * _confirmTapAreaHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
@@ -469,9 +524,11 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 14.0),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -586,7 +643,8 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
     _completeWithFade(fadeDuration: const Duration(milliseconds: 200));
   }
 
-  void _completeWithFade({Duration fadeDuration = const Duration(milliseconds: 800)}) {
+  void _completeWithFade(
+      {Duration fadeDuration = const Duration(milliseconds: 800)}) {
     if (_hasCompleted) return;
     _hasCompleted = true;
 

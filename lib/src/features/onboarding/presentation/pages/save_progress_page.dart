@@ -84,7 +84,8 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     }
 
     try {
-      debugPrint('[SaveProgress] Checking onboarding and subscription status for user $userId');
+      debugPrint(
+          '[SaveProgress] Checking onboarding and subscription status for user $userId');
 
       // Check if user has completed onboarding
       final supabase = Supabase.instance.client;
@@ -97,11 +98,13 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
       final hasCompletedOnboarding = userResponse != null &&
           userResponse['onboarding_state'] == 'completed';
 
-      debugPrint('[SaveProgress] Has completed onboarding: $hasCompletedOnboarding');
+      debugPrint(
+          '[SaveProgress] Has completed onboarding: $hasCompletedOnboarding');
 
       if (hasCompletedOnboarding) {
         // Existing user who completed onboarding - check subscription
-        debugPrint('[SaveProgress] User completed onboarding, checking subscription status');
+        debugPrint(
+            '[SaveProgress] User completed onboarding, checking subscription status');
 
         // Get subscription status from RevenueCat with retry logic
         CustomerInfo? customerInfo;
@@ -133,7 +136,8 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         final hasActiveSubscription =
             activeEntitlements != null && activeEntitlements.isNotEmpty;
 
-        debugPrint('[SaveProgress] Has active subscription: $hasActiveSubscription');
+        debugPrint(
+            '[SaveProgress] Has active subscription: $hasActiveSubscription');
 
         if (hasActiveSubscription) {
           // Completed onboarding + subscription → Home
@@ -160,7 +164,8 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           }
         } else {
           // Completed onboarding + NO subscription → Paywall
-          debugPrint('[SaveProgress] User has no subscription - going to paywall');
+          debugPrint(
+              '[SaveProgress] User has no subscription - going to paywall');
           if (mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (context) => const PaywallPage()),
@@ -192,7 +197,8 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   Future<void> _persistOnboardingSelections(String userId) async {
     try {
       final selectedGender = ref.read(selectedGenderProvider);
-      final notificationGranted = ref.read(notificationPermissionGrantedProvider);
+      final notificationGranted =
+          ref.read(notificationPermissionGrantedProvider);
       final styleDirection = ref.read(styleDirectionProvider);
       final whatYouWant = ref.read(whatYouWantProvider);
       final budget = ref.read(budgetProvider);
@@ -275,7 +281,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     await _navigateBasedOnSubscriptionStatus();
   }
 
-
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
@@ -310,124 +315,59 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
             return false;
           },
           child: SingleChildScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                spacing.l,
-                0,
-                spacing.l,
-                bottomPadding,
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              spacing.l,
+              0,
+              spacing.l,
+              bottomPadding,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom -
+                    kToolbarHeight,
               ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height -
-                      MediaQuery.of(context).padding.top -
-                      MediaQuery.of(context).padding.bottom -
-                      kToolbarHeight,
-                ),
-                child: IntrinsicHeight(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: spacing.l),
-
-                      const Text(
-                        'Save your progress',
-                        style: TextStyle(
-                          fontSize: 34,
-                          fontFamily: 'PlusJakartaSans',
-                          letterSpacing: -1.0,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          height: 1.3,
-                        ),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: spacing.l),
+                    const Text(
+                      'Save your progress',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -1.0,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        height: 1.3,
                       ),
-
-                      SizedBox(height: spacing.xxl * 4),
-
-                      Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          child: Column(
-                            children: [
-                              if (isAppleSignInAvailable) ...[
-                                _AuthButton(
-                                  icon: Icons.apple,
-                                  iconSize: 32,
-                                  label: 'Continue with Apple',
-                                  backgroundColor: Colors.black,
-                                  textColor: Colors.white,
-                                  onPressed: () async {
-                                    final authService =
-                                        ref.read(authServiceProvider);
-
-                                    try {
-                                      await authService.signInWithApple();
-                                    } catch (e) {
-                                      debugPrint(
-                                          '[SaveProgress] Apple sign in error: $e');
-
-                                      if (e == AuthService.authCancelledException) {
-                                        // User cancelled - do nothing
-                                        return;
-                                      }
-
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .clearSnackBars();
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Error signing in with Apple: ${e.toString()}',
-                                              style: context.snackTextStyle(
-                                                merge: const TextStyle(
-                                                    fontFamily:
-                                                        'PlusJakartaSans'),
-                                              ),
-                                            ),
-                                            duration: const Duration(
-                                                milliseconds: 2500),
-                                          ),
-                                        );
-                                        return;
-                                      }
-                                    }
-
-                                    await Future.delayed(
-                                        const Duration(milliseconds: 500));
-
-                                    if (context.mounted) {
-                                      await _handleAuthSuccess(context);
-                                    }
-                                  },
-                                ),
-                                SizedBox(height: spacing.m),
-                              ],
-
-                              _AuthButtonWithSvg(
-                                svgAsset: 'assets/icons/google_logo.svg',
-                                iconSize: 22,
-                                label: 'Continue with Google',
-                                backgroundColor: Colors.white,
-                                textColor: Colors.black,
-                                borderColor: const Color(0xFFE5E7EB),
+                    ),
+                    SizedBox(height: spacing.xxl * 4),
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: Column(
+                          children: [
+                            if (isAppleSignInAvailable) ...[
+                              _AuthButton(
+                                icon: Icons.apple,
+                                iconSize: 32,
+                                label: 'Continue with Apple',
+                                backgroundColor: Colors.black,
+                                textColor: Colors.white,
                                 onPressed: () async {
                                   final authService =
                                       ref.read(authServiceProvider);
 
                                   try {
-                                    await authService.signInWithGoogle();
-
-                                    await Future.delayed(
-                                        const Duration(milliseconds: 500));
-
-                                    if (context.mounted) {
-                                      await _handleAuthSuccess(context);
-                                    }
+                                    await authService.signInWithApple();
                                   } catch (e) {
                                     debugPrint(
-                                        '[SaveProgress] Sign in error: $e');
+                                        '[SaveProgress] Apple sign in error: $e');
 
                                     if (e ==
                                         AuthService.authCancelledException) {
@@ -442,7 +382,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                           .showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'Error signing in with Google: ${e.toString()}',
+                                            'Error signing in with Apple: ${e.toString()}',
                                             style: context.snackTextStyle(
                                               merge: const TextStyle(
                                                   fontFamily:
@@ -453,48 +393,104 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                               milliseconds: 2500),
                                         ),
                                       );
+                                      return;
                                     }
                                   }
-                                },
-                              ),
 
-                              SizedBox(height: spacing.m),
+                                  await Future.delayed(
+                                      const Duration(milliseconds: 500));
 
-                              _AuthButton(
-                                icon: Icons.email_outlined,
-                                iconSize: 26,
-                                label: 'Continue with Email',
-                                backgroundColor: Colors.white,
-                                textColor: Colors.black,
-                                borderColor: const Color(0xFFE5E7EB),
-                                onPressed: () async {
-                                  final result =
-                                      await Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const EmailSignInPage(),
-                                    ),
-                                  );
-
-                                  if (result == true && context.mounted) {
-                                    await Future.delayed(
-                                        const Duration(milliseconds: 500));
-                                    if (!context.mounted) return;
+                                  if (context.mounted) {
                                     await _handleAuthSuccess(context);
                                   }
                                 },
                               ),
+                              SizedBox(height: spacing.m),
                             ],
-                          ),
+                            _AuthButtonWithSvg(
+                              svgAsset: 'assets/icons/google_logo.svg',
+                              iconSize: 22,
+                              label: 'Continue with Google',
+                              backgroundColor: Colors.white,
+                              textColor: Colors.black,
+                              borderColor: const Color(0xFFE5E7EB),
+                              onPressed: () async {
+                                final authService =
+                                    ref.read(authServiceProvider);
+
+                                try {
+                                  await authService.signInWithGoogle();
+
+                                  await Future.delayed(
+                                      const Duration(milliseconds: 500));
+
+                                  if (context.mounted) {
+                                    await _handleAuthSuccess(context);
+                                  }
+                                } catch (e) {
+                                  debugPrint(
+                                      '[SaveProgress] Sign in error: $e');
+
+                                  if (e == AuthService.authCancelledException) {
+                                    // User cancelled - do nothing
+                                    return;
+                                  }
+
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context)
+                                        .clearSnackBars();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Error signing in with Google: ${e.toString()}',
+                                          style: context.snackTextStyle(
+                                            merge: const TextStyle(
+                                                fontFamily: 'PlusJakartaSans'),
+                                          ),
+                                        ),
+                                        duration:
+                                            const Duration(milliseconds: 2500),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                            SizedBox(height: spacing.m),
+                            _AuthButton(
+                              icon: Icons.email_outlined,
+                              iconSize: 26,
+                              label: 'Continue with Email',
+                              backgroundColor: Colors.white,
+                              textColor: Colors.black,
+                              borderColor: const Color(0xFFE5E7EB),
+                              onPressed: () async {
+                                final result = await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const EmailSignInPage(),
+                                  ),
+                                );
+
+                                if (result == true && context.mounted) {
+                                  await Future.delayed(
+                                      const Duration(milliseconds: 500));
+                                  if (!context.mounted) return;
+                                  await _handleAuthSuccess(context);
+                                }
+                              },
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
         ),
+      ),
     );
   }
 }

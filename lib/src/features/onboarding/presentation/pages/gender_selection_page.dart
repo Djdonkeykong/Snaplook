@@ -63,7 +63,8 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
     try {
       final user = ref.read(authServiceProvider).currentUser;
       if (user != null) {
-        debugPrint('[GenderSelection] Initializing onboarding for user ${user.id}');
+        debugPrint(
+            '[GenderSelection] Initializing onboarding for user ${user.id}');
 
         // Start onboarding tracking
         await OnboardingStateService().startOnboarding(user.id);
@@ -73,7 +74,8 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
 
         debugPrint('[GenderSelection] Onboarding initialized successfully');
       } else {
-        debugPrint('[GenderSelection] No authenticated user - skipping onboarding init');
+        debugPrint(
+            '[GenderSelection] No authenticated user - skipping onboarding init');
       }
     } catch (e) {
       debugPrint('[GenderSelection] Error initializing onboarding: $e');
@@ -88,11 +90,13 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
 
       final user = ref.read(authServiceProvider).currentUser;
       if (user == null) {
-        debugPrint('[GenderSelection] No authenticated user - preferences will be saved after login');
+        debugPrint(
+            '[GenderSelection] No authenticated user - preferences will be saved after login');
         return;
       }
 
-      debugPrint('[GenderSelection] Saving gender preference: ${selectedGender.name}');
+      debugPrint(
+          '[GenderSelection] Saving gender preference: ${selectedGender.name}');
 
       // Map Gender enum to preferred_gender_filter
       String filterValue;
@@ -191,6 +195,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
         // Always show back button to mirror other onboarding pages.
         // Pop this page (non-root so it works when pushed from the auth sheet flow).
         leading: SnaplookBackButton(
+          enableHaptics: true,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
@@ -253,9 +258,11 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                               label: "Men's Clothing",
                               isSelected: selectedGender == Gender.male,
                               onTap: () {
-                                debugPrint('[GenderSelection] User selected: male');
-                                ref.read(selectedGenderProvider.notifier).state =
-                                    Gender.male;
+                                debugPrint(
+                                    '[GenderSelection] User selected: male');
+                                ref
+                                    .read(selectedGenderProvider.notifier)
+                                    .state = Gender.male;
                                 debugPrint(
                                     '[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
                               },
@@ -280,9 +287,11 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                               label: "Women's Clothing",
                               isSelected: selectedGender == Gender.female,
                               onTap: () {
-                                debugPrint('[GenderSelection] User selected: female');
-                                ref.read(selectedGenderProvider.notifier).state =
-                                    Gender.female;
+                                debugPrint(
+                                    '[GenderSelection] User selected: female');
+                                ref
+                                    .read(selectedGenderProvider.notifier)
+                                    .state = Gender.female;
                                 debugPrint(
                                     '[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
                               },
@@ -307,9 +316,11 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                               label: 'Both',
                               isSelected: selectedGender == Gender.other,
                               onTap: () {
-                                debugPrint('[GenderSelection] User selected: other');
-                                ref.read(selectedGenderProvider.notifier).state =
-                                    Gender.other;
+                                debugPrint(
+                                    '[GenderSelection] User selected: other');
+                                ref
+                                    .read(selectedGenderProvider.notifier)
+                                    .state = Gender.other;
                                 debugPrint(
                                     '[GenderSelection] Provider updated to: ${ref.read(selectedGenderProvider)?.name}');
                               },

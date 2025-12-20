@@ -176,7 +176,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                   backgroundColor: Colors.transparent,
                   elevation: 0,
                   scrolledUnderElevation: 0,
-                  leading: SnaplookBackButton(),
+                  leading: SnaplookBackButton(enableHaptics: true),
                   centerTitle: true,
                   title: const OnboardingProgressIndicator(
                     currentStep: 1,

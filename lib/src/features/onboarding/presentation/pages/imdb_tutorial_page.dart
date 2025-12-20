@@ -70,8 +70,10 @@ enum ImdbTutorialPhase {
   waitingForAction,
 }
 
-final imdbTutorialStepProvider = StateProvider<ImdbTutorialStep>((ref) => ImdbTutorialStep.step1);
-final imdbTutorialPhaseProvider = StateProvider<ImdbTutorialPhase>((ref) => ImdbTutorialPhase.showingInstruction);
+final imdbTutorialStepProvider =
+    StateProvider<ImdbTutorialStep>((ref) => ImdbTutorialStep.step1);
+final imdbTutorialPhaseProvider = StateProvider<ImdbTutorialPhase>(
+    (ref) => ImdbTutorialPhase.showingInstruction);
 final imdbHasUserTappedProvider = StateProvider<bool>((ref) => false);
 
 class ImdbTutorialPage extends ConsumerStatefulWidget {
@@ -91,8 +93,10 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(imdbTutorialStepProvider.notifier).state = ImdbTutorialStep.step1;
-      ref.read(imdbTutorialPhaseProvider.notifier).state = ImdbTutorialPhase.showingInstruction;
+      ref.read(imdbTutorialStepProvider.notifier).state =
+          ImdbTutorialStep.step1;
+      ref.read(imdbTutorialPhaseProvider.notifier).state =
+          ImdbTutorialPhase.showingInstruction;
       ref.read(imdbHasUserTappedProvider.notifier).state = false;
     });
   }
@@ -120,19 +124,21 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
 
   bool _isOneTimeSetupStep(ImdbTutorialStep step) {
     return step == ImdbTutorialStep.tapMore ||
-           step == ImdbTutorialStep.tapEdit ||
-           step == ImdbTutorialStep.tapSnaplookShortcut ||
-           step == ImdbTutorialStep.tapDone ||
-           step == ImdbTutorialStep.tapDoneLast;
+        step == ImdbTutorialStep.tapEdit ||
+        step == ImdbTutorialStep.tapSnaplookShortcut ||
+        step == ImdbTutorialStep.tapDone ||
+        step == ImdbTutorialStep.tapDoneLast;
   }
 
   void _onInstructionComplete() {
-    ref.read(imdbTutorialPhaseProvider.notifier).state = ImdbTutorialPhase.waitingForAction;
+    ref.read(imdbTutorialPhaseProvider.notifier).state =
+        ImdbTutorialPhase.waitingForAction;
   }
 
   void _onActionComplete(ImdbTutorialStep nextStep) {
     ref.read(imdbTutorialStepProvider.notifier).state = nextStep;
-    ref.read(imdbTutorialPhaseProvider.notifier).state = ImdbTutorialPhase.showingInstruction;
+    ref.read(imdbTutorialPhaseProvider.notifier).state =
+        ImdbTutorialPhase.showingInstruction;
 
     Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) {
@@ -164,13 +170,14 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
           ),
 
           // Dark overlay when popup appears
-          if (hasUserTapped && (currentStep == ImdbTutorialStep.tapShare ||
-              currentStep == ImdbTutorialStep.tapMore ||
-              currentStep == ImdbTutorialStep.tapEdit ||
-              currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
-              currentStep == ImdbTutorialStep.tapDone ||
-              currentStep == ImdbTutorialStep.tapDoneLast ||
-              currentStep == ImdbTutorialStep.step2))
+          if (hasUserTapped &&
+              (currentStep == ImdbTutorialStep.tapShare ||
+                  currentStep == ImdbTutorialStep.tapMore ||
+                  currentStep == ImdbTutorialStep.tapEdit ||
+                  currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
+                  currentStep == ImdbTutorialStep.tapDone ||
+                  currentStep == ImdbTutorialStep.tapDoneLast ||
+                  currentStep == ImdbTutorialStep.step2))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -217,7 +224,8 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Step 5 overlay - after tapping Edit
-          if (hasUserTapped && currentStep == ImdbTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentStep == ImdbTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: 0,
               left: 0,
@@ -269,7 +277,8 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Tap area for step1 - share button
-          if (currentPhase == ImdbTutorialPhase.waitingForAction && currentStep == ImdbTutorialStep.step1)
+          if (currentPhase == ImdbTutorialPhase.waitingForAction &&
+              currentStep == ImdbTutorialStep.step1)
             Positioned(
               bottom: screenHeight * _step1BottomFraction,
               left: screenWidth * _step1LeftFraction,
@@ -282,15 +291,21 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
                   width: screenWidth * _step1WidthFraction,
                   height: screenHeight * _step1HeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapShare - Share button
-          if (hasUserTapped && currentPhase == ImdbTutorialPhase.waitingForAction && currentStep == ImdbTutorialStep.tapShare)
+          if (hasUserTapped &&
+              currentPhase == ImdbTutorialPhase.waitingForAction &&
+              currentStep == ImdbTutorialStep.tapShare)
             Positioned(
               bottom: screenHeight * _tapShareBottomFraction,
               left: screenWidth * _tapShareLeftFraction,
@@ -303,15 +318,21 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
                   width: screenWidth * _tapShareWidthFraction,
                   height: screenHeight * _tapShareHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapMore - More button (scroll right)
-          if (hasUserTapped && currentPhase == ImdbTutorialPhase.waitingForAction && currentStep == ImdbTutorialStep.tapMore)
+          if (hasUserTapped &&
+              currentPhase == ImdbTutorialPhase.waitingForAction &&
+              currentStep == ImdbTutorialStep.tapMore)
             Positioned(
               bottom: screenHeight * _tapMoreBottomFraction,
               left: screenWidth * _tapMoreLeftFraction,
@@ -324,15 +345,21 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
                   width: screenWidth * _tapMoreWidthFraction,
                   height: screenHeight * _tapMoreHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapEdit - Edit button
-          if (hasUserTapped && currentPhase == ImdbTutorialPhase.waitingForAction && currentStep == ImdbTutorialStep.tapEdit)
+          if (hasUserTapped &&
+              currentPhase == ImdbTutorialPhase.waitingForAction &&
+              currentStep == ImdbTutorialStep.tapEdit)
             Positioned(
               bottom: screenHeight * _tapEditBottomFraction,
               right: screenWidth * _tapEditRightFraction,
@@ -345,15 +372,21 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
                   width: screenWidth * _tapEditWidthFraction,
                   height: screenHeight * _tapEditHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapSnaplookShortcut - Snaplook icon
-          if (hasUserTapped && currentPhase == ImdbTutorialPhase.waitingForAction && currentStep == ImdbTutorialStep.tapSnaplookShortcut)
+          if (hasUserTapped &&
+              currentPhase == ImdbTutorialPhase.waitingForAction &&
+              currentStep == ImdbTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
               left: screenWidth * _tapSnaplookShortcutLeftFraction,
@@ -366,17 +399,24 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
                   width: screenWidth * _tapSnaplookShortcutWidthFraction,
                   height: screenHeight * _tapSnaplookShortcutHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapDone - Done button
-          if (hasUserTapped && currentPhase == ImdbTutorialPhase.waitingForAction && currentStep == ImdbTutorialStep.tapDone)
+          if (hasUserTapped &&
+              currentPhase == ImdbTutorialPhase.waitingForAction &&
+              currentStep == ImdbTutorialStep.tapDone)
             Positioned(
-              top: MediaQuery.of(context).padding.top + screenHeight * _tapDoneTopFraction,
+              top: MediaQuery.of(context).padding.top +
+                  screenHeight * _tapDoneTopFraction,
               right: screenWidth * _tapDoneRightFraction,
               child: GestureDetector(
                 onTap: () {
@@ -387,17 +427,24 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
                   width: screenWidth * _tapDoneWidthFraction,
                   height: screenHeight * _tapDoneHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for tapDoneLast - second Done button
-          if (hasUserTapped && currentPhase == ImdbTutorialPhase.waitingForAction && currentStep == ImdbTutorialStep.tapDoneLast)
+          if (hasUserTapped &&
+              currentPhase == ImdbTutorialPhase.waitingForAction &&
+              currentStep == ImdbTutorialStep.tapDoneLast)
             Positioned(
-              top: MediaQuery.of(context).padding.top + screenHeight * _tapDoneLastTopFraction,
+              top: MediaQuery.of(context).padding.top +
+                  screenHeight * _tapDoneLastTopFraction,
               right: screenWidth * _tapDoneLastRightFraction,
               child: GestureDetector(
                 onTap: () {
@@ -408,15 +455,21 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
                   width: screenWidth * _tapDoneLastWidthFraction,
                   height: screenHeight * _tapDoneLastHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
             ),
 
           // Tap area for step2 - final Snaplook selection
-          if (hasUserTapped && currentPhase == ImdbTutorialPhase.waitingForAction && currentStep == ImdbTutorialStep.step2)
+          if (hasUserTapped &&
+              currentPhase == ImdbTutorialPhase.waitingForAction &&
+              currentStep == ImdbTutorialStep.step2)
             Positioned(
               bottom: screenHeight * _finalSelectBottomFraction,
               left: screenWidth * _finalSelectLeftFraction,
@@ -442,8 +495,12 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
                   width: screenWidth * _finalSelectWidthFraction,
                   height: screenHeight * _finalSelectHeightFraction,
                   decoration: BoxDecoration(
-                    color: _kShowTouchTargets ? Colors.red.withValues(alpha: 0.25) : Colors.transparent,
-                    border: _kShowTouchTargets ? Border.all(color: Colors.redAccent) : null,
+                    color: _kShowTouchTargets
+                        ? Colors.red.withValues(alpha: 0.25)
+                        : Colors.transparent,
+                    border: _kShowTouchTargets
+                        ? Border.all(color: Colors.redAccent)
+                        : null,
                   ),
                 ),
               ),
@@ -464,9 +521,11 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 14.0),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -581,7 +640,8 @@ class _InstructionOverlayState extends State<_InstructionOverlay>
     _completeWithFade(fadeDuration: const Duration(milliseconds: 200));
   }
 
-  void _completeWithFade({Duration fadeDuration = const Duration(milliseconds: 800)}) {
+  void _completeWithFade(
+      {Duration fadeDuration = const Duration(milliseconds: 800)}) {
     if (_hasCompleted) return;
     _hasCompleted = true;
 
