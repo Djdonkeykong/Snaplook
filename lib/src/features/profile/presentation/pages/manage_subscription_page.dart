@@ -1,10 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
+
+// Provider to fetch user subscription info from Supabase
+final userSubscriptionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+  final userId = Supabase.instance.client.auth.currentUser?.id;
+  if (userId == null) return null;
+
+  try {
+    final response = await Supabase.instance.client
+        .from('users')
+        .select('subscription_status, is_trial, paid_credits_remaining')
+        .eq('id', userId)
+        .maybeSingle();
+
+    return response;
+  } catch (e) {
+    print('[ManageSubscription] Error fetching subscription: $e');
+    return null;
+  }
+});
 
 class ManageSubscriptionPage extends ConsumerWidget {
   const ManageSubscriptionPage({super.key});
@@ -61,9 +81,7 @@ class ManageSubscriptionPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final spacing = context.spacing;
-
-    const isSubscribed = true;
-    const displayStatus = 'Premium';
+    final subscriptionAsync = ref.watch(userSubscriptionProvider);
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -89,73 +107,106 @@ class ManageSubscriptionPage extends ConsumerWidget {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: spacing.l),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: spacing.l),
-
-              _SettingsCard(
-                showShadow: true,
-                children: [
-                  const SizedBox(height: 8),
-                  _SettingsRow.value(
-                    label: 'Current Plan',
-                    value: displayStatus,
-                    valueColor:
-                        isSubscribed ? AppColors.secondary : colorScheme.onSurface,
-                  ),
-                  const SizedBox(height: 8),
-                ],
+        child: subscriptionAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
+            child: Text(
+              'Error loading subscription',
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontFamily: 'PlusJakartaSans',
               ),
-
-              SizedBox(height: spacing.l),
-
-              _SettingsCard(
-                children: [
-                  const SizedBox(height: 8),
-                  _SettingsRow.disclosure(
-                    label: Platform.isIOS
-                        ? 'Manage in App Store'
-                        : 'Manage in Google Play',
-                    onTap: () => _openSubscriptionManagement(context),
-                  ),
-                  const SizedBox(height: 8),
-                  _Divider(),
-                  const SizedBox(height: 8),
-                  _SettingsRow.disclosure(
-                    label: 'Restore Purchases',
-                    onTap: () => _restorePurchases(context),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-
-              SizedBox(height: spacing.l),
-
-              _SettingsCard(
-                children: [
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    child: Text(
-                      'To cancel or modify your subscription, use the ${Platform.isIOS ? 'App Store' : 'Google Play'} subscription management. Changes take effect at the end of your billing period.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.45,
-                        color: colorScheme.onSurfaceVariant,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
+          data: (subscriptionData) {
+            // Extract subscription info from Supabase users table
+            final subscriptionStatus = subscriptionData?['subscription_status'] as String? ?? 'free';
+            final isTrial = subscriptionData?['is_trial'] as bool? ?? false;
+            final credits = subscriptionData?['paid_credits_remaining'] as int? ?? 0;
+
+            // Determine display values
+            final isSubscribed = subscriptionStatus == 'active';
+            final displayStatus = _formatSubscriptionStatus(subscriptionStatus, isTrial);
+
+            return SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: spacing.l),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: spacing.l),
+
+                  _SettingsCard(
+                    showShadow: true,
+                    children: [
+                      const SizedBox(height: 8),
+                      _SettingsRow.value(
+                        label: 'Current Plan',
+                        value: displayStatus,
+                        valueColor:
+                            isSubscribed ? AppColors.secondary : colorScheme.onSurface,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+
+                  SizedBox(height: spacing.l),
+
+                  _SettingsCard(
+                    children: [
+                      const SizedBox(height: 8),
+                      _SettingsRow.disclosure(
+                        label: Platform.isIOS
+                            ? 'Manage in App Store'
+                            : 'Manage in Google Play',
+                        onTap: () => _openSubscriptionManagement(context),
+                      ),
+                      const SizedBox(height: 8),
+                      _Divider(),
+                      const SizedBox(height: 8),
+                      _SettingsRow.disclosure(
+                        label: 'Restore Purchases',
+                        onTap: () => _restorePurchases(context),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+
+                  SizedBox(height: spacing.l),
+
+                  _SettingsCard(
+                    children: [
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        child: Text(
+                          'To cancel or modify your subscription, use the ${Platform.isIOS ? 'App Store' : 'Google Play'} subscription management. Changes take effect at the end of your billing period.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.45,
+                            color: colorScheme.onSurfaceVariant,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
+  }
+
+  String _formatSubscriptionStatus(String status, bool isTrial) {
+    if (status == 'active') {
+      return isTrial ? 'Premium (Trial)' : 'Premium';
+    } else if (status == 'cancelled' || status == 'expired') {
+      return 'Expired';
+    } else {
+      return 'Free';
+    }
   }
 
   String _formatMembership(String raw) {
