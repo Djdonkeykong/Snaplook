@@ -1102,11 +1102,11 @@ class _InfoBottomSheetContentState extends ConsumerState<_InfoBottomSheetContent
                         BottomSheetHandle(
                           margin: EdgeInsets.only(bottom: spacing.m),
                         ),
-                        SizedBox(height: spacing.xl),
+                        SizedBox(height: 120),
                         const CircularProgressIndicator(),
                         SizedBox(height: spacing.m),
                         Text(
-                          'Loading credits...',
+                          'Loading...',
                           style: TextStyle(
                             fontSize: 14,
                             color: Theme.of(context)
@@ -1115,7 +1115,7 @@ class _InfoBottomSheetContentState extends ConsumerState<_InfoBottomSheetContent
                             fontFamily: 'PlusJakartaSans',
                           ),
                         ),
-                        SizedBox(height: spacing.xl),
+                        SizedBox(height: 120),
                       ],
                     )
                   : creditBalance.when(
