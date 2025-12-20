@@ -28,10 +28,10 @@ BEGIN
   -- Check if user exists
   IF NOT FOUND THEN
     RETURN QUERY SELECT
-      false,
-      'User not found'::TEXT,
-      0,
-      'active'::TEXT;
+      false AS success,
+      'User not found'::TEXT AS message,
+      0 AS paid_credits_remaining,
+      'active'::TEXT AS subscription_status;
     RETURN;
   END IF;
 
@@ -50,17 +50,17 @@ BEGIN
       v_paid_credits;
 
     RETURN QUERY SELECT
-      true,
-      format('Deducted %s credits', p_garment_count)::TEXT,
-      v_paid_credits,
-      v_subscription_status;
+      true AS success,
+      format('Deducted %s credits', p_garment_count)::TEXT AS message,
+      v_paid_credits AS paid_credits_remaining,
+      v_subscription_status AS subscription_status;
   ELSE
     -- Insufficient credits
     RETURN QUERY SELECT
-      false,
-      format('Insufficient credits. Need %s, have %s', p_garment_count, v_paid_credits)::TEXT,
-      v_paid_credits,
-      v_subscription_status;
+      false AS success,
+      format('Insufficient credits. Need %s, have %s', p_garment_count, v_paid_credits)::TEXT AS message,
+      v_paid_credits AS paid_credits_remaining,
+      v_subscription_status AS subscription_status;
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
