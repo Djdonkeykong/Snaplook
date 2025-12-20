@@ -810,14 +810,23 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
             ) ?? false;
 
             if (!hasCredits) {
-              // User has no credits - navigate to paywall
-              print('[Detection] User has no credits - showing paywall');
+              // User has no credits - show snackbar
+              print('[Detection] User has no credits - showing message');
               HapticFeedback.mediumImpact();
 
               if (mounted) {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const PaywallPage(),
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text(
+                      'You have no credits available',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    duration: const Duration(milliseconds: 2500),
+                    behavior: SnackBarBehavior.floating,
                   ),
                 );
               }
