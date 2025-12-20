@@ -4334,7 +4334,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         resultsLabel.text = "Found \(resultsCount) similar match\(resultsCount == 1 ? "" : "es")"
         resultsLabel.font = UIFont(name: "PlusJakartaSans-Bold", size: 17)
             ?? .systemFont(ofSize: 17, weight: .bold)
-        resultsLabel.textColor = .label
+        resultsLabel.textColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) // Munsell red
         resultsLabel.translatesAutoresizingMaskIntoConstraints = false
 
         tableHeaderContainer.addSubview(imageComparisonView)
@@ -4434,7 +4434,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         thumbnailImageView.clipsToBounds = true
         thumbnailImageView.layer.cornerRadius = 8
         thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false
-        thumbnailImageView.backgroundColor = .systemGray5
+        // Use lighter background for thumbnail
+        thumbnailImageView.backgroundColor = UIColor(red: 249/255, green: 249/255, blue: 249/255, alpha: 1.0)
 
         // Load image from pendingImageData or analyzedImageData
         if let data = pendingImageData ?? analyzedImageData, let image = UIImage(data: data) {
@@ -4475,7 +4476,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         fullImageView.translatesAutoresizingMaskIntoConstraints = false
         fullImageView.alpha = 0 // Hidden initially
         fullImageView.tag = 1003
-        fullImageView.backgroundColor = .systemGray5
+        // Match container background to prevent white flash during fade
+        fullImageView.backgroundColor = UIColor(red: 249/255, green: 249/255, blue: 249/255, alpha: 1.0)
 
         // Load image from pendingImageData or analyzedImageData
         if let data = pendingImageData ?? analyzedImageData, let image = UIImage(data: data) {
@@ -4536,21 +4538,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             expandedHeight = 300 // Default fallback
         }
 
-        UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut) {
-            if self.isImageComparisonExpanded {
-                // Expand: hide collapsed view, show full image
-                collapsedView?.alpha = 0
-                fullImageView?.alpha = 1
-                iconView?.transform = CGAffineTransform(rotationAngle: .pi)
-            } else {
-                // Collapse: show collapsed view, hide full image
-                collapsedView?.alpha = 1
-                fullImageView?.alpha = 0
-                iconView?.transform = .identity
-            }
-        }
-
-        // Update height constraint with animation
+        // Update height constraint BEFORE animation
         if let heightConstraint = container.constraints.first(where: { $0.firstAttribute == .height }) {
             heightConstraint.isActive = false
         }
@@ -4559,8 +4547,38 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let heightConstraint = container.heightAnchor.constraint(equalToConstant: newHeight)
         heightConstraint.isActive = true
 
-        UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut) {
+        // Animate with smoother cross-fade and layout update
+        UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseInOut, .allowUserInteraction]) {
+            if self.isImageComparisonExpanded {
+                // Expand: cross-fade from collapsed to full image
+                collapsedView?.alpha = 0
+                fullImageView?.alpha = 1
+                iconView?.transform = CGAffineTransform(rotationAngle: .pi)
+            } else {
+                // Collapse: cross-fade from full image to collapsed
+                collapsedView?.alpha = 1
+                fullImageView?.alpha = 0
+                iconView?.transform = .identity
+            }
+
+            // Layout container and update table header
+            container.layoutIfNeeded()
             container.superview?.layoutIfNeeded()
+        } completion: { _ in
+            // Update table header view frame after animation to prevent white gap
+            if let tableView = self.resultsTableView,
+               let headerView = tableView.tableHeaderView {
+                headerView.setNeedsLayout()
+                headerView.layoutIfNeeded()
+
+                let newHeaderHeight = headerView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
+                var headerFrame = headerView.frame
+                headerFrame.size.height = newHeaderHeight
+                headerView.frame = headerFrame
+
+                // Trigger table view to update its content
+                tableView.tableHeaderView = headerView
+            }
         }
     }
 
