@@ -2012,26 +2012,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urlString: String,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
-        // Prefer Apify actor if token is set; fallback to ScrapingBee otherwise
-        if let apifyToken = apifyApiToken(), !apifyToken.isEmpty {
-            performInstagramApifyFetch(
-                instagramUrl: urlString,
-                apiToken: apifyToken,
-                completion: completion
-            )
+        guard let apifyToken = apifyApiToken(), !apifyToken.isEmpty else {
+            shareLog("[WARNING] Apify token missing - Instagram scraping disabled")
+            completion(.failure(makeDownloadError("instagram", "Instagram scraping not configured. Please open the Snaplook app to set up the Apify token.")))
             return
         }
 
-        guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
-            shareLog("[WARNING] No Instagram scraper configured (Apify or ScrapingBee)")
-            completion(.failure(makeDownloadError("instagram", "Instagram scraping not configured. Please open the Snaplook app to set up API keys.")))
-            return
-        }
-
-        performInstagramScrape(
+        performInstagramApifyFetch(
             instagramUrl: urlString,
-            apiKey: apiKey,
-            attempt: 0,
+            apiToken: apifyToken,
             completion: completion
         )
     }
