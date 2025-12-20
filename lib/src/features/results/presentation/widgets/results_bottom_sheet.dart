@@ -1,11 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../detection/domain/models/detection_result.dart';
-import '../../../favorites/presentation/widgets/favorite_button.dart';
+import '../../../favorites/domain/providers/favorites_provider.dart';
 
 class ResultsBottomSheetContent extends StatelessWidget {
   final List<DetectionResult> results;
@@ -226,16 +229,7 @@ class _ProductCard extends StatelessWidget {
                   Positioned(
                     bottom: 4,
                     right: 4,
-                    child: FavoriteButton(
-                      product: result,
-                      size: 18,
-                      containerSize: 28,
-                      containerOpacity: 0.75,
-                      shadowBlurRadius: 3,
-                      shadowOffset: const Offset(0, 1.5),
-                      iconSize: 12,
-                      translateInactiveIcon: false,
-                    ),
+                    child: _SheetFavoriteButton(product: result),
                   ),
               ],
             ),
@@ -327,6 +321,133 @@ class _AllResultsChip extends StatelessWidget {
           fontSize: 14,
           color: Colors.white,
         ),
+      ),
+    );
+  }
+}
+
+class _SheetFavoriteButton extends ConsumerStatefulWidget {
+  final DetectionResult product;
+
+  const _SheetFavoriteButton({required this.product});
+
+  @override
+  ConsumerState<_SheetFavoriteButton> createState() =>
+      _SheetFavoriteButtonState();
+}
+
+class _SheetFavoriteButtonState extends ConsumerState<_SheetFavoriteButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onTap(BuildContext context) async {
+    HapticFeedback.mediumImpact();
+    _controller.forward().then((_) => _controller.reverse());
+
+    final wasAlreadyFavorited = ref.read(isFavoriteProvider(widget.product.id));
+
+    try {
+      await ref.read(favoritesProvider.notifier).toggleFavorite(widget.product);
+
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              wasAlreadyFavorited
+                  ? 'Removed from favorites'
+                  : 'Added to favorites',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+            duration: const Duration(milliseconds: 2500),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to update favorites: ${e.toString()}',
+              style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+            duration: const Duration(milliseconds: 2500),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFavorite = ref.watch(isFavoriteProvider(widget.product.id));
+
+    // Tailored defaults for bottom-sheet cards
+    const containerSize = 28.0;
+    const containerOpacity = 0.75;
+    const shadowBlur = 3.0;
+    const shadowOffset = Offset(0, 1.5);
+    const filledIconSize = 12.0;
+    const outlineIconSize = 10.0;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _onTap(context),
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: Container(
+              width: containerSize,
+              height: containerSize,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(containerOpacity),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: shadowBlur,
+                    offset: shadowOffset,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  isFavorite
+                      ? SnaplookIcons.heartFilled
+                      : SnaplookIcons.heartOutline,
+                  size: isFavorite ? filledIconSize : outlineIconSize,
+                  color: isFavorite ? const Color(0xFFf2003c) : Colors.black,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -515,7 +515,7 @@ class _ResultFavoriteButtonState extends ConsumerState<_ResultFavoriteButton>
     const shadowBlur = 3.0;
     const shadowOffset = Offset(0, 1.5);
     const filledIconSize = 12.0;
-    const outlineIconSize = 6.0;
+    const outlineIconSize = 12.0;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
