@@ -3138,10 +3138,36 @@ open class RSIShareViewController: SLComposeServiceViewController {
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
             guard error == nil,
-                  let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200,
-                  let data = data,
-                  let html = String(data: data, encoding: .utf8) else {
+                  let httpResponse = response as? HTTPURLResponse else {
+                completion([])
+                return
+            }
+
+            let statusCode = httpResponse.statusCode
+            guard (200...299).contains(statusCode),
+                  let data = data else {
+                completion([])
+                return
+            }
+
+            // If the response itself is an image (Squarespace CDN, etc.), skip HTML parsing
+            let contentType = httpResponse.value(forHTTPHeaderField: "Content-Type")?.lowercased() ?? ""
+            if contentType.contains("image/") {
+                shareLog("Generic link returned image content-type (\(contentType)) - treating as direct image")
+                completion([url.absoluteString])
+                return
+            }
+
+            // Some CDNs serve raw bytes without a helpful content-type; sniff the payload
+            if contentType.isEmpty || contentType.contains("octet-stream") {
+                if UIImage(data: data) != nil {
+                    shareLog("Generic link response looked like raw image data - treating as direct image")
+                    completion([url.absoluteString])
+                    return
+                }
+            }
+
+            guard let html = String(data: data, encoding: .utf8) else {
                 completion([])
                 return
             }
@@ -3211,6 +3237,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func looksLikeImageUrl(_ urlString: String) -> Bool {
         let lower = urlString.lowercased()
+
+        // Squarespace CDN often serves images without an extension
+        if let components = URLComponents(string: urlString),
+           let host = components.host?.lowercased(),
+           host.contains("squarespace-cdn.com"),
+           components.path.contains("/content/") {
+            return true
+        }
+
         return lower.hasSuffix(".jpg") ||
             lower.hasSuffix(".jpeg") ||
             lower.hasSuffix(".png") ||
@@ -3337,6 +3372,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
             )
             request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
             request.setValue("https://www.facebook.com/", forHTTPHeaderField: "Referer")
+            request.setValue("image/avif,image/webp,image/apng,image/*,*/*;q=0.8", forHTTPHeaderField: "Accept")
+        } else if platform == "generic" {
+            request.setValue(
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                forHTTPHeaderField: "User-Agent"
+            )
             request.setValue("image/avif,image/webp,image/apng,image/*,*/*;q=0.8", forHTTPHeaderField: "Accept")
         }
 

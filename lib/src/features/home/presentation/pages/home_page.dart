@@ -985,13 +985,14 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   Future<void> _launchPipTutorial(PipTutorialTarget target) async {
     const instagramDeepLink =
         'https://www.instagram.com/p/DQSaR_FEsU8/?igsh=MTEyNzJuaXF6cDlmNA==';
-    const pinterestDeepLink = 'https://pin.it/Ani6VLsSY';
+    const pinterestDeepLink = 'https://pin.it/223au9vpX';
     const tiktokDeepLink = 'https://vm.tiktok.com/ZNRYGe1YY/';
     const imdbDeepLink =
         'https://www.imdb.com/name/nm2858875/mediaviewer/rm667585282?ref_=ext_shr_lnk';
     const xDeepLink =
         'https://x.com/iamjhud/status/1962314855802651108?s=46'; // specific post
-    const safariDeepLink = 'https://share.google/aPal8bORQGk5dKzan';
+    const safariDeepLink =
+        'https://www.google.com/imgres?imgurl=https%3A%2F%2Fmedia.glamour.com%2Fphotos%2F5ae09534ed441129f636ed0b%2Fmaster%2Fw_1600%252Cc_limit%2FAimee_song_of_style_caroline_constas_polka_dot_puffer_sleeves_top_amo_distressed_jeans_dior_kitten_heels_pumps_le_specs_adam_selman_sunglasses_straw_bag_earrings.jpg&tbnid=JSIMQ6gKiEoIIM&vet=1&imgrefurl=https%3A%2F%2Fwww.glamour.com%2Fstory%2Fafter-almost-a-decade-aimee-song-influence-is-more-bankable-than-ever&docid=1-gN0KwlJ8FQ3M&w=800&h=1198&hl=en-us&source=sh%2Fx%2Fim%2Fm4%2F0&kgs=b74b63e1f5e69c79';
     final videoAsset = switch (target) {
       PipTutorialTarget.instagram => 'assets/videos/instagram-tutorial.mp4',
       PipTutorialTarget.pinterest => 'assets/videos/pinterest-tutorial.mp4',
@@ -1095,30 +1096,7 @@ class _InfoBottomSheetContentState extends ConsumerState<_InfoBottomSheetContent
           children: [
             Padding(
               padding: EdgeInsets.all(spacing.l),
-              child: shouldShowLoading
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        BottomSheetHandle(
-                          margin: EdgeInsets.only(bottom: spacing.m),
-                        ),
-                        SizedBox(height: 120),
-                        const CircularProgressIndicator(),
-                        SizedBox(height: spacing.m),
-                        Text(
-                          'Loading...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                        ),
-                        SizedBox(height: 120),
-                      ],
-                    )
-                  : creditBalance.when(
+              child: creditBalance.when(
                       data: (balance) {
                         // Format membership type based on subscription status and trial
                         final membershipType = balance.hasActiveSubscription
@@ -1338,6 +1316,32 @@ class _InfoBottomSheetContentState extends ConsumerState<_InfoBottomSheetContent
                       ),
                     ),
             ),
+            // Loading overlay
+            if (shouldShowLoading)
+              Positioned.fill(
+                child: Container(
+                  color: Theme.of(context).colorScheme.surface,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(),
+                        SizedBox(height: spacing.m),
+                        Text(
+                          'Loading...',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             // Close button at top right
             Positioned(
               top: spacing.l,
