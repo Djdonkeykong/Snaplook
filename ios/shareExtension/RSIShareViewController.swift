@@ -671,6 +671,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var imageComparisonThumbnailImageView: UIImageView?
     private var imageComparisonFullImageView: UIImageView?
     private var isImageComparisonExpanded = false
+    private var imageComparisonHeightConstraint: NSLayoutConstraint?
     private var isShowingResults = false
     private var isShowingPreview = false
     private let bannedKeywordPatterns: [NSRegularExpression] = [
@@ -4340,12 +4341,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         tableHeaderContainer.addSubview(imageComparisonView)
         tableHeaderContainer.addSubview(resultsLabel)
 
+        let imageHeightConstraint = imageComparisonView.heightAnchor.constraint(equalToConstant: 68)
+        imageComparisonHeightConstraint = imageHeightConstraint
+
         NSLayoutConstraint.activate([
             // Image comparison at top with horizontal padding
             imageComparisonView.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
             imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
             imageComparisonView.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
-            imageComparisonView.heightAnchor.constraint(equalToConstant: 68),
+            imageHeightConstraint,
 
             // Results label below image comparison
             resultsLabel.topAnchor.constraint(equalTo: imageComparisonView.bottomAnchor, constant: 16),
@@ -4545,14 +4549,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
             expandedHeight = 300 // Default fallback
         }
 
-        // Update height constraint BEFORE animation
-        if let heightConstraint = container.constraints.first(where: { $0.firstAttribute == .height }) {
+        // Update height constraint BEFORE animation (use the stored constraint added by the header)
+        if let heightConstraint = imageComparisonHeightConstraint {
             heightConstraint.isActive = false
+            heightConstraint.constant = isImageComparisonExpanded ? expandedHeight : 68
+            heightConstraint.isActive = true
+        } else {
+            // Fallback: create one if missing (shouldn't happen in normal flow)
+            let heightConstraint = container.heightAnchor.constraint(equalToConstant: isImageComparisonExpanded ? expandedHeight : 68)
+            heightConstraint.isActive = true
+            imageComparisonHeightConstraint = heightConstraint
         }
-
-        let newHeight: CGFloat = isImageComparisonExpanded ? expandedHeight : 68
-        let heightConstraint = container.heightAnchor.constraint(equalToConstant: newHeight)
-        heightConstraint.isActive = true
 
         // Animate with smoother cross-fade and layout update
         UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseInOut, .allowUserInteraction]) {
