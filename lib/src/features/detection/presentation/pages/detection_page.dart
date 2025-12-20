@@ -815,18 +815,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               HapticFeedback.mediumImpact();
 
               if (mounted) {
-                ScaffoldMessenger.of(context).clearSnackBars();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text(
+                final messenger = ScaffoldMessenger.of(context);
+                messenger.clearSnackBars();
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text(
                       'You have no credits available',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: TextStyle(fontFamily: 'PlusJakartaSans'),
                     ),
-                    duration: const Duration(milliseconds: 2500),
-                    behavior: SnackBarBehavior.floating,
+                    duration: Duration(milliseconds: 2500),
                   ),
                 );
               }
