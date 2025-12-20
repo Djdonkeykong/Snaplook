@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
@@ -7,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
@@ -36,6 +38,17 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   final ScrollController _scrollController = ScrollController();
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
+
+  Future<void> _openLegalLink({
+    required String url,
+    required String fallbackLabel,
+  }) async {
+    final uri = Uri.parse(url);
+    final opened = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    if (!opened) {
+      debugPrint('[SaveProgress] Failed to open $fallbackLabel link');
+    }
+  }
 
   @override
   void initState() {
@@ -346,6 +359,17 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                         height: 1.3,
                       ),
                     ),
+                    SizedBox(height: spacing.xs),
+                    const Text(
+                      'Sign in to keep your picks safe and continue from any device.',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black54,
+                        fontFamily: 'PlusJakartaSans',
+                        height: 1.4,
+                      ),
+                    ),
                     SizedBox(height: spacing.xxl * 4),
                     Center(
                       child: ConstrainedBox(
@@ -480,6 +504,76 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                 }
                               },
                             ),
+                            SizedBox(height: spacing.l),
+                            Padding(
+                              padding:
+                                  EdgeInsets.symmetric(horizontal: spacing.m),
+                              child: RichText(
+                                textAlign: TextAlign.center,
+                                text: TextSpan(
+                                  text:
+                                      "By continuing you agree to Snaplook's ",
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF6B7280),
+                                    fontFamily: 'PlusJakartaSans',
+                                    height: 1.5,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: 'Terms of Conditions',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black,
+                                        fontFamily: 'PlusJakartaSans',
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                        height: 1.5,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () {
+                                          HapticFeedback.selectionClick();
+                                          _openLegalLink(
+                                            url:
+                                                'https://truefindr.com/terms-of-service/',
+                                            fallbackLabel: 'Terms of Service',
+                                          );
+                                        },
+                                    ),
+                                    const TextSpan(
+                                      text: ' and ',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF6B7280),
+                                        fontFamily: 'PlusJakartaSans',
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: 'Privacy Policy',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black,
+                                        fontFamily: 'PlusJakartaSans',
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                        height: 1.5,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () {
+                                          HapticFeedback.selectionClick();
+                                          _openLegalLink(
+                                            url:
+                                                'https://truefindr.com/privacy-policy/',
+                                            fallbackLabel: 'Privacy Policy',
+                                          );
+                                        },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: spacing.l),
                           ],
                         ),
                       ),

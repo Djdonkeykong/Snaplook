@@ -49,24 +49,64 @@ class SubscriptionSyncService {
           : null;
       final productId = entitlement?.productIdentifier;
 
-      // Determine subscription status
-      String subscriptionStatus = hasActiveRevenueCat ? 'active' : 'free';
-      if (!hasActiveRevenueCat && expirationDateIso != null) {
-        final expirationDate = DateTime.parse(expirationDateIso);
-        if (expirationDate.isBefore(DateTime.now())) {
-          subscriptionStatus = 'expired';
-        }
-      }
+      // Check if user has credits (users with credits should not have their status overwritten to 'free')
+      final userResponse = await _supabase
+          .from('users')
+          .select('paid_credits_remaining, subscription_status, subscription_expires_at, subscription_product_id, is_trial')
+          .eq('id', user.id)
+          .maybeSingle();
 
-      await _supabase.from('users').upsert({
-        'id': user.id,
-        'subscription_status': subscriptionStatus,
-        'subscription_expires_at': expirationDateIso,
-        'subscription_product_id': productId,
-        'is_trial': isTrial,
-        'subscription_last_synced_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'id');
+      final hasCredits = (userResponse?['paid_credits_remaining'] ?? 0) > 0;
+      final currentStatus = userResponse?['subscription_status'] ?? 'free';
+
+      // Determine what to sync
+      if (hasActiveRevenueCat) {
+        // RevenueCat says active - sync all data from RevenueCat
+        final subscriptionStatus = 'active';
+
+        await _supabase.from('users').upsert({
+          'id': user.id,
+          'subscription_status': subscriptionStatus,
+          'subscription_expires_at': expirationDateIso,
+          'subscription_product_id': productId,
+          'is_trial': isTrial,
+          'subscription_last_synced_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'id');
+
+        debugPrint('[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: $isTrial, Expires: $expirationDateIso');
+      } else if (hasCredits && (currentStatus == 'active' || currentStatus == 'expired')) {
+        // User has credits but no active RevenueCat subscription
+        // Preserve their existing subscription data entirely (don't overwrite with nulls)
+        // Only update the sync timestamp
+        await _supabase.from('users').update({
+          'subscription_last_synced_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', user.id);
+
+        debugPrint('[SubscriptionSync] User has credits - preserving existing subscription data. Status: $currentStatus');
+      } else {
+        // No RevenueCat subscription and no credits - set to free or expired
+        String subscriptionStatus = 'free';
+        if (expirationDateIso != null) {
+          final expirationDate = DateTime.parse(expirationDateIso);
+          if (expirationDate.isBefore(DateTime.now())) {
+            subscriptionStatus = 'expired';
+          }
+        }
+
+        await _supabase.from('users').upsert({
+          'id': user.id,
+          'subscription_status': subscriptionStatus,
+          'subscription_expires_at': expirationDateIso,
+          'subscription_product_id': productId,
+          'is_trial': isTrial,
+          'subscription_last_synced_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'id');
+
+        debugPrint('[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: $isTrial, Expires: $expirationDateIso');
+      }
 
       debugPrint('[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: $isTrial, Expires: $expirationDateIso');
     } catch (e, stackTrace) {

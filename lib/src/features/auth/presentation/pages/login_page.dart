@@ -365,11 +365,24 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 print(
                                     '[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');
 
+                                // Check if user has credits (even without subscription)
+                                final userCreditsResponse = await supabase
+                                    .from('users')
+                                    .select('paid_credits_remaining')
+                                    .eq('id', userId)
+                                    .maybeSingle();
+
+                                final hasCredits =
+                                    (userCreditsResponse?['paid_credits_remaining'] ?? 0) > 0;
+
+                                print(
+                                    '[LoginPage] User has credits: $hasCredits (${userCreditsResponse?['paid_credits_remaining']} remaining)');
+
                                 if (hasCompletedOnboarding &&
-                                    hasActiveSubscription) {
-                                  // User completed onboarding and has active subscription - go to home
+                                    (hasActiveSubscription || hasCredits)) {
+                                  // User completed onboarding and has active subscription OR credits - go to home
                                   debugPrint(
-                                      '[LoginPage] User has completed onboarding and active subscription - going to home');
+                                      '[LoginPage] User has completed onboarding and has access (subscription: $hasActiveSubscription, credits: $hasCredits) - going to home');
                                   debugPrint(
                                       '[LoginPage] Skipping device locale setup (user_profiles table not configured)');
 
@@ -387,10 +400,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     (route) => false,
                                   );
                                 } else if (hasCompletedOnboarding &&
-                                    !hasActiveSubscription) {
-                                  // User completed onboarding but NO subscription - go to paywall
+                                    !hasActiveSubscription && !hasCredits) {
+                                  // User completed onboarding but NO subscription and NO credits - go to paywall
                                   debugPrint(
-                                      '[LoginPage] User completed onboarding but no subscription - going to paywall');
+                                      '[LoginPage] User completed onboarding but no subscription or credits - going to paywall');
                                   navigator.push(
                                     MaterialPageRoute(
                                       builder: (context) => const PaywallPage(),
@@ -621,11 +634,24 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               print(
                                   '[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');
 
+                              // Check if user has credits (even without subscription)
+                              final userCreditsResponse = await supabase
+                                  .from('users')
+                                  .select('paid_credits_remaining')
+                                  .eq('id', userId)
+                                  .maybeSingle();
+
+                              final hasCredits =
+                                  (userCreditsResponse?['paid_credits_remaining'] ?? 0) > 0;
+
+                              print(
+                                  '[LoginPage] User has credits: $hasCredits (${userCreditsResponse?['paid_credits_remaining']} remaining)');
+
                               if (hasCompletedOnboarding &&
-                                  hasActiveSubscription) {
-                                // User completed onboarding and has active subscription - go to home
+                                  (hasActiveSubscription || hasCredits)) {
+                                // User completed onboarding and has active subscription OR credits - go to home
                                 debugPrint(
-                                    '[LoginPage] User has completed onboarding and active subscription - going to home');
+                                    '[LoginPage] User has completed onboarding and has access (subscription: $hasActiveSubscription, credits: $hasCredits) - going to home');
                                 debugPrint(
                                     '[LoginPage] Skipping device locale setup (user_profiles table not configured)');
 
@@ -641,10 +667,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   (route) => false,
                                 );
                               } else if (hasCompletedOnboarding &&
-                                  !hasActiveSubscription) {
-                                // User completed onboarding but NO subscription - go to paywall
+                                  !hasActiveSubscription && !hasCredits) {
+                                // User completed onboarding but NO subscription and NO credits - go to paywall
                                 debugPrint(
-                                    '[LoginPage] User completed onboarding but no subscription - going to paywall');
+                                    '[LoginPage] User completed onboarding but no subscription or credits - going to paywall');
                                 navigator.push(
                                   MaterialPageRoute(
                                     builder: (context) => const PaywallPage(),

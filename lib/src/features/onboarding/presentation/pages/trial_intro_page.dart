@@ -139,7 +139,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
 
             // Main heading
             const Text(
-              'We want you to\ntry Snaplook for free.',
+              'We want you to\ntry Snaplook for free',
               textAlign: TextAlign.start,
               style: TextStyle(
                 fontSize: 34,
