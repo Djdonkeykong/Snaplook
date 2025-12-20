@@ -17,6 +17,8 @@ import '../../../profile/domain/providers/feed_preference_provider.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
 import '../../../product/presentation/pages/product_detail_page.dart';
 import '../../../product/presentation/pages/detected_products_page.dart';
+import '../../../paywall/models/subscription_plan.dart';
+import '../../../paywall/providers/credit_provider.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
@@ -1035,200 +1037,288 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   void _showInfoBottomSheet(BuildContext context) {
     final spacing = context.spacing;
 
-    // TODO: Replace with actual user data from provider
-    final membershipType = 'Trial';
-    final creditsRemaining = 100;
-    final maxCredits = 100;
-    final creditsPercentage = creditsRemaining / maxCredits;
+    // Always refresh from Supabase when opening the sheet so the count is current.
+    ref.read(creditBalanceProvider.notifier).refresh();
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       useRootNavigator: true,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(20),
-          ),
-        ),
-        child: SafeArea(
-          child: Stack(
-            children: [
-              Padding(
-                padding: EdgeInsets.all(spacing.l),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    BottomSheetHandle(
-                      margin: EdgeInsets.only(bottom: spacing.m),
-                    ),
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final creditBalance = ref.watch(creditBalanceProvider);
 
-                    // Membership label
-                    Text(
-                      'Membership',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                    ),
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(spacing.l),
+                    child: creditBalance.when(
+                      data: (balance) {
+                        final membershipType =
+                            balance.hasActiveSubscription ? 'Premium' : 'Free';
+                        const maxCredits =
+                            SubscriptionPlan.monthly.creditsPerMonth;
+                        final creditsRemaining =
+                            balance.availableCredits.clamp(0, maxCredits).toInt();
+                        final creditsPercentage = maxCredits > 0
+                            ? (creditsRemaining / maxCredits).clamp(0.0, 1.0)
+                            : 0.0;
 
-                    const SizedBox(height: 2),
-
-                    // Membership type
-                    Text(
-                      'Premium',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontFamily: 'PlusJakartaSans',
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-
-                    SizedBox(height: spacing.l),
-
-                    // Credits display
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          '$creditsRemaining',
-                          style: TextStyle(
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white
-                                    : const Color(0xFFf2003c),
-                            fontFamily: 'PlusJakartaSans',
-                            letterSpacing: -2,
-                          ),
-                        ),
-                        Text(
-                          ' / $maxCredits',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: spacing.xs),
-
-                    // Credits label
-                    Text(
-                      'Credits Remaining',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                    ),
-
-                    SizedBox(height: spacing.l),
-
-                    // Progress bar
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        value: creditsPercentage,
-                        minHeight: 6,
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : const Color(0xFFf2003c)),
-                      ),
-                    ),
-
-                    SizedBox(height: spacing.m),
-
-                    // Info text
-                    Text(
-                      'Resets monthly on the 1st',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontFamily: 'PlusJakartaSans',
-                      ),
-                    ),
-
-                    SizedBox(height: spacing.l),
-
-                    // Note about credits & cropping
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(spacing.m),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest
-                            .withOpacity(
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? 0.4
-                                  : 0.6,
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            BottomSheetHandle(
+                              margin: EdgeInsets.only(bottom: spacing.m),
                             ),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 20,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                          SizedBox(width: spacing.m),
-                          Expanded(
-                            child: Text(
-                              'Each garment costs 1 credit. If there are multiple items in a photo, cropping to just one helps conserve credits.',
+
+                            // Membership label
+                            Text(
+                              'Membership',
                               style: TextStyle(
-                                fontSize: 13,
-                                height: 1.4,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                                 color: Theme.of(context)
                                     .colorScheme
                                     .onSurfaceVariant,
                                 fontFamily: 'PlusJakartaSans',
                               ),
                             ),
+
+                            const SizedBox(height: 2),
+
+                            // Membership type
+                            Text(
+                              membershipType,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontFamily: 'PlusJakartaSans',
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+
+                            SizedBox(height: spacing.l),
+
+                            // Credits display
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  '$creditsRemaining',
+                                  style: TextStyle(
+                                    fontSize: 48,
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white
+                                        : const Color(0xFFf2003c),
+                                    fontFamily: 'PlusJakartaSans',
+                                    letterSpacing: -2,
+                                  ),
+                                ),
+                                Text(
+                                  ' / $maxCredits',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w500,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    fontFamily: 'PlusJakartaSans',
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            SizedBox(height: spacing.xs),
+
+                            // Credits label
+                            Text(
+                              'Credits Remaining',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+
+                            SizedBox(height: spacing.l),
+
+                            // Progress bar
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: LinearProgressIndicator(
+                                value: creditsPercentage,
+                                minHeight: 6,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white
+                                      : const Color(0xFFf2003c),
+                                ),
+                              ),
+                            ),
+
+                            SizedBox(height: spacing.m),
+
+                            // Info text
+                            Text(
+                              'Resets monthly on the 1st',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
+                            ),
+
+                            SizedBox(height: spacing.l),
+
+                            // Note about credits & cropping
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(spacing.m),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest
+                                    .withOpacity(
+                                      Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? 0.4
+                                          : 0.6,
+                                    ),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    size: 20,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                                  SizedBox(width: spacing.m),
+                                  Expanded(
+                                    child: Text(
+                                      'Each garment costs 1 credit. If there are multiple items in a photo, cropping to just one helps conserve credits.',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        height: 1.4,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                        fontFamily: 'PlusJakartaSans',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            SizedBox(height: spacing.l),
+                          ],
+                        );
+                      },
+                      loading: () => Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          BottomSheetHandle(
+                            margin: EdgeInsets.only(bottom: spacing.m),
                           ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: spacing.m),
+                            child: const CircularProgressIndicator(),
+                          ),
+                          Text(
+                            'Loading credits...',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              fontFamily: 'PlusJakartaSans',
+                            ),
+                          ),
+                          SizedBox(height: spacing.m),
+                        ],
+                      ),
+                      error: (error, stackTrace) => Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          BottomSheetHandle(
+                            margin: EdgeInsets.only(bottom: spacing.m),
+                          ),
+                          Icon(
+                            Icons.error_outline,
+                            size: 28,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          SizedBox(height: spacing.s),
+                          Text(
+                            'Unable to load credits',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontFamily: 'PlusJakartaSans',
+                            ),
+                          ),
+                          SizedBox(height: spacing.xs),
+                          Text(
+                            'Please try again.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              fontFamily: 'PlusJakartaSans',
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: spacing.m),
                         ],
                       ),
                     ),
+                  ),
 
-                    SizedBox(height: spacing.l),
-                  ],
-                ),
+                  // Close button at top right
+                  Positioned(
+                    top: spacing.l,
+                    right: spacing.l,
+                    child: SnaplookCircularIconButton(
+                      icon: Icons.close,
+                      iconSize: 18,
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Close',
+                      semanticLabel: 'Close',
+                    ),
+                  ),
+                ],
               ),
-
-              // Close button at top right
-              Positioned(
-                top: spacing.l,
-                right: spacing.l,
-              child: SnaplookCircularIconButton(
-                icon: Icons.close,
-                iconSize: 18,
-                onPressed: () => Navigator.pop(context),
-                tooltip: 'Close',
-                semanticLabel: 'Close',
-              ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
