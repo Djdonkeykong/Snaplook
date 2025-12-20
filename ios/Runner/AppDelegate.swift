@@ -16,6 +16,7 @@ import FirebaseMessaging
   private let scrapingBeeApiKeyKey = "ScrapingBeeApiKey"
   private let serpApiKeyKey = "SerpApiKey"
   private let detectorEndpointKey = "DetectorEndpoint"
+  private let apifyApiTokenKey = "ApifyApiToken"
   private let shareLogsChannelName = "snaplook/share_extension_logs"
   private let shareLogsKey = "ShareExtensionLogEntries"
   private let authFlagKey = "user_authenticated"
@@ -191,6 +192,13 @@ import FirebaseMessaging
 
           defaults.set(serpKey, forKey: self.serpApiKeyKey)
           defaults.set(endpoint, forKey: self.detectorEndpointKey)
+
+          // Save Apify token if provided
+          if let apifyToken = args["apifyApiToken"] as? String {
+            defaults.set(apifyToken, forKey: self.apifyApiTokenKey)
+            NSLog("[ShareConfig] âœ… Saved ApifyApiToken: \(apifyToken.prefix(12))...")
+          }
+
           defaults.synchronize()
 
           NSLog("[ShareConfig] âœ… Saved to app group \(appGroupId)")

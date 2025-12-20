@@ -17,15 +17,18 @@ class ShareExtensionConfigService {
       // Use method channel to write to app group UserDefaults (iOS native)
       final serpKey = AppConstants.serpApiKey;
       final endpoint = AppConstants.serpDetectAndSearchEndpoint;
+      final apifyToken = AppConstants.apifyApiToken;
 
       await _channel.invokeMethod('saveSharedConfig', {
         'appGroupId': _appGroupId,
         'serpApiKey': serpKey,
         'detectorEndpoint': endpoint,
+        'apifyApiToken': apifyToken,
       });
 
       debugPrint('ShareExtensionConfig: ✅ Saved SerpApiKey to app group');
       debugPrint('ShareExtensionConfig: ✅ Saved DetectorEndpoint: $endpoint');
+      debugPrint('ShareExtensionConfig: ✅ Saved ApifyApiToken to app group');
       debugPrint('ShareExtensionConfig: Configuration saved successfully');
     } catch (e) {
       debugPrint('ShareExtensionConfig: ❌ Failed to save config: $e');

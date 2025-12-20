@@ -47,8 +47,6 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.share-services</string>
 	</dict>
-    <key>ScrapingBeeApiKey</key>
-    <string>MBVJU10S1A0YUDAMPSUBIVSPGPA6MIJ5R1HNXZBSRQSDD06JH6K8UK74XZF9N8AISFWXTOLQH3U37NZF</string>
     <key>ApifyApiToken</key>
     <string>$(APIFY_API_TOKEN)</string>
   </dict>
