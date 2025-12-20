@@ -1045,23 +1045,80 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       useRootNavigator: true,
-      builder: (context) => Consumer(
-        builder: (context, ref, _) {
-          final creditBalance = ref.watch(creditBalanceProvider);
+      builder: (context) => _InfoBottomSheetContent(spacing: spacing),
+    );
+  }
+}
 
-          return Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-            ),
-            child: SafeArea(
-              child: Stack(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.all(spacing.l),
-                    child: creditBalance.when(
+class _InfoBottomSheetContent extends ConsumerStatefulWidget {
+  final AppSpacingExtension spacing;
+
+  const _InfoBottomSheetContent({required this.spacing});
+
+  @override
+  ConsumerState<_InfoBottomSheetContent> createState() => _InfoBottomSheetContentState();
+}
+
+class _InfoBottomSheetContentState extends ConsumerState<_InfoBottomSheetContent> {
+  bool _minLoadingTimePassed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ensure minimum 1 second loading time for smooth UI
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() {
+          _minLoadingTimePassed = true;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final creditBalance = ref.watch(creditBalanceProvider);
+    final spacing = widget.spacing;
+
+    // Show loading if either data is loading OR minimum time hasn't passed
+    final shouldShowLoading = creditBalance.isLoading || !_minLoadingTimePassed;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(20),
+        ),
+      ),
+      child: SafeArea(
+        child: Stack(
+          children: [
+            Padding(
+              padding: EdgeInsets.all(spacing.l),
+              child: shouldShowLoading
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        BottomSheetHandle(
+                          margin: EdgeInsets.only(bottom: spacing.m),
+                        ),
+                        SizedBox(height: spacing.xl),
+                        const CircularProgressIndicator(),
+                        SizedBox(height: spacing.m),
+                        Text(
+                          'Loading credits...',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                            fontFamily: 'PlusJakartaSans',
+                          ),
+                        ),
+                        SizedBox(height: spacing.xl),
+                      ],
+                    )
+                  : creditBalance.when(
                       data: (balance) {
                         // Format membership type based on subscription status and trial
                         final membershipType = balance.hasActiveSubscription
@@ -1241,29 +1298,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                           ],
                         );
                       },
-                      loading: () => Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          BottomSheetHandle(
-                            margin: EdgeInsets.only(bottom: spacing.m),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(vertical: spacing.m),
-                            child: const CircularProgressIndicator(),
-                          ),
-                          Text(
-                            'Loading credits...',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                              fontFamily: 'PlusJakartaSans',
-                            ),
-                          ),
-                          SizedBox(height: spacing.m),
-                        ],
-                      ),
+                      loading: () => const SizedBox.shrink(), // Handled by shouldShowLoading
                       error: (error, stackTrace) => Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1302,25 +1337,21 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                         ],
                       ),
                     ),
-                  ),
-
-                  // Close button at top right
-                  Positioned(
-                    top: spacing.l,
-                    right: spacing.l,
-                    child: SnaplookCircularIconButton(
-                      icon: Icons.close,
-                      iconSize: 18,
-                      onPressed: () => Navigator.pop(context),
-                      tooltip: 'Close',
-                      semanticLabel: 'Close',
-                    ),
-                  ),
-                ],
+            ),
+            // Close button at top right
+            Positioned(
+              top: spacing.l,
+              right: spacing.l,
+              child: SnaplookCircularIconButton(
+                icon: Icons.close,
+                iconSize: 18,
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Close',
+                semanticLabel: 'Close',
               ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
