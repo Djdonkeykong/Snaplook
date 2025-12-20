@@ -1323,6 +1323,113 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
+    private func performInstagramApifyFetch(
+        instagramUrl: String,
+        apiToken: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        // Use Apify actor nH2AHrwxeTRJoN5hX via run-sync to get displayUrl/images
+        guard let endpoint = URL(string: "https://api.apify.com/v2/acts/nH2AHrwxeTRJoN5hX/run-sync?token=\(apiToken)") else {
+            completion(.failure(makeDownloadError("instagram", "Invalid Apify endpoint")))
+            return
+        }
+
+        let payload: [String: Any] = [
+            "resultsLimit": 1,
+            "skipPinnedPosts": false,
+            "username": [instagramUrl]
+        ]
+
+        guard let body = try? JSONSerialization.data(withJSONObject: payload) else {
+            completion(.failure(makeDownloadError("instagram", "Failed to encode Apify request")))
+            return
+        }
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 20.0
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+
+        let session = URLSession(configuration: .ephemeral)
+        session.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                shareLog("Apify Instagram fetch error: \(error.localizedDescription)")
+                completion(.failure(self.makeDownloadError("instagram", "Apify request failed")))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode),
+                  let data = data else {
+                let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+                shareLog("Apify Instagram fetch non-200 status: \(status)")
+                completion(.failure(self.makeDownloadError("instagram", "Apify returned status \(status)")))
+                return
+            }
+
+            let urls = self.parseApifyInstagramUrls(from: data)
+            guard !urls.isEmpty else {
+                completion(.failure(self.makeDownloadError("instagram", "Apify did not return any image URLs")))
+                return
+            }
+
+            self.downloadFirstValidImage(
+                from: urls,
+                platform: "instagram",
+                session: session,
+                completion: completion
+            )
+        }.resume()
+    }
+
+    private func parseApifyInstagramUrls(from data: Data) -> [String] {
+        // Apify run-sync returns an array of items; each item may have displayUrl and images[]
+        guard let json = try? JSONSerialization.jsonObject(with: data) else { return [] }
+
+        var urls: [String] = []
+
+        func addUrl(_ value: Any?) {
+            guard let raw = value as? String, !raw.isEmpty else { return }
+            urls.append(raw)
+        }
+
+        if let array = json as? [[String: Any]] {
+            for item in array {
+                addUrl(item["displayUrl"])
+                if let images = item["images"] as? [Any] {
+                    for img in images {
+                        addUrl(img)
+                    }
+                }
+                // For sidecar childPosts
+                if let children = item["childPosts"] as? [[String: Any]] {
+                    for child in children {
+                        addUrl(child["displayUrl"])
+                        if let cImages = child["images"] as? [Any] {
+                            for img in cImages {
+                                addUrl(img)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Deduplicate while preserving order
+        var seen = Set<String>()
+        var unique: [String] = []
+        for url in urls {
+            if !seen.contains(url) {
+                unique.append(url)
+                seen.insert(url)
+            }
+        }
+        return unique
+    }
+
     private func suppressKeyboard() {
         let isResponder = textView?.isFirstResponder ?? false
         let isEditable = textView?.isEditable ?? false
@@ -1874,6 +1981,23 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return nil
     }
 
+    private func apifyApiToken() -> String? {
+        if let defaults = UserDefaults(suiteName: appGroupId),
+           let key = defaults.string(forKey: "ApifyApiToken"),
+           !key.isEmpty {
+            shareLog("Using Apify token from shared defaults")
+            return key
+        }
+
+        if let infoKey = Bundle.main.object(forInfoDictionaryKey: "ApifyApiToken") as? String,
+           !infoKey.isEmpty {
+            shareLog("Using Apify token from Info.plist fallback")
+            return infoKey
+        }
+
+        return nil
+    }
+
     private func updateProcessingStatus(_ status: String) {
         guard !appGroupId.isEmpty,
               let defaults = UserDefaults(suiteName: appGroupId) else { return }
@@ -1888,10 +2012,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urlString: String,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
+        // Prefer Apify actor if token is set; fallback to ScrapingBee otherwise
+        if let apifyToken = apifyApiToken(), !apifyToken.isEmpty {
+            performInstagramApifyFetch(
+                instagramUrl: urlString,
+                apiToken: apifyToken,
+                completion: completion
+            )
+            return
+        }
+
         guard let apiKey = scrapingBeeApiKey(), !apiKey.isEmpty else {
-            shareLog("[WARNING] ScrapingBee API key missing - cannot download Instagram image")
-            shareLog("[INFO] Instagram URL detected but ScrapingBee not configured. Please run the main app first to set up API keys.")
-            completion(.failure(makeDownloadError("instagram", "ScrapingBee API key not configured. Please open the Snaplook app first.")))
+            shareLog("[WARNING] No Instagram scraper configured (Apify or ScrapingBee)")
+            completion(.failure(makeDownloadError("instagram", "Instagram scraping not configured. Please open the Snaplook app to set up API keys.")))
             return
         }
 
