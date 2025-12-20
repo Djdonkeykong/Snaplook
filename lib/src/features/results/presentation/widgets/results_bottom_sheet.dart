@@ -437,12 +437,15 @@ class _SheetFavoriteButtonState extends ConsumerState<_SheetFavoriteButton>
                 ],
               ),
               child: Center(
-                child: Icon(
-                  isFavorite
-                      ? SnaplookIcons.heartFilled
-                      : SnaplookIcons.heartOutline,
-                  size: isFavorite ? filledIconSize : outlineIconSize,
-                  color: isFavorite ? const Color(0xFFf2003c) : Colors.black,
+                child: Transform.translate(
+                  offset: isFavorite ? Offset.zero : const Offset(-1, 0),
+                  child: Icon(
+                    isFavorite
+                        ? SnaplookIcons.heartFilled
+                        : SnaplookIcons.heartOutline,
+                    size: isFavorite ? filledIconSize : outlineIconSize,
+                    color: isFavorite ? const Color(0xFFf2003c) : Colors.black,
+                  ),
                 ),
               ),
             ),
