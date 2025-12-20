@@ -1591,12 +1591,16 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         // Deduct credits based on garment count
         try {
           // Count unique garments detected (group by category)
+          final allCategories = results.map((r) => r.category).toList();
+          print('[Credits] All result categories: $allCategories');
+
           final uniqueGarments = results
               .map((r) => r.category)
               .where((category) => category.isNotEmpty)
               .toSet();
           final garmentCount = uniqueGarments.isEmpty ? 1 : uniqueGarments.length;
 
+          print('[Credits] Unique categories: $uniqueGarments');
           print('[Credits] Detected $garmentCount unique garments');
 
           // Call Supabase function to deduct credits
