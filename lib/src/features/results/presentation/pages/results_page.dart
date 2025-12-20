@@ -514,7 +514,8 @@ class _ResultFavoriteButtonState extends ConsumerState<_ResultFavoriteButton>
     const containerOpacity = 0.75;
     const shadowBlur = 3.0;
     const shadowOffset = Offset(0, 1.5);
-    const iconSize = 12.0;
+    const filledIconSize = 12.0;
+    const outlineIconSize = 10.0;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -545,7 +546,7 @@ class _ResultFavoriteButtonState extends ConsumerState<_ResultFavoriteButton>
                     isFavorite
                         ? SnaplookIcons.heartFilled
                         : SnaplookIcons.heartOutline,
-                    size: iconSize,
+                    size: isFavorite ? filledIconSize : outlineIconSize,
                     color: isFavorite ? const Color(0xFFf2003c) : Colors.black,
                   ),
                 ),
