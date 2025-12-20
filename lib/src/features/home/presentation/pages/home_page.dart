@@ -1063,8 +1063,10 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                     padding: EdgeInsets.all(spacing.l),
                     child: creditBalance.when(
                       data: (balance) {
-                        final membershipType =
-                            balance.hasActiveSubscription ? 'Premium' : 'Free';
+                        // Format membership type based on subscription status and trial
+                        final membershipType = balance.hasActiveSubscription
+                            ? (balance.isTrialSubscription ? 'Premium (Trial)' : 'Premium')
+                            : 'Free';
                         final maxCredits =
                             SubscriptionPlan.monthly.creditsPerMonth;
                         final creditsRemaining =

@@ -62,6 +62,7 @@ class CreditService {
         totalCredits: paidCredits,
         hasActiveSubscription: hasActiveSubscription,
         hasUsedFreeTrial: true, // All users are now paid users
+        isTrialSubscription: isTrial,
         nextRefillDate: _calculateNextRefillDate(),
         subscriptionPlanId: superwallStatus.productIdentifier,
       );

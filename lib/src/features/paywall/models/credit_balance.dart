@@ -6,6 +6,7 @@ class CreditBalance extends Equatable {
   final int totalCredits;
   final bool hasActiveSubscription;
   final bool hasUsedFreeTrial;
+  final bool isTrialSubscription;
   final DateTime? nextRefillDate;
   final String? subscriptionPlanId;
 
@@ -14,6 +15,7 @@ class CreditBalance extends Equatable {
     required this.totalCredits,
     this.hasActiveSubscription = false,
     this.hasUsedFreeTrial = false,
+    this.isTrialSubscription = false,
     this.nextRefillDate,
     this.subscriptionPlanId,
   });
@@ -53,6 +55,7 @@ class CreditBalance extends Equatable {
     int? totalCredits,
     bool? hasActiveSubscription,
     bool? hasUsedFreeTrial,
+    bool? isTrialSubscription,
     DateTime? nextRefillDate,
     String? subscriptionPlanId,
   }) {
@@ -61,6 +64,7 @@ class CreditBalance extends Equatable {
       totalCredits: totalCredits ?? this.totalCredits,
       hasActiveSubscription: hasActiveSubscription ?? this.hasActiveSubscription,
       hasUsedFreeTrial: hasUsedFreeTrial ?? this.hasUsedFreeTrial,
+      isTrialSubscription: isTrialSubscription ?? this.isTrialSubscription,
       nextRefillDate: nextRefillDate ?? this.nextRefillDate,
       subscriptionPlanId: subscriptionPlanId ?? this.subscriptionPlanId,
     );
@@ -89,6 +93,7 @@ class CreditBalance extends Equatable {
       'totalCredits': totalCredits,
       'hasActiveSubscription': hasActiveSubscription,
       'hasUsedFreeTrial': hasUsedFreeTrial,
+      'isTrialSubscription': isTrialSubscription,
       'nextRefillDate': nextRefillDate?.toIso8601String(),
       'subscriptionPlanId': subscriptionPlanId,
     };
@@ -101,6 +106,7 @@ class CreditBalance extends Equatable {
       totalCredits: json['totalCredits'] as int? ?? 0,
       hasActiveSubscription: json['hasActiveSubscription'] as bool? ?? false,
       hasUsedFreeTrial: json['hasUsedFreeTrial'] as bool? ?? false,
+      isTrialSubscription: json['isTrialSubscription'] as bool? ?? false,
       nextRefillDate: json['nextRefillDate'] != null
           ? DateTime.parse(json['nextRefillDate'] as String)
           : null,
@@ -114,12 +120,13 @@ class CreditBalance extends Equatable {
         totalCredits,
         hasActiveSubscription,
         hasUsedFreeTrial,
+        isTrialSubscription,
         nextRefillDate,
         subscriptionPlanId,
       ];
 
   @override
   String toString() {
-    return 'CreditBalance(availableCredits: $availableCredits, totalCredits: $totalCredits, hasActiveSubscription: $hasActiveSubscription, hasUsedFreeTrial: $hasUsedFreeTrial)';
+    return 'CreditBalance(availableCredits: $availableCredits, totalCredits: $totalCredits, hasActiveSubscription: $hasActiveSubscription, hasUsedFreeTrial: $hasUsedFreeTrial, isTrialSubscription: $isTrialSubscription)';
   }
 }
