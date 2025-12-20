@@ -4332,8 +4332,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let resultsLabel = UILabel()
         let resultsCount = detectionResults.count
         resultsLabel.text = "Found \(resultsCount) similar match\(resultsCount == 1 ? "" : "es")"
-        resultsLabel.font = UIFont(name: "PlusJakartaSans-Bold", size: 17)
-            ?? .systemFont(ofSize: 17, weight: .bold)
+        resultsLabel.font = UIFont(name: "PlusJakartaSans-Medium", size: 15)
+            ?? .systemFont(ofSize: 15, weight: .medium)
         resultsLabel.textColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) // Munsell red
         resultsLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -4449,28 +4449,37 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Text label
         let textLabel = UILabel()
         textLabel.text = "Compare with original"
-        textLabel.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 15)
-            ?? .systemFont(ofSize: 15, weight: .semibold)
+        textLabel.font = UIFont(name: "PlusJakartaSans-Medium", size: 14)
+            ?? .systemFont(ofSize: 14, weight: .medium)
         textLabel.textColor = .label
         textLabel.translatesAutoresizingMaskIntoConstraints = false
+        textLabel.setContentHuggingPriority(.required, for: .horizontal)
+        textLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         // Expand/collapse icon
         let iconImageView = UIImageView()
-        let iconConfig = UIImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
+        let iconConfig = UIImage.SymbolConfiguration(pointSize: 13, weight: .medium)
         iconImageView.image = UIImage(systemName: "chevron.down", withConfiguration: iconConfig)
-        iconImageView.tintColor = .secondaryLabel
+        iconImageView.tintColor = .label // Use label color for better visibility
         iconImageView.contentMode = .scaleAspectFit
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
         iconImageView.tag = 1002 // Tag for rotation animation
+        iconImageView.setContentHuggingPriority(.required, for: .horizontal)
+        iconImageView.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        // Spacer to push icon to the right
+        let spacer = UIView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        spacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         collapsedStackView.addArrangedSubview(thumbnailImageView)
         collapsedStackView.addArrangedSubview(textLabel)
-        collapsedStackView.addArrangedSubview(UIView()) // Spacer
+        collapsedStackView.addArrangedSubview(spacer)
         collapsedStackView.addArrangedSubview(iconImageView)
 
         // Expanded state UI - full image
         let fullImageView = UIImageView()
-        fullImageView.contentMode = .scaleAspectFill
+        fullImageView.contentMode = .scaleAspectFit // Center image without cropping
         fullImageView.clipsToBounds = true
         fullImageView.layer.cornerRadius = 12
         fullImageView.translatesAutoresizingMaskIntoConstraints = false
@@ -4496,9 +4505,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             thumbnailImageView.widthAnchor.constraint(equalToConstant: 48),
             thumbnailImageView.heightAnchor.constraint(equalToConstant: 48),
 
-            // Icon constraints
-            iconImageView.widthAnchor.constraint(equalToConstant: 16),
-            iconImageView.heightAnchor.constraint(equalToConstant: 16),
+            // Icon constraints (18x18 for better visibility)
+            iconImageView.widthAnchor.constraint(equalToConstant: 18),
+            iconImageView.heightAnchor.constraint(equalToConstant: 18),
 
             // Collapsed stack view (10px padding instead of 12px for less height)
             collapsedStackView.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
