@@ -4270,11 +4270,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         filteredResults = detectionResults
         selectedGroup = nil
 
-        shareLog("Creating category filters...")
-        // Create category filter chips
-        let filterView = createCategoryFilters()
-        categoryFilterView = filterView
-
         shareLog("Creating table view...")
         // Create table view if not exists
         if resultsTableView == nil {
@@ -4325,42 +4320,68 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         let headerView = addResultsHeaderIfNeeded()
 
-        // Create image comparison view
+        // Create table header view containing image comparison + results count
+        let tableHeaderContainer = UIView()
+        tableHeaderContainer.backgroundColor = .systemBackground
+        tableHeaderContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        // Image comparison view
         let imageComparisonView = createImageComparisonView()
 
-        let comparisonTopAnchor: NSLayoutYAxisAnchor
-        let comparisonTopPadding: CGFloat
-        if let headerView = headerView {
-            comparisonTopAnchor = headerView.bottomAnchor
-            comparisonTopPadding = 12
-        } else {
-            comparisonTopAnchor = loadingView.safeAreaLayoutGuide.topAnchor
-            comparisonTopPadding = 0
-        }
+        // Results count label
+        let resultsLabel = UILabel()
+        let resultsCount = detectionResults.count
+        resultsLabel.text = "Found \(resultsCount) similar match\(resultsCount == 1 ? "" : "es")"
+        resultsLabel.font = UIFont(name: "PlusJakartaSans-Bold", size: 17)
+            ?? .systemFont(ofSize: 17, weight: .bold)
+        resultsLabel.textColor = .label
+        resultsLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        tableHeaderContainer.addSubview(imageComparisonView)
+        tableHeaderContainer.addSubview(resultsLabel)
+
+        NSLayoutConstraint.activate([
+            // Image comparison at top with horizontal padding
+            imageComparisonView.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
+            imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
+            imageComparisonView.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
+            imageComparisonView.heightAnchor.constraint(equalToConstant: 68),
+
+            // Results label below image comparison
+            resultsLabel.topAnchor.constraint(equalTo: imageComparisonView.bottomAnchor, constant: 16),
+            resultsLabel.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
+            resultsLabel.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
+            resultsLabel.bottomAnchor.constraint(equalTo: tableHeaderContainer.bottomAnchor, constant: -12),
+        ])
+
+        // Set as table header view so it scrolls with content
+        tableView.tableHeaderView = tableHeaderContainer
+
+        // Size the header properly
+        tableHeaderContainer.setNeedsLayout()
+        tableHeaderContainer.layoutIfNeeded()
+        let headerHeight = tableHeaderContainer.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
+        tableHeaderContainer.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: headerHeight)
 
         // Add all views to loadingView
-        loadingView.addSubview(imageComparisonView)
-        loadingView.addSubview(filterView)
         loadingView.addSubview(tableView)
         loadingView.addSubview(bottomBarContainer)
         if let headerView = headerView {
             loadingView.bringSubviewToFront(headerView)
         }
 
+        let tableTopAnchor: NSLayoutYAxisAnchor
+        let tableTopPadding: CGFloat
+        if let headerView = headerView {
+            tableTopAnchor = headerView.bottomAnchor
+            tableTopPadding = 0
+        } else {
+            tableTopAnchor = loadingView.safeAreaLayoutGuide.topAnchor
+            tableTopPadding = 0
+        }
+
         NSLayoutConstraint.activate([
-            // Image comparison view
-            imageComparisonView.topAnchor.constraint(equalTo: comparisonTopAnchor, constant: comparisonTopPadding),
-            imageComparisonView.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor, constant: 16),
-            imageComparisonView.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor, constant: -16),
-            imageComparisonView.heightAnchor.constraint(equalToConstant: 80),
-
-            // Filter view (now below image comparison view)
-            filterView.topAnchor.constraint(equalTo: imageComparisonView.bottomAnchor, constant: 12),
-            filterView.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
-            filterView.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
-            filterView.heightAnchor.constraint(equalToConstant: 60),
-
-            tableView.topAnchor.constraint(equalTo: filterView.bottomAnchor),
+            tableView.topAnchor.constraint(equalTo: tableTopAnchor, constant: tableTopPadding),
             tableView.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
@@ -4388,7 +4409,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func createImageComparisonView() -> UIView {
         let container = UIView()
-        container.backgroundColor = UIColor.systemGray6
+        // Match Flutter Colors.grey.shade50 (RGB 249, 249, 249)
+        container.backgroundColor = UIColor(red: 249/255, green: 249/255, blue: 249/255, alpha: 1.0)
         container.translatesAutoresizingMaskIntoConstraints = false
         container.layer.cornerRadius = 12
         container.clipsToBounds = true
@@ -4412,8 +4434,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         thumbnailImageView.clipsToBounds = true
         thumbnailImageView.layer.cornerRadius = 8
         thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false
-        if let data = pendingImageData, let image = UIImage(data: data) {
+        thumbnailImageView.backgroundColor = .systemGray5
+
+        // Load image from pendingImageData or analyzedImageData
+        if let data = pendingImageData ?? analyzedImageData, let image = UIImage(data: data) {
             thumbnailImageView.image = image
+            shareLog("[ImageComparison] Thumbnail loaded from image data")
+        } else {
+            shareLog("[ImageComparison] WARNING: No image data available for thumbnail")
         }
         imageComparisonThumbnailImageView = thumbnailImageView
 
@@ -4447,8 +4475,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         fullImageView.translatesAutoresizingMaskIntoConstraints = false
         fullImageView.alpha = 0 // Hidden initially
         fullImageView.tag = 1003
-        if let data = pendingImageData, let image = UIImage(data: data) {
+        fullImageView.backgroundColor = .systemGray5
+
+        // Load image from pendingImageData or analyzedImageData
+        if let data = pendingImageData ?? analyzedImageData, let image = UIImage(data: data) {
             fullImageView.image = image
+            shareLog("[ImageComparison] Full image loaded from image data")
+        } else {
+            shareLog("[ImageComparison] WARNING: No image data available for full view")
         }
         imageComparisonFullImageView = fullImageView
 
@@ -4456,19 +4490,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         container.addSubview(fullImageView)
 
         NSLayoutConstraint.activate([
-            // Thumbnail constraints
-            thumbnailImageView.widthAnchor.constraint(equalToConstant: 56),
-            thumbnailImageView.heightAnchor.constraint(equalToConstant: 56),
+            // Thumbnail constraints (48x48 instead of 56x56 for less height)
+            thumbnailImageView.widthAnchor.constraint(equalToConstant: 48),
+            thumbnailImageView.heightAnchor.constraint(equalToConstant: 48),
 
             // Icon constraints
             iconImageView.widthAnchor.constraint(equalToConstant: 16),
             iconImageView.heightAnchor.constraint(equalToConstant: 16),
 
-            // Collapsed stack view
-            collapsedStackView.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+            // Collapsed stack view (10px padding instead of 12px for less height)
+            collapsedStackView.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
             collapsedStackView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
             collapsedStackView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-            collapsedStackView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -12),
+            collapsedStackView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -10),
 
             // Full image view (takes full container when expanded)
             fullImageView.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
@@ -4521,7 +4555,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             heightConstraint.isActive = false
         }
 
-        let newHeight: CGFloat = isImageComparisonExpanded ? expandedHeight : 80
+        let newHeight: CGFloat = isImageComparisonExpanded ? expandedHeight : 68
         let heightConstraint = container.heightAnchor.constraint(equalToConstant: newHeight)
         heightConstraint.isActive = true
 
