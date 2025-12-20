@@ -1035,11 +1035,13 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     }
   }
 
-  void _showInfoBottomSheet(BuildContext context) {
+  Future<void> _showInfoBottomSheet(BuildContext context) async {
     final spacing = context.spacing;
 
-    // Always refresh from Supabase when opening the sheet so the count is current.
-    ref.read(creditBalanceProvider.notifier).refresh();
+    // Fetch credit balance before opening the modal to prevent jitter
+    await ref.read(creditBalanceProvider.notifier).refresh();
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -1051,38 +1053,14 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   }
 }
 
-class _InfoBottomSheetContent extends ConsumerStatefulWidget {
+class _InfoBottomSheetContent extends ConsumerWidget {
   final AppSpacingExtension spacing;
 
   const _InfoBottomSheetContent({required this.spacing});
 
   @override
-  ConsumerState<_InfoBottomSheetContent> createState() => _InfoBottomSheetContentState();
-}
-
-class _InfoBottomSheetContentState extends ConsumerState<_InfoBottomSheetContent> {
-  bool _minLoadingTimePassed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Ensure minimum 1 second loading time for smooth UI
-    Future.delayed(const Duration(milliseconds: 1000), () {
-      if (mounted) {
-        setState(() {
-          _minLoadingTimePassed = true;
-        });
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final creditBalance = ref.watch(creditBalanceProvider);
-    final spacing = widget.spacing;
-
-    // Show loading if either data is loading OR minimum time hasn't passed
-    final shouldShowLoading = creditBalance.isLoading || !_minLoadingTimePassed;
 
     return Container(
       decoration: BoxDecoration(
@@ -1316,40 +1294,6 @@ class _InfoBottomSheetContentState extends ConsumerState<_InfoBottomSheetContent
                       ),
                     ),
             ),
-            // Loading overlay
-            if (shouldShowLoading)
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CircularProgressIndicator(
-                          color: Color(0xFFf2003c),
-                          strokeWidth: 2,
-                        ),
-                        SizedBox(height: spacing.m),
-                        Text(
-                          'Loading...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             // Close button at top right
             Positioned(
               top: spacing.l,
