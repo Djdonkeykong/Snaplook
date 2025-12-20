@@ -4341,7 +4341,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         tableHeaderContainer.addSubview(imageComparisonView)
         tableHeaderContainer.addSubview(resultsLabel)
 
-        let imageHeightConstraint = imageComparisonView.heightAnchor.constraint(equalToConstant: 68)
+        let imageHeightConstraint = imageComparisonView.heightAnchor.constraint(equalToConstant: 80)
         imageComparisonHeightConstraint = imageHeightConstraint
 
         NSLayoutConstraint.activate([
@@ -4464,7 +4464,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let iconImageView = UIImageView()
         let iconConfig = UIImage.SymbolConfiguration(pointSize: 13, weight: .medium)
         iconImageView.image = UIImage(systemName: "chevron.down", withConfiguration: iconConfig)
-        iconImageView.tintColor = .label // Use label color for better visibility
+        iconImageView.tintColor = .black
         iconImageView.contentMode = .scaleAspectFit
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
         iconImageView.tag = 1002 // Tag for rotation animation
@@ -4503,19 +4503,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         container.addSubview(fullImageView)
 
         NSLayoutConstraint.activate([
-            // Thumbnail constraints (48x48 instead of 56x56 for less height)
-            thumbnailImageView.widthAnchor.constraint(equalToConstant: 48),
-            thumbnailImageView.heightAnchor.constraint(equalToConstant: 48),
+            // Thumbnail constraints
+            thumbnailImageView.widthAnchor.constraint(equalToConstant: 56),
+            thumbnailImageView.heightAnchor.constraint(equalToConstant: 56),
 
             // Icon constraints (18x18 for better visibility)
             iconImageView.widthAnchor.constraint(equalToConstant: 18),
             iconImageView.heightAnchor.constraint(equalToConstant: 18),
 
-            // Collapsed stack view (10px padding instead of 12px for less height)
-            collapsedStackView.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
+            // Collapsed stack view padding
+            collapsedStackView.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
             collapsedStackView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
             collapsedStackView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-            collapsedStackView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -10),
+            collapsedStackView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -12),
 
             // Full image view (takes full container when expanded)
             fullImageView.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
@@ -4552,11 +4552,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Update height constraint BEFORE animation (use the stored constraint added by the header)
         if let heightConstraint = imageComparisonHeightConstraint {
             heightConstraint.isActive = false
-            heightConstraint.constant = isImageComparisonExpanded ? expandedHeight : 68
+            heightConstraint.constant = isImageComparisonExpanded ? expandedHeight : 80
             heightConstraint.isActive = true
         } else {
             // Fallback: create one if missing (shouldn't happen in normal flow)
-            let heightConstraint = container.heightAnchor.constraint(equalToConstant: isImageComparisonExpanded ? expandedHeight : 68)
+            let heightConstraint = container.heightAnchor.constraint(equalToConstant: isImageComparisonExpanded ? expandedHeight : 80)
             heightConstraint.isActive = true
             imageComparisonHeightConstraint = heightConstraint
         }
