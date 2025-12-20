@@ -1320,7 +1320,12 @@ class _InfoBottomSheetContentState extends ConsumerState<_InfoBottomSheetContent
             if (shouldShowLoading)
               Positioned.fill(
                 child: Container(
-                  color: Theme.of(context).colorScheme.surface,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
