@@ -55,6 +55,11 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
     HapticFeedback.mediumImpact();
 
     try {
+      // Give the keyboard a moment to close before navigating forward
+      FocusScope.of(context).unfocus();
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+
       final authService = ref.read(authServiceProvider);
       await authService.signInWithOtp(_emailController.text);
 

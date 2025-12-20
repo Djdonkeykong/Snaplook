@@ -795,7 +795,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       onPressed: () async {
                         Navigator.pop(context);
                         // Give the sheet a moment to finish closing for smoother transition
-                        await Future.delayed(const Duration(milliseconds: 150));
+                        await Future.delayed(const Duration(milliseconds: 250));
                         if (!context.mounted) return;
 
                         navigator.push(

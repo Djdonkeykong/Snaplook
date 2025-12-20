@@ -11,7 +11,11 @@ import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
-    show MainNavigation, selectedIndexProvider, scrollToTopTriggerProvider, isAtHomeRootProvider;
+    show
+        MainNavigation,
+        selectedIndexProvider,
+        scrollToTopTriggerProvider,
+        isAtHomeRootProvider;
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/subscription_sync_service.dart';
@@ -95,6 +99,10 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
     bool allFilled = _controllers.every((c) => c.text.isNotEmpty);
     if (allFilled) {
       String code = _controllers.map((c) => c.text).join();
+      // Give the keyboard a moment to close before verifying
+      FocusScope.of(context).unfocus();
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
       await _verifyCode(code);
     }
   }
@@ -126,17 +134,21 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               );
               print('[EmailVerification] Checkpoint updated to account');
             } catch (checkpointError) {
-              print('[EmailVerification] Error updating checkpoint: $checkpointError');
+              print(
+                  '[EmailVerification] Error updating checkpoint: $checkpointError');
             }
 
             // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
             // This must happen BEFORE checking subscription status
-            print('[EmailVerification] Linking RevenueCat subscription to account...');
+            print(
+                '[EmailVerification] Linking RevenueCat subscription to account...');
             try {
               await SubscriptionSyncService().identify(userId);
-              print('[EmailVerification] RevenueCat subscription linked and synced');
+              print(
+                  '[EmailVerification] RevenueCat subscription linked and synced');
             } catch (linkError) {
-              print('[EmailVerification] Error linking RevenueCat subscription: $linkError');
+              print(
+                  '[EmailVerification] Error linking RevenueCat subscription: $linkError');
             }
 
             // Update device fingerprint for fraud prevention
@@ -149,23 +161,30 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 email: widget.email,
               );
             } catch (fraudError) {
-              print('[EmailVerification] Error calculating fraud score: $fraudError');
+              print(
+                  '[EmailVerification] Error calculating fraud score: $fraudError');
             }
 
             // Persist ALL onboarding selections if they exist in providers
             final selectedGender = ref.read(selectedGenderProvider);
-            final notificationGranted = ref.read(notificationPermissionGrantedProvider);
+            final notificationGranted =
+                ref.read(notificationPermissionGrantedProvider);
             final styleDirection = ref.read(styleDirectionProvider);
             final whatYouWant = ref.read(whatYouWantProvider);
             final budget = ref.read(budgetProvider);
             final discoverySource = ref.read(selectedDiscoverySourceProvider);
 
-            print('[EmailVerification] Gender from provider: ${selectedGender?.name}');
-            print('[EmailVerification] Notification permission from provider: $notificationGranted');
-            print('[EmailVerification] Style direction from provider: $styleDirection');
-            print('[EmailVerification] What you want from provider: $whatYouWant');
+            print(
+                '[EmailVerification] Gender from provider: ${selectedGender?.name}');
+            print(
+                '[EmailVerification] Notification permission from provider: $notificationGranted');
+            print(
+                '[EmailVerification] Style direction from provider: $styleDirection');
+            print(
+                '[EmailVerification] What you want from provider: $whatYouWant');
             print('[EmailVerification] Budget from provider: $budget');
-            print('[EmailVerification] Discovery source from provider: ${discoverySource?.name}');
+            print(
+                '[EmailVerification] Discovery source from provider: ${discoverySource?.name}');
 
             // Map Gender enum to preferred_gender_filter
             String? preferredGenderFilter;
@@ -195,14 +214,16 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 userId: userId,
                 preferredGenderFilter: preferredGenderFilter,
                 notificationEnabled: notificationGranted,
-                styleDirection: styleDirection.isNotEmpty ? styleDirection : null,
+                styleDirection:
+                    styleDirection.isNotEmpty ? styleDirection : null,
                 whatYouWant: whatYouWant.isNotEmpty ? whatYouWant : null,
                 budget: budget,
                 discoverySource: discoverySourceString,
               );
               print('[EmailVerification] All onboarding preferences persisted');
             } catch (prefError) {
-              print('[EmailVerification] Error persisting preferences: $prefError');
+              print(
+                  '[EmailVerification] Error persisting preferences: $prefError');
             }
 
             // Check if user has completed onboarding from database
@@ -213,26 +234,33 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 .eq('id', userId)
                 .maybeSingle();
 
-            print('[EmailVerification] User record found: ${userResponse != null}');
+            print(
+                '[EmailVerification] User record found: ${userResponse != null}');
 
-            final hasCompletedOnboarding = userResponse != null && userResponse['onboarding_state'] == 'completed';
-            print('[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
+            final hasCompletedOnboarding = userResponse != null &&
+                userResponse['onboarding_state'] == 'completed';
+            print(
+                '[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
 
             // Check subscription status from RevenueCat (source of truth)
             CustomerInfo? customerInfo;
             try {
               customerInfo = await Purchases.getCustomerInfo();
             } catch (e) {
-              debugPrint('[EmailVerification] Error fetching RevenueCat customer info: $e');
+              debugPrint(
+                  '[EmailVerification] Error fetching RevenueCat customer info: $e');
             }
 
             final activeEntitlements = customerInfo?.entitlements.active.values;
-            final hasActiveSubscription = activeEntitlements != null && activeEntitlements.isNotEmpty;
-            print('[EmailVerification] Has active subscription (RevenueCat): $hasActiveSubscription');
+            final hasActiveSubscription =
+                activeEntitlements != null && activeEntitlements.isNotEmpty;
+            print(
+                '[EmailVerification] Has active subscription (RevenueCat): $hasActiveSubscription');
 
             if (hasCompletedOnboarding && hasActiveSubscription) {
               // Existing user who completed onboarding and has active subscription - go to main app
-              print('[EmailVerification] Existing user with subscription - navigating to main app');
+              print(
+                  '[EmailVerification] Existing user with subscription - navigating to main app');
               // Reset to home tab
               ref.read(selectedIndexProvider.notifier).state = 0;
               // Invalidate all providers to refresh state
@@ -241,13 +269,15 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               ref.invalidate(isAtHomeRootProvider);
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
-                  builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
+                  builder: (context) =>
+                      const MainNavigation(key: ValueKey('fresh-main-nav')),
                 ),
                 (route) => false,
               );
             } else if (hasCompletedOnboarding && !hasActiveSubscription) {
               // Existing user who completed onboarding but NO subscription - go to paywall
-              print('[EmailVerification] Existing user without subscription - navigating to paywall');
+              print(
+                  '[EmailVerification] Existing user without subscription - navigating to paywall');
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                   builder: (context) => const PaywallPage(),
@@ -260,20 +290,23 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
 
               if (hasActiveSubscription) {
                 // User purchased subscription - go straight to home
-                print('[EmailVerification] New user with subscription - navigating to home');
+                print(
+                    '[EmailVerification] New user with subscription - navigating to home');
                 ref.read(selectedIndexProvider.notifier).state = 0;
                 ref.invalidate(selectedIndexProvider);
                 ref.invalidate(scrollToTopTriggerProvider);
                 ref.invalidate(isAtHomeRootProvider);
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (context) => const MainNavigation(key: ValueKey('fresh-main-nav')),
+                    builder: (context) =>
+                        const MainNavigation(key: ValueKey('fresh-main-nav')),
                   ),
                   (route) => false,
                 );
               } else if (hasOnboardingData) {
                 // User went through onboarding but no subscription - go to paywall
-                print('[EmailVerification] New user with onboarding data but no subscription - navigating to paywall');
+                print(
+                    '[EmailVerification] New user with onboarding data but no subscription - navigating to paywall');
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                     builder: (context) => const PaywallPage(),
@@ -282,7 +315,8 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 );
               } else {
                 // New user without onboarding data - start from beginning
-                print('[EmailVerification] New user without onboarding data - navigating to HowItWorksPage');
+                print(
+                    '[EmailVerification] New user without onboarding data - navigating to HowItWorksPage');
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                     builder: (context) => const HowItWorksPage(),
