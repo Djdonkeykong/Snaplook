@@ -4349,6 +4349,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         tableHeaderContainer.addSubview(imageComparisonView)
         tableHeaderContainer.addSubview(resultsLabel)
+        let headerTap = UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison))
+        headerTap.cancelsTouchesInView = false
+        tableHeaderContainer.addGestureRecognizer(headerTap)
+        tableHeaderContainer.isUserInteractionEnabled = true
 
         // Force a fixed-ish width based on the table width at layout time
         let fixedCardWidth: CGFloat = 408
