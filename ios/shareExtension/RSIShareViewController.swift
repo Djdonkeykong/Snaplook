@@ -670,6 +670,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var imageComparisonContainerView: UIView?
     private var imageComparisonThumbnailImageView: UIImageView?
     private var imageComparisonFullImageView: UIImageView?
+    private var imageComparisonWidthConstraint: NSLayoutConstraint?
     private var isImageComparisonExpanded = false
     private var isShowingResults = false
     private var isShowingPreview = false
@@ -3833,6 +3834,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         super.viewDidLayoutSubviews()
         applySheetCornerRadius(12)
 
+        if let cardView = imageComparisonContainerView,
+           let widthConstraint = imageComparisonWidthConstraint,
+           let tapArea = cardView.superview {
+            let availableWidth = tapArea.bounds.width - 32
+            if availableWidth > 0 {
+                widthConstraint.constant = min(408, availableWidth)
+            }
+        }
+
         updateResultsHeaderLayout()
     }
 
@@ -4363,18 +4373,42 @@ open class RSIShareViewController: SLComposeServiceViewController {
         resultsLabel.textColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) // Munsell red
         resultsLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        tableHeaderContainer.addSubview(imageComparisonView)
+        let imageComparisonTapArea = UIControl()
+        imageComparisonTapArea.translatesAutoresizingMaskIntoConstraints = false
+        imageComparisonTapArea.addTarget(self, action: #selector(toggleImageComparison), for: .touchUpInside)
+
+        tableHeaderContainer.addSubview(imageComparisonTapArea)
+        imageComparisonTapArea.addSubview(imageComparisonView)
         tableHeaderContainer.addSubview(resultsLabel)
 
+        // Prefer a fixed card width, but clamp it to available space.
+        let widthConstraint = imageComparisonView.widthAnchor.constraint(equalToConstant: 408)
+        widthConstraint.priority = .defaultHigh
+        imageComparisonWidthConstraint = widthConstraint
+
+        let fallbackWidthConstraint = imageComparisonView.widthAnchor.constraint(
+            equalTo: imageComparisonTapArea.widthAnchor,
+            constant: -32
+        )
+        fallbackWidthConstraint.priority = .defaultLow
+
         NSLayoutConstraint.activate([
-            // Image comparison at top with horizontal padding
-            imageComparisonView.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
-            imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
-            imageComparisonView.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
+            // Tap area spans full row width so the entire row is clickable.
+            imageComparisonTapArea.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
+            imageComparisonTapArea.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor),
+            imageComparisonTapArea.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor),
+
+            // Image comparison card inside the tap area.
+            imageComparisonView.topAnchor.constraint(equalTo: imageComparisonTapArea.topAnchor),
+            imageComparisonView.leadingAnchor.constraint(equalTo: imageComparisonTapArea.leadingAnchor, constant: 16),
+            imageComparisonView.bottomAnchor.constraint(equalTo: imageComparisonTapArea.bottomAnchor),
             imageComparisonView.heightAnchor.constraint(equalToConstant: 68),
+            widthConstraint,
+            imageComparisonView.widthAnchor.constraint(lessThanOrEqualTo: imageComparisonTapArea.widthAnchor, constant: -32),
+            fallbackWidthConstraint,
 
             // Results label below image comparison
-            resultsLabel.topAnchor.constraint(equalTo: imageComparisonView.bottomAnchor, constant: 16),
+            resultsLabel.topAnchor.constraint(equalTo: imageComparisonTapArea.bottomAnchor, constant: 16),
             resultsLabel.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
             resultsLabel.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
             resultsLabel.bottomAnchor.constraint(equalTo: tableHeaderContainer.bottomAnchor, constant: -12),
@@ -4436,11 +4470,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         container.translatesAutoresizingMaskIntoConstraints = false
         container.layer.cornerRadius = 12
         container.clipsToBounds = true
-
-        // Add tap gesture
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison))
-        container.addGestureRecognizer(tapGesture)
-        container.isUserInteractionEnabled = true
+        container.isUserInteractionEnabled = false
 
         // Collapsed state UI - thumbnail + text + icon
         let collapsedStackView = UIStackView()
