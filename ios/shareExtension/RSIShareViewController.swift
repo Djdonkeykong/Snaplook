@@ -4370,6 +4370,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             loadingView.bringSubviewToFront(headerView)
         }
 
+        refreshTableHeaderLayout()
+
         let tableTopAnchor: NSLayoutYAxisAnchor
         let tableTopPadding: CGFloat
         if let headerView = headerView {
@@ -4581,13 +4583,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func refreshTableHeaderLayout() {
         guard let tableView = resultsTableView, let header = tableView.tableHeaderView else { return }
+        header.frame.size.width = tableView.bounds.width
         header.setNeedsLayout()
         header.layoutIfNeeded()
-        let size = header.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+        let targetSize = CGSize(width: tableView.bounds.width, height: UIView.layoutFittingCompressedSize.height)
+        let size = header.systemLayoutSizeFitting(targetSize)
         if header.frame.height != size.height {
             header.frame.size.height = size.height
             tableView.tableHeaderView = header
         }
+    }
+
+    public override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        refreshTableHeaderLayout()
     }
 
     private func createCategoryFilters() -> UIView {
