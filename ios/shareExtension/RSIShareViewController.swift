@@ -670,6 +670,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var imageComparisonContainerView: UIView?
     private var imageComparisonThumbnailImageView: UIImageView?
     private var imageComparisonFullImageView: UIImageView?
+    private var imageComparisonHeightConstraint: NSLayoutConstraint?
     private var isImageComparisonExpanded = false
     private var isShowingResults = false
     private var isShowingPreview = false
@@ -4345,7 +4346,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
             imageComparisonView.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
             imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
             imageComparisonView.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
-            imageComparisonView.heightAnchor.constraint(equalToConstant: 68),
 
             // Results label below image comparison
             resultsLabel.topAnchor.constraint(equalTo: imageComparisonView.bottomAnchor, constant: 16),
@@ -4414,6 +4414,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         container.translatesAutoresizingMaskIntoConstraints = false
         container.layer.cornerRadius = 12
         container.clipsToBounds = true
+        container.layoutMargins = UIEdgeInsets(top: 10, left: 16, bottom: 10, right: 16)
 
         // Add tap gesture
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison))
@@ -4435,6 +4436,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         thumbnailImageView.layer.cornerRadius = 8
         thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false
         thumbnailImageView.backgroundColor = .systemGray5
+        thumbnailImageView.setContentHuggingPriority(.required, for: .horizontal)
+        thumbnailImageView.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         // Load image from pendingImageData or analyzedImageData
         if let data = pendingImageData ?? analyzedImageData, let image = UIImage(data: data) {
@@ -4452,6 +4455,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             ?? .systemFont(ofSize: 15, weight: .semibold)
         textLabel.textColor = .label
         textLabel.translatesAutoresizingMaskIntoConstraints = false
+        textLabel.lineBreakMode = .byTruncatingTail
+        textLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         // Expand/collapse icon
         let iconImageView = UIImageView()
@@ -4461,15 +4466,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
         iconImageView.contentMode = .scaleAspectFit
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
         iconImageView.tag = 1002 // Tag for rotation animation
+        iconImageView.setContentHuggingPriority(.required, for: .horizontal)
+        iconImageView.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        let spacerView = UIView()
+        spacerView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        spacerView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         collapsedStackView.addArrangedSubview(thumbnailImageView)
         collapsedStackView.addArrangedSubview(textLabel)
-        collapsedStackView.addArrangedSubview(UIView()) // Spacer
+        collapsedStackView.addArrangedSubview(spacerView)
         collapsedStackView.addArrangedSubview(iconImageView)
 
         // Expanded state UI - full image
         let fullImageView = UIImageView()
-        fullImageView.contentMode = .scaleAspectFill
+        fullImageView.contentMode = .scaleAspectFit
         fullImageView.clipsToBounds = true
         fullImageView.layer.cornerRadius = 12
         fullImageView.translatesAutoresizingMaskIntoConstraints = false
@@ -4489,6 +4500,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         container.addSubview(collapsedStackView)
         container.addSubview(fullImageView)
 
+        let marginsGuide = container.layoutMarginsGuide
+
         NSLayoutConstraint.activate([
             // Thumbnail constraints (48x48 instead of 56x56 for less height)
             thumbnailImageView.widthAnchor.constraint(equalToConstant: 48),
@@ -4499,17 +4512,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
             iconImageView.heightAnchor.constraint(equalToConstant: 16),
 
             // Collapsed stack view (10px padding instead of 12px for less height)
-            collapsedStackView.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
-            collapsedStackView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
-            collapsedStackView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-            collapsedStackView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -10),
+            collapsedStackView.topAnchor.constraint(equalTo: marginsGuide.topAnchor),
+            collapsedStackView.leadingAnchor.constraint(equalTo: marginsGuide.leadingAnchor),
+            collapsedStackView.trailingAnchor.constraint(equalTo: marginsGuide.trailingAnchor),
+            collapsedStackView.bottomAnchor.constraint(equalTo: marginsGuide.bottomAnchor),
 
             // Full image view (takes full container when expanded)
-            fullImageView.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
-            fullImageView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
-            fullImageView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
-            fullImageView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -12),
+            fullImageView.topAnchor.constraint(equalTo: marginsGuide.topAnchor, constant: 2),
+            fullImageView.leadingAnchor.constraint(equalTo: marginsGuide.leadingAnchor),
+            fullImageView.trailingAnchor.constraint(equalTo: marginsGuide.trailingAnchor),
+            fullImageView.bottomAnchor.constraint(equalTo: marginsGuide.bottomAnchor, constant: -2),
         ])
+
+        let heightConstraint = container.heightAnchor.constraint(equalToConstant: 68)
+        heightConstraint.isActive = true
+        imageComparisonHeightConstraint = heightConstraint
 
         imageComparisonContainerView = container
         return container
@@ -4523,14 +4540,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let collapsedView = container.viewWithTag(1001)
         let fullImageView = container.viewWithTag(1003) as? UIImageView
         let iconView = container.viewWithTag(1002) as? UIImageView
+        container.layoutIfNeeded()
 
         // Calculate expanded height based on image aspect ratio
         let expandedHeight: CGFloat
         if let image = fullImageView?.image {
-            let containerWidth = container.frame.width - 32 // Account for padding
+            let availableWidth = container.bounds.width - (container.layoutMargins.left + container.layoutMargins.right)
             let aspectRatio = image.size.height / image.size.width
             // Calculate height maintaining aspect ratio, with max height of 400
-            let calculatedHeight = (containerWidth * aspectRatio) + 24 // Add padding
+            let calculatedHeight = (availableWidth * aspectRatio) + (container.layoutMargins.top + container.layoutMargins.bottom)
             expandedHeight = min(calculatedHeight, 400)
         } else {
             expandedHeight = 300 // Default fallback
@@ -4551,16 +4569,24 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         // Update height constraint with animation
-        if let heightConstraint = container.constraints.first(where: { $0.firstAttribute == .height }) {
-            heightConstraint.isActive = false
-        }
-
         let newHeight: CGFloat = isImageComparisonExpanded ? expandedHeight : 68
-        let heightConstraint = container.heightAnchor.constraint(equalToConstant: newHeight)
-        heightConstraint.isActive = true
+        imageComparisonHeightConstraint?.constant = newHeight
 
         UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut) {
             container.superview?.layoutIfNeeded()
+        } completion: { _ in
+            self.refreshTableHeaderLayout()
+        }
+    }
+
+    private func refreshTableHeaderLayout() {
+        guard let tableView = resultsTableView, let header = tableView.tableHeaderView else { return }
+        header.setNeedsLayout()
+        header.layoutIfNeeded()
+        let size = header.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+        if header.frame.height != size.height {
+            header.frame.size.height = size.height
+            tableView.tableHeaderView = header
         }
     }
 
