@@ -675,6 +675,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var imageComparisonThumbnailImageView: UIImageView?
     private var imageComparisonFullImageView: UIImageView?
     private var imageComparisonWidthConstraint: NSLayoutConstraint?
+    private var isUpdatingResultsHeaderLayout = false
     private var isImageComparisonExpanded = false
     private var isShowingResults = false
     private var isShowingPreview = false
@@ -3856,33 +3857,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func updateResultsHeaderLayout() {
+        guard !isUpdatingResultsHeaderLayout else { return }
+        isUpdatingResultsHeaderLayout = true
+        defer { isUpdatingResultsHeaderLayout = false }
+
         guard let tableView = resultsTableView,
-              let headerView = tableView.tableHeaderView else { return }
+              resultsHeaderContainerView != nil else { return }
 
-        let targetWidth = tableView.bounds.width > 0 ? tableView.bounds.width : view.bounds.width
-        guard targetWidth > 0 else { return }
-
-        headerView.setNeedsLayout()
-        headerView.layoutIfNeeded()
-
-        let targetSize = headerView.systemLayoutSizeFitting(
-            CGSize(width: targetWidth, height: 0),
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
-        )
-
-        let needsUpdate = abs(headerView.frame.size.height - targetSize.height) > 0.5
-            || abs(headerView.frame.size.width - targetWidth) > 0.5
-        guard needsUpdate else { return }
-
-        headerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: targetSize.height)
-        tableView.tableHeaderView = headerView
-
-        // Force table view to update its layout without reloading data
         tableView.beginUpdates()
         tableView.endUpdates()
-
-        // Ensure visible cells are laid out correctly
         tableView.layoutIfNeeded()
     }
 
@@ -4330,6 +4313,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             tableView.delegate = self
             tableView.dataSource = self
             tableView.register(ResultCell.self, forCellReuseIdentifier: "ResultCell")
+            tableView.register(UITableViewCell.self, forCellReuseIdentifier: "ResultsHeaderCell")
             tableView.rowHeight = UITableView.automaticDimension
             tableView.estimatedRowHeight = 100
             tableView.backgroundColor = .systemBackground
@@ -4436,26 +4420,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
         ])
 
         // Add all views to loadingView
-        loadingView.addSubview(resultsHeaderContainer)
         loadingView.addSubview(tableView)
         loadingView.addSubview(bottomBarContainer)
         if let headerView = headerView {
             loadingView.bringSubviewToFront(headerView)
         }
 
-        let resultsHeaderTopAnchor: NSLayoutYAxisAnchor
+        let tableTopAnchor: NSLayoutYAxisAnchor
         if let headerView = headerView {
-            resultsHeaderTopAnchor = headerView.bottomAnchor
+            tableTopAnchor = headerView.bottomAnchor
         } else {
-            resultsHeaderTopAnchor = loadingView.safeAreaLayoutGuide.topAnchor
+            tableTopAnchor = loadingView.safeAreaLayoutGuide.topAnchor
         }
 
         NSLayoutConstraint.activate([
-            resultsHeaderContainer.topAnchor.constraint(equalTo: resultsHeaderTopAnchor),
-            resultsHeaderContainer.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
-            resultsHeaderContainer.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
-
-            tableView.topAnchor.constraint(equalTo: resultsHeaderContainer.bottomAnchor),
+            tableView.topAnchor.constraint(equalTo: tableTopAnchor),
             tableView.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
@@ -4640,10 +4619,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             } else {
                 container.superview?.layoutIfNeeded()
             }
+            self.resultsTableView?.beginUpdates()
+            self.resultsTableView?.endUpdates()
         } completion: { _ in
             if let loadingView = self.loadingView {
                 loadingView.layoutIfNeeded()
             }
+            self.resultsTableView?.beginUpdates()
+            self.resultsTableView?.endUpdates()
         }
     }
 
@@ -6721,6 +6704,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stopSmoothProgress()
         loadingView?.removeFromSuperview()
         loadingView = nil
+        resultsHeaderContainerView?.removeFromSuperview()
         resultsHeaderContainerView = nil
         removeResultsHeader()
         activityIndicator?.stopAnimating()
@@ -7287,6 +7271,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         categoryFilterView = nil
 
         // Remove image comparison view
+        resultsHeaderContainerView?.removeFromSuperview()
         resultsHeaderContainerView = nil
         imageComparisonContainerView?.removeFromSuperview()
         imageComparisonContainerView = nil
@@ -7716,11 +7701,42 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
 // MARK: - Table View Delegate & DataSource
 extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
+    public func numberOfSections(in tableView: UITableView) -> Int {
+        return resultsHeaderContainerView == nil ? 1 : 2
+    }
+
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if resultsHeaderContainerView != nil && section == 0 {
+            return 1
+        }
         return filteredResults.count
     }
 
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        if resultsHeaderContainerView != nil && indexPath.section == 0 {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "ResultsHeaderCell", for: indexPath)
+            cell.selectionStyle = .none
+            cell.backgroundColor = .systemBackground
+            cell.contentView.backgroundColor = .systemBackground
+            cell.separatorInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: .greatestFiniteMagnitude)
+
+            if let headerView = resultsHeaderContainerView {
+                if headerView.superview !== cell.contentView {
+                    headerView.removeFromSuperview()
+                    cell.contentView.addSubview(headerView)
+                    headerView.translatesAutoresizingMaskIntoConstraints = false
+                    NSLayoutConstraint.activate([
+                        headerView.topAnchor.constraint(equalTo: cell.contentView.topAnchor),
+                        headerView.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor),
+                        headerView.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor),
+                        headerView.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor)
+                    ])
+                }
+            }
+
+            return cell
+        }
+
         let cell = tableView.dequeueReusableCell(withIdentifier: "ResultCell", for: indexPath) as! ResultCell
         let result = filteredResults[indexPath.row]
         let isFavorited = favoritedProductIds.contains(result.id)
@@ -7771,6 +7787,11 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
     }
 
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if resultsHeaderContainerView != nil && indexPath.section == 0 {
+            tableView.deselectRow(at: indexPath, animated: true)
+            return
+        }
+
         tableView.deselectRow(at: indexPath, animated: true)
         let selectedResult = filteredResults[indexPath.row]
         shareLog("User selected result: \(selectedResult.product_name)")
