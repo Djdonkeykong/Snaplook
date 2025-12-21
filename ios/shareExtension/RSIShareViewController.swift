@@ -3833,6 +3833,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     open override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         applySheetCornerRadius(12)
+        refreshTableHeaderLayout()
     }
 
     private func applySheetCornerRadius(_ radius: CGFloat) {
@@ -4594,10 +4595,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
-    public override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        refreshTableHeaderLayout()
-    }
 
     private func createCategoryFilters() -> UIView {
         let containerView = UIView()
