@@ -670,7 +670,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var imageComparisonContainerView: UIView?
     private var imageComparisonThumbnailImageView: UIImageView?
     private var imageComparisonFullImageView: UIImageView?
-    private var imageComparisonWidthConstraint: NSLayoutConstraint?
     private var isImageComparisonExpanded = false
     private var isShowingResults = false
     private var isShowingPreview = false
@@ -3834,15 +3833,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         super.viewDidLayoutSubviews()
         applySheetCornerRadius(12)
 
-        if let tableView = resultsTableView,
-           let widthConstraint = imageComparisonWidthConstraint {
-            let w = tableView.bounds.width
-            if w > 0 {
-                let target = min(420, max(280, w * 0.9))
-                widthConstraint.constant = target
-            }
-        }
-
         updateResultsHeaderLayout()
     }
 
@@ -4376,17 +4366,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         tableHeaderContainer.addSubview(imageComparisonView)
         tableHeaderContainer.addSubview(resultsLabel)
 
-        // Force a fixed-ish width based on the table width at layout time
-        let fixedCardWidth: CGFloat = 408
-
-        let widthConstraint = imageComparisonView.widthAnchor.constraint(equalToConstant: fixedCardWidth)
-        imageComparisonWidthConstraint = widthConstraint
-
         NSLayoutConstraint.activate([
             // Image comparison at top with horizontal padding
             imageComparisonView.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
             imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
-            widthConstraint,
+            imageComparisonView.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
             imageComparisonView.heightAnchor.constraint(equalToConstant: 68),
 
             // Results label below image comparison
