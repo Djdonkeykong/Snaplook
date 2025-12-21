@@ -4341,7 +4341,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         tableHeaderContainer.addSubview(resultsLabel)
 
         // Force a fixed-ish width based on the table width at layout time
-        let fixedCardWidth: CGFloat = 320
+        let fixedCardWidth: CGFloat = 460
 
         NSLayoutConstraint.activate([
             // Image comparison at top with horizontal padding
@@ -4421,6 +4421,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Add tap gesture
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison))
+        tapGesture.cancelsTouchesInView = false
         container.addGestureRecognizer(tapGesture)
         container.isUserInteractionEnabled = true
 
@@ -4429,6 +4430,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         collapsedStackView.axis = .horizontal
         collapsedStackView.spacing = 12
         collapsedStackView.alignment = .center
+        collapsedStackView.isUserInteractionEnabled = true
         collapsedStackView.translatesAutoresizingMaskIntoConstraints = false
         collapsedStackView.tag = 1001 // Tag for easy reference
 
@@ -4473,6 +4475,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         collapsedStackView.addArrangedSubview(textLabel)
         collapsedStackView.addArrangedSubview(UIView()) // Spacer
         collapsedStackView.addArrangedSubview(iconImageView)
+        collapsedStackView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison)))
 
         // Expanded state UI - full image
         let fullImageView = UIImageView()
