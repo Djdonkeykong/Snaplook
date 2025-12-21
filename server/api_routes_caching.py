@@ -5,6 +5,7 @@ Add these routes to your FastAPI app.
 IMPORTANT: user_id must be a valid auth.users.id from Supabase Auth.
 """
 
+import os
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -17,6 +18,8 @@ from supabase_client import supabase_manager
 from hash_utils import hash_image, normalize_url
 
 router = APIRouter(prefix="/api/v1")
+
+CACHE_RESULTS = os.getenv("CACHE_RESULTS", "").lower() in {"1", "true", "yes"}
 
 
 # ============================================
@@ -143,7 +146,7 @@ async def analyze_with_caching(
 
         # Store in cache
         cache_id = None
-        if supabase_manager.enabled and detection_result.get('cloudinary_url'):
+        if CACHE_RESULTS and supabase_manager.enabled and detection_result.get('cloudinary_url'):
             cache_id = supabase_manager.store_cache(
                 image_url=image_url or detection_result.get('cloudinary_url'),
                 image_hash=image_hash or hash_image(image_obj) if image_obj else "",
@@ -152,15 +155,15 @@ async def analyze_with_caching(
                 search_results=detection_result.get('results', [])
             )
 
-            # Also save to Instagram URL cache if this is an Instagram share
-            # This allows future requests for the same Instagram URL to skip scraping
-            if request.search_type == "instagram" and request.source_url:
-                supabase_manager.save_instagram_url_cache(
-                    instagram_url=request.source_url,
-                    image_url=detection_result['cloudinary_url'],
-                    extraction_method='server_upload'
-                )
-                print(f"Saved Instagram URL mapping to cache: {request.source_url} -> Cloudinary")
+        # Also save to Instagram URL cache if this is an Instagram share
+        # This allows future requests for the same Instagram URL to skip scraping
+        if supabase_manager.enabled and request.search_type == "instagram" and request.source_url and detection_result.get('cloudinary_url'):
+            supabase_manager.save_instagram_url_cache(
+                instagram_url=request.source_url,
+                image_url=detection_result['cloudinary_url'],
+                extraction_method='server_upload'
+            )
+            print(f"Saved Instagram URL mapping to cache: {request.source_url} -> Cloudinary")
 
         # Create user search entry
         search_id = None

@@ -33,6 +33,42 @@ load_dotenv(dotenv_path=Path(__file__).parent / '.env', override=True)
 
 from supabase_client import supabase_manager
 
+# Cache control (results + image_cache)
+CACHE_RESULTS = os.getenv("CACHE_RESULTS", "").lower() in {"1", "true", "yes"}
+
+# --- Logging control ---
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+_LOG_LEVELS = {"DEBUG": 10, "INFO": 20, "WARN": 30, "WARNING": 30, "ERROR": 40}
+_original_print = print
+CLOUDINARY_LOG_TIMING = os.getenv("CLOUDINARY_LOG_TIMING", "").lower() in {"1", "true", "yes"}
+
+
+def _infer_log_level(message: str) -> str:
+    upper = message.upper()
+    if "ERROR" in upper or "EXCEPTION" in upper or "TRACEBACK" in upper or "FAILED" in upper:
+        return "ERROR"
+    if "WARN" in upper:
+        return "WARN"
+    if "DEBUG" in upper:
+        return "DEBUG"
+    return "INFO"
+
+
+def print(*args, **kwargs):
+    if LOG_LEVEL in {"SILENT", "NONE", "OFF"}:
+        return
+    sep = kwargs.get("sep", " ")
+    message = sep.join(str(arg) for arg in args)
+    level = _infer_log_level(message)
+    if _LOG_LEVELS.get(level, 20) < _LOG_LEVELS.get(LOG_LEVEL, 20):
+        return
+    _original_print(*args, **kwargs)
+
+
+def _cloudinary_log(message: str) -> None:
+    if CLOUDINARY_LOG_TIMING:
+        _original_print(message)
+
 # === CONFIG ===
 MODEL_ID = "valentinafeve/yolos-fashionpedia"
 CONF_THRESHOLD = float(os.getenv("CONF_THRESHOLD", 0.275))
@@ -40,11 +76,12 @@ EXPAND_RATIO = float(os.getenv("EXPAND_RATIO", 0.1))
 SHOE_EXPAND_RATIO = float(os.getenv("SHOE_EXPAND_RATIO", 0.22))
 HAT_EXPAND_RATIO = float(os.getenv("HAT_EXPAND_RATIO", 0.18))
 MAX_GARMENTS = int(os.getenv("MAX_GARMENTS", 5))
+CLOUDINARY_CROP_MAX_DIM = int(os.getenv("CLOUDINARY_CROP_MAX_DIM", 768))
+CLOUDINARY_FULL_MAX_DIM = int(os.getenv("CLOUDINARY_FULL_MAX_DIM", 1600))
+CLOUDINARY_CROP_QUALITY = int(os.getenv("CLOUDINARY_CROP_QUALITY", 72))
+CLOUDINARY_FULL_QUALITY = int(os.getenv("CLOUDINARY_FULL_QUALITY", 80))
 
 # Debug crop saving
-DEBUG_SAVE_CROPS = os.getenv("DEBUG_SAVE_CROPS", "").lower() in {"1", "true", "yes"}
-DEBUG_CROPS_DIR = Path(os.getenv("DEBUG_CROPS_DIR", str(Path.home() / "Desktop" / "snaplook_debug_crops")))
-
 # Cloudinary configuration
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
@@ -484,27 +521,7 @@ def sanitize_filename(value: str) -> str:
 
 
 def save_debug_crops(crops: List[tuple], prefix: str) -> None:
-    if not DEBUG_SAVE_CROPS:
-        return
-    try:
-        DEBUG_CROPS_DIR.mkdir(parents=True, exist_ok=True)
-        run_id = uuid.uuid4().hex[:8]
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        saved = 0
-        for idx, item in enumerate(crops, 1):
-            if not item or len(item) < 2:
-                continue
-            det, crop = item[0], item[1]
-            if crop is None:
-                continue
-            label = sanitize_filename(det.get("label", "item"))
-            filename = f"{timestamp}_{prefix}_{run_id}_{idx:02d}_{label}.jpg"
-            crop.save(DEBUG_CROPS_DIR / filename, format="JPEG", quality=85)
-            saved += 1
-        if saved:
-            print(f"[Debug] Saved {saved} crops to {DEBUG_CROPS_DIR}")
-    except Exception as e:
-        print(f"[Debug] Failed to save crops: {e}")
+    return
 
 
 def resolve_expand_ratio(label: str, base_ratio: float) -> float:
@@ -1645,7 +1662,7 @@ def detect(req: DetectRequest):
         # Step 3 — Parallel Cloudinary uploads
         results = []
         if len(crops) > 0:
-            print(f"[Cloudinary] Uploading {len(crops)} crops in parallel...")
+            _cloudinary_log(f"[Cloudinary] Uploading {len(crops)} crops in parallel...")
             with ThreadPoolExecutor(max_workers=min(4, len(crops))) as executor:
                 future_to_item = {
                     executor.submit(upload_to_cloudinary, crop, det.get('label')): (det, bbox)
@@ -1657,7 +1674,7 @@ def detect(req: DetectRequest):
                     try:
                         upload_url = future.result(timeout=25)
                     except Exception as e:
-                        print(f"[Cloudinary] Upload failed for {det['label']}: {e}")
+                        _cloudinary_log(f"[Cloudinary] Upload failed for {det['label']}: {e}")
 
                     results.append({
                         "id": det["id"],
@@ -1761,7 +1778,7 @@ def run_full_detection_pipeline(
         print("[Detection] No garments detected - will use full image for search")
         if image is not None:
             # Upload full image and use it for search
-            uploaded_url = upload_to_cloudinary(image, "clothing")
+            uploaded_url = upload_to_cloudinary(image, "clothing", is_full=True)
             if uploaded_url:
                 full_image_url = uploaded_url
                 # Create a synthetic garment entry for the full image
@@ -1772,7 +1789,7 @@ def run_full_detection_pipeline(
                 }]
                 crops_with_urls = [{"garment": filtered[0], "crop_url": uploaded_url}]
                 uploaded_cloudinary_url = uploaded_url
-                print(f"[Cloudinary] Full image uploaded for fallback search: {uploaded_url}")
+                _cloudinary_log(f"[Cloudinary] Full image uploaded for fallback search: {uploaded_url}")
             else:
                 return {'success': False, 'message': 'No garments detected and failed to upload image'}
         else:
@@ -1783,7 +1800,7 @@ def run_full_detection_pipeline(
         crops_with_urls = [{"garment": filtered[0], "crop_url": uploaded_cloudinary_url}]
     elif initial_count == 1 and image is not None:
         print(f"Only 1 garment - uploading full image")
-        full_image_url = upload_to_cloudinary(image, filtered[0].get('label'))
+        full_image_url = upload_to_cloudinary(image, filtered[0].get('label'), is_full=True)
         if full_image_url:
             crops_with_urls = [{"garment": filtered[0], "crop_url": full_image_url}]
             uploaded_cloudinary_url = full_image_url
@@ -1823,7 +1840,7 @@ def run_full_detection_pipeline(
         ]
         if crops_with_urls:
             # Upload the full original image so we can persist a holistic preview for history.
-            full_image_url = upload_to_cloudinary(image, "full-image")
+            full_image_url = upload_to_cloudinary(image, "full-image", is_full=True)
             if full_image_url:
                 uploaded_cloudinary_url = full_image_url
             else:
@@ -1839,7 +1856,7 @@ def run_full_detection_pipeline(
             uploaded_cloudinary_url = full_image_url
         elif image is not None:
             print("All uploads failed - attempting fallback")
-            fallback_url = upload_to_cloudinary(image, filtered[0].get('label'))
+            fallback_url = upload_to_cloudinary(image, filtered[0].get('label'), is_full=True)
             if fallback_url:
                 full_image_url = fallback_url
                 crops_with_urls = [{"garment": filtered[0], "crop_url": fallback_url}]
@@ -1948,7 +1965,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
 
         # Step 0: Check cache first (by source_url or image_url)
         cache_lookup_url = req.source_url or req.image_url
-        if cache_lookup_url and supabase_manager.enabled:
+        if CACHE_RESULTS and cache_lookup_url and supabase_manager.enabled:
             cache_entry = supabase_manager.check_cache(image_url=cache_lookup_url)
             if cache_entry:
                 print(f"[Cache] HIT - returning cached results for {cache_lookup_url[:50]}...")
@@ -2020,7 +2037,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
             print("[Detection] No garments detected - will use full image for search")
             if image is not None:
                 # Upload full image and use it for search
-                uploaded_url = upload_to_cloudinary(image, "clothing")
+                uploaded_url = upload_to_cloudinary(image, "clothing", is_full=True)
                 if uploaded_url:
                     full_image_url = uploaded_url
                     # Create a synthetic garment entry for the full image
@@ -2030,7 +2047,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                         'bbox': [0, 0, image.width, image.height]
                     }]
                     crops_with_urls = [{"garment": filtered[0], "crop_url": uploaded_url}]
-                    print(f"[Cloudinary] Full image uploaded for fallback search: {uploaded_url}")
+                    _cloudinary_log(f"[Cloudinary] Full image uploaded for fallback search: {uploaded_url}")
                 else:
                     return {'success': False, 'message': 'No garments detected and failed to upload image', 'results': []}
             else:
@@ -2039,17 +2056,17 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         # Skip upload if user provided a pre-cropped image URL
         elif req.skip_detection and req.image_url:
             full_image_url = req.image_url
-            print(f"[Cloudinary] Using pre-uploaded image URL (skip_detection=true)")
+            _cloudinary_log(f"[Cloudinary] Using pre-uploaded image URL (skip_detection=true)")
             crops_with_urls = [{"garment": filtered[0], "crop_url": req.image_url}]
         elif initial_count == 1 and image is not None:
-            print(f"[Cloudinary] Only 1 garment initially detected - uploading full image instead of cropping")
+            _cloudinary_log(f"[Cloudinary] Only 1 garment initially detected - uploading full image instead of cropping")
             # Upload the full image once
-            uploaded_url = upload_to_cloudinary(image, filtered[0].get('label'))
+            uploaded_url = upload_to_cloudinary(image, filtered[0].get('label'), is_full=True)
             if uploaded_url:
                 full_image_url = uploaded_url
                 crops_with_urls = [{"garment": filtered[0], "crop_url": uploaded_url}]
             else:
-                print("[Cloudinary] Full image upload failed")
+                _cloudinary_log("[Cloudinary] Full image upload failed")
                 crops_with_urls = []
         elif image is not None:
             context_bbox = compute_person_context_bbox(filtered, image)
@@ -2069,23 +2086,23 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                     url = upload_to_cloudinary(crop, det.get('label'))
                     if url:
                         return det, url
-                    print(f"[Cloudinary] Empty response for {det.get('label') or 'unknown'}")
+                    _cloudinary_log(f"[Cloudinary] Empty response for {det.get('label') or 'unknown'}")
                 except Exception as e:
-                    print(f"[Cloudinary] Upload failed for {det['label']}: {e}")
+                    _cloudinary_log(f"[Cloudinary] Upload failed for {det['label']}: {e}")
                 return det, None
 
             def upload_full_image():
                 """Upload full image in parallel with crops"""
                 try:
-                    url = upload_to_cloudinary(image, "full")
+                    url = upload_to_cloudinary(image, "full", is_full=True)
                     if url:
-                        print(f"[Cloudinary] Full image uploaded: {url}")
+                        _cloudinary_log(f"[Cloudinary] Full image uploaded: {url}")
                     return url
                 except Exception as e:
-                    print(f"[Cloudinary] Full image upload failed: {e}")
+                    _cloudinary_log(f"[Cloudinary] Full image upload failed: {e}")
                     return None
 
-            print(f"[Cloudinary] Uploading {len(crop_data)} crops + full image in parallel...")
+            _cloudinary_log(f"[Cloudinary] Uploading {len(crop_data)} crops + full image in parallel...")
             t_upload = time.time()
             with ThreadPoolExecutor(max_workers=min(7, len(crop_data) + 1)) as ex:
                 # Submit all crop uploads
@@ -2097,31 +2114,31 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 results = [f.result() for f in crop_futures]
                 # Get full image URL
                 full_image_url = full_image_future.result()
-            print(f"[Cloudinary] Uploads complete in {time.time()-t_upload:.2f}s")
+            _cloudinary_log(f"[Cloudinary] Uploads complete in {time.time()-t_upload:.2f}s")
 
             crops_with_urls = [
                 {"garment": det, "crop_url": url}
                 for det, url in results if url
             ]
         else:
-            print("[Cloudinary] No image available for cropping")
+            _cloudinary_log("[Cloudinary] No image available for cropping")
             crops_with_urls = []
         if not crops_with_urls:
             if full_image_url:
-                print("[Cloudinary] All crop uploads failed - using full image fallback")
+                _cloudinary_log("[Cloudinary] All crop uploads failed - using full image fallback")
                 crops_with_urls = [{"garment": filtered[0], "crop_url": full_image_url}]
             elif image is not None:
-                print("[Cloudinary] All crop uploads failed - attempting fallback with entire image")
-                fallback_url = upload_to_cloudinary(image, filtered[0].get('label'))
+                _cloudinary_log("[Cloudinary] All crop uploads failed - attempting fallback with entire image")
+                fallback_url = upload_to_cloudinary(image, filtered[0].get('label'), is_full=True)
                 if fallback_url:
                     full_image_url = fallback_url
                     crops_with_urls = [{"garment": filtered[0], "crop_url": fallback_url}]
-                    print("[Cloudinary] Fallback: Using entire image for search")
+                    _cloudinary_log("[Cloudinary] Fallback: Using entire image for search")
                 else:
-                    print("[Cloudinary] Fallback failed - aborting search")
+                    _cloudinary_log("[Cloudinary] Fallback failed - aborting search")
                     return {'success': False, 'message': 'Failed to upload garment crops to CDN', 'results': []}
             else:
-                print("[Cloudinary] No crops and no image available - aborting search")
+                _cloudinary_log("[Cloudinary] No crops and no image available - aborting search")
                 return {'success': False, 'message': 'Failed to upload garment crops to CDN', 'results': []}
 
         # Step 4: Visual product search (parallel, no timeout)
@@ -2197,7 +2214,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
 
         # Save to Supabase if user_id is provided
         search_id = None
-        if req.user_id and supabase_manager.enabled:
+        if CACHE_RESULTS and req.user_id and supabase_manager.enabled:
             try:
                 # Use full image URL for display (not crop URL)
                 display_url = full_image_url or (crops_with_urls[0]['crop_url'] if crops_with_urls else None)
@@ -2260,7 +2277,11 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
 # === Optimized helpers ===
 
 
-def upload_to_cloudinary(image: Image.Image, label: Optional[str] = None) -> Optional[str]:
+def upload_to_cloudinary(
+    image: Image.Image,
+    label: Optional[str] = None,
+    is_full: bool = False,
+) -> Optional[str]:
     """Upload image to Cloudinary CDN for global availability."""
     image = image.convert("RGB")
     w, h = image.size
@@ -2285,14 +2306,23 @@ def upload_to_cloudinary(image: Image.Image, label: Optional[str] = None) -> Opt
         min_area = 5000
 
     if w < min_w or h < min_h or (w * h) < min_area:
-        print(f"[Cloudinary] Skipping crop {w}x{h} (label={label_lower or 'unknown'})")
+        _cloudinary_log(f"[Cloudinary] Skipping crop {w}x{h} (label={label_lower or 'unknown'})")
         return None
+
+    max_dim = CLOUDINARY_FULL_MAX_DIM if is_full else CLOUDINARY_CROP_MAX_DIM
+    if max_dim > 0 and max(w, h) > max_dim:
+        image.thumbnail((max_dim, max_dim), Image.LANCZOS)
+        w, h = image.size
+
+    quality = CLOUDINARY_FULL_QUALITY if is_full else CLOUDINARY_CROP_QUALITY
+    quality = max(40, min(95, quality))
+    t_upload = time.time()
 
     for attempt in range(1, 3):  # Two attempts
         try:
             buf = io.BytesIO()
             # Lower quality for faster uploads - images only used for visual search
-            image.save(buf, format="JPEG", quality=80)
+            image.save(buf, format="JPEG", quality=quality)
             buf.seek(0)
 
             # Upload to Cloudinary with minimal processing for speed
@@ -2306,11 +2336,14 @@ def upload_to_cloudinary(image: Image.Image, label: Optional[str] = None) -> Opt
 
             if result and result.get("secure_url"):
                 url = result["secure_url"]
-                print(f"[Cloudinary] Uploaded {label_lower or 'garment'}: {url}")
+                elapsed = time.time() - t_upload
+                _cloudinary_log(
+                    f"[Cloudinary] Uploaded {label_lower or 'garment'} {w}x{h} in {elapsed:.2f}s: {url}"
+                )
                 return url
 
         except Exception as e:
-            print(f"[Cloudinary] Attempt {attempt} failed: {e}")
+            _cloudinary_log(f"[Cloudinary] Attempt {attempt} failed: {e}")
 
         if attempt < 2:
             time.sleep(0.5)
