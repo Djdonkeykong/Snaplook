@@ -18,17 +18,23 @@ class ShareExtensionConfigService {
       final serpKey = AppConstants.serpApiKey;
       final endpoint = AppConstants.serpDetectAndSearchEndpoint;
       final apifyToken = AppConstants.apifyApiToken;
+      final supabaseUrl = AppConstants.supabaseUrl;
+      final supabaseAnonKey = AppConstants.supabaseAnonKey;
 
       await _channel.invokeMethod('saveSharedConfig', {
         'appGroupId': _appGroupId,
         'serpApiKey': serpKey,
         'detectorEndpoint': endpoint,
         'apifyApiToken': apifyToken,
+        'supabaseUrl': supabaseUrl,
+        'supabaseAnonKey': supabaseAnonKey,
       });
 
       debugPrint('ShareExtensionConfig: ✅ Saved SerpApiKey to app group');
       debugPrint('ShareExtensionConfig: ✅ Saved DetectorEndpoint: $endpoint');
       debugPrint('ShareExtensionConfig: ✅ Saved ApifyApiToken to app group');
+      debugPrint('ShareExtensionConfig: ✅ Saved Supabase URL to app group');
+      debugPrint('ShareExtensionConfig: ✅ Saved Supabase Anon Key to app group');
       debugPrint('ShareExtensionConfig: Configuration saved successfully');
     } catch (e) {
       debugPrint('ShareExtensionConfig: ❌ Failed to save config: $e');

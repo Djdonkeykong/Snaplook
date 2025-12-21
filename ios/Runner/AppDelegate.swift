@@ -17,6 +17,8 @@ import FirebaseMessaging
   private let serpApiKeyKey = "SerpApiKey"
   private let detectorEndpointKey = "DetectorEndpoint"
   private let apifyApiTokenKey = "ApifyApiToken"
+  private let supabaseUrlKey = "SupabaseUrl"
+  private let supabaseAnonKeyKey = "SupabaseAnonKey"
   private let shareLogsChannelName = "snaplook/share_extension_logs"
   private let shareLogsKey = "ShareExtensionLogEntries"
   private let authFlagKey = "user_authenticated"
@@ -197,6 +199,16 @@ import FirebaseMessaging
           if let apifyToken = args["apifyApiToken"] as? String {
             defaults.set(apifyToken, forKey: self.apifyApiTokenKey)
             NSLog("[ShareConfig] âœ… Saved ApifyApiToken: \(apifyToken.prefix(12))...")
+          }
+
+          // Save Supabase URL and anon key if provided
+          if let supabaseUrl = args["supabaseUrl"] as? String {
+            defaults.set(supabaseUrl, forKey: self.supabaseUrlKey)
+            NSLog("[ShareConfig] âœ… Saved Supabase URL: \(supabaseUrl)")
+          }
+          if let supabaseAnonKey = args["supabaseAnonKey"] as? String {
+            defaults.set(supabaseAnonKey, forKey: self.supabaseAnonKeyKey)
+            NSLog("[ShareConfig] âœ… Saved Supabase Anon Key: \(supabaseAnonKey.prefix(20))...")
           }
 
           defaults.synchronize()

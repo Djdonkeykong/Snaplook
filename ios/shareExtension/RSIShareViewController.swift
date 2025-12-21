@@ -550,6 +550,7 @@ struct DetectionResponse: Decodable {
     let search_id: String?
     let image_cache_id: String?
     let cached: Bool?
+    let garments_searched: Int?
 
     enum CodingKeys: String, CodingKey {
         case success
@@ -562,6 +563,7 @@ struct DetectionResponse: Decodable {
         case search_id
         case image_cache_id
         case cached
+        case garments_searched
     }
 
     init(from decoder: Decoder) throws {
@@ -597,6 +599,7 @@ struct DetectionResponse: Decodable {
         search_id = try? container.decodeIfPresent(String.self, forKey: .search_id)
         image_cache_id = try? container.decodeIfPresent(String.self, forKey: .image_cache_id)
         cached = try? container.decodeIfPresent(Bool.self, forKey: .cached)
+        garments_searched = try? container.decodeIfPresent(Int.self, forKey: .garments_searched)
     }
 
     struct DetectedGarment: Decodable {
@@ -3752,6 +3755,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         shareLog("Cache status: \(cached ? "HIT" : "MISS")")
                     }
 
+                    // Deduct credits based on garment count
+                    if let garmentCount = detectionResponse.garments_searched, garmentCount > 0 {
+                        self.deductCredits(garmentCount: garmentCount)
+                    }
+
                     self.updateProgress(1.0, status: "Analysis complete")
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self.stopSmoothProgress()
@@ -5196,6 +5204,102 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return deviceId
         }
         return "anonymous"
+    }
+
+    private func deductCredits(garmentCount: Int) {
+        shareLog("[Credits] Attempting to deduct \(garmentCount) credits")
+
+        guard let defaults = UserDefaults(suiteName: appGroupId) else {
+            shareLog("[Credits] ERROR: Could not access shared UserDefaults")
+            return
+        }
+
+        guard let supabaseUrl = defaults.string(forKey: "SupabaseUrl"),
+              let supabaseAnonKey = defaults.string(forKey: "SupabaseAnonKey") else {
+            shareLog("[Credits] ERROR: Supabase configuration not found in UserDefaults")
+            return
+        }
+
+        let userId = getUserId()
+        shareLog("[Credits] Using user ID: \(userId)")
+
+        let rpcEndpoint = "\(supabaseUrl)/rest/v1/rpc/deduct_credits"
+        shareLog("[Credits] RPC endpoint: \(rpcEndpoint)")
+
+        guard let url = URL(string: rpcEndpoint) else {
+            shareLog("[Credits] ERROR: Invalid RPC endpoint URL")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+
+        let payload: [String: Any] = [
+            "p_user_id": userId,
+            "p_garment_count": garmentCount
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        } catch {
+            shareLog("[Credits] ERROR: Failed to serialize request body: \(error)")
+            return
+        }
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                self.shareLog("[Credits] ERROR: Request failed: \(error.localizedDescription)")
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                self.shareLog("[Credits] ERROR: Invalid response type")
+                return
+            }
+
+            self.shareLog("[Credits] Response status code: \(httpResponse.statusCode)")
+
+            guard let data = data else {
+                self.shareLog("[Credits] ERROR: No response data")
+                return
+            }
+
+            if let responseString = String(data: data, encoding: .utf8) {
+                self.shareLog("[Credits] Response: \(responseString)")
+            }
+
+            if httpResponse.statusCode == 200 {
+                do {
+                    if let json = try JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+                       let result = json.first {
+                        if let success = result["success"] as? Bool, success {
+                            let remaining = result["paid_credits_remaining"] as? Int ?? 0
+                            self.shareLog("[Credits] SUCCESS: Deducted \(garmentCount) credits, remaining: \(remaining)")
+
+                            // Update credits in UserDefaults for UI
+                            DispatchQueue.main.async {
+                                defaults.set(remaining, forKey: "user_available_credits")
+                                defaults.synchronize()
+                            }
+                        } else {
+                            let message = result["message"] as? String ?? "Unknown error"
+                            self.shareLog("[Credits] FAILED: \(message)")
+                        }
+                    }
+                } catch {
+                    self.shareLog("[Credits] ERROR: Failed to parse response: \(error)")
+                }
+            } else {
+                self.shareLog("[Credits] ERROR: Server returned status \(httpResponse.statusCode)")
+            }
+        }
+
+        task.resume()
     }
 
     private func extractInstagramUsername(from url: String) -> String? {
