@@ -4349,10 +4349,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         tableHeaderContainer.addSubview(imageComparisonView)
         tableHeaderContainer.addSubview(resultsLabel)
-        let headerTap = UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison))
-        headerTap.cancelsTouchesInView = false
-        tableHeaderContainer.addGestureRecognizer(headerTap)
-        tableHeaderContainer.isUserInteractionEnabled = true
+        // Full-width tap target to toggle comparison
+        let headerTapButton = UIButton(type: .custom)
+        headerTapButton.translatesAutoresizingMaskIntoConstraints = false
+        headerTapButton.backgroundColor = .clear
+        headerTapButton.addTarget(self, action: #selector(toggleImageComparison), for: .touchUpInside)
+        tableHeaderContainer.addSubview(headerTapButton)
 
         // Force a fixed-ish width based on the table width at layout time
         let fixedCardWidth: CGFloat = 408
@@ -4372,6 +4374,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
             resultsLabel.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
             resultsLabel.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
             resultsLabel.bottomAnchor.constraint(equalTo: tableHeaderContainer.bottomAnchor, constant: -12),
+
+            // Make the tap target cover the whole header area
+            headerTapButton.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor),
+            headerTapButton.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor),
+            headerTapButton.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor),
+            headerTapButton.bottomAnchor.constraint(equalTo: tableHeaderContainer.bottomAnchor),
         ])
 
         // Set as table header view so it scrolls with content
