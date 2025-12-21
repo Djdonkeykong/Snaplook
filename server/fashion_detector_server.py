@@ -50,7 +50,7 @@ cloudinary.config(
 )
 
 # SearchAPI.io credentials and configuration
-SERPAPI_KEY = os.getenv("SERPAPI_KEY", "UexwcLYH6kTnBnXnyMNZqQth")
+SERPAPI_KEY = os.getenv("SERPAPI_KEY", "pvMfH1LTuQ37BdoA9wzamK5G")
 SERPAPI_LOCATION = os.getenv("SERPAPI_LOCATION", "United States")  # Location for results
 SERPAPI_DEVICE = os.getenv("SERPAPI_DEVICE", "mobile")  # mobile or desktop
 
