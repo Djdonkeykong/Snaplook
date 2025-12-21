@@ -4475,7 +4475,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         collapsedStackView.addArrangedSubview(textLabel)
         collapsedStackView.addArrangedSubview(UIView()) // Spacer
         collapsedStackView.addArrangedSubview(iconImageView)
-        collapsedStackView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison)))
 
         // Expanded state UI - full image
         let fullImageView = UIImageView()
