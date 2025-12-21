@@ -33,7 +33,7 @@ load_dotenv(dotenv_path=Path(__file__).parent / '.env', override=True)
 
 from supabase_client import supabase_manager
 
-# Cache control (results + image_cache)
+# Cache lookup control (disable cache hits but still store history)
 CACHE_RESULTS = os.getenv("CACHE_RESULTS", "").lower() in {"1", "true", "yes"}
 
 # --- Logging control ---
@@ -2212,9 +2212,9 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         print(f"✅ Pipeline complete ({time.time()-t0:.2f}s total). "
               f"Returned {len(deduped_results)} results from {search_desc}.")
 
-        # Save to Supabase if user_id is provided
+        # Save to Supabase for user history if user_id is provided
         search_id = None
-        if CACHE_RESULTS and req.user_id and supabase_manager.enabled:
+        if req.user_id and supabase_manager.enabled:
             try:
                 # Use full image URL for display (not crop URL)
                 display_url = full_image_url or (crops_with_urls[0]['crop_url'] if crops_with_urls else None)

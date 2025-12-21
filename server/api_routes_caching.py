@@ -6,6 +6,7 @@ IMPORTANT: user_id must be a valid auth.users.id from Supabase Auth.
 """
 
 import os
+import uuid
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -18,9 +19,6 @@ from supabase_client import supabase_manager
 from hash_utils import hash_image, normalize_url
 
 router = APIRouter(prefix="/api/v1")
-
-CACHE_RESULTS = os.getenv("CACHE_RESULTS", "").lower() in {"1", "true", "yes"}
-
 
 # ============================================
 # REQUEST/RESPONSE MODELS
@@ -144,12 +142,13 @@ async def analyze_with_caching(
                 message=detection_result.get('message', 'Analysis failed')
             )
 
-        # Store in cache
+        # Store results for user history (cache lookups are disabled)
         cache_id = None
-        if CACHE_RESULTS and supabase_manager.enabled and detection_result.get('cloudinary_url'):
+        if supabase_manager.enabled and request.user_id and detection_result.get('cloudinary_url'):
+            cache_hash = image_hash or (hash_image(image_obj) if image_obj else None) or uuid.uuid4().hex
             cache_id = supabase_manager.store_cache(
                 image_url=image_url or detection_result.get('cloudinary_url'),
-                image_hash=image_hash or hash_image(image_obj) if image_obj else "",
+                image_hash=cache_hash,
                 cloudinary_url=detection_result['cloudinary_url'],
                 detected_garments=detection_result.get('detected_garments', []),
                 search_results=detection_result.get('results', [])
