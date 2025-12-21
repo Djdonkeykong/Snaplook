@@ -4340,11 +4340,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         tableHeaderContainer.addSubview(imageComparisonView)
         tableHeaderContainer.addSubview(resultsLabel)
 
+        // Force a fixed-ish width based on the table width at layout time
+        let fixedCardWidth = tableView.bounds.width * 0.15
+
         NSLayoutConstraint.activate([
             // Image comparison at top with horizontal padding
             imageComparisonView.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
             imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
-            imageComparisonView.widthAnchor.constraint(equalTo: tableHeaderContainer.widthAnchor, multiplier: 0.15),
+            imageComparisonView.widthAnchor.constraint(equalToConstant: fixedCardWidth),
             imageComparisonView.heightAnchor.constraint(equalToConstant: 68),
 
             // Results label below image comparison
@@ -4454,6 +4457,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             ?? .systemFont(ofSize: 15, weight: .medium)
         textLabel.textColor = .label
         textLabel.translatesAutoresizingMaskIntoConstraints = false
+        textLabel.lineBreakMode = .byTruncatingTail
+        textLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         // Expand/collapse icon
         let iconImageView = UIImageView()
