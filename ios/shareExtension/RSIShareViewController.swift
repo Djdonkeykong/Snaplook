@@ -4483,6 +4483,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         iconImageView.isUserInteractionEnabled = true
         iconImageView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison)))
 
+        // Extra tap target over the chevron area to improve hit testing
+        let chevronTapButton = UIButton(type: .custom)
+        chevronTapButton.translatesAutoresizingMaskIntoConstraints = false
+        chevronTapButton.backgroundColor = .clear
+        chevronTapButton.addTarget(self, action: #selector(toggleImageComparison), for: .touchUpInside)
+        container.addSubview(chevronTapButton)
+
         collapsedStackView.addArrangedSubview(thumbnailImageView)
         collapsedStackView.addArrangedSubview(textLabel)
         collapsedStackView.addArrangedSubview(UIView()) // Spacer
@@ -4519,6 +4526,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Icon constraints
             iconImageView.widthAnchor.constraint(equalToConstant: 16),
             iconImageView.heightAnchor.constraint(equalToConstant: 16),
+
+            // Chevron tap target
+            chevronTapButton.topAnchor.constraint(equalTo: container.topAnchor),
+            chevronTapButton.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            chevronTapButton.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            chevronTapButton.widthAnchor.constraint(equalToConstant: 80),
 
             // Collapsed stack view (10px padding instead of 12px for less height)
             collapsedStackView.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
