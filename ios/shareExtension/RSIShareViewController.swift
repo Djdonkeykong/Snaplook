@@ -4325,6 +4325,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let tableHeaderContainer = UIView()
         tableHeaderContainer.backgroundColor = .systemBackground
         tableHeaderContainer.translatesAutoresizingMaskIntoConstraints = false
+        tableHeaderContainer.layoutMargins = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
 
         // Image comparison view
         let imageComparisonView = createImageComparisonView()
@@ -4345,16 +4346,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
         imageComparisonHeightConstraint = imageHeightConstraint
 
         NSLayoutConstraint.activate([
-            // Image comparison at top with horizontal padding
+            // Image comparison at top with horizontal padding (use layout margins for consistent width)
             imageComparisonView.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
-            imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
-            imageComparisonView.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
+            imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.layoutMarginsGuide.leadingAnchor),
+            imageComparisonView.trailingAnchor.constraint(equalTo: tableHeaderContainer.layoutMarginsGuide.trailingAnchor),
             imageHeightConstraint,
 
             // Results label below image comparison
             resultsLabel.topAnchor.constraint(equalTo: imageComparisonView.bottomAnchor, constant: 16),
-            resultsLabel.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
-            resultsLabel.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
+            resultsLabel.leadingAnchor.constraint(equalTo: tableHeaderContainer.layoutMarginsGuide.leadingAnchor),
+            resultsLabel.trailingAnchor.constraint(equalTo: tableHeaderContainer.layoutMarginsGuide.trailingAnchor),
             resultsLabel.bottomAnchor.constraint(equalTo: tableHeaderContainer.bottomAnchor, constant: -12),
         ])
 
@@ -4364,8 +4365,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Size the header properly
         tableHeaderContainer.setNeedsLayout()
         tableHeaderContainer.layoutIfNeeded()
-        let headerHeight = tableHeaderContainer.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-        tableHeaderContainer.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: headerHeight)
+        updateTableHeaderSize(for: tableView)
 
         // Add all views to loadingView
         loadingView.addSubview(tableView)
@@ -4457,17 +4457,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
             ?? .systemFont(ofSize: 14, weight: .medium)
         textLabel.textColor = .label
         textLabel.translatesAutoresizingMaskIntoConstraints = false
-        textLabel.setContentHuggingPriority(.required, for: .horizontal)
-        textLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+        // Allow the label to shrink so the chevron never disappears
+        textLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        textLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         // Expand/collapse icon
         let iconImageView = UIImageView()
-        let iconConfig = UIImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+        let iconConfig = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
         iconImageView.image = UIImage(systemName: "chevron.down", withConfiguration: iconConfig)
         iconImageView.tintColor = .black
         iconImageView.contentMode = .scaleAspectFit
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
         iconImageView.tag = 1002 // Tag for rotation animation
+        // Keep the chevron visible even with long text
+        iconImageView.setContentHuggingPriority(.required, for: .horizontal)
+        iconImageView.setContentCompressionResistancePriority(.required, for: .horizontal)
         iconImageView.setContentHuggingPriority(.required, for: .horizontal)
         iconImageView.setContentCompressionResistancePriority(.required, for: .horizontal)
 
@@ -4507,9 +4511,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             thumbnailImageView.widthAnchor.constraint(equalToConstant: 56),
             thumbnailImageView.heightAnchor.constraint(equalToConstant: 56),
 
-            // Icon constraints (18x18 for better visibility)
-            iconImageView.widthAnchor.constraint(equalToConstant: 18),
-            iconImageView.heightAnchor.constraint(equalToConstant: 18),
+            // Icon constraints (20x20 for visibility)
+            iconImageView.widthAnchor.constraint(equalToConstant: 20),
+            iconImageView.heightAnchor.constraint(equalToConstant: 20),
 
             // Collapsed stack view padding
             collapsedStackView.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
@@ -4580,19 +4584,28 @@ open class RSIShareViewController: SLComposeServiceViewController {
             container.superview?.layoutIfNeeded()
         } completion: { _ in
             // Update table header view frame after animation to prevent white gap
-            if let tableView = self.resultsTableView,
-               let headerView = tableView.tableHeaderView {
-                headerView.setNeedsLayout()
-                headerView.layoutIfNeeded()
+            self.updateTableHeaderSize(for: self.resultsTableView)
+        }
+    }
 
-                let newHeaderHeight = headerView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-                var headerFrame = headerView.frame
-                headerFrame.size.height = newHeaderHeight
-                headerView.frame = headerFrame
+    // Recompute the tableHeaderView frame so it respects the current table width/margins.
+    private func updateTableHeaderSize(for tableView: UITableView?) {
+        guard let tableView = tableView, let header = tableView.tableHeaderView else { return }
 
-                // Trigger table view to update its content
-                tableView.tableHeaderView = headerView
-            }
+        // Match header width to table view minus adjusted insets
+        let targetWidth = tableView.bounds.width - tableView.adjustedContentInset.left - tableView.adjustedContentInset.right
+        header.frame.size.width = max(targetWidth, 0)
+
+        header.setNeedsLayout()
+        header.layoutIfNeeded()
+
+        let height = header.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
+        if header.frame.height != height {
+            header.frame.size.height = height
+            tableView.tableHeaderView = header
+        } else {
+            // Assign back to force UIKit to re-measure with the new width
+            tableView.tableHeaderView = header
         }
     }
 
