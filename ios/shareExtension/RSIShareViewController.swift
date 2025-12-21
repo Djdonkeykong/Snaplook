@@ -5249,28 +5249,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                self.shareLog("[Credits] ERROR: Request failed: \(error.localizedDescription)")
+                shareLog("[Credits] ERROR: Request failed: \(error.localizedDescription)")
                 return
             }
 
             guard let httpResponse = response as? HTTPURLResponse else {
-                self.shareLog("[Credits] ERROR: Invalid response type")
+                shareLog("[Credits] ERROR: Invalid response type")
                 return
             }
 
-            self.shareLog("[Credits] Response status code: \(httpResponse.statusCode)")
+            shareLog("[Credits] Response status code: \(httpResponse.statusCode)")
 
             guard let data = data else {
-                self.shareLog("[Credits] ERROR: No response data")
+                shareLog("[Credits] ERROR: No response data")
                 return
             }
 
             if let responseString = String(data: data, encoding: .utf8) {
-                self.shareLog("[Credits] Response: \(responseString)")
+                shareLog("[Credits] Response: \(responseString)")
             }
 
             if httpResponse.statusCode == 200 {
@@ -5279,7 +5277,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                        let result = json.first {
                         if let success = result["success"] as? Bool, success {
                             let remaining = result["paid_credits_remaining"] as? Int ?? 0
-                            self.shareLog("[Credits] SUCCESS: Deducted \(garmentCount) credits, remaining: \(remaining)")
+                            shareLog("[Credits] SUCCESS: Deducted \(garmentCount) credits, remaining: \(remaining)")
 
                             // Update credits in UserDefaults for UI
                             DispatchQueue.main.async {
@@ -5288,14 +5286,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
                             }
                         } else {
                             let message = result["message"] as? String ?? "Unknown error"
-                            self.shareLog("[Credits] FAILED: \(message)")
+                            shareLog("[Credits] FAILED: \(message)")
                         }
                     }
                 } catch {
-                    self.shareLog("[Credits] ERROR: Failed to parse response: \(error)")
+                    shareLog("[Credits] ERROR: Failed to parse response: \(error)")
                 }
             } else {
-                self.shareLog("[Credits] ERROR: Server returned status \(httpResponse.statusCode)")
+                shareLog("[Credits] ERROR: Server returned status \(httpResponse.statusCode)")
             }
         }
 
