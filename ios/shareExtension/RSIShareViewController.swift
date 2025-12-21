@@ -4451,7 +4451,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let textLabel = UILabel()
         textLabel.text = "Compare with original"
         textLabel.font = UIFont(name: "PlusJakartaSans-Medium", size: 14)
-            ?? .systemFont(ofSize: 15, weight: .Medium)
+            ?? .systemFont(ofSize: 15, weight: .medium)
         textLabel.textColor = .label
         textLabel.translatesAutoresizingMaskIntoConstraints = false
 
