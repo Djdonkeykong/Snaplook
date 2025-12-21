@@ -4341,7 +4341,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         tableHeaderContainer.addSubview(resultsLabel)
 
         // Force a fixed-ish width based on the table width at layout time
-        let fixedCardWidth = tableView.bounds.width * 0.15
+        let fallbackWidth: CGFloat = 160
+        let fixedCardWidth = max(tableView.bounds.width * 0.15, fallbackWidth)
 
         NSLayoutConstraint.activate([
             // Image comparison at top with horizontal padding
