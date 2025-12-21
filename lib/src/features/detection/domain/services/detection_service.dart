@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -81,6 +82,19 @@ class DetectionService {
     }
   }
 
+  Future<List<int>> _readNormalizedBytes(XFile image) async {
+    final bytes = await image.readAsBytes();
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) return bytes;
+
+    final orientation = decoded.exif.imageIfd.orientation;
+    if (orientation == null || orientation == 1) return bytes;
+
+    // Normalize EXIF orientation so backend sees the same orientation as UI.
+    final baked = img.bakeOrientation(decoded);
+    return img.encodeJpg(baked, quality: 95);
+  }
+
   Future<List<DetectionResult>> _analyzeViaDetectorServer(
     XFile? image, {
     bool skipDetection = false,
@@ -129,7 +143,7 @@ class DetectionService {
     } else if (image != null) {
       // Send base64 for detection - backend will upload crops as needed
       debugPrint('Sending base64 image for detection');
-      final bytes = await image.readAsBytes();
+      final bytes = await _readNormalizedBytes(image);
       payload['image_base64'] = base64Encode(bytes);
     } else {
       throw Exception('No image or URL provided');
@@ -377,7 +391,7 @@ class DetectionService {
   Future<_SerpImageBatch> _runLocalDetector(XFile image) async {
     final endpoint = AppConstants.serpDetectEndpoint;
     try {
-      final bytes = await image.readAsBytes();
+      final bytes = await _readNormalizedBytes(image);
       final payload = jsonEncode({
         'image_base64': base64Encode(bytes),
         'max_crops': _maxGarments,
