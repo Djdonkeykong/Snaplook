@@ -670,6 +670,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var headerLogoImageView: UIImageView?
     private var cancelButtonView: UIButton?
     private var backButtonView: UIButton?
+    private var resultsHeaderContainerView: UIView?
     private var imageComparisonContainerView: UIView?
     private var imageComparisonThumbnailImageView: UIImageView?
     private var imageComparisonFullImageView: UIImageView?
@@ -4375,10 +4376,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         let headerView = addResultsHeaderIfNeeded()
 
-        // Create table header view containing image comparison + results count
-        let tableHeaderContainer = UIView()
-        tableHeaderContainer.backgroundColor = .systemBackground
-        tableHeaderContainer.translatesAutoresizingMaskIntoConstraints = false
+        // Create results header view containing image comparison + results count
+        let resultsHeaderContainer = UIView()
+        resultsHeaderContainer.backgroundColor = .systemBackground
+        resultsHeaderContainer.translatesAutoresizingMaskIntoConstraints = false
+        resultsHeaderContainerView = resultsHeaderContainer
 
         // Image comparison view
         let imageComparisonView = createImageComparisonView()
@@ -4396,9 +4398,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         imageComparisonTapArea.translatesAutoresizingMaskIntoConstraints = false
         imageComparisonTapArea.addTarget(self, action: #selector(toggleImageComparison), for: .touchUpInside)
 
-        tableHeaderContainer.addSubview(imageComparisonTapArea)
+        resultsHeaderContainer.addSubview(imageComparisonTapArea)
         imageComparisonTapArea.addSubview(imageComparisonView)
-        tableHeaderContainer.addSubview(resultsLabel)
+        resultsHeaderContainer.addSubview(resultsLabel)
 
         // Prefer a fixed card width, but clamp it to available space.
         let widthConstraint = imageComparisonView.widthAnchor.constraint(equalToConstant: 408)
@@ -4413,9 +4415,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         NSLayoutConstraint.activate([
             // Tap area spans full row width so the entire row is clickable.
-            imageComparisonTapArea.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
-            imageComparisonTapArea.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor),
-            imageComparisonTapArea.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor),
+            imageComparisonTapArea.topAnchor.constraint(equalTo: resultsHeaderContainer.topAnchor, constant: 12),
+            imageComparisonTapArea.leadingAnchor.constraint(equalTo: resultsHeaderContainer.leadingAnchor),
+            imageComparisonTapArea.trailingAnchor.constraint(equalTo: resultsHeaderContainer.trailingAnchor),
 
             // Image comparison card inside the tap area.
             imageComparisonView.topAnchor.constraint(equalTo: imageComparisonTapArea.topAnchor),
@@ -4428,35 +4430,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Results label below image comparison
             resultsLabel.topAnchor.constraint(equalTo: imageComparisonTapArea.bottomAnchor, constant: 16),
-            resultsLabel.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
-            resultsLabel.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
-            resultsLabel.bottomAnchor.constraint(equalTo: tableHeaderContainer.bottomAnchor, constant: -12),
+            resultsLabel.leadingAnchor.constraint(equalTo: resultsHeaderContainer.leadingAnchor, constant: 16),
+            resultsLabel.trailingAnchor.constraint(equalTo: resultsHeaderContainer.trailingAnchor, constant: -16),
+            resultsLabel.bottomAnchor.constraint(equalTo: resultsHeaderContainer.bottomAnchor, constant: -12),
         ])
 
-        // Set as table header view so it scrolls with content
-        tableView.tableHeaderView = tableHeaderContainer
-
-        updateResultsHeaderLayout()
-
         // Add all views to loadingView
+        loadingView.addSubview(resultsHeaderContainer)
         loadingView.addSubview(tableView)
         loadingView.addSubview(bottomBarContainer)
         if let headerView = headerView {
             loadingView.bringSubviewToFront(headerView)
         }
 
-        let tableTopAnchor: NSLayoutYAxisAnchor
-        let tableTopPadding: CGFloat
+        let resultsHeaderTopAnchor: NSLayoutYAxisAnchor
         if let headerView = headerView {
-            tableTopAnchor = headerView.bottomAnchor
-            tableTopPadding = 0
+            resultsHeaderTopAnchor = headerView.bottomAnchor
         } else {
-            tableTopAnchor = loadingView.safeAreaLayoutGuide.topAnchor
-            tableTopPadding = 0
+            resultsHeaderTopAnchor = loadingView.safeAreaLayoutGuide.topAnchor
         }
 
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: tableTopAnchor, constant: tableTopPadding),
+            resultsHeaderContainer.topAnchor.constraint(equalTo: resultsHeaderTopAnchor),
+            resultsHeaderContainer.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
+            resultsHeaderContainer.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
+
+            tableView.topAnchor.constraint(equalTo: resultsHeaderContainer.bottomAnchor),
             tableView.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: bottomBarContainer.topAnchor),
@@ -4636,10 +4635,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Layout container and update table header
             container.layoutIfNeeded()
-            container.superview?.layoutIfNeeded()
+            if let loadingView = self.loadingView {
+                loadingView.layoutIfNeeded()
+            } else {
+                container.superview?.layoutIfNeeded()
+            }
         } completion: { _ in
-            // Update table header frame after animation so taps match the visible area.
-            self.updateResultsHeaderLayout()
+            if let loadingView = self.loadingView {
+                loadingView.layoutIfNeeded()
+            }
         }
     }
 
@@ -6717,6 +6721,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stopSmoothProgress()
         loadingView?.removeFromSuperview()
         loadingView = nil
+        resultsHeaderContainerView = nil
         removeResultsHeader()
         activityIndicator?.stopAnimating()
         activityIndicator = nil
@@ -7282,6 +7287,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         categoryFilterView = nil
 
         // Remove image comparison view
+        resultsHeaderContainerView = nil
         imageComparisonContainerView?.removeFromSuperview()
         imageComparisonContainerView = nil
         imageComparisonThumbnailImageView = nil
