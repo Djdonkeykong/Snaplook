@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // ACTUAL ONBOARDING FLOW - Used in production
 // Style direction - "Which styles do you like?" (multi-select)
-// Options: Streetwear, Minimal, Casual, Classic, Bold
+// Options: Streetwear, Minimal, Casual, Classic, Bold, Everything
 final styleDirectionProvider = StateProvider<List<String>>((ref) => []);
 
 // What you want - "What are you mostly looking for?" (multi-select)

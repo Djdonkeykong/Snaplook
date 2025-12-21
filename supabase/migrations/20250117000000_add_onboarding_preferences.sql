@@ -26,7 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_users_style_direction_gin ON public.users USING G
 CREATE INDEX IF NOT EXISTS idx_users_what_you_want_gin ON public.users USING GIN (what_you_want);
 
 -- Add comments to document the fields
-COMMENT ON COLUMN public.users.style_direction IS 'JSON array of style directions: ["Streetwear", "Minimal", "Casual", "Classic", "Bold"]';
+COMMENT ON COLUMN public.users.style_direction IS 'JSON array of style directions: ["Streetwear", "Minimal", "Casual", "Classic", "Bold", "Everything"]';
 COMMENT ON COLUMN public.users.what_you_want IS 'JSON array of product interests: ["Outfits", "Shoes", "Tops", "Accessories", "Everything"]';
 COMMENT ON COLUMN public.users.budget IS 'Budget preference: Affordable, Mid-range, Premium, or It varies';
 COMMENT ON COLUMN public.users.discovery_source IS 'How the user discovered the app (for attribution tracking)';

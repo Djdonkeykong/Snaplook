@@ -26,6 +26,7 @@ class _StyleDirectionPageState extends ConsumerState<StyleDirectionPage>
     'Casual',
     'Classic',
     'Bold',
+    'Everything',
   ];
 
   late List<AnimationController> _animationControllers;
