@@ -3842,6 +3842,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 widthConstraint.constant = target
             }
         }
+
+        updateResultsHeaderLayout()
+    }
+
+    private func updateResultsHeaderLayout() {
+        guard let tableView = resultsTableView,
+              let headerView = tableView.tableHeaderView else { return }
+
+        let targetWidth = tableView.bounds.width > 0 ? tableView.bounds.width : view.bounds.width
+        guard targetWidth > 0 else { return }
+
+        headerView.setNeedsLayout()
+        headerView.layoutIfNeeded()
+
+        let targetSize = headerView.systemLayoutSizeFitting(
+            CGSize(width: targetWidth, height: 0),
+            withHorizontalFittingPriority: .required,
+            verticalFittingPriority: .fittingSizeLevel
+        )
+
+        let needsUpdate = abs(headerView.frame.size.height - targetSize.height) > 0.5
+            || abs(headerView.frame.size.width - targetWidth) > 0.5
+        guard needsUpdate else { return }
+
+        headerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: targetSize.height)
+        tableView.tableHeaderView = headerView
     }
 
     private func applySheetCornerRadius(_ radius: CGFloat) {
@@ -4373,12 +4399,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Set as table header view so it scrolls with content
         tableView.tableHeaderView = tableHeaderContainer
 
-        // Size the header properly
-        tableHeaderContainer.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: tableHeaderContainer.frame.height)
-        tableHeaderContainer.setNeedsLayout()
-        tableHeaderContainer.layoutIfNeeded()
-        let headerHeight = tableHeaderContainer.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-        tableHeaderContainer.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: headerHeight)
+        updateResultsHeaderLayout()
 
         // Add all views to loadingView
         loadingView.addSubview(tableView)
@@ -4584,20 +4605,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             container.layoutIfNeeded()
             container.superview?.layoutIfNeeded()
         } completion: { _ in
-            // Update table header view frame after animation to prevent white gap
-            if let tableView = self.resultsTableView,
-               let headerView = tableView.tableHeaderView {
-                headerView.setNeedsLayout()
-                headerView.layoutIfNeeded()
-
-                let newHeaderHeight = headerView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
-                var headerFrame = headerView.frame
-                headerFrame.size.height = newHeaderHeight
-                headerView.frame = headerFrame
-
-                // Trigger table view to update its content
-                tableView.tableHeaderView = headerView
-            }
+            // Update table header frame after animation so taps match the visible area.
+            self.updateResultsHeaderLayout()
         }
     }
 
