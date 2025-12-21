@@ -4343,8 +4343,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         NSLayoutConstraint.activate([
             // Image comparison at top with horizontal padding
             imageComparisonView.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
-            imageComparisonView.centerXAnchor.constraint(equalTo: tableHeaderContainer.centerXAnchor),
-            imageComparisonView.widthAnchor.constraint(equalTo: tableHeaderContainer.widthAnchor, multiplier: 0.65),
+            imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
+            imageComparisonView.widthAnchor.constraint(equalTo: tableHeaderContainer.widthAnchor, multiplier: 0.55),
             imageComparisonView.heightAnchor.constraint(equalToConstant: 68),
 
             // Results label below image comparison
