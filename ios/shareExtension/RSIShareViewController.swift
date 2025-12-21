@@ -609,6 +609,15 @@ struct DetectionResponse: Decodable {
     }
 }
 
+private final class HeaderLayoutTrackingView: UIView {
+    var onLayout: (() -> Void)?
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        onLayout?()
+    }
+}
+
 @available(swift, introduced: 5.0)
 open class RSIShareViewController: SLComposeServiceViewController {
     var hostAppBundleIdentifier = ""
@@ -674,6 +683,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var imageComparisonThumbnailImageView: UIImageView?
     private var imageComparisonFullImageView: UIImageView?
     private var imageComparisonWidthConstraint: NSLayoutConstraint?
+    private var isUpdatingResultsHeaderLayout = false
     private var isImageComparisonExpanded = false
     private var isShowingResults = false
     private var isShowingPreview = false
@@ -3855,6 +3865,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func updateResultsHeaderLayout() {
+        guard !isUpdatingResultsHeaderLayout else { return }
+        isUpdatingResultsHeaderLayout = true
+        defer { isUpdatingResultsHeaderLayout = false }
+
         guard let tableView = resultsTableView,
               let headerView = tableView.tableHeaderView else { return }
 
@@ -4483,13 +4497,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func createImageComparisonView() -> UIView {
-        let container = UIView()
+        let container = HeaderLayoutTrackingView()
         // Match Flutter Colors.grey.shade50 (RGB 249, 249, 249)
         container.backgroundColor = UIColor(red: 249/255, green: 249/255, blue: 249/255, alpha: 1.0)
         container.translatesAutoresizingMaskIntoConstraints = false
         container.layer.cornerRadius = 12
         container.clipsToBounds = true
         container.isUserInteractionEnabled = false
+        container.onLayout = { [weak self] in
+            self?.updateResultsHeaderLayout()
+        }
 
         // Collapsed state UI - thumbnail + text + icon
         let collapsedStackView = UIStackView()
