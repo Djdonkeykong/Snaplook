@@ -3876,6 +3876,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         headerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: targetSize.height)
         tableView.tableHeaderView = headerView
+
+        // Force table view to update its layout without reloading data
+        tableView.beginUpdates()
+        tableView.endUpdates()
+
+        // Ensure visible cells are laid out correctly
+        tableView.layoutIfNeeded()
     }
 
     private func applySheetCornerRadius(_ radius: CGFloat) {
@@ -4327,6 +4334,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             tableView.backgroundColor = .systemBackground
             tableView.separatorStyle = .singleLine
             tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+
+            // Prevent white space issues when header resizes
+            tableView.contentInsetAdjustmentBehavior = .never
+            tableView.insetsContentViewsToSafeArea = false
 
             resultsTableView = tableView
             shareLog("Table view created successfully")
