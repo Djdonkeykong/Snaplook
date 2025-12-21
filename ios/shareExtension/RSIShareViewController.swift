@@ -4349,6 +4349,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         tableHeaderContainer.addSubview(imageComparisonView)
         tableHeaderContainer.addSubview(resultsLabel)
+
         // Force a fixed-ish width based on the table width at layout time
         let fixedCardWidth: CGFloat = 408
 
@@ -4366,7 +4367,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             resultsLabel.topAnchor.constraint(equalTo: imageComparisonView.bottomAnchor, constant: 16),
             resultsLabel.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
             resultsLabel.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
-            resultsLabel.bottomAnchor.constraint(equalTo: tableHeaderContainer.bottomAnchor, constant: -12)
+            resultsLabel.bottomAnchor.constraint(equalTo: tableHeaderContainer.bottomAnchor, constant: -12),
         ])
 
         // Set as table header view so it scrolls with content
@@ -4480,15 +4481,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         iconImageView.contentMode = .scaleAspectFit
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
         iconImageView.tag = 1002 // Tag for rotation animation
-        iconImageView.isUserInteractionEnabled = true
-        iconImageView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison)))
-
-        // Extra tap target over the chevron area to improve hit testing
-        let chevronTapButton = UIButton(type: .custom)
-        chevronTapButton.translatesAutoresizingMaskIntoConstraints = false
-        chevronTapButton.backgroundColor = .clear
-        chevronTapButton.addTarget(self, action: #selector(toggleImageComparison), for: .touchUpInside)
-        container.addSubview(chevronTapButton)
 
         collapsedStackView.addArrangedSubview(thumbnailImageView)
         collapsedStackView.addArrangedSubview(textLabel)
@@ -4526,12 +4518,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Icon constraints
             iconImageView.widthAnchor.constraint(equalToConstant: 16),
             iconImageView.heightAnchor.constraint(equalToConstant: 16),
-
-            // Chevron tap target
-            chevronTapButton.topAnchor.constraint(equalTo: container.topAnchor),
-            chevronTapButton.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            chevronTapButton.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            chevronTapButton.widthAnchor.constraint(equalToConstant: 80),
 
             // Collapsed stack view (10px padding instead of 12px for less height)
             collapsedStackView.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
