@@ -609,50 +609,6 @@ struct DetectionResponse: Decodable {
     }
 }
 
-private final class HeaderLayoutTrackingView: UIView {
-    var onLayout: (() -> Void)?
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        onLayout?()
-    }
-}
-
-private final class HeaderSizingTableView: UITableView {
-    private var isResizingHeader = false
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        sizeHeaderIfNeeded()
-    }
-
-    func sizeHeaderIfNeeded() {
-        guard !isResizingHeader else { return }
-        guard let headerView = tableHeaderView else { return }
-        let targetWidth = bounds.width
-        guard targetWidth > 0 else { return }
-
-        isResizingHeader = true
-        defer { isResizingHeader = false }
-
-        headerView.setNeedsLayout()
-        headerView.layoutIfNeeded()
-
-        let targetSize = headerView.systemLayoutSizeFitting(
-            CGSize(width: targetWidth, height: 0),
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
-        )
-
-        let needsUpdate = abs(headerView.frame.size.height - targetSize.height) > 0.5
-            || abs(headerView.frame.size.width - targetWidth) > 0.5
-        guard needsUpdate else { return }
-
-        headerView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: targetSize.height)
-        tableHeaderView = headerView
-    }
-}
-
 @available(swift, introduced: 5.0)
 open class RSIShareViewController: SLComposeServiceViewController {
     var hostAppBundleIdentifier = ""
@@ -718,7 +674,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var imageComparisonThumbnailImageView: UIImageView?
     private var imageComparisonFullImageView: UIImageView?
     private var imageComparisonWidthConstraint: NSLayoutConstraint?
-    private var isUpdatingResultsHeaderLayout = false
     private var isImageComparisonExpanded = false
     private var isShowingResults = false
     private var isShowingPreview = false
@@ -3900,16 +3855,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func updateResultsHeaderLayout() {
-        guard !isUpdatingResultsHeaderLayout else { return }
-        isUpdatingResultsHeaderLayout = true
-        defer { isUpdatingResultsHeaderLayout = false }
-
         guard let tableView = resultsTableView,
               let headerView = tableView.tableHeaderView else { return }
-
-        if let sizingTableView = tableView as? HeaderSizingTableView {
-            sizingTableView.sizeHeaderIfNeeded()
-        }
 
         let targetWidth = tableView.bounds.width > 0 ? tableView.bounds.width : view.bounds.width
         guard targetWidth > 0 else { return }
@@ -4377,15 +4324,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("Creating table view...")
         // Create table view if not exists
         if resultsTableView == nil {
-            let tableView = HeaderSizingTableView(frame: .zero, style: .plain)
+            let tableView = UITableView(frame: .zero, style: .plain)
             tableView.translatesAutoresizingMaskIntoConstraints = false
             tableView.delegate = self
             tableView.dataSource = self
             tableView.register(ResultCell.self, forCellReuseIdentifier: "ResultCell")
             tableView.rowHeight = UITableView.automaticDimension
-            tableView.estimatedRowHeight = 0
-            tableView.estimatedSectionHeaderHeight = 0
-            tableView.estimatedSectionFooterHeight = 0
+            tableView.estimatedRowHeight = 100
             tableView.backgroundColor = .systemBackground
             tableView.separatorStyle = .singleLine
             tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
@@ -4538,20 +4483,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func createImageComparisonView() -> UIView {
-        let container = HeaderLayoutTrackingView()
+        let container = UIView()
         // Match Flutter Colors.grey.shade50 (RGB 249, 249, 249)
         container.backgroundColor = UIColor(red: 249/255, green: 249/255, blue: 249/255, alpha: 1.0)
         container.translatesAutoresizingMaskIntoConstraints = false
         container.layer.cornerRadius = 12
         container.clipsToBounds = true
         container.isUserInteractionEnabled = false
-        container.onLayout = { [weak self] in
-            guard let self = self else { return }
-            self.resultsTableView?.setNeedsLayout()
-            DispatchQueue.main.async { [weak self] in
-                self?.updateResultsHeaderLayout()
-            }
-        }
 
         // Collapsed state UI - thumbnail + text + icon
         let collapsedStackView = UIStackView()
