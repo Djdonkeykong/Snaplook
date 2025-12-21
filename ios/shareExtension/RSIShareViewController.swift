@@ -4421,7 +4421,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Add tap gesture
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(toggleImageComparison))
-        tapGesture.cancelsTouchesInView = false
         container.addGestureRecognizer(tapGesture)
         container.isUserInteractionEnabled = true
 
@@ -4430,7 +4429,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         collapsedStackView.axis = .horizontal
         collapsedStackView.spacing = 12
         collapsedStackView.alignment = .center
-        collapsedStackView.isUserInteractionEnabled = true
         collapsedStackView.translatesAutoresizingMaskIntoConstraints = false
         collapsedStackView.tag = 1001 // Tag for easy reference
 
@@ -4459,8 +4457,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
             ?? .systemFont(ofSize: 15, weight: .medium)
         textLabel.textColor = .label
         textLabel.translatesAutoresizingMaskIntoConstraints = false
-        textLabel.lineBreakMode = .byTruncatingTail
-        textLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         // Expand/collapse icon
         let iconImageView = UIImageView()
