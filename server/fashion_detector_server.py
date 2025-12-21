@@ -19,7 +19,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, Field, model_validator
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageEnhance, ImageOps, ImageStat
 from transformers import AutoImageProcessor, YolosForObjectDetection
 import cloudinary
 import cloudinary.uploader
@@ -40,6 +40,10 @@ EXPAND_RATIO = float(os.getenv("EXPAND_RATIO", 0.1))
 SHOE_EXPAND_RATIO = float(os.getenv("SHOE_EXPAND_RATIO", 0.22))
 HAT_EXPAND_RATIO = float(os.getenv("HAT_EXPAND_RATIO", 0.18))
 MAX_GARMENTS = int(os.getenv("MAX_GARMENTS", 5))
+
+# Debug crop saving
+DEBUG_SAVE_CROPS = os.getenv("DEBUG_SAVE_CROPS", "").lower() in {"1", "true", "yes"}
+DEBUG_CROPS_DIR = Path(os.getenv("DEBUG_CROPS_DIR", str(Path.home() / "Desktop" / "snaplook_debug_crops")))
 
 # Cloudinary configuration
 cloudinary.config(
@@ -84,6 +88,23 @@ UPPER_CENTER_DIST_FRAC = 0.30   # centers closer than ~30% of avg width → same
 
 # Bottom garments for dress conflict resolution
 BOTTOM_GARMENTS = {
+    "pants",
+    "shorts",
+    "skirt",
+}
+
+# Use major apparel to build a loose person context for tighter crops.
+PERSON_CONTEXT_LABELS = {
+    "shirt, blouse",
+    "top, t-shirt, sweatshirt",
+    "sweater",
+    "cardigan",
+    "jacket",
+    "vest",
+    "coat",
+    "dress",
+    "jumpsuit",
+    "cape",
     "pants",
     "shorts",
     "skirt",
@@ -457,12 +478,101 @@ def expand_bbox(bbox, img_width, img_height, ratio=0.1):
     return [int(x1), int(y1), int(x2), int(y2)]
 
 
+def sanitize_filename(value: str) -> str:
+    safe = re.sub(r"[^a-zA-Z0-9_-]+", "_", value or "").strip("_")
+    return safe or "item"
+
+
+def save_debug_crops(crops: List[tuple], prefix: str) -> None:
+    if not DEBUG_SAVE_CROPS:
+        return
+    try:
+        DEBUG_CROPS_DIR.mkdir(parents=True, exist_ok=True)
+        run_id = uuid.uuid4().hex[:8]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        saved = 0
+        for idx, item in enumerate(crops, 1):
+            if not item or len(item) < 2:
+                continue
+            det, crop = item[0], item[1]
+            if crop is None:
+                continue
+            label = sanitize_filename(det.get("label", "item"))
+            filename = f"{timestamp}_{prefix}_{run_id}_{idx:02d}_{label}.jpg"
+            crop.save(DEBUG_CROPS_DIR / filename, format="JPEG", quality=85)
+            saved += 1
+        if saved:
+            print(f"[Debug] Saved {saved} crops to {DEBUG_CROPS_DIR}")
+    except Exception as e:
+        print(f"[Debug] Failed to save crops: {e}")
+
+
 def resolve_expand_ratio(label: str, base_ratio: float) -> float:
     if label == "shoe":
         return max(base_ratio, SHOE_EXPAND_RATIO)
     if label == "hat":
         return max(base_ratio, HAT_EXPAND_RATIO)
     return base_ratio
+
+def compute_expand_ratio(det: dict, base_ratio: float, image: Image.Image) -> float:
+    ratio = resolve_expand_ratio(det["label"], base_ratio)
+    w = det["bbox"][2] - det["bbox"][0]
+    h = det["bbox"][3] - det["bbox"][1]
+    img_area = max(1, image.width * image.height)
+    area_ratio = (w * h) / img_area
+    min_ratio = max(0.02, base_ratio * 0.6)
+
+    if area_ratio < 0.04:
+        ratio = max(ratio, base_ratio + 0.08)
+    elif area_ratio > 0.30:
+        ratio = max(min_ratio, ratio - 0.04)
+
+    if det.get("score", 1.0) < 0.5:
+        ratio = max(ratio, base_ratio + 0.05)
+
+    return min(ratio, 0.35)
+
+def clamp_bbox(bbox, bounds):
+    x1, y1, x2, y2 = bbox
+    X1, Y1, X2, Y2 = bounds
+    x1 = max(x1, X1)
+    y1 = max(y1, Y1)
+    x2 = min(x2, X2)
+    y2 = min(y2, Y2)
+    return [int(x1), int(y1), int(x2), int(y2)]
+
+def compute_person_context_bbox(detections: List[dict], image: Image.Image) -> Optional[List[int]]:
+    candidates = [d for d in detections if d["label"] in PERSON_CONTEXT_LABELS]
+    if len(candidates) < 2:
+        return None
+    x1 = min(d["bbox"][0] for d in candidates)
+    y1 = min(d["bbox"][1] for d in candidates)
+    x2 = max(d["bbox"][2] for d in candidates)
+    y2 = max(d["bbox"][3] for d in candidates)
+    area = max(1, (x2 - x1) * (y2 - y1))
+    if (area / (image.width * image.height)) < 0.12:
+        return None
+
+    pad_w = image.width * 0.05
+    pad_h = image.height * 0.05
+    x1 = max(0, x1 - pad_w)
+    y1 = max(0, y1 - pad_h)
+    x2 = min(image.width, x2 + pad_w)
+    y2 = min(image.height, y2 + pad_h)
+    return [int(x1), int(y1), int(x2), int(y2)]
+
+def get_luma_stats(image: Image.Image) -> tuple[float, float]:
+    gray = image.convert("L")
+    stat = ImageStat.Stat(gray)
+    mean = stat.mean[0] if stat.mean else 0.0
+    stddev = stat.stddev[0] if stat.stddev else 0.0
+    return mean, stddev
+
+def enhance_image_for_detection(image: Image.Image) -> Image.Image:
+    enhanced = ImageOps.autocontrast(image)
+    enhanced = ImageEnhance.Brightness(enhanced).enhance(1.15)
+    enhanced = ImageEnhance.Contrast(enhanced).enhance(1.2)
+    return enhanced
 
 def bbox_iou(box1, box2):
     x1, y1, x2, y2 = box1
@@ -947,8 +1057,8 @@ def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
     return flattened
 
 # === DETECTION CORE ===
-def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max_crops: int):
-    print(f"🚦 Using detection threshold: {threshold}")
+
+def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     inputs = processor(images=image, return_tensors="pt")
     with torch.no_grad():
         outputs = model(**inputs)
@@ -958,7 +1068,6 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
         target_sizes=torch.tensor([[image.height, image.width]])
     )[0]
 
-    # === Collect detections ===
     detections = []
     for box, score, label_idx in zip(results["boxes"], results["scores"], results["labels"]):
         score = score.item()
@@ -967,6 +1076,38 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
             continue
         x1, y1, x2, y2 = map(int, box.tolist())
         detections.append({"label": label, "score": score, "bbox": [x1, y1, x2, y2]})
+    return detections
+
+
+def merge_detections(primary: List[dict], extras: List[dict], iou_threshold: float = 0.6) -> List[dict]:
+    merged = list(primary)
+    for det in extras:
+        replaced = False
+        for i, existing in enumerate(merged):
+            if det["label"] != existing["label"]:
+                continue
+            if bbox_iou(det["bbox"], existing["bbox"]) >= iou_threshold:
+                if det["score"] > existing["score"]:
+                    merged[i] = det
+                replaced = True
+                break
+        if not replaced:
+            merged.append(det)
+    return merged
+
+
+def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max_crops: int):
+    print(f"dYsI Using detection threshold: {threshold}")
+    detections = get_raw_detections(image, threshold)
+
+    mean_luma, std_luma = get_luma_stats(image)
+    if (mean_luma < 65 or (mean_luma < 85 and std_luma < 25)) and len(detections) < max(2, max_crops):
+        print(f"[Detection] Low light (mean {mean_luma:.1f}, std {std_luma:.1f}) - running enhanced pass")
+        enhanced = enhance_image_for_detection(image)
+        relaxed_threshold = max(0.2, threshold * 0.9)
+        extra_detections = get_raw_detections(enhanced, relaxed_threshold)
+        if extra_detections:
+            detections = merge_detections(detections, extra_detections)
 
     # === Smart Headwear False Positive Filter (v3) ===
     filtered_detections = []
@@ -1483,13 +1624,17 @@ def detect(req: DetectRequest):
 
         # Step 2 — Prepare crops
         crops = []
+        context_bbox = compute_person_context_bbox(filtered, image)
         for det in filtered:
-            ratio = resolve_expand_ratio(det["label"], req.expand_ratio)
-            x1, y1, x2, y2 = expand_bbox(det["bbox"], image.width, image.height, ratio)
-            expanded_bbox = [x1, y1, x2, y2]
+            ratio = compute_expand_ratio(det, req.expand_ratio, image)
+            expanded_bbox = expand_bbox(det["bbox"], image.width, image.height, ratio)
+            if context_bbox and det["label"] in PERSON_CONTEXT_LABELS:
+                expanded_bbox = clamp_bbox(expanded_bbox, context_bbox)
+            x1, y1, x2, y2 = expanded_bbox
             det["expanded_bbox"] = expanded_bbox
             crop = image.crop((x1, y1, x2, y2))
             crops.append((det, crop, expanded_bbox))
+        save_debug_crops(crops, "detect")
 
         # Step 3 — Parallel Cloudinary uploads
         results = []
@@ -1570,6 +1715,7 @@ def run_full_detection_pipeline(
     image = None
     initial_count = 0
     uploaded_cloudinary_url = cloudinary_url  # Track the main cloudinary URL
+    full_image_url = None
 
     if skip_detection and (image_url or cloudinary_url):
         print("User cropped image - skipping detection")
@@ -1611,6 +1757,7 @@ def run_full_detection_pipeline(
             # Upload full image and use it for search
             uploaded_url = upload_to_cloudinary(image, "clothing")
             if uploaded_url:
+                full_image_url = uploaded_url
                 # Create a synthetic garment entry for the full image
                 filtered = [{
                     'label': 'clothing',
@@ -1637,12 +1784,16 @@ def run_full_detection_pipeline(
         else:
             return {'success': False, 'message': 'Failed to upload image to CDN'}
     elif image is not None:
+        context_bbox = compute_person_context_bbox(filtered, image)
         crop_data = []
         for det in filtered:
-            ratio = resolve_expand_ratio(det["label"], expand_ratio)
+            ratio = compute_expand_ratio(det, expand_ratio, image)
             expanded = expand_bbox(det["bbox"], image.width, image.height, ratio)
+            if context_bbox and det["label"] in PERSON_CONTEXT_LABELS:
+                expanded = clamp_bbox(expanded, context_bbox)
             det["expanded_bbox"] = expanded
             crop_data.append((det, image.crop(tuple(expanded))))
+        save_debug_crops(crop_data, "analyze")
 
         def upload_crop_safe(crop_tuple):
             det, crop = crop_tuple
@@ -1676,10 +1827,15 @@ def run_full_detection_pipeline(
         return {'success': False, 'message': 'No image available for processing'}
 
     if not crops_with_urls:
-        if image is not None:
+        if full_image_url:
+            print("All crop uploads failed - using full image fallback")
+            crops_with_urls = [{"garment": filtered[0], "crop_url": full_image_url}]
+            uploaded_cloudinary_url = full_image_url
+        elif image is not None:
             print("All uploads failed - attempting fallback")
             fallback_url = upload_to_cloudinary(image, filtered[0].get('label'))
             if fallback_url:
+                full_image_url = fallback_url
                 crops_with_urls = [{"garment": filtered[0], "crop_url": fallback_url}]
                 uploaded_cloudinary_url = fallback_url
             else:
@@ -1688,7 +1844,15 @@ def run_full_detection_pipeline(
             return {'success': False, 'message': 'Failed to upload to CDN'}
 
     # Step 4: Visual product search
-    print(f"Searching {len(crops_with_urls)} garments...")
+    search_items = list(crops_with_urls)
+    added_full_image = False
+    if full_image_url and not any(item["crop_url"] == full_image_url for item in crops_with_urls):
+        search_items.append({"garment": {"label": "full-image"}, "crop_url": full_image_url})
+        added_full_image = True
+    search_desc = f"{len(crops_with_urls)} crops"
+    if added_full_image:
+        search_desc += " + full image"
+    print(f"Searching {len(search_items)} items ({search_desc})...")
 
     def search_single_garment(item):
         garment = item['garment']
@@ -1711,8 +1875,8 @@ def run_full_detection_pipeline(
 
     t_serp = time.time()
     all_results = []
-    executor = ThreadPoolExecutor(max_workers=min(6, len(crops_with_urls)))
-    future_to_item = {executor.submit(search_single_garment, item): item for item in crops_with_urls}
+    executor = ThreadPoolExecutor(max_workers=min(6, len(search_items)))
+    future_to_item = {executor.submit(search_single_garment, item): item for item in search_items}
     done, not_done = set(), set()
     try:
         done, not_done = wait(list(future_to_item.keys()), timeout=None)
@@ -1882,12 +2046,16 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 print("[Cloudinary] Full image upload failed")
                 crops_with_urls = []
         elif image is not None:
+            context_bbox = compute_person_context_bbox(filtered, image)
             crop_data = []
             for det in filtered:
-                ratio = resolve_expand_ratio(det["label"], req.expand_ratio)
+                ratio = compute_expand_ratio(det, req.expand_ratio, image)
                 expanded = expand_bbox(det["bbox"], image.width, image.height, ratio)
+                if context_bbox and det["label"] in PERSON_CONTEXT_LABELS:
+                    expanded = clamp_bbox(expanded, context_bbox)
                 det["expanded_bbox"] = expanded
                 crop_data.append((det, image.crop(tuple(expanded))))
+            save_debug_crops(crop_data, "detect_search")
 
             def upload_crop_safe(crop_tuple):
                 det, crop = crop_tuple
@@ -1933,10 +2101,14 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
             print("[Cloudinary] No image available for cropping")
             crops_with_urls = []
         if not crops_with_urls:
-            if image is not None:
+            if full_image_url:
+                print("[Cloudinary] All crop uploads failed - using full image fallback")
+                crops_with_urls = [{"garment": filtered[0], "crop_url": full_image_url}]
+            elif image is not None:
                 print("[Cloudinary] All crop uploads failed - attempting fallback with entire image")
                 fallback_url = upload_to_cloudinary(image, filtered[0].get('label'))
                 if fallback_url:
+                    full_image_url = fallback_url
                     crops_with_urls = [{"garment": filtered[0], "crop_url": fallback_url}]
                     print("[Cloudinary] Fallback: Using entire image for search")
                 else:
@@ -1947,7 +2119,15 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 return {'success': False, 'message': 'Failed to upload garment crops to CDN', 'results': []}
 
         # Step 4: Visual product search (parallel, no timeout)
-        print(f"[SerpAPI] Searching {len(crops_with_urls)} garments...")
+        search_items = list(crops_with_urls)
+        added_full_image = False
+        if full_image_url and not any(item["crop_url"] == full_image_url for item in crops_with_urls):
+            search_items.append({"garment": {"label": "full-image"}, "crop_url": full_image_url})
+            added_full_image = True
+        search_desc = f"{len(crops_with_urls)} crops"
+        if added_full_image:
+            search_desc += " + full image"
+        print(f"[SerpAPI] Searching {len(search_items)} items ({search_desc})...")
 
         def search_single_garment(item):
             garment = item['garment']
@@ -1970,8 +2150,8 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
 
         t_serp = time.time()
         all_results = []
-        executor = ThreadPoolExecutor(max_workers=min(6, len(crops_with_urls)))
-        future_to_item = {executor.submit(search_single_garment, item): item for item in crops_with_urls}
+        executor = ThreadPoolExecutor(max_workers=min(6, len(search_items)))
+        future_to_item = {executor.submit(search_single_garment, item): item for item in search_items}
         done, not_done = set(), set()
         try:
             done, not_done = wait(list(future_to_item.keys()), timeout=None)  # Wait indefinitely
@@ -2007,7 +2187,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
 
         deduped_results = deduplicate_and_limit_by_domain(all_results)
         print(f"✅ Pipeline complete ({time.time()-t0:.2f}s total). "
-              f"Returned {len(deduped_results)} results from {len(crops_with_urls)} garments.")
+              f"Returned {len(deduped_results)} results from {search_desc}.")
 
         # Save to Supabase if user_id is provided
         search_id = None
@@ -2320,10 +2500,14 @@ def debug_detect(req: DetectRequest):
     draw = ImageDraw.Draw(debug_image)
     cropped_items = []
 
+    context_bbox = compute_person_context_bbox(filtered, image)
     for i, det in enumerate(filtered):
         label, score = det["label"], det["score"]
-        ratio = resolve_expand_ratio(label, req.expand_ratio)
-        x1, y1, x2, y2 = expand_bbox(det["bbox"], image.width, image.height, ratio)
+        ratio = compute_expand_ratio(det, req.expand_ratio, image)
+        expanded_bbox = expand_bbox(det["bbox"], image.width, image.height, ratio)
+        if context_bbox and label in PERSON_CONTEXT_LABELS:
+            expanded_bbox = clamp_bbox(expanded_bbox, context_bbox)
+        x1, y1, x2, y2 = expanded_bbox
         det["expanded_bbox"] = [x1, y1, x2, y2]
         draw.rectangle((x1, y1, x2, y2), outline="red", width=3)
         draw.text((x1 + 4, y1 + 4), f"{label}:{score:.2f}", fill="red")
@@ -2354,4 +2538,6 @@ def debug_detect(req: DetectRequest):
 @app.get("/")
 def root():
     return {"message": "Fashion Detector API is running!"}
+
+
 
