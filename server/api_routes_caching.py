@@ -43,6 +43,7 @@ class AnalyzeResponse(BaseModel):
     search_id: Optional[str] = None
     image_cache_id: Optional[str] = None
     total_results: int
+    garments_searched: int = 0
     detected_garments: List[Dict[str, Any]]
     search_results: List[Dict[str, Any]]
     message: Optional[str] = None
@@ -134,6 +135,7 @@ async def analyze_with_caching(
                 success=False,
                 cached=False,
                 total_results=0,
+                garments_searched=0,
                 detected_garments=[],
                 search_results=[],
                 message=detection_result.get('message', 'Analysis failed')
@@ -177,6 +179,7 @@ async def analyze_with_caching(
             search_id=search_id,
             image_cache_id=cache_id,
             total_results=detection_result.get('total_results', 0),
+            garments_searched=detection_result.get('garments_searched', 0),
             detected_garments=detection_result.get('detected_garments', []),
             search_results=detection_result.get('results', [])
         )

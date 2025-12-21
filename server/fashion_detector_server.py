@@ -1757,6 +1757,7 @@ def run_full_detection_pipeline(
             }
             for det in filtered
         ],
+        'garments_searched': len(filtered),
         'results': deduped_results,
         'total_results': len(deduped_results)
     }
