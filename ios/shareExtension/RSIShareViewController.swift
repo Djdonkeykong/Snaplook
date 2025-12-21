@@ -4344,7 +4344,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Image comparison at top with horizontal padding
             imageComparisonView.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
             imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
-            imageComparisonView.widthAnchor.constraint(equalTo: tableHeaderContainer.widthAnchor, multiplier: 0.55),
+            imageComparisonView.widthAnchor.constraint(equalTo: tableHeaderContainer.widthAnchor, multiplier: 0.15),
             imageComparisonView.heightAnchor.constraint(equalToConstant: 68),
 
             // Results label below image comparison
