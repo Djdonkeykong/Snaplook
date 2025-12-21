@@ -1239,7 +1239,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     ) {
         // Use Apify actor nH2AHrwxeTRJoN5hX via run-sync-get-dataset-items
         // This endpoint waits for the run to complete and returns the dataset items directly
-        guard let endpoint = URL(string: "https://api.apify.com/v2/acts/nH2AHrwxeTRJoN5hX/run-sync-get-dataset-items?token=\(apiToken)&timeout=60") else {
+        guard let endpoint = URL(string: "https://api.apify.com/v2/acts/nH2AHrwxeTRJoN5hX/run-sync-get-dataset-items?token=\(apiToken)&timeout=60&memory=2048") else {
             completion(.failure(makeDownloadError("instagram", "Invalid Apify endpoint")))
             return
         }

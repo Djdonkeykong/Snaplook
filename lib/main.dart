@@ -681,6 +681,24 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
   }
 
   Future<void> _checkForPendingSharedMediaOnResume() async {
+    try {
+      // Check if there's a pending search_id from "Analyze now" + "Analyze in app" flow
+      final searchId = await ShareImportStatus.getPendingSearchId();
+      if (searchId != null && searchId.isNotEmpty) {
+        _logShare("[SHARE EXTENSION] Found pending search_id: $searchId");
+        _logShare(
+            "[SHARE EXTENSION] Navigating to detection page with existing results");
+
+        // Navigate to detection page with this search_id to load existing results
+        _navigateToDetectionWithSearchId(searchId);
+        return;
+      }
+    } catch (e) {
+      debugPrint(
+        "[SHARE EXTENSION ERROR] Error checking pending search_id: $e",
+      );
+    }
+
     if (_skipNextResumePendingCheck) {
       _skipNextResumePendingCheck = false;
       return;
@@ -689,6 +707,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       // Initial share already queued for HomePage; avoid double-handling before UI is ready.
       return;
     }
+
     try {
       // Check if user tapped "Open Snaplook" from login modal in share extension
       final prefs = await SharedPreferences.getInstance();
@@ -701,18 +720,6 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
         // Navigate to login page
         _navigateToLoginPage();
-        return;
-      }
-
-      // Check if there's a pending search_id from "Analyze now" + "Analyze in app" flow
-      final searchId = await ShareImportStatus.getPendingSearchId();
-      if (searchId != null && searchId.isNotEmpty) {
-        _logShare("[SHARE EXTENSION] Found pending search_id: $searchId");
-        _logShare(
-            "[SHARE EXTENSION] Navigating to detection page with existing results");
-
-        // Navigate to detection page with this search_id to load existing results
-        _navigateToDetectionWithSearchId(searchId);
         return;
       }
 

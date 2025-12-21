@@ -32,7 +32,7 @@ class InstagramService {
     // Apify Instagram Post Scraper actor
     final uri = Uri.parse(
       'https://api.apify.com/v2/acts/nH2AHrwxeTRJoN5hX/run-sync-get-dataset-items'
-      '?token=$apifyToken&timeout=60',
+      '?token=$apifyToken&timeout=60&memory=2048',
     );
 
     final payload = {

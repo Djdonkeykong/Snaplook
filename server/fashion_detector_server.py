@@ -1430,13 +1430,19 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
     return filtered, initial_detection_count
 
 # === SERP API SEARCH HELPERS ===
+def load_image_from_bytes(img_bytes: bytes) -> Image.Image:
+    image = Image.open(io.BytesIO(img_bytes))
+    image = ImageOps.exif_transpose(image)
+    return image.convert("RGB")
+
+
 def download_image_from_url(image_url: str) -> Image.Image:
     """Download image from URL and return PIL Image."""
     print(f"📥 Downloading image from: {image_url}")
     response = requests.get(image_url, timeout=15)
     if response.status_code != 200:
         raise Exception(f"Failed to download image: {response.status_code}")
-    return Image.open(io.BytesIO(response.content)).convert("RGB")
+    return load_image_from_bytes(response.content)
 
 def search_serp_api(
     image_url: str,
@@ -1617,7 +1623,7 @@ def format_detection_result(serp_result: dict, garment_label: str, index: int) -
 def detect(req: DetectRequest):
     try:
         img_bytes = base64.b64decode(req.image_base64)
-        image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        image = load_image_from_bytes(img_bytes)
 
         # Step 1 — Run YOLOS detection
         filtered, initial_count = run_detection(image, req.threshold, req.expand_ratio, req.max_crops)
@@ -1732,7 +1738,7 @@ def run_full_detection_pipeline(
         if image_base64:
             try:
                 img_bytes = base64.b64decode(image_base64)
-                image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                image = load_image_from_bytes(img_bytes)
                 print(f"Image decoded from base64: {image.width}x{image.height}")
             except Exception as e:
                 return {'success': False, 'message': f'Unable to decode base64 image: {e}'}
@@ -1993,7 +1999,7 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 except Exception as e:
                     raise HTTPException(status_code=400, detail=f"Invalid image_base64 payload: {e}")
                 try:
-                    image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                    image = load_image_from_bytes(img_bytes)
                 except Exception as e:
                     raise HTTPException(status_code=400, detail=f"Unable to decode base64 image: {e}")
                 print(f"\u2705 Image decoded from base64: {image.width}x{image.height} ({time.time()-t0:.2f}s)")
@@ -2488,7 +2494,7 @@ def search_visual_products(
 @app.post("/debug")
 def debug_detect(req: DetectRequest):
     img_bytes = base64.b64decode(req.image_base64)
-    image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    image = load_image_from_bytes(img_bytes)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     out_dir = Path(f"./debug_{timestamp}")
