@@ -24,6 +24,13 @@ class ProfilePage extends ConsumerStatefulWidget {
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   final ScrollController _scrollController = ScrollController();
 
+  void _resetMainNavigationState() {
+    ref.read(selectedIndexProvider.notifier).state = 0;
+    ref.invalidate(selectedIndexProvider);
+    ref.invalidate(scrollToTopTriggerProvider);
+    ref.invalidate(isAtHomeRootProvider);
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -177,6 +184,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     if (confirmed == true && mounted) {
       try {
+        _resetMainNavigationState();
         // Navigate immediately to prevent UI flash of default user
         Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),

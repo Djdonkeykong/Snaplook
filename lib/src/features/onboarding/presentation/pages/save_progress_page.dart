@@ -39,6 +39,13 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
 
+  void _resetMainNavigationState() {
+    ref.read(selectedIndexProvider.notifier).state = 0;
+    ref.invalidate(selectedIndexProvider);
+    ref.invalidate(scrollToTopTriggerProvider);
+    ref.invalidate(isAtHomeRootProvider);
+  }
+
   Future<void> _openLegalLink({
     required String url,
     required String fallbackLabel,
@@ -166,6 +173,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           }
 
           if (mounted) {
+            _resetMainNavigationState();
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(
                 builder: (context) => const MainNavigation(
