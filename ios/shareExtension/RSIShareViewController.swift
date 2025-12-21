@@ -4332,8 +4332,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let resultsLabel = UILabel()
         let resultsCount = detectionResults.count
         resultsLabel.text = "Found \(resultsCount) similar match\(resultsCount == 1 ? "" : "es")"
-        resultsLabel.font = UIFont(name: "PlusJakartaSans-Bold", size: 17)
-            ?? .systemFont(ofSize: 17, weight: .bold)
+        resultsLabel.font = UIFont(name: "PlusJakartaSans-Medium", size: 16)
+            ?? .systemFont(ofSize: 17, weight: .medium)
         resultsLabel.textColor = UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0) // Munsell red
         resultsLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -4343,8 +4343,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         NSLayoutConstraint.activate([
             // Image comparison at top with horizontal padding
             imageComparisonView.topAnchor.constraint(equalTo: tableHeaderContainer.topAnchor, constant: 12),
-            imageComparisonView.leadingAnchor.constraint(equalTo: tableHeaderContainer.leadingAnchor, constant: 16),
-            imageComparisonView.trailingAnchor.constraint(equalTo: tableHeaderContainer.trailingAnchor, constant: -16),
+            imageComparisonView.centerXAnchor.constraint(equalTo: tableHeaderContainer.centerXAnchor),
+            imageComparisonView.widthAnchor.constraint(equalTo: tableHeaderContainer.widthAnchor, multiplier: 0.92),
             imageComparisonView.heightAnchor.constraint(equalToConstant: 68),
 
             // Results label below image comparison
@@ -4358,6 +4358,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         tableView.tableHeaderView = tableHeaderContainer
 
         // Size the header properly
+        tableHeaderContainer.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: tableHeaderContainer.frame.height)
         tableHeaderContainer.setNeedsLayout()
         tableHeaderContainer.layoutIfNeeded()
         let headerHeight = tableHeaderContainer.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize).height
@@ -4449,8 +4450,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Text label
         let textLabel = UILabel()
         textLabel.text = "Compare with original"
-        textLabel.font = UIFont(name: "PlusJakartaSans-SemiBold", size: 15)
-            ?? .systemFont(ofSize: 15, weight: .semibold)
+        textLabel.font = UIFont(name: "PlusJakartaSans-Medium", size: 14)
+            ?? .systemFont(ofSize: 15, weight: .Medium)
         textLabel.textColor = .label
         textLabel.translatesAutoresizingMaskIntoConstraints = false
 
