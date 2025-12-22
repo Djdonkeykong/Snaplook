@@ -11,6 +11,10 @@ from supabase import create_client, Client
 
 # Minimum pixel area filter (width * height); default ~2MP
 MIN_PIXELS = 2_000_000
+ALLOWED_DOMAIN = "bananarepublic.gap.com"
+ALLOWED_PATH_PREFIXES = ["/browse/product.do"]
+ALLOWED_QUERY_PARAM = "pid"
+ALLOWED_SCHEMES = {"https"}
 
 
 def is_allowed(url: str, allowed_domains, path_prefixes: list[str] | None) -> bool:
@@ -20,14 +24,20 @@ def is_allowed(url: str, allowed_domains, path_prefixes: list[str] | None) -> bo
         parsed = urlparse(url)
         host = parsed.hostname or ""
         path = parsed.path or ""
+        scheme = (parsed.scheme or "").lower()
+        query = parsed.query or ""
     except Exception:
+        return False
+    if scheme not in ALLOWED_SCHEMES:
         return False
     host = host.lower()
     domain_ok = allowed_domains == ["*"] or any(host == d or host.endswith("." + d) for d in allowed_domains)
     if not domain_ok:
         return False
-    if path_prefixes:
-        return any(path.startswith(prefix) for prefix in path_prefixes)
+    if path_prefixes and not any(path.startswith(prefix) for prefix in path_prefixes):
+        return False
+    if ALLOWED_QUERY_PARAM:
+        return re.search(rf"(?:^|&){re.escape(ALLOWED_QUERY_PARAM)}=\d+", query) is not None
     return True
 
 
@@ -203,10 +213,14 @@ def main():
     parser.add_argument("--target-gender", type=str, default=None, help="Optional target gender to store if the column exists")
     parser.add_argument("--table", default="products", help="Supabase table name")
     parser.add_argument("--brand", type=str, default=None, help="Optional brand to store if the column exists")
-    parser.add_argument("--domains", default="www.weekday.com", help="Comma-separated allowed domains; use * to allow any")
+    parser.add_argument(
+        "--domains",
+        default=ALLOWED_DOMAIN,
+        help="Comma-separated allowed domains; use * to allow any",
+    )
     parser.add_argument(
         "--path-prefix",
-        default="/en-ww/p",
+        default=",".join(ALLOWED_PATH_PREFIXES),
         help="Optional required URL path prefix(es), comma-separated (e.g., /en-ww/p). Leave empty to disable path filtering.",
     )
     parser.add_argument(
@@ -234,8 +248,8 @@ def main():
         }.items() if not val]
         raise SystemExit(f"Missing required environment vars: {', '.join(missing)}")
 
-    allowed_domains = [d.strip().lower() for d in args.domains.split(",") if d.strip()]
-    path_prefixes = [p.strip() if p.strip().startswith("/") else "/" + p.strip() for p in args.path_prefix.split(",") if p.strip()] or None
+    allowed_domains = [ALLOWED_DOMAIN]
+    path_prefixes = ALLOWED_PATH_PREFIXES
 
     MIN_PIXELS = args.min_pixels
 

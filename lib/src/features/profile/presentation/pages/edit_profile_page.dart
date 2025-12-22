@@ -24,11 +24,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     final user = ref.watch(currentUserProvider);
     final email = user?.email ?? 'user@example.com';
     final metadata = user?.userMetadata ?? <String, dynamic>{};
-    final fullName = metadata['full_name'] as String? ?? email.split('@').first;
-    final username = metadata['username'] as String? ?? email.split('@').first;
-    final displayUsername = username.isNotEmpty ? username : 'User';
+    final fullName = (metadata['full_name'] as String? ?? '').trim();
+    final username = (metadata['username'] as String? ?? '').trim();
+    final fallbackName = email.split('@').first;
+    final displayName = fullName.isNotEmpty
+        ? fullName
+        : (username.isNotEmpty ? username : fallbackName);
     final circleLabel =
-        displayUsername.isNotEmpty ? displayUsername[0].toUpperCase() : 'U';
+        displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -84,7 +87,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     ),
                     SizedBox(height: spacing.s),
                     Text(
-                      displayUsername,
+                      displayName,
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,

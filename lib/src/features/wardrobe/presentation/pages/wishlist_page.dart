@@ -291,8 +291,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
 
     if (confirmed != true) return false;
 
-    HapticFeedback.mediumImpact();
-
     await ref.read(favoritesProvider.notifier).removeFavorite(productId);
 
     if (!mounted) return true;
@@ -365,7 +363,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
 
     return EasyRefresh(
       onRefresh: () async {
-        HapticFeedback.selectionClick();
         await ref.read(favoritesProvider.notifier).refresh();
       },
       header: ClassicHeader(
@@ -579,7 +576,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
 
     return EasyRefresh(
       onRefresh: () async {
-        HapticFeedback.selectionClick();
         ref.invalidate(historyProvider);
       },
       header: ClassicHeader(
@@ -780,6 +776,8 @@ class _FavoriteCard extends ConsumerWidget {
   }
 
   Future<void> _shareProductUrl(BuildContext context) async {
+    HapticFeedback.mediumImpact();
+
     final productUrl = _resolveProductUrl();
     if (productUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -903,8 +901,6 @@ class _FavoriteCard extends ConsumerWidget {
       );
       return;
     }
-
-    HapticFeedback.selectionClick();
 
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
@@ -1291,8 +1287,6 @@ class _HistoryCard extends ConsumerWidget {
 
     if (confirmed != true) return false;
 
-    HapticFeedback.mediumImpact();
-
     final supabaseService = SupabaseService();
     final success = await supabaseService.deleteSearch(searchId);
 
@@ -1316,8 +1310,6 @@ class _HistoryCard extends ConsumerWidget {
       _showToast(context, 'No image available for re-search.');
       return;
     }
-
-    HapticFeedback.selectionClick();
 
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(

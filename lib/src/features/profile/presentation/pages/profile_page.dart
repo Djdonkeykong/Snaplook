@@ -280,12 +280,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final user = ref.watch(currentUserProvider);
     final userEmail = user?.email ?? 'user@example.com';
     final metadata = user?.userMetadata ?? <String, dynamic>{};
-    final username = metadata['username'] as String? ?? '';
-    final fullName = metadata['full_name'] as String? ?? '';
-    final displayName = (username.isNotEmpty
-            ? username
-            : (fullName.isNotEmpty ? fullName : userEmail.split('@').first))
-        .trim();
+    final fullName = (metadata['full_name'] as String? ?? '').trim();
+    final username = (metadata['username'] as String? ?? '').trim();
+    final fallbackName = userEmail.split('@').first;
+    final displayName = fullName.isNotEmpty
+        ? fullName
+        : (username.isNotEmpty ? username : fallbackName);
     final profileInitial =
         displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
 
