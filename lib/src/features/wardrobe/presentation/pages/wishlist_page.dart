@@ -1818,10 +1818,10 @@ class _HistoryShareCard extends StatelessWidget {
 
         final heroSize = s(520);
         final heroRadius = s(40);
-        final cardWidth = s(880);
+        final cardWidth = s(960);
         final cardRadius = s(32);
-        final rowImageSize = s(92);
-        final rowVerticalPadding = s(18);
+        final rowImageSize = s(108);
+        final rowVerticalPadding = s(20);
         final rowHeight = rowImageSize + (rowVerticalPadding * 2);
         final listHeight = rowHeight * 4.2;
 
@@ -1923,8 +1923,8 @@ class _HistoryShareCard extends StatelessWidget {
                                     return _ShareResultRow(
                                       item: shareItems[index],
                                       imageSize: rowImageSize,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: s(24),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: s(30),
                                         vertical: rowVerticalPadding,
                                       ),
                                     );
@@ -1933,8 +1933,8 @@ class _HistoryShareCard extends StatelessWidget {
                                     height: 1,
                                     thickness: 1,
                                     color: const Color(0xFFEDEDED),
-                                    indent: s(24),
-                                    endIndent: s(24),
+                                    indent: s(30),
+                                    endIndent: s(30),
                                   ),
                                 ),
                               ),
