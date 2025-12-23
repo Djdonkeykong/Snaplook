@@ -1887,7 +1887,7 @@ class _HistoryShareCard extends StatelessWidget {
                         Positioned(
                           left: 0,
                           right: 0,
-                          bottom: 6,
+                          bottom: -24,
                           child: Center(
                             child: _TopMatchesTag(
                               height: s(74),
