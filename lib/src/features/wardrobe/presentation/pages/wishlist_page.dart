@@ -1816,14 +1816,14 @@ class _HistoryShareCard extends StatelessWidget {
         final scale = width / 1080;
         double s(double value) => value * scale;
 
-        final heroSize = s(660);
-        final heroRadius = s(48);
+        final heroSize = s(600);
+        final heroRadius = s(44);
         final cardWidth = s(880);
         final cardRadius = s(32);
         final rowImageSize = s(92);
         final rowVerticalPadding = s(18);
         final rowHeight = rowImageSize + (rowVerticalPadding * 2);
-        final listHeight = rowHeight * 2.55;
+        final listHeight = rowHeight * 2.75;
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(s(52)),
@@ -1943,14 +1943,14 @@ class _HistoryShareCard extends StatelessWidget {
                           bottom: 0,
                           child: IgnorePointer(
                             child: Container(
-                              height: s(140),
+                              height: s(110),
                               decoration: const BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                   colors: [
                                     Color(0x00FFFFFF),
-                                    Color(0xCCFFFFFF),
+                                    Color(0xB3FFFFFF),
                                     Color(0xFFFFFFFF),
                                   ],
                                 ),
