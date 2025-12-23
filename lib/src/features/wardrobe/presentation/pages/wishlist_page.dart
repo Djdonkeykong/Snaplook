@@ -1816,14 +1816,14 @@ class _HistoryShareCard extends StatelessWidget {
         final scale = width / 1080;
         double s(double value) => value * scale;
 
-        final heroSize = s(600);
-        final heroRadius = s(44);
+        final heroSize = s(520);
+        final heroRadius = s(40);
         final cardWidth = s(880);
         final cardRadius = s(32);
         final rowImageSize = s(92);
         final rowVerticalPadding = s(18);
         final rowHeight = rowImageSize + (rowVerticalPadding * 2);
-        final listHeight = rowHeight * 2.75;
+        final listHeight = rowHeight * 2.7;
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(s(52)),
@@ -1912,28 +1912,27 @@ class _HistoryShareCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(cardRadius),
                           child: Container(
                             color: Colors.white,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                for (var i = 0; i < shareItems.length; i++) ...[
-                                  _ShareResultRow(
-                                    item: shareItems[i],
-                                    imageSize: rowImageSize,
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: s(24),
-                                      vertical: rowVerticalPadding,
-                                    ),
+                            child: ListView.separated(
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: EdgeInsets.zero,
+                              itemCount: shareItems.length,
+                              itemBuilder: (context, index) {
+                                return _ShareResultRow(
+                                  item: shareItems[index],
+                                  imageSize: rowImageSize,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: s(24),
+                                    vertical: rowVerticalPadding,
                                   ),
-                                  if (i < shareItems.length - 1)
-                                    Divider(
-                                      height: 1,
-                                      thickness: 1,
-                                      color: const Color(0xFFEDEDED),
-                                      indent: s(24),
-                                      endIndent: s(24),
-                                    ),
-                                ],
-                              ],
+                                );
+                              },
+                              separatorBuilder: (context, index) => Divider(
+                                height: 1,
+                                thickness: 1,
+                                color: const Color(0xFFEDEDED),
+                                indent: s(24),
+                                endIndent: s(24),
+                              ),
                             ),
                           ),
                         ),
