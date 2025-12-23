@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:snaplook/src/shared/utils/native_share_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -1100,7 +1101,7 @@ class _HistoryCard extends ConsumerWidget {
     'photos',
     'home',
   };
-  static const Size _shareCardSize = Size(720, 900);
+  static const Size _shareCardSize = Size(1080, 1350);
   static const double _shareCardPixelRatio = 2.0;
 
   const _HistoryCard({
@@ -1131,6 +1132,7 @@ class _HistoryCard extends ConsumerWidget {
     }
 
     final payload = _buildSharePayload(fullSearch);
+    final shareItems = _buildShareItems(fullSearch);
     final cloudinaryUrl =
         (fullSearch['cloudinary_url'] as String?)?.trim() ?? '';
     XFile? shareImage;
@@ -1138,15 +1140,15 @@ class _HistoryCard extends ConsumerWidget {
       shareImage = await _downloadAndSquare(cloudinaryUrl);
     }
 
-    final totalResults =
-        (fullSearch['total_results'] as num?)?.toInt() ?? 0;
-    final heroProvider =
-        shareImage != null ? FileImage(File(shareImage.path)) : null;
+    final heroProvider = shareImage != null
+        ? FileImage(File(shareImage.path))
+        : (cloudinaryUrl.isNotEmpty
+            ? CachedNetworkImageProvider(cloudinaryUrl)
+            : null);
     final shareCard = await _buildShareCardFile(
       context,
       heroImage: heroProvider,
-      totalResults: totalResults,
-      sourceLabel: _getSourceLabel(),
+      shareItems: shareItems,
     );
 
     final primaryFile = shareCard ?? shareImage;
@@ -1187,6 +1189,43 @@ class _HistoryCard extends ConsumerWidget {
       subject: 'Snaplook Matches',
       message: message,
     );
+  }
+
+  List<_ShareCardItem> _buildShareItems(Map<String, dynamic> searchData) {
+    final results = _extractSearchResults(searchData['search_results']);
+    if (results.isEmpty) return const [];
+
+    final items = <_ShareCardItem>[];
+    for (final result in results.take(2)) {
+      final item = _ShareCardItem.fromSearch(result);
+      if (item != null) {
+        items.add(item);
+      }
+    }
+    return items;
+  }
+
+  List<Map<String, dynamic>> _extractSearchResults(dynamic rawResults) {
+    dynamic decoded = rawResults;
+    if (rawResults is String) {
+      try {
+        decoded = jsonDecode(rawResults);
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (decoded is List) {
+      final results = <Map<String, dynamic>>[];
+      for (final item in decoded) {
+        if (item is Map) {
+          results.add(Map<String, dynamic>.from(item));
+        }
+      }
+      return results;
+    }
+
+    return const [];
   }
 
   Future<XFile?> _downloadAndSquare(String url) async {
@@ -1242,16 +1281,20 @@ class _HistoryCard extends ConsumerWidget {
   Future<XFile?> _buildShareCardFile(
     BuildContext context, {
     required ImageProvider? heroImage,
-    required int totalResults,
-    required String sourceLabel,
+    required List<_ShareCardItem> shareItems,
   }) async {
     try {
-      await _precacheShareImage(context, heroImage);
+      await _precacheShareImages(
+        context,
+        [
+          heroImage,
+          ...shareItems.map((item) => item.imageProvider),
+        ],
+      );
       final bytes = await _captureShareCardBytes(
         context,
         heroImage: heroImage,
-        totalResults: totalResults,
-        sourceLabel: sourceLabel,
+        shareItems: shareItems,
       );
       if (bytes == null || bytes.isEmpty) return null;
 
@@ -1270,23 +1313,24 @@ class _HistoryCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _precacheShareImage(
+  Future<void> _precacheShareImages(
     BuildContext context,
-    ImageProvider? image,
+    List<ImageProvider?> images,
   ) async {
-    if (image == null) return;
-    try {
-      await precacheImage(image, context);
-    } catch (e) {
-      debugPrint('Error precaching share image: $e');
+    for (final image in images) {
+      if (image == null) continue;
+      try {
+        await precacheImage(image, context);
+      } catch (e) {
+        debugPrint('Error precaching share image: $e');
+      }
     }
   }
 
   Future<Uint8List?> _captureShareCardBytes(
     BuildContext context, {
     required ImageProvider? heroImage,
-    required int totalResults,
-    required String sourceLabel,
+    required List<_ShareCardItem> shareItems,
   }) async {
     final overlay = Overlay.of(context, rootOverlay: true);
     if (overlay == null) return null;
@@ -1314,8 +1358,7 @@ class _HistoryCard extends ConsumerWidget {
                     height: _shareCardSize.height,
                     child: _HistoryShareCard(
                       heroImage: heroImage,
-                      totalResults: totalResults,
-                      sourceLabel: sourceLabel,
+                      shareItems: shareItems,
                     ),
                   ),
                 ),
@@ -1755,146 +1798,246 @@ class _ActionIcon extends StatelessWidget {
 
 class _HistoryShareCard extends StatelessWidget {
   final ImageProvider? heroImage;
-  final int totalResults;
-  final String sourceLabel;
+  final List<_ShareCardItem> shareItems;
 
   const _HistoryShareCard({
     required this.heroImage,
-    required this.totalResults,
-    required this.sourceLabel,
+    required this.shareItems,
   });
 
   @override
   Widget build(BuildContext context) {
-    final matchLabel =
-        totalResults == 1 ? '1 match' : '$totalResults matches';
-    final source = sourceLabel.trim().isEmpty ? 'Snaplook' : sourceLabel.trim();
-    final safeSource =
-        source.length > 18 ? '${source.substring(0, 18)}...' : source;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final scale = width / 1080;
+        double s(double value) => value * scale;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(36),
-      child: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF141419),
-                  Color(0xFF1c1c25),
-                  Color(0xFF2a0b18),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            right: -90,
-            top: -70,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.secondary.withOpacity(0.28),
-              ),
-            ),
-          ),
-          Positioned(
-            left: -80,
-            bottom: -120,
-            child: Container(
-              width: 260,
-              height: 260,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const _SharePill(
-                      label: 'SNAPLOOK',
-                      backgroundColor: Color(0x33FFFFFF),
-                      borderColor: Color(0x55FFFFFF),
-                      textColor: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.1,
-                    ),
-                    const Spacer(),
-                    _SharePill(
-                      label: safeSource,
-                      backgroundColor: const Color(0x1FFFFFFF),
-                      borderColor: const Color(0x33FFFFFF),
-                      textColor: Colors.white,
-                    ),
-                  ],
+        final heroSize = s(720);
+        final heroRadius = s(48);
+        final cardWidth = s(880);
+        final cardRadius = s(32);
+
+        return Container(
+          color: Colors.white,
+          child: Column(
+            children: [
+              SizedBox(height: s(52)),
+              Text(
+                'snaplook',
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: s(36),
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
                 ),
-                const SizedBox(height: 18),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(26),
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
+              ),
+              SizedBox(height: s(36)),
+              Center(
+                child: SizedBox(
+                  width: heroSize,
+                  height: heroSize,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(heroRadius),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.12),
+                              blurRadius: s(28),
+                              offset: Offset(0, s(14)),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(heroRadius),
                           child: heroImage != null
                               ? Image(
                                   image: heroImage!,
                                   fit: BoxFit.cover,
                                 )
                               : Container(
-                                  color: AppColors.blackLight,
+                                  color: const Color(0xFFEFEFEF),
                                   child: const Icon(
                                     Icons.image_rounded,
-                                    color: Color(0x55FFFFFF),
-                                    size: 44,
+                                    color: Color(0xFFBDBDBD),
+                                    size: 48,
                                   ),
                                 ),
                         ),
-                        Positioned.fill(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.black.withOpacity(0.55),
-                                ],
+                      ),
+                      Positioned(
+                        left: s(-36),
+                        top: s(24),
+                        child: _ShareBadge(
+                          size: s(92),
+                          icon: Icons.favorite,
+                          iconColor: AppColors.secondary,
+                          backgroundColor: const Color(0xFFF0F0F0),
+                          shadowOpacity: 0.18,
+                        ),
+                      ),
+                      Positioned(
+                        left: s(-6),
+                        top: s(138),
+                        child: Container(
+                          width: s(16),
+                          height: s(16),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFFD8D8D8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: s(12),
+                                offset: Offset(0, s(6)),
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: s(30),
+                        bottom: s(-18),
+                        child: Transform.rotate(
+                          angle: -0.06,
+                          child: _TopMatchesTag(
+                            height: s(58),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: s(26),
                             ),
                           ),
                         ),
-                        Positioned(
-                          left: 16,
-                          bottom: 16,
-                          child: _SharePill(
-                            label: matchLabel,
-                            icon: Icons.local_fire_department_rounded,
-                            backgroundColor: Colors.black.withOpacity(0.6),
-                            borderColor: Colors.white.withOpacity(0.22),
-                            textColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Top matches inside Snaplook',
+              ),
+              SizedBox(height: s(36)),
+              if (shareItems.isNotEmpty)
+                Container(
+                  width: cardWidth,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(cardRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: s(22),
+                        offset: Offset(0, s(10)),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < shareItems.length; i++) ...[
+                        _ShareResultRow(
+                          item: shareItems[i],
+                          imageSize: s(92),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: s(24),
+                            vertical: s(18),
+                          ),
+                        ),
+                        if (i < shareItems.length - 1)
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: const Color(0xFFEDEDED),
+                            indent: s(24),
+                            endIndent: s(24),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ShareResultRow extends StatelessWidget {
+  final _ShareCardItem item;
+  final double imageSize;
+  final EdgeInsets padding;
+
+  const _ShareResultRow({
+    required this.item,
+    required this.imageSize,
+    required this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPrice = item.priceText != null && item.priceText!.trim().isNotEmpty;
+    return Padding(
+      padding: padding,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(imageSize * 0.2),
+            child: SizedBox(
+              width: imageSize,
+              height: imageSize,
+              child: item.imageProvider != null
+                  ? Image(
+                      image: item.imageProvider!,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      color: const Color(0xFFF2F2F2),
+                      child: const Icon(
+                        Icons.image_rounded,
+                        color: Color(0xFFBDBDBD),
+                        size: 28,
+                      ),
+                    ),
+            ),
+          ),
+          SizedBox(width: imageSize * 0.18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.brand.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: imageSize * 0.24,
+                    color: const Color(0xFF111111),
+                  ),
+                ),
+                SizedBox(height: imageSize * 0.08),
+                Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontWeight: FontWeight.w500,
+                    fontSize: imageSize * 0.2,
+                    color: const Color(0xFF343434),
+                  ),
+                ),
+                SizedBox(height: imageSize * 0.12),
+                Text(
+                  hasPrice ? item.priceText! : 'Price unavailable',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontWeight: FontWeight.w700,
+                    fontSize: imageSize * 0.23,
+                    color: hasPrice
+                        ? AppColors.secondary
+                        : const Color(0xFF9A9A9A),
                   ),
                 ),
               ],
@@ -1906,57 +2049,166 @@ class _HistoryShareCard extends StatelessWidget {
   }
 }
 
-class _SharePill extends StatelessWidget {
-  final String label;
+class _ShareBadge extends StatelessWidget {
+  final double size;
+  final IconData icon;
+  final Color iconColor;
   final Color backgroundColor;
-  final Color borderColor;
-  final Color textColor;
-  final IconData? icon;
-  final double fontSize;
-  final FontWeight fontWeight;
-  final double letterSpacing;
+  final double shadowOpacity;
 
-  const _SharePill({
-    required this.label,
+  const _ShareBadge({
+    required this.size,
+    required this.icon,
+    required this.iconColor,
     required this.backgroundColor,
-    required this.borderColor,
-    required this.textColor,
-    this.icon,
-    this.fontSize = 12,
-    this.fontWeight = FontWeight.w600,
-    this.letterSpacing = 0,
+    required this.shadowOpacity,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      width: size,
+      height: size,
       decoration: BoxDecoration(
+        shape: BoxShape.circle,
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(shadowOpacity),
+            blurRadius: size * 0.25,
+            offset: Offset(0, size * 0.12),
+          ),
+        ],
+      ),
+      child: Icon(
+        icon,
+        size: size * 0.44,
+        color: iconColor,
+      ),
+    );
+  }
+}
+
+class _TopMatchesTag extends StatelessWidget {
+  final double height;
+  final EdgeInsets padding;
+
+  const _TopMatchesTag({
+    required this.height,
+    required this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(height * 0.35),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: height * 0.5,
+            offset: Offset(0, height * 0.25),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 14, color: AppColors.secondary),
-            const SizedBox(width: 6),
-          ],
           Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            'TOP MATCHES',
             style: TextStyle(
               fontFamily: 'PlusJakartaSans',
-              fontSize: fontSize,
-              fontWeight: fontWeight,
-              letterSpacing: letterSpacing,
-              color: textColor,
+              fontSize: height * 0.38,
+              fontWeight: FontWeight.w800,
+              color: Colors.black,
+              letterSpacing: 0.8,
             ),
+          ),
+          SizedBox(width: height * 0.22),
+          Icon(
+            Icons.local_fire_department_rounded,
+            size: height * 0.42,
+            color: AppColors.secondary,
           ),
         ],
       ),
     );
   }
+}
+
+class _ShareCardItem {
+  final String brand;
+  final String title;
+  final String? priceText;
+  final ImageProvider? imageProvider;
+
+  const _ShareCardItem({
+    required this.brand,
+    required this.title,
+    required this.priceText,
+    required this.imageProvider,
+  });
+
+  static _ShareCardItem? fromSearch(Map<String, dynamic> data) {
+    final brand =
+        (data['brand'] as String?)?.trim().isNotEmpty == true
+            ? (data['brand'] as String).trim()
+            : 'Brand';
+    final title =
+        (data['product_name'] as String?)?.trim().isNotEmpty == true
+            ? (data['product_name'] as String).trim()
+            : 'Item';
+    final priceText = _formatSharePrice(data);
+    final imageUrl = (data['image_url'] as String?)?.trim();
+    final imageProvider = imageUrl != null && imageUrl.isNotEmpty
+        ? CachedNetworkImageProvider(imageUrl)
+        : null;
+
+    return _ShareCardItem(
+      brand: brand,
+      title: title,
+      priceText: priceText,
+      imageProvider: imageProvider,
+    );
+  }
+}
+
+String? _formatSharePrice(Map<String, dynamic> data) {
+  String? currency = (data['currency'] as String?)?.toUpperCase();
+  String? display;
+  final priceData = data['price'];
+
+  if (priceData is Map<String, dynamic>) {
+    display = (priceData['display'] as String?) ??
+        (priceData['text'] as String?) ??
+        (priceData['raw'] as String?) ??
+        (priceData['formatted'] as String?);
+    currency ??= (priceData['currency'] as String?)?.toUpperCase();
+    final extracted = (priceData['extracted_value'] as num?)?.toDouble();
+    if ((display == null || display.isEmpty) && extracted != null) {
+      display = _formatCurrency(extracted, currency);
+    }
+  } else if (priceData is num) {
+    display = _formatCurrency(priceData.toDouble(), currency);
+  } else if (priceData is String) {
+    display = priceData.trim();
+  }
+
+  display ??= (data['price_display'] as String?) ??
+      (data['price_text'] as String?) ??
+      (data['price_raw'] as String?) ??
+      (data['price_formatted'] as String?);
+
+  return display != null && display.trim().isNotEmpty ? display.trim() : null;
+}
+
+String _formatCurrency(double value, String? currency) {
+  final formatted = value.toStringAsFixed(2);
+  if (currency == null || currency.isEmpty || currency == 'USD') {
+    return '\$$formatted';
+  }
+  return '$currency $formatted';
 }
