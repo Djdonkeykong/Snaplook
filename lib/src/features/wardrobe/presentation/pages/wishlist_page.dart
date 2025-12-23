@@ -1877,7 +1877,7 @@ class _HistoryShareCard extends StatelessWidget {
                           left: s(-36),
                           top: s(24),
                           child: _ShareBadge(
-                            size: s(112),
+                          size: s(120),
                             icon: Icons.favorite,
                             iconColor: AppColors.secondary,
                             backgroundColor: const Color(0xFFF0F0F0),
@@ -1887,7 +1887,7 @@ class _HistoryShareCard extends StatelessWidget {
                         Positioned(
                           left: 0,
                           right: 0,
-                          bottom: s(-22),
+                          bottom: s(-12),
                           child: Center(
                             child: _TopMatchesTag(
                               height: s(74),
