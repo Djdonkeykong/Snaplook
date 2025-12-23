@@ -1833,8 +1833,8 @@ class _HistoryShareCard extends StatelessWidget {
               children: [
                 SizedBox(height: s(52)),
                 Image.asset(
-                  'assets/images/snaplook-logo-splash-text.png',
-                  height: s(48),
+                  'assets/images/logo.png',
+                  height: s(52),
                   fit: BoxFit.contain,
                 ),
                 SizedBox(height: s(36)),
