@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -7,8 +8,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:snaplook/src/shared/utils/native_share_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1098,6 +1100,8 @@ class _HistoryCard extends ConsumerWidget {
     'photos',
     'home',
   };
+  static const Size _shareCardSize = Size(720, 900);
+  static const double _shareCardPixelRatio = 2.0;
 
   const _HistoryCard({
     required this.search,
@@ -1134,16 +1138,29 @@ class _HistoryCard extends ConsumerWidget {
       shareImage = await _downloadAndSquare(cloudinaryUrl);
     }
 
-    if (shareImage != null) {
+    final totalResults =
+        (fullSearch['total_results'] as num?)?.toInt() ?? 0;
+    final heroProvider =
+        shareImage != null ? FileImage(File(shareImage.path)) : null;
+    final shareCard = await _buildShareCardFile(
+      context,
+      heroImage: heroProvider,
+      totalResults: totalResults,
+      sourceLabel: _getSourceLabel(),
+    );
+
+    final primaryFile = shareCard ?? shareImage;
+
+    if (primaryFile != null) {
       final handled = await NativeShareHelper.shareImageFirst(
-        file: shareImage,
+        file: primaryFile,
         text: payload.message,
         subject: payload.subject,
         origin: origin,
       );
       if (!handled) {
         await Share.shareXFiles(
-          [shareImage],
+          [primaryFile],
           text: payload.message,
           subject: payload.subject,
           sharePositionOrigin: origin,
@@ -1159,49 +1176,16 @@ class _HistoryCard extends ConsumerWidget {
   }
 
   SharePayload _buildSharePayload(Map<String, dynamic> searchData) {
-    final rawResults = searchData['search_results'];
-    List<dynamic> results;
-    if (rawResults is List) {
-      results = rawResults;
-    } else if (rawResults is String) {
-      try {
-        final decoded = jsonDecode(rawResults);
-        results = decoded is List ? decoded : <dynamic>[];
-      } catch (_) {
-        results = <dynamic>[];
-      }
-    } else {
-      results = <dynamic>[];
-    }
-
-    final topResults = results.take(5).toList();
     final totalResults = (searchData['total_results'] as num?)?.toInt() ?? 0;
-
-    final buffer = StringBuffer();
-    buffer.writeln('I analyzed this look on Snaplook and found $totalResults matches!\n');
-
-    if (topResults.isNotEmpty) {
-      buffer.writeln('Top finds:');
-      for (var i = 0; i < topResults.length; i++) {
-        final r = topResults[i] as Map<String, dynamic>;
-        final name = (r['product_name'] as String?)?.trim();
-        final brand = (r['brand'] as String?)?.trim();
-        final link = (r['purchase_url'] as String?)?.trim() ?? '';
-
-        final safeName = (name != null && name.isNotEmpty) ? name : 'Item';
-        final safeBrand = (brand != null && brand.isNotEmpty) ? brand : 'Unknown brand';
-        final safeLink = link.isNotEmpty ? link : 'URL not available';
-
-        buffer.writeln('${i + 1}. $safeBrand - $safeName - $safeLink');
-      }
-      buffer.writeln();
-    }
-
-    buffer.write('Get Snaplook to find your fashion matches: https://snaplook.app');
+    final matchLabel =
+        totalResults == 1 ? '1 match' : '$totalResults matches';
+    final message = totalResults > 0
+        ? 'Snaplook found $matchLabel for this look.'
+        : 'Snaplook analyzed this look.';
 
     return SharePayload(
-      subject: 'Snaplook Fashion Matches',
-      message: buffer.toString(),
+      subject: 'Snaplook Matches',
+      message: message,
     );
   }
 
@@ -1252,6 +1236,112 @@ class _HistoryCard extends ConsumerWidget {
     } catch (e) {
       debugPrint('Error preparing share image: $e');
       return null;
+    }
+  }
+
+  Future<XFile?> _buildShareCardFile(
+    BuildContext context, {
+    required ImageProvider? heroImage,
+    required int totalResults,
+    required String sourceLabel,
+  }) async {
+    try {
+      await _precacheShareImage(context, heroImage);
+      final bytes = await _captureShareCardBytes(
+        context,
+        heroImage: heroImage,
+        totalResults: totalResults,
+        sourceLabel: sourceLabel,
+      );
+      if (bytes == null || bytes.isEmpty) return null;
+
+      final filePath =
+          '${Directory.systemTemp.path}/snaplook_share_card_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File(filePath);
+      await file.writeAsBytes(bytes, flush: true);
+      return XFile(
+        filePath,
+        mimeType: 'image/png',
+        name: 'snaplook_share_card.png',
+      );
+    } catch (e) {
+      debugPrint('Error creating share card: $e');
+      return null;
+    }
+  }
+
+  Future<void> _precacheShareImage(
+    BuildContext context,
+    ImageProvider? image,
+  ) async {
+    if (image == null) return;
+    try {
+      await precacheImage(image, context);
+    } catch (e) {
+      debugPrint('Error precaching share image: $e');
+    }
+  }
+
+  Future<Uint8List?> _captureShareCardBytes(
+    BuildContext context, {
+    required ImageProvider? heroImage,
+    required int totalResults,
+    required String sourceLabel,
+  }) async {
+    final overlay = Overlay.of(context, rootOverlay: true);
+    if (overlay == null) return null;
+
+    final boundaryKey = GlobalKey();
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (overlayContext) {
+        return Positioned(
+          left: -_shareCardSize.width - 20,
+          top: 0,
+          child: Material(
+            type: MaterialType.transparency,
+            child: MediaQuery(
+              data: MediaQuery.of(overlayContext).copyWith(
+                size: _shareCardSize,
+              ),
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: RepaintBoundary(
+                  key: boundaryKey,
+                  child: SizedBox(
+                    width: _shareCardSize.width,
+                    height: _shareCardSize.height,
+                    child: _HistoryShareCard(
+                      heroImage: heroImage,
+                      totalResults: totalResults,
+                      sourceLabel: sourceLabel,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 30));
+      final boundary =
+          boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      final image = await boundary.toImage(pixelRatio: _shareCardPixelRatio);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return null;
+      return byteData.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('Error capturing share card: $e');
+      return null;
+    } finally {
+      entry.remove();
     }
   }
 
@@ -1658,6 +1748,214 @@ class _ActionIcon extends StatelessWidget {
             size: 16,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _HistoryShareCard extends StatelessWidget {
+  final ImageProvider? heroImage;
+  final int totalResults;
+  final String sourceLabel;
+
+  const _HistoryShareCard({
+    required this.heroImage,
+    required this.totalResults,
+    required this.sourceLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final matchLabel =
+        totalResults == 1 ? '1 match' : '$totalResults matches';
+    final source = sourceLabel.trim().isEmpty ? 'Snaplook' : sourceLabel.trim();
+    final safeSource =
+        source.length > 18 ? '${source.substring(0, 18)}...' : source;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(36),
+      child: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF141419),
+                  Color(0xFF1c1c25),
+                  Color(0xFF2a0b18),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            right: -90,
+            top: -70,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.secondary.withOpacity(0.28),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -80,
+            bottom: -120,
+            child: Container(
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.08),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const _SharePill(
+                      label: 'SNAPLOOK',
+                      backgroundColor: Color(0x33FFFFFF),
+                      borderColor: Color(0x55FFFFFF),
+                      textColor: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.1,
+                    ),
+                    const Spacer(),
+                    _SharePill(
+                      label: safeSource,
+                      backgroundColor: const Color(0x1FFFFFFF),
+                      borderColor: const Color(0x33FFFFFF),
+                      textColor: Colors.white,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(26),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: heroImage != null
+                              ? Image(
+                                  image: heroImage!,
+                                  fit: BoxFit.cover,
+                                )
+                              : Container(
+                                  color: AppColors.blackLight,
+                                  child: const Icon(
+                                    Icons.image_rounded,
+                                    color: Color(0x55FFFFFF),
+                                    size: 44,
+                                  ),
+                                ),
+                        ),
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.55),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: 16,
+                          bottom: 16,
+                          child: _SharePill(
+                            label: matchLabel,
+                            icon: Icons.local_fire_department_rounded,
+                            backgroundColor: Colors.black.withOpacity(0.6),
+                            borderColor: Colors.white.withOpacity(0.22),
+                            textColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Top matches inside Snaplook',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SharePill extends StatelessWidget {
+  final String label;
+  final Color backgroundColor;
+  final Color borderColor;
+  final Color textColor;
+  final IconData? icon;
+  final double fontSize;
+  final FontWeight fontWeight;
+  final double letterSpacing;
+
+  const _SharePill({
+    required this.label,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.textColor,
+    this.icon,
+    this.fontSize = 12,
+    this.fontWeight = FontWeight.w600,
+    this.letterSpacing = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: AppColors.secondary),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: fontSize,
+              fontWeight: fontWeight,
+              letterSpacing: letterSpacing,
+              color: textColor,
+            ),
+          ),
+        ],
       ),
     );
   }
