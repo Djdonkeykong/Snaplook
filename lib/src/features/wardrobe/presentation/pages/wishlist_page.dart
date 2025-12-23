@@ -1903,61 +1903,66 @@ class _HistoryShareCard extends StatelessWidget {
                 ),
                 SizedBox(height: s(36)),
                 if (shareItems.isNotEmpty)
-                  SizedBox(
-                    width: cardWidth,
-                    height: listHeight,
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(cardRadius),
-                          child: Container(
-                            color: Colors.white,
-                            child: ListView.separated(
-                              physics: const NeverScrollableScrollPhysics(),
-                              padding: EdgeInsets.zero,
-                              itemCount: shareItems.length,
-                              itemBuilder: (context, index) {
-                                return _ShareResultRow(
-                                  item: shareItems[index],
-                                  imageSize: rowImageSize,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: s(24),
-                                    vertical: rowVerticalPadding,
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: SizedBox(
+                        width: cardWidth,
+                        height: listHeight,
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(cardRadius),
+                              child: Container(
+                                color: Colors.white,
+                                child: ListView.separated(
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  padding: EdgeInsets.zero,
+                                  itemCount: shareItems.length,
+                                  itemBuilder: (context, index) {
+                                    return _ShareResultRow(
+                                      item: shareItems[index],
+                                      imageSize: rowImageSize,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: s(24),
+                                        vertical: rowVerticalPadding,
+                                      ),
+                                    );
+                                  },
+                                  separatorBuilder: (context, index) => Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: const Color(0xFFEDEDED),
+                                    indent: s(24),
+                                    endIndent: s(24),
                                   ),
-                                );
-                              },
-                              separatorBuilder: (context, index) => Divider(
-                                height: 1,
-                                thickness: 1,
-                                color: const Color(0xFFEDEDED),
-                                indent: s(24),
-                                endIndent: s(24),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: IgnorePointer(
-                            child: Container(
-                              height: s(110),
-                              decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Color(0x00FFFFFF),
-                                    Color(0xB3FFFFFF),
-                                    Color(0xFFFFFFFF),
-                                  ],
                                 ),
                               ),
                             ),
-                          ),
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: IgnorePointer(
+                                child: Container(
+                                  height: s(110),
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Color(0x00FFFFFF),
+                                        Color(0xB3FFFFFF),
+                                        Color(0xFFFFFFFF),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
               ],
