@@ -1199,7 +1199,7 @@ class _HistoryCard extends ConsumerWidget {
     if (results.isEmpty) return const [];
 
     final items = <_ShareCardItem>[];
-    for (final result in results.take(2)) {
+    for (final result in results.take(3)) {
       final item = _ShareCardItem.fromSearch(result);
       if (item != null) {
         items.add(item);
@@ -1816,124 +1816,153 @@ class _HistoryShareCard extends StatelessWidget {
         final scale = width / 1080;
         double s(double value) => value * scale;
 
-        final heroSize = s(720);
+        final heroSize = s(660);
         final heroRadius = s(48);
         final cardWidth = s(880);
         final cardRadius = s(32);
+        final rowImageSize = s(92);
+        final rowVerticalPadding = s(18);
+        final rowHeight = rowImageSize + (rowVerticalPadding * 2);
+        final listHeight = rowHeight * 2.55;
 
-        return Container(
-          color: Colors.white,
-          child: Column(
-            children: [
-              SizedBox(height: s(52)),
-              Image.asset(
-                'assets/images/snaplook-logo-splash-text.png',
-                height: s(48),
-                fit: BoxFit.contain,
-              ),
-              SizedBox(height: s(36)),
-              Center(
-                child: SizedBox(
-                  width: heroSize,
-                  height: heroSize,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(heroRadius),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.12),
-                              blurRadius: s(28),
-                              offset: Offset(0, s(14)),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(heroRadius),
-                          child: heroImage != null
-                              ? Image(
-                                  image: heroImage!,
-                                  fit: BoxFit.cover,
-                                )
-                              : Container(
-                                  color: const Color(0xFFEFEFEF),
-                                  child: const Icon(
-                                    Icons.image_rounded,
-                                    color: Color(0xFFBDBDBD),
-                                    size: 48,
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(s(52)),
+          child: Container(
+            color: Colors.white,
+            child: Column(
+              children: [
+                SizedBox(height: s(52)),
+                Image.asset(
+                  'assets/images/snaplook-logo-splash-text.png',
+                  height: s(48),
+                  fit: BoxFit.contain,
+                ),
+                SizedBox(height: s(36)),
+                Center(
+                  child: SizedBox(
+                    width: heroSize,
+                    height: heroSize,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(heroRadius),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: s(28),
+                                offset: Offset(0, s(14)),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(heroRadius),
+                            child: heroImage != null
+                                ? Image(
+                                    image: heroImage!,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    color: const Color(0xFFEFEFEF),
+                                    child: const Icon(
+                                      Icons.image_rounded,
+                                      color: Color(0xFFBDBDBD),
+                                      size: 48,
+                                    ),
                                   ),
-                                ),
+                          ),
                         ),
-                      ),
-                      Positioned(
-                        left: s(-36),
-                        top: s(24),
-                        child: _ShareBadge(
-                          size: s(112),
-                          icon: Icons.favorite,
-                          iconColor: AppColors.secondary,
-                          backgroundColor: const Color(0xFFF0F0F0),
-                          shadowOpacity: 0.18,
+                        Positioned(
+                          left: s(-36),
+                          top: s(24),
+                          child: _ShareBadge(
+                            size: s(112),
+                            icon: Icons.favorite,
+                            iconColor: AppColors.secondary,
+                            backgroundColor: const Color(0xFFF0F0F0),
+                            shadowOpacity: 0.18,
+                          ),
                         ),
-                      ),
-                      Positioned(
-                        right: s(30),
-                        bottom: s(-18),
-                        child: Transform.rotate(
-                          angle: -0.06,
-                          child: _TopMatchesTag(
-                            height: s(68),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: s(30),
+                        Positioned(
+                          right: s(30),
+                          bottom: s(-18),
+                          child: Transform.rotate(
+                            angle: -0.06,
+                            child: _TopMatchesTag(
+                              height: s(68),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: s(30),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: s(36)),
-              if (shareItems.isNotEmpty)
-                Container(
-                  width: cardWidth,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(cardRadius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: s(22),
-                        offset: Offset(0, s(10)),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < shareItems.length; i++) ...[
-                        _ShareResultRow(
-                          item: shareItems[i],
-                          imageSize: s(92),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: s(24),
-                            vertical: s(18),
+                SizedBox(height: s(36)),
+                if (shareItems.isNotEmpty)
+                  SizedBox(
+                    width: cardWidth,
+                    height: listHeight,
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(cardRadius),
+                          child: Container(
+                            color: Colors.white,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                for (var i = 0; i < shareItems.length; i++) ...[
+                                  _ShareResultRow(
+                                    item: shareItems[i],
+                                    imageSize: rowImageSize,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: s(24),
+                                      vertical: rowVerticalPadding,
+                                    ),
+                                  ),
+                                  if (i < shareItems.length - 1)
+                                    Divider(
+                                      height: 1,
+                                      thickness: 1,
+                                      color: const Color(0xFFEDEDED),
+                                      indent: s(24),
+                                      endIndent: s(24),
+                                    ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
-                        if (i < shareItems.length - 1)
-                          Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: const Color(0xFFEDEDED),
-                            indent: s(24),
-                            endIndent: s(24),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: IgnorePointer(
+                            child: Container(
+                              height: s(140),
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Color(0x00FFFFFF),
+                                    Color(0xCCFFFFFF),
+                                    Color(0xFFFFFFFF),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
+                        ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         );
       },
