@@ -1140,11 +1140,14 @@ class _HistoryCard extends ConsumerWidget {
       shareImage = await _downloadAndSquare(cloudinaryUrl);
     }
 
-    final ImageProvider? heroProvider = shareImage != null
-        ? FileImage(File(shareImage.path))
-        : (cloudinaryUrl.isNotEmpty
-            ? CachedNetworkImageProvider(cloudinaryUrl)
-            : null);
+    final ImageProvider<Object>? heroProvider;
+    if (shareImage != null) {
+      heroProvider = FileImage(File(shareImage.path));
+    } else if (cloudinaryUrl.isNotEmpty) {
+      heroProvider = CachedNetworkImageProvider(cloudinaryUrl);
+    } else {
+      heroProvider = null;
+    }
     final shareCard = await _buildShareCardFile(
       context,
       heroImage: heroProvider,
@@ -1280,7 +1283,7 @@ class _HistoryCard extends ConsumerWidget {
 
   Future<XFile?> _buildShareCardFile(
     BuildContext context, {
-    required ImageProvider? heroImage,
+    required ImageProvider<Object>? heroImage,
     required List<_ShareCardItem> shareItems,
   }) async {
     try {
@@ -1315,7 +1318,7 @@ class _HistoryCard extends ConsumerWidget {
 
   Future<void> _precacheShareImages(
     BuildContext context,
-    List<ImageProvider?> images,
+    List<ImageProvider<Object>?> images,
   ) async {
     for (final image in images) {
       if (image == null) continue;
@@ -1329,7 +1332,7 @@ class _HistoryCard extends ConsumerWidget {
 
   Future<Uint8List?> _captureShareCardBytes(
     BuildContext context, {
-    required ImageProvider? heroImage,
+    required ImageProvider<Object>? heroImage,
     required List<_ShareCardItem> shareItems,
   }) async {
     final overlay = Overlay.of(context, rootOverlay: true);
@@ -1797,7 +1800,7 @@ class _ActionIcon extends StatelessWidget {
 }
 
 class _HistoryShareCard extends StatelessWidget {
-  final ImageProvider? heroImage;
+  final ImageProvider<Object>? heroImage;
   final List<_ShareCardItem> shareItems;
 
   const _HistoryShareCard({
@@ -2143,7 +2146,7 @@ class _ShareCardItem {
   final String brand;
   final String title;
   final String? priceText;
-  final ImageProvider? imageProvider;
+  final ImageProvider<Object>? imageProvider;
 
   const _ShareCardItem({
     required this.brand,
