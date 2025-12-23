@@ -1874,8 +1874,8 @@ class _HistoryShareCard extends StatelessWidget {
                           ),
                         ),
                         Positioned(
-                          left: s(-36),
-                          top: s(24),
+                        left: s(-48),
+                        top: s(24),
                           child: _ShareBadge(
                           size: s(120),
                             icon: Icons.favorite,
@@ -1887,7 +1887,7 @@ class _HistoryShareCard extends StatelessWidget {
                         Positioned(
                           left: 0,
                           right: 0,
-                          bottom: s(-12),
+                          bottom: s(-6),
                           child: Center(
                             child: _TopMatchesTag(
                               height: s(74),
