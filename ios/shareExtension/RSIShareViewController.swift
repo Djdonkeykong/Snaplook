@@ -1924,7 +1924,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 guard let self = self else { return }
 
                 if let cachedUrl = cachedUrl {
-                    self.shareLog("Instagram cache HIT (server) - using cached image URL")
+                    shareLog("Instagram cache HIT (server) - using cached image URL")
                     self.downloadFirstValidImage(
                         from: [cachedUrl],
                         platform: "instagram",
@@ -1985,9 +1985,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.httpMethod = "GET"
         request.timeoutInterval = 6.0
 
-        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                self?.shareLog("Instagram cache check failed: \(error.localizedDescription)")
+                shareLog("Instagram cache check failed: \(error.localizedDescription)")
                 completion(nil)
                 return
             }
@@ -2012,7 +2012,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     }
                 }
             } catch {
-                self?.shareLog("Instagram cache check parse error: \(error.localizedDescription)")
+                shareLog("Instagram cache check parse error: \(error.localizedDescription)")
             }
 
             completion(nil)
