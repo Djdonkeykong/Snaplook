@@ -1199,7 +1199,7 @@ class _HistoryCard extends ConsumerWidget {
     if (results.isEmpty) return const [];
 
     final items = <_ShareCardItem>[];
-    for (final result in results.take(3)) {
+    for (final result in results.take(5)) {
       final item = _ShareCardItem.fromSearch(result);
       if (item != null) {
         items.add(item);
@@ -1823,7 +1823,7 @@ class _HistoryShareCard extends StatelessWidget {
         final rowImageSize = s(92);
         final rowVerticalPadding = s(18);
         final rowHeight = rowImageSize + (rowVerticalPadding * 2);
-        final listHeight = rowHeight * 2.7;
+        final listHeight = rowHeight * 4.2;
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(s(52)),
