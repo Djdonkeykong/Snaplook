@@ -1140,7 +1140,7 @@ class _HistoryCard extends ConsumerWidget {
       shareImage = await _downloadAndSquare(cloudinaryUrl);
     }
 
-    final heroProvider = shareImage != null
+    final ImageProvider? heroProvider = shareImage != null
         ? FileImage(File(shareImage.path))
         : (cloudinaryUrl.isNotEmpty
             ? CachedNetworkImageProvider(cloudinaryUrl)
