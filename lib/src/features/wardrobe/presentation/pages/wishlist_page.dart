@@ -1818,7 +1818,7 @@ class _HistoryShareCard extends StatelessWidget {
 
         final heroSize = s(520);
         final heroRadius = s(40);
-        final cardWidth = s(960);
+        final cardWidth = s(980);
         final cardRadius = s(32);
         final rowImageSize = s(108);
         final rowVerticalPadding = s(20);
@@ -2144,10 +2144,9 @@ class _TopMatchesTag extends StatelessWidget {
             ),
           ),
           SizedBox(width: height * 0.22),
-          Icon(
-            Icons.local_fire_department_rounded,
-            size: height * 0.42,
-            color: AppColors.secondary,
+          Text(
+            '🔥',
+            style: TextStyle(fontSize: height * 0.42),
           ),
         ],
       ),
