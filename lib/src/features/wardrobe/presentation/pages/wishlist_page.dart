@@ -1826,14 +1826,10 @@ class _HistoryShareCard extends StatelessWidget {
           child: Column(
             children: [
               SizedBox(height: s(52)),
-              Text(
-                'snaplook',
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: s(36),
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                ),
+              Image.asset(
+                'assets/images/snaplook-logo-splash-text.png',
+                height: s(48),
+                fit: BoxFit.contain,
               ),
               SizedBox(height: s(36)),
               Center(
@@ -1875,30 +1871,11 @@ class _HistoryShareCard extends StatelessWidget {
                         left: s(-36),
                         top: s(24),
                         child: _ShareBadge(
-                          size: s(92),
+                          size: s(112),
                           icon: Icons.favorite,
                           iconColor: AppColors.secondary,
                           backgroundColor: const Color(0xFFF0F0F0),
                           shadowOpacity: 0.18,
-                        ),
-                      ),
-                      Positioned(
-                        left: s(-6),
-                        top: s(138),
-                        child: Container(
-                          width: s(16),
-                          height: s(16),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFFD8D8D8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.12),
-                                blurRadius: s(12),
-                                offset: Offset(0, s(6)),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                       Positioned(
@@ -1907,9 +1884,9 @@ class _HistoryShareCard extends StatelessWidget {
                         child: Transform.rotate(
                           angle: -0.06,
                           child: _TopMatchesTag(
-                            height: s(58),
+                            height: s(68),
                             padding: EdgeInsets.symmetric(
-                              horizontal: s(26),
+                              horizontal: s(30),
                             ),
                           ),
                         ),
@@ -1977,7 +1954,6 @@ class _ShareResultRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasPrice = item.priceText != null && item.priceText!.trim().isNotEmpty;
     return Padding(
       padding: padding,
       child: Row(
@@ -2033,14 +2009,12 @@ class _ShareResultRow extends StatelessWidget {
                 ),
                 SizedBox(height: imageSize * 0.12),
                 Text(
-                  hasPrice ? item.priceText! : 'Price unavailable',
+                  'See store',
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontWeight: FontWeight.w700,
                     fontSize: imageSize * 0.23,
-                    color: hasPrice
-                        ? AppColors.secondary
-                        : const Color(0xFF9A9A9A),
+                    color: AppColors.secondary,
                   ),
                 ),
               ],
