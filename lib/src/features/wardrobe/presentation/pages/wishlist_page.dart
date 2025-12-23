@@ -1987,73 +1987,79 @@ class _ShareResultRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textWidth = imageSize * 3.6;
     return Padding(
       padding: padding,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(imageSize * 0.2),
-            child: SizedBox(
-              width: imageSize,
-              height: imageSize,
-              child: item.imageProvider != null
-                  ? Image(
-                      image: item.imageProvider!,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      color: const Color(0xFFF2F2F2),
-                      child: const Icon(
-                        Icons.image_rounded,
-                        color: Color(0xFFBDBDBD),
-                        size: 28,
+      child: Align(
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(imageSize * 0.2),
+              child: SizedBox(
+                width: imageSize,
+                height: imageSize,
+                child: item.imageProvider != null
+                    ? Image(
+                        image: item.imageProvider!,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        color: const Color(0xFFF2F2F2),
+                        child: const Icon(
+                          Icons.image_rounded,
+                          color: Color(0xFFBDBDBD),
+                          size: 28,
+                        ),
                       ),
+              ),
+            ),
+            SizedBox(width: imageSize * 0.18),
+            SizedBox(
+              width: textWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.brand.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: imageSize * 0.24,
+                      color: const Color(0xFF111111),
                     ),
+                  ),
+                  SizedBox(height: imageSize * 0.08),
+                  Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w500,
+                      fontSize: imageSize * 0.2,
+                      color: const Color(0xFF343434),
+                    ),
+                  ),
+                  SizedBox(height: imageSize * 0.12),
+                  Text(
+                    'See store',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: imageSize * 0.23,
+                      color: AppColors.secondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          SizedBox(width: imageSize * 0.18),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.brand.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontWeight: FontWeight.w700,
-                    fontSize: imageSize * 0.24,
-                    color: const Color(0xFF111111),
-                  ),
-                ),
-                SizedBox(height: imageSize * 0.08),
-                Text(
-                  item.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontWeight: FontWeight.w500,
-                    fontSize: imageSize * 0.2,
-                    color: const Color(0xFF343434),
-                  ),
-                ),
-                SizedBox(height: imageSize * 0.12),
-                Text(
-                  'See store',
-                  style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontWeight: FontWeight.w700,
-                    fontSize: imageSize * 0.23,
-                    color: AppColors.secondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
