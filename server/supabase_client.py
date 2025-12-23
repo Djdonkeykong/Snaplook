@@ -167,13 +167,22 @@ class SupabaseManager:
             }
 
             response = self.client.table('image_cache')\
-                .insert(cache_entry)\
+                .upsert(cache_entry, on_conflict='image_hash')\
                 .execute()
 
             if response.data:
                 cache_id = response.data[0]['id']
                 print(f"Stored in cache: {cache_id}")
                 return cache_id
+
+            # Fallback: fetch existing row if upsert returns no data
+            existing = self.client.table('image_cache')\
+                .select('id')\
+                .eq('image_hash', image_hash)\
+                .limit(1)\
+                .execute()
+            if existing.data and len(existing.data) > 0:
+                return existing.data[0]['id']
 
             return None
 
@@ -255,9 +264,41 @@ class SupabaseManager:
                 'access_count': 1
             }
 
-            response = self.client.table('instagram_url_cache')\
-                .upsert(cache_entry, on_conflict='normalized_url')\
-                .execute()
+            try:
+                response = self.client.table('instagram_url_cache')\
+                    .upsert(cache_entry, on_conflict='normalized_url')\
+                    .execute()
+            except Exception as e:
+                error_text = str(e)
+                if '42P10' in error_text or 'no unique or exclusion constraint' in error_text:
+                    response = None
+                else:
+                    raise
+
+            if response is None:
+                existing = self.client.table('instagram_url_cache')\
+                    .select('id')\
+                    .eq('normalized_url', normalized_url)\
+                    .limit(1)\
+                    .execute()
+
+                if existing.data and len(existing.data) > 0:
+                    cache_id = existing.data[0]['id']
+                    self.client.table('instagram_url_cache')\
+                        .update({
+                            'instagram_url': instagram_url,
+                            'image_url': image_url,
+                            'extraction_method': extraction_method,
+                            'last_accessed_at': datetime.now().isoformat()
+                        })\
+                        .eq('id', cache_id)\
+                        .execute()
+                    print(f"Updated Instagram URL cache: {normalized_url} -> {image_url[:50]}...")
+                    return cache_id
+
+                response = self.client.table('instagram_url_cache')\
+                    .insert(cache_entry)\
+                    .execute()
 
             if response.data and len(response.data) > 0:
                 cache_id = response.data[0]['id']

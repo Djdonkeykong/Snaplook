@@ -325,7 +325,7 @@ class InstagramService {
         'extraction_method': extractionMethod,
         'created_at': DateTime.now().toIso8601String(),
         'last_accessed_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'instagram_url');
+      }, onConflict: 'normalized_url');
 
       print('✅ Saved to Instagram cache: $normalized -> $imageUrl');
     } catch (e) {

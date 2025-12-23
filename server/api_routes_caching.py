@@ -74,6 +74,20 @@ async def check_cache(source_url: str):
     # This ensures users always get fresh, location-appropriate results
     return {"cached": False}
 
+@router.get("/instagram/cache")
+async def check_instagram_cache(url: str):
+    """
+    Check if an Instagram URL has a cached image URL.
+    Returns cached image URL when available.
+    """
+    if not supabase_manager.enabled:
+        return {"cached": False}
+
+    image_url = supabase_manager.check_instagram_url_cache(url)
+    if image_url:
+        return {"cached": True, "image_url": image_url}
+    return {"cached": False}
+
 
 # ============================================
 # ANALYZE ENDPOINT WITH CACHING

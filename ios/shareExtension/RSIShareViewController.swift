@@ -1916,6 +1916,39 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urlString: String,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
+        if let serverBaseUrl = getServerBaseUrl() {
+            fetchCachedInstagramImageUrl(
+                instagramUrl: urlString,
+                serverBaseUrl: serverBaseUrl
+            ) { [weak self] cachedUrl in
+                guard let self = self else { return }
+
+                if let cachedUrl = cachedUrl {
+                    self.shareLog("Instagram cache HIT (server) - using cached image URL")
+                    self.downloadFirstValidImage(
+                        from: [cachedUrl],
+                        platform: "instagram",
+                        session: URLSession.shared,
+                        completion: completion
+                    )
+                    return
+                }
+
+                self.downloadInstagramViaApify(
+                    urlString: urlString,
+                    completion: completion
+                )
+            }
+            return
+        }
+
+        downloadInstagramViaApify(urlString: urlString, completion: completion)
+    }
+
+    private func downloadInstagramViaApify(
+        urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
         guard let apifyToken = apifyApiToken(), !apifyToken.isEmpty else {
             shareLog("[WARNING] Apify token missing - Instagram scraping disabled")
             completion(.failure(makeDownloadError("instagram", "Instagram scraping not configured. Please open the Snaplook app to set up the Apify token.")))
@@ -1927,6 +1960,64 @@ open class RSIShareViewController: SLComposeServiceViewController {
             apiToken: apifyToken,
             completion: completion
         )
+    }
+
+    private func fetchCachedInstagramImageUrl(
+        instagramUrl: String,
+        serverBaseUrl: String,
+        completion: @escaping (String?) -> Void
+    ) {
+        guard var components = URLComponents(string: serverBaseUrl + "/api/v1/instagram/cache") else {
+            completion(nil)
+            return
+        }
+
+        components.queryItems = [
+            URLQueryItem(name: "url", value: instagramUrl)
+        ]
+
+        guard let url = components.url else {
+            completion(nil)
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 6.0
+
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            if let error = error {
+                self?.shareLog("Instagram cache check failed: \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(nil)
+                return
+            }
+
+            guard httpResponse.statusCode == 200, let data = data else {
+                completion(nil)
+                return
+            }
+
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let cached = json["cached"] as? Bool ?? false
+                    let imageUrl = json["image_url"] as? String
+                    if cached, let imageUrl = imageUrl, !imageUrl.isEmpty {
+                        completion(imageUrl)
+                        return
+                    }
+                }
+            } catch {
+                self?.shareLog("Instagram cache check parse error: \(error.localizedDescription)")
+            }
+
+            completion(nil)
+        }
+        task.resume()
     }
 
     // MARK: - TikTok Scraping
