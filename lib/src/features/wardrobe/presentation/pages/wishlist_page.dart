@@ -1885,14 +1885,14 @@ class _HistoryShareCard extends StatelessWidget {
                           ),
                         ),
                         Positioned(
-                          right: s(30),
-                          bottom: s(-18),
-                          child: Transform.rotate(
-                            angle: -0.06,
+                          left: 0,
+                          right: 0,
+                          bottom: s(-22),
+                          child: Center(
                             child: _TopMatchesTag(
-                              height: s(68),
+                              height: s(74),
                               padding: EdgeInsets.symmetric(
-                                horizontal: s(30),
+                                horizontal: s(34),
                               ),
                             ),
                           ),
