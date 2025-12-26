@@ -57,60 +57,78 @@ class ResultsBottomSheetContent extends StatelessWidget {
                 left: spacing.m,
                 right: spacing.m,
                 top: spacing.l,
+                bottom: spacing.m,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  BottomSheetHandle(
-                    margin: EdgeInsets.only(bottom: spacing.m),
-                  ),
-                  // Image comparison card (matches iOS)
-                  _ImageComparisonCard(analyzedImage: analyzedImage),
-                  SizedBox(height: spacing.m),
-                  // Results count label in red
-                  Text(
-                    'Found ${results.length} similar match${results.length == 1 ? '' : 'es'}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFFf2003c),
-                      fontFamily: 'PlusJakartaSans',
-                    ),
-                  ),
-                ],
-              ),
+              child: BottomSheetHandle(),
             ),
-            SizedBox(height: spacing.sm),
             Expanded(
-              child: ListView.separated(
+              child: CustomScrollView(
                 controller: scrollController,
                 physics: const ClampingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  spacing.m,
-                  0,
-                  spacing.m,
-                  safeAreaBottom + spacing.l,
-                ),
-                itemCount: results.length,
-                separatorBuilder: (context, index) {
-                  return Padding(
-                    padding: EdgeInsets.only(left: spacing.m),
-                    child: Divider(
-                      color: Colors.grey[300],
-                      height: 1,
-                      thickness: 1,
+                slivers: [
+                  // Image comparison card that scrolls
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                      child: _ImageComparisonCard(analyzedImage: analyzedImage),
                     ),
-                  );
-                },
-                itemBuilder: (context, index) {
-                  final result = results[index];
-                  return _ProductCard(
-                    result: result,
-                    onTap: () => onProductTap(result),
-                    isFirst: index == 0,
-                    showFavoriteButton: showFavoriteButton,
-                  );
-                },
+                  ),
+                  // Results count label
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        spacing.m,
+                        spacing.m,
+                        spacing.m,
+                        spacing.sm,
+                      ),
+                      child: Text(
+                        'Found ${results.length} similar match${results.length == 1 ? '' : 'es'}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFFf2003c),
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Product list
+                  SliverPadding(
+                    padding: EdgeInsets.symmetric(horizontal: spacing.m),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final result = results[index];
+                          return Column(
+                            children: [
+                              _ProductCard(
+                                result: result,
+                                onTap: () => onProductTap(result),
+                                isFirst: index == 0,
+                                showFavoriteButton: showFavoriteButton,
+                              ),
+                              if (index < results.length - 1)
+                                Padding(
+                                  padding: EdgeInsets.only(left: spacing.m),
+                                  child: Divider(
+                                    color: Colors.grey[300],
+                                    height: 1,
+                                    thickness: 1,
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                        childCount: results.length,
+                      ),
+                    ),
+                  ),
+                  // Bottom padding
+                  SliverPadding(
+                    padding: EdgeInsets.only(bottom: safeAreaBottom + spacing.l),
+                  ),
+                ],
               ),
             ),
           ],
@@ -178,7 +196,7 @@ class _ProductCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.only(
-          top: isFirst ? 0 : spacing.m,
+          top: spacing.m,
           bottom: spacing.m,
         ),
         color: Theme.of(context).colorScheme.surface,
@@ -523,13 +541,19 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Calculate expanded height similar to iOS (max 400px)
+    // Assume a typical aspect ratio for the image
+    final containerWidth = screenWidth - (spacing.m * 2);
+    final expandedHeight = 400.0; // Match iOS max height
 
     return GestureDetector(
       onTap: _toggleExpanded,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-        height: _isExpanded ? 300 : 68,
+        height: _isExpanded ? expandedHeight : 68,
         padding: EdgeInsets.symmetric(
           horizontal: spacing.m,
           vertical: _isExpanded ? 12 : 10,
