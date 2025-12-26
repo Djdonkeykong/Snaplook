@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/onboarding/presentation/pages/welcome_free_analysis_page.dart';
-import '../shared/navigation/main_navigation.dart';
+import '../../shared/navigation/main_navigation.dart';
 import 'superwall_service.dart';
 import 'subscription_sync_service.dart';
 import 'onboarding_state_service.dart';
