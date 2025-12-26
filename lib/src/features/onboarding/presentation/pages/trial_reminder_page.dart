@@ -7,8 +7,9 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
-import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../services/revenuecat_service.dart';
+import '../../../../services/paywall_helper.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
   const TrialReminderPage({super.key});
@@ -180,14 +181,14 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   HapticFeedback.mediumImpact();
 
-                  // Navigate to RevenueCat paywall
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const PaywallPage(),
-                    ),
+                  // Present Superwall paywall
+                  final userId = Supabase.instance.client.auth.currentUser?.id;
+                  await PaywallHelper.presentPaywallAndNavigate(
+                    context: context,
+                    userId: userId,
                   );
                 },
                 style: ElevatedButton.styleFrom(

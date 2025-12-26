@@ -10,9 +10,9 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_reminder_page.dart';
-import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/onboarding_state_service.dart';
+import '../../../../services/paywall_helper.dart';
 
 class TrialIntroPage extends ConsumerStatefulWidget {
   const TrialIntroPage({super.key});
@@ -77,9 +77,11 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         });
 
         // If not eligible, skip directly to paywall
-        if (!isEligible) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const PaywallPage()),
+        if (!isEligible && mounted) {
+          final userId = Supabase.instance.client.auth.currentUser?.id;
+          await PaywallHelper.presentPaywallAndNavigate(
+            context: context,
+            userId: userId,
           );
         }
       }
