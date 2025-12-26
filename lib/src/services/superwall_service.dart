@@ -57,10 +57,9 @@ class SuperwallService {
     _latestStatus = sw.SubscriptionStatus.unknown;
   }
 
-  /// Present a paywall placement and resolve when we observe an active subscription or timeout.
+  /// Present a paywall and return true if user purchased, false otherwise.
   Future<bool> presentPaywall({
     String placement = defaultPlacement,
-    Duration timeout = const Duration(seconds: 45),
   }) async {
     if (!_configured) {
       if (kDebugMode) {
@@ -70,16 +69,64 @@ class SuperwallService {
     }
 
     try {
-      // Trigger the placement; paywall display is driven by dashboard configuration.
-      await sw.Superwall.shared.registerPlacement(placement);
+      final completer = Completer<bool>();
+      final handler = sw.PaywallPresentationHandler();
 
-      // Wait for an active status or timeout.
-      final result = await sw.Superwall.shared.subscriptionStatus
-          .firstWhere((status) => status is sw.SubscriptionStatusActive)
-          .timeout(timeout, onTimeout: () => _latestStatus);
+      handler.onPresent((paywallInfo) {
+        if (kDebugMode) {
+          debugPrint('[Superwall] Paywall presented: ${paywallInfo.experiment?.id ?? "no_experiment"}');
+        }
+      });
 
-      _latestStatus = result;
-      return result is sw.SubscriptionStatusActive;
+      handler.onDismiss((paywallInfo, result) {
+        if (kDebugMode) {
+          debugPrint('[Superwall] Paywall dismissed with result: ${result.runtimeType}');
+        }
+
+        // Check if user purchased
+        if (result is sw.PaywallResultPurchased) {
+          if (kDebugMode) {
+            debugPrint('[Superwall] Purchase completed: ${result.productId}');
+          }
+          completer.complete(true);
+        } else if (result is sw.PaywallResultRestored) {
+          if (kDebugMode) {
+            debugPrint('[Superwall] Purchases restored');
+          }
+          completer.complete(true);
+        } else if (result is sw.PaywallResultDeclined) {
+          if (kDebugMode) {
+            debugPrint('[Superwall] User declined paywall');
+          }
+          completer.complete(false);
+        } else {
+          if (kDebugMode) {
+            debugPrint('[Superwall] Unknown result type - defaulting to false');
+          }
+          completer.complete(false);
+        }
+      });
+
+      handler.onSkip((paywallInfo) {
+        // User already has entitlements, paywall was skipped
+        if (kDebugMode) {
+          debugPrint('[Superwall] Paywall skipped - user already subscribed');
+        }
+        completer.complete(true);
+      });
+
+      handler.onError((error) {
+        if (kDebugMode) {
+          debugPrint('[Superwall] Paywall error: $error');
+        }
+        completer.complete(false);
+      });
+
+      // Register the placement with the handler
+      await sw.Superwall.shared.registerPlacement(placement, handler: handler);
+
+      // Wait for the result
+      return await completer.future;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('[Superwall] presentPaywall error: $e');
