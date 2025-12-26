@@ -85,9 +85,9 @@ class SuperwallService {
 
         // Handle different paywall results using type checking
         if (result is sw.PurchasedPaywallResult) {
-          final product = result.product;
+          final productId = result.productId;
           if (kDebugMode) {
-            debugPrint('[Superwall] Purchase completed: ${product.id}');
+            debugPrint('[Superwall] Purchase completed: $productId');
           }
           completer.complete(true);
         } else if (result is sw.RestoredPaywallResult) {
