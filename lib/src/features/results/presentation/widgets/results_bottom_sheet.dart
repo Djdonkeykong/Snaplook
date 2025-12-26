@@ -269,13 +269,52 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-class _ImageComparisonCard extends StatelessWidget {
+class _ImageComparisonCard extends StatefulWidget {
   final dynamic analyzedImage; // Can be XFile, String (URL), or null
 
   const _ImageComparisonCard({this.analyzedImage});
 
+  @override
+  State<_ImageComparisonCard> createState() => _ImageComparisonCardState();
+}
+
+class _ImageComparisonCardState extends State<_ImageComparisonCard>
+    with SingleTickerProviderStateMixin {
+  bool _isExpanded = false;
+  late AnimationController _rotationController;
+  late Animation<double> _rotationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _rotationAnimation = Tween<double>(begin: 0, end: 0.5).animate(
+      CurvedAnimation(parent: _rotationController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  void _toggleExpanded() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+      if (_isExpanded) {
+        _rotationController.forward();
+      } else {
+        _rotationController.reverse();
+      }
+    });
+  }
+
   Widget _buildThumbnail() {
-    if (analyzedImage == null) {
+    if (widget.analyzedImage == null) {
       // Placeholder when no image
       return Container(
         width: 48,
@@ -293,8 +332,8 @@ class _ImageComparisonCard extends StatelessWidget {
     }
 
     // Handle String (URL or asset path)
-    if (analyzedImage is String) {
-      final imageString = analyzedImage as String;
+    if (widget.analyzedImage is String) {
+      final imageString = widget.analyzedImage as String;
 
       // Check if it's an asset path
       if (imageString.startsWith('assets/')) {
@@ -347,7 +386,7 @@ class _ImageComparisonCard extends StatelessWidget {
     }
 
     // Handle XFile (local file)
-    if (analyzedImage.runtimeType.toString().contains('XFile')) {
+    if (widget.analyzedImage.runtimeType.toString().contains('XFile')) {
       return Container(
         width: 48,
         height: 48,
@@ -358,7 +397,7 @@ class _ImageComparisonCard extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Image.file(
-            File(analyzedImage.path),
+            File(widget.analyzedImage.path),
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) => const Icon(
               Icons.image_outlined,
@@ -386,40 +425,148 @@ class _ImageComparisonCard extends StatelessWidget {
     );
   }
 
+  Widget _buildFullImage() {
+    if (widget.analyzedImage == null) {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.grey[200],
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.image_outlined,
+            color: Colors.grey,
+            size: 48,
+          ),
+        ),
+      );
+    }
+
+    // Handle String (URL or asset path)
+    if (widget.analyzedImage is String) {
+      final imageString = widget.analyzedImage as String;
+
+      // Asset path
+      if (imageString.startsWith('assets/')) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.asset(
+            imageString,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.grey[200],
+              ),
+              child: const Center(
+                child: Icon(Icons.image_outlined, color: Colors.grey, size: 48),
+              ),
+            ),
+          ),
+        );
+      }
+
+      // Network URL
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: CachedNetworkImage(
+          imageUrl: imageString,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Container(
+            color: Colors.grey[200],
+          ),
+          errorWidget: (context, url, error) => Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.grey[200],
+            ),
+            child: const Center(
+              child: Icon(Icons.image_outlined, color: Colors.grey, size: 48),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // XFile (local file)
+    if (widget.analyzedImage.runtimeType.toString().contains('XFile')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(
+          File(widget.analyzedImage.path),
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.grey[200],
+            ),
+            child: const Center(
+              child: Icon(Icons.image_outlined, color: Colors.grey, size: 48),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Fallback
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey[200],
+      ),
+      child: const Center(
+        child: Icon(Icons.image_outlined, color: Colors.grey, size: 48),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    return Container(
-      height: 68,
-      padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F9F9),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          // Thumbnail image
-          _buildThumbnail(),
-          SizedBox(width: spacing.m),
-          // "Compare with original" text
-          const Expanded(
-            child: Text(
-              'Compare with original',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'PlusJakartaSans',
+    return GestureDetector(
+      onTap: _toggleExpanded,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        height: _isExpanded ? 300 : 68,
+        padding: EdgeInsets.symmetric(
+          horizontal: spacing.m,
+          vertical: _isExpanded ? 12 : 10,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9F9F9),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: _isExpanded
+            ? _buildFullImage()
+            : Row(
+                children: [
+                  // Thumbnail image
+                  _buildThumbnail(),
+                  SizedBox(width: spacing.m),
+                  // "Compare with original" text
+                  const Expanded(
+                    child: Text(
+                      'Compare with original',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                    ),
+                  ),
+                  // Chevron icon with rotation
+                  RotationTransition(
+                    turns: _rotationAnimation,
+                    child: const Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
-          // Chevron icon
-          const Icon(
-            Icons.keyboard_arrow_down,
-            size: 16,
-            color: Colors.grey,
-          ),
-        ],
       ),
     );
   }
