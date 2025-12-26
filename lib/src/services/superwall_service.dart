@@ -80,30 +80,29 @@ class SuperwallService {
 
       handler.onDismiss((paywallInfo, result) {
         if (kDebugMode) {
-          debugPrint('[Superwall] Paywall dismissed with result: ${result.runtimeType}');
+          debugPrint('[Superwall] Paywall dismissed');
         }
 
-        // Check if user purchased
-        if (result is sw.PaywallResultPurchased) {
-          if (kDebugMode) {
-            debugPrint('[Superwall] Purchase completed: ${result.productId}');
-          }
-          completer.complete(true);
-        } else if (result is sw.PaywallResultRestored) {
-          if (kDebugMode) {
-            debugPrint('[Superwall] Purchases restored');
-          }
-          completer.complete(true);
-        } else if (result is sw.PaywallResultDeclined) {
-          if (kDebugMode) {
-            debugPrint('[Superwall] User declined paywall');
-          }
-          completer.complete(false);
-        } else {
-          if (kDebugMode) {
-            debugPrint('[Superwall] Unknown result type - defaulting to false');
-          }
-          completer.complete(false);
+        // Handle different paywall results using switch
+        switch (result) {
+          case sw.PaywallResult.purchased(final product):
+            if (kDebugMode) {
+              debugPrint('[Superwall] Purchase completed: ${product.id}');
+            }
+            completer.complete(true);
+            break;
+          case sw.PaywallResult.restored():
+            if (kDebugMode) {
+              debugPrint('[Superwall] Purchases restored');
+            }
+            completer.complete(true);
+            break;
+          case sw.PaywallResult.declined():
+            if (kDebugMode) {
+              debugPrint('[Superwall] User declined paywall');
+            }
+            completer.complete(false);
+            break;
         }
       });
 
