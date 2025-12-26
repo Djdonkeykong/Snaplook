@@ -487,7 +487,7 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
                       builder: (context) => TutorialImageAnalysisPage(
-                        imagePath: 'assets/images/instagram_tutorial.jpg',
+                        imagePath: 'assets/images/tutorial_analysis_image_2.jpg',
                         scenario: 'Instagram',
                         returnToOnboarding: widget.returnToOnboarding,
                       ),
