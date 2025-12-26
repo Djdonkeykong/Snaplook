@@ -9,7 +9,7 @@ import '../../domain/providers/auth_provider.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../onboarding/presentation/pages/notification_permission_page.dart';
-import '../../../paywall/presentation/pages/paywall_page.dart';
+import '../../../../services/paywall_helper.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
         MainNavigation,
@@ -275,14 +275,12 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 (route) => false,
               );
             } else if (hasCompletedOnboarding && !hasActiveSubscription) {
-              // Existing user who completed onboarding but NO subscription - go to paywall
+              // Existing user who completed onboarding but NO subscription - present Superwall paywall
               print(
-                  '[EmailVerification] Existing user without subscription - navigating to paywall');
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) => const PaywallPage(),
-                ),
-                (route) => false,
+                  '[EmailVerification] Existing user without subscription - presenting Superwall paywall');
+              await PaywallHelper.presentPaywallAndNavigate(
+                context: context,
+                userId: userId,
               );
             } else {
               // New user - check onboarding progress
@@ -304,14 +302,12 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                   (route) => false,
                 );
               } else if (hasOnboardingData) {
-                // User went through onboarding but no subscription - go to paywall
+                // User went through onboarding but no subscription - present Superwall paywall
                 print(
-                    '[EmailVerification] New user with onboarding data but no subscription - navigating to paywall');
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (context) => const PaywallPage(),
-                  ),
-                  (route) => false,
+                    '[EmailVerification] New user with onboarding data but no subscription - presenting Superwall paywall');
+                await PaywallHelper.presentPaywallAndNavigate(
+                  context: context,
+                  userId: userId,
                 );
               } else {
                 // New user without onboarding data - start from beginning

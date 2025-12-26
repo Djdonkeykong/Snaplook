@@ -21,7 +21,7 @@ import '../../../onboarding/presentation/pages/notification_permission_page.dart
 import '../../../onboarding/presentation/pages/trial_intro_page.dart';
 import '../../../onboarding/presentation/pages/save_progress_page.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
-import '../../../paywall/presentation/pages/paywall_page.dart';
+import '../../../../services/paywall_helper.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../../user/repositories/user_profile_repository.dart';
 import 'email_sign_in_page.dart';
@@ -401,13 +401,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   );
                                 } else if (hasCompletedOnboarding &&
                                     !hasActiveSubscription && !hasCredits) {
-                                  // User completed onboarding but NO subscription and NO credits - go to paywall
+                                  // User completed onboarding but NO subscription and NO credits - present Superwall paywall
                                   debugPrint(
-                                      '[LoginPage] User completed onboarding but no subscription or credits - going to paywall');
-                                  navigator.push(
-                                    MaterialPageRoute(
-                                      builder: (context) => const PaywallPage(),
-                                    ),
+                                      '[LoginPage] User completed onboarding but no subscription or credits - presenting Superwall paywall');
+                                  await PaywallHelper.presentPaywallAndNavigate(
+                                    context: navigator.context,
+                                    userId: userId,
                                   );
                                 } else {
                                   // User hasn't completed onboarding - resume where they left off
@@ -462,10 +461,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                       break;
                                     case 'trial':
                                       debugPrint(
-                                          '[LoginPage] Resuming at trial - eligible: $isEligibleForTrial');
-                                      nextPage = isEligibleForTrial
-                                          ? const TrialIntroPage()
-                                          : const PaywallPage();
+                                          '[LoginPage] Resuming at trial');
+                                      nextPage = const TrialIntroPage();
                                       break;
                                     case 'save_progress':
                                       debugPrint(
@@ -473,9 +470,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                       nextPage = hasActiveSubscription
                                           ? const MainNavigation(
                                               key: ValueKey('fresh-main-nav'))
-                                          : (isEligibleForTrial
-                                              ? const TrialIntroPage()
-                                              : const PaywallPage());
+                                          : const TrialIntroPage();
                                       break;
                                     case 'paywall':
                                     case 'account':
@@ -484,9 +479,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                       nextPage = hasActiveSubscription
                                           ? const MainNavigation(
                                               key: ValueKey('fresh-main-nav'))
-                                          : (isEligibleForTrial
-                                              ? const TrialIntroPage()
-                                              : const PaywallPage());
+                                          : const TrialIntroPage();
                                       break;
                                     case 'welcome':
                                       debugPrint(
@@ -668,13 +661,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 );
                               } else if (hasCompletedOnboarding &&
                                   !hasActiveSubscription && !hasCredits) {
-                                // User completed onboarding but NO subscription and NO credits - go to paywall
+                                // User completed onboarding but NO subscription and NO credits - present Superwall paywall
                                 debugPrint(
-                                    '[LoginPage] User completed onboarding but no subscription or credits - going to paywall');
-                                navigator.push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const PaywallPage(),
-                                  ),
+                                    '[LoginPage] User completed onboarding but no subscription or credits - presenting Superwall paywall');
+                                await PaywallHelper.presentPaywallAndNavigate(
+                                  context: navigator.context,
+                                  userId: userId,
                                 );
                               } else {
                                 // User hasn't completed onboarding - resume where they left off
@@ -729,10 +721,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     break;
                                   case 'trial':
                                     debugPrint(
-                                        '[LoginPage] Resuming at trial - eligible: $isEligibleForTrial');
-                                    nextPage = isEligibleForTrial
-                                        ? const TrialIntroPage()
-                                        : const PaywallPage();
+                                        '[LoginPage] Resuming at trial');
+                                    nextPage = const TrialIntroPage();
                                     break;
                                   case 'save_progress':
                                     debugPrint(
@@ -740,9 +730,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     nextPage = hasActiveSubscription
                                         ? const MainNavigation(
                                             key: ValueKey('fresh-main-nav'))
-                                        : (isEligibleForTrial
-                                            ? const TrialIntroPage()
-                                            : const PaywallPage());
+                                        : const TrialIntroPage();
                                     break;
                                   case 'paywall':
                                   case 'account':
@@ -751,9 +739,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     nextPage = hasActiveSubscription
                                         ? const MainNavigation(
                                             key: ValueKey('fresh-main-nav'))
-                                        : (isEligibleForTrial
-                                            ? const TrialIntroPage()
-                                            : const PaywallPage());
+                                        : const TrialIntroPage();
                                     break;
                                   case 'welcome':
                                     debugPrint(
