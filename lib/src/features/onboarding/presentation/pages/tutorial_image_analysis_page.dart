@@ -175,6 +175,7 @@ class _TutorialImageAnalysisPageState
                       scrollController: scrollController,
                       onProductTap: _openProduct,
                       showFavoriteButton: false,
+                      analyzedImage: widget.imagePath,
                     );
                   },
                 ),

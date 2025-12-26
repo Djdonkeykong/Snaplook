@@ -158,7 +158,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
           // Full-screen Photos screenshot (step 1 - ALWAYS visible)
           Positioned.fill(
             child: Image.asset(
-              'assets/images/photos_step1.png',
+              'assets/images/photos_step1_v2.png',
               fit: BoxFit.cover,
               gaplessPlayback: true,
             ),

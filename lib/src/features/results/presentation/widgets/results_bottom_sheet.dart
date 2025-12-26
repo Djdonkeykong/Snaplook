@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,7 @@ class ResultsBottomSheetContent extends StatelessWidget {
   final ScrollController scrollController;
   final ValueChanged<DetectionResult> onProductTap;
   final bool showFavoriteButton;
+  final dynamic analyzedImage; // Can be XFile, String (URL), or null
 
   const ResultsBottomSheetContent({
     super.key,
@@ -22,6 +24,7 @@ class ResultsBottomSheetContent extends StatelessWidget {
     required this.scrollController,
     required this.onProductTap,
     this.showFavoriteButton = true,
+    this.analyzedImage,
   });
 
   @override
@@ -61,50 +64,20 @@ class ResultsBottomSheetContent extends StatelessWidget {
                   BottomSheetHandle(
                     margin: EdgeInsets.only(bottom: spacing.m),
                   ),
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Similar matches',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '${results.length} results',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'PlusJakartaSans',
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: spacing.m),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: SizedBox(
-                height: 36,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(horizontal: spacing.m),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        _AllResultsChip(),
-                      ],
+                  // Image comparison card (matches iOS)
+                  _ImageComparisonCard(analyzedImage: analyzedImage),
+                  SizedBox(height: spacing.m),
+                  // Results count label in red
+                  Text(
+                    'Found ${results.length} similar match${results.length == 1 ? '' : 'es'}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFf2003c),
+                      fontFamily: 'PlusJakartaSans',
                     ),
                   ),
-                ),
+                ],
               ),
             ),
             SizedBox(height: spacing.sm),
@@ -296,31 +269,157 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-class _AllResultsChip extends StatelessWidget {
-  const _AllResultsChip();
+class _ImageComparisonCard extends StatelessWidget {
+  final dynamic analyzedImage; // Can be XFile, String (URL), or null
+
+  const _ImageComparisonCard({this.analyzedImage});
+
+  Widget _buildThumbnail() {
+    if (analyzedImage == null) {
+      // Placeholder when no image
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.grey[200],
+        ),
+        child: const Icon(
+          Icons.image_outlined,
+          color: Colors.grey,
+          size: 24,
+        ),
+      );
+    }
+
+    // Handle String (URL or asset path)
+    if (analyzedImage is String) {
+      final imageString = analyzedImage as String;
+
+      // Check if it's an asset path
+      if (imageString.startsWith('assets/')) {
+        return Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.grey[200],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              imageString,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.image_outlined,
+                color: Colors.grey,
+                size: 24,
+              ),
+            ),
+          ),
+        );
+      }
+
+      // Otherwise treat as network URL
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.grey[200],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: CachedNetworkImage(
+            imageUrl: imageString,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => Container(
+              color: Colors.grey[200],
+            ),
+            errorWidget: (context, url, error) => const Icon(
+              Icons.image_outlined,
+              color: Colors.grey,
+              size: 24,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Handle XFile (local file)
+    if (analyzedImage.runtimeType.toString().contains('XFile')) {
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.grey[200],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.file(
+            File(analyzedImage.path),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const Icon(
+              Icons.image_outlined,
+              color: Colors.grey,
+              size: 24,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Fallback
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey[200],
+      ),
+      child: const Icon(
+        Icons.image_outlined,
+        color: Colors.grey,
+        size: 24,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final spacing = context.spacing;
+
     return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 68,
+      padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2003C),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0xFFF2003C),
-          width: 1,
-        ),
+        color: const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(12),
       ),
-      alignment: Alignment.center,
-      child: const Text(
-        'All',
-        style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-          color: Colors.white,
-        ),
+      child: Row(
+        children: [
+          // Thumbnail image
+          _buildThumbnail(),
+          SizedBox(width: spacing.m),
+          // "Compare with original" text
+          const Expanded(
+            child: Text(
+              'Compare with original',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'PlusJakartaSans',
+              ),
+            ),
+          ),
+          // Chevron icon
+          const Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: Colors.grey,
+          ),
+        ],
       ),
     );
   }

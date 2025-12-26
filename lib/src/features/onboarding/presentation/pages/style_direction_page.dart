@@ -23,10 +23,10 @@ class _StyleDirectionPageState extends ConsumerState<StyleDirectionPage>
   static const _styleOptions = [
     'Streetwear',
     'Minimal',
-    'Casual',
-    'Classic',
-    'Bold',
-    'Everything',
+    'Relaxed',
+    'Timeless',
+    'Elevated',
+    'Statement',
   ];
 
   late List<AnimationController> _animationControllers;

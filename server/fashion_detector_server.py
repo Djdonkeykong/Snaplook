@@ -845,6 +845,10 @@ def looks_like_pdp(url: str, title: str) -> bool:
     url_lower = url.lower()
     title_lower = title.lower()
 
+    # First check: if it looks like a collection page, it's NOT a PDP
+    if looks_like_collection(url, title):
+        return False
+
     pdp_url_pattern = r'/product/|/products?/|/p/|/pd/|/sku/|/item/|/buy/|/dp/|/gp/product/|/shop/[^/]*\d'
     pdp_title_pattern = r'\b(sku|style|model|size|midi|maxi|silk|satin|lace)\b'
 
@@ -855,12 +859,15 @@ def looks_like_collection(url: str, title: str) -> bool:
     url_lower = url.lower()
     title_lower = title.lower()
 
-    # Title pattern: "Category | Store"
+    # Title patterns: "Category | Store" or "Shop All" / "View All"
     if re.search(r'\b(women|men|kids|midi|maxi|skirts?|dresses|clothing)\b', title_lower) and ' | ' in title_lower:
         return True
 
-    # Collection/category URLs
-    collection_pattern = r'/c/|/category/|/collections?/|/shop/[^/]+/?$|/women/[^/]+/?$|/women/?$|/new-arrivals/?$|/sale/?$'
+    if re.search(r'\b(shop all|view all|browse all|all products|all items)\b', title_lower):
+        return True
+
+    # Collection/category URLs (added /all/, /browse/, /catalog/, /search/)
+    collection_pattern = r'/c/|/category/|/collections?/|/all/|/browse/|/catalog/|/search/|/shop/[^/]+/?$|/women/[^/]+/?$|/women/?$|/men/?$|/new-arrivals/?$|/sale/?$'
     if re.search(collection_pattern, url_lower):
         return True
 

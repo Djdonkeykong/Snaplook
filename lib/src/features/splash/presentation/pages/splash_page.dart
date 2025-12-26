@@ -32,11 +32,11 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     // Preload onboarding images to prevent white flash
     await ImagePreloader.instance.preloadSocialMediaShareImage(context);
 
-    // Wait for auth state to be ready (with minimum 1.0s splash time)
+    // Wait for auth state to be ready (with minimum 0.5s splash time)
     // CRITICAL: Wait for actual auth state data, not just the provider to be available
     // This ensures Supabase session restoration from SharedPreferences completes
     await Future.wait([
-      Future.delayed(const Duration(milliseconds: 1000)),
+      Future.delayed(const Duration(milliseconds: 500)),
       ref.read(authStateProvider.future).timeout(
         const Duration(seconds: 3),
         onTimeout: () {

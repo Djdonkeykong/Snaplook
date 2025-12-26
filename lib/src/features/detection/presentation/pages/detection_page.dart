@@ -454,10 +454,21 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                                 snap: false,
                                 expand: false,
                                 builder: (context, scrollController) {
+                                  // Determine which image to show in comparison card
+                                  dynamic analyzedImage;
+                                  if (_loadedImageUrl != null && _loadedImageUrl!.isNotEmpty) {
+                                    analyzedImage = _loadedImageUrl;
+                                  } else if (widget.imageUrl != null) {
+                                    analyzedImage = widget.imageUrl;
+                                  } else {
+                                    analyzedImage = imagesState.currentImage;
+                                  }
+
                                   return ResultsBottomSheetContent(
                                     results: _results,
                                     scrollController: scrollController,
                                     onProductTap: _openProduct,
+                                    analyzedImage: analyzedImage,
                                   );
                                 },
                               ),

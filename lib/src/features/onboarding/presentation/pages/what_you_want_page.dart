@@ -21,11 +21,12 @@ class WhatYouWantPage extends ConsumerStatefulWidget {
 class _WhatYouWantPageState extends ConsumerState<WhatYouWantPage>
     with TickerProviderStateMixin, RouteAware {
   static const _options = [
-    'Outfits',
-    'Shoes',
-    'Tops',
-    'Accessories',
-    'Everything',
+    'Complete outfits',
+    'A specific item I saw',
+    'Affordable alternatives',
+    'Designer look-alikes',
+    'Statement pieces',
+    'Everyday basics',
   ];
 
   late List<AnimationController> _animationControllers;
