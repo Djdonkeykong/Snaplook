@@ -13,6 +13,7 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import 'save_progress_page.dart';
 import 'trial_intro_page.dart';
+import 'paywall_presentation_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -262,14 +263,18 @@ class _NotificationPermissionPageState
               );
             }
           } else {
-            // Not eligible for trial - present Superwall paywall
+            // Not eligible for trial - navigate to paywall presentation page
             debugPrint(
-                '[NotificationPermission] Not eligible for trial - presenting Superwall paywall');
+                '[NotificationPermission] Not eligible for trial - navigating to paywall');
             if (mounted) {
               final userId = Supabase.instance.client.auth.currentUser?.id;
-              await PaywallHelper.presentPaywallAndNavigate(
-                context: context,
-                userId: userId,
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => PaywallPresentationPage(
+                    userId: userId,
+                    placement: 'onboarding_paywall',
+                  ),
+                ),
               );
             }
           }

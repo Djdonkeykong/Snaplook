@@ -1,7 +1,9 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:io' show Platform;
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -10,6 +12,7 @@ class NotificationService {
 
   FirebaseMessaging? _messaging;
   String? _currentToken;
+  static const _notificationChannel = MethodChannel('snaplook/notifications');
 
   Future<void> initialize() async {
     try {
@@ -60,34 +63,52 @@ class NotificationService {
     }
   }
 
+  Future<void> _triggerApnsRegistration() async {
+    if (!Platform.isIOS) return;
+
+    try {
+      debugPrint('[NotificationService] Triggering APNS registration on iOS...');
+      await _notificationChannel.invokeMethod('registerForRemoteNotifications');
+      debugPrint('[NotificationService] APNS registration triggered successfully');
+
+      // Give iOS a moment to generate the APNS token
+      await Future.delayed(const Duration(milliseconds: 1000));
+    } catch (e) {
+      debugPrint('[NotificationService] Error triggering APNS registration: $e');
+      // Continue anyway - might already be registered
+    }
+  }
+
   Future<void> _registerToken() async {
     try {
       if (_messaging == null) return;
 
-      // On iOS, we need to ensure APNS token is available first
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        debugPrint('[NotificationService] iOS detected - checking for APNS token...');
+      // On iOS, we MUST trigger APNS registration first
+      // This is critical when FirebaseAppDelegateProxyEnabled is false
+      if (Platform.isIOS) {
+        debugPrint('[NotificationService] iOS detected - triggering APNS registration...');
+        await _triggerApnsRegistration();
 
-        // Try to get APNS token first
+        // Check if APNS token is now available
         String? apnsToken;
         try {
           apnsToken = await _messaging!.getAPNSToken();
           debugPrint('[NotificationService] APNS token available: ${apnsToken != null}');
         } catch (e) {
-          debugPrint('[NotificationService] APNS token not available yet: $e');
+          debugPrint('[NotificationService] APNS token check error: $e');
         }
 
-        // If APNS token not available, wait a bit and retry
+        // If still not available, wait a bit longer
         if (apnsToken == null) {
-          debugPrint('[NotificationService] Waiting for APNS token...');
+          debugPrint('[NotificationService] APNS token not ready, waiting longer...');
           await Future.delayed(const Duration(seconds: 2));
 
           try {
             apnsToken = await _messaging!.getAPNSToken();
-            debugPrint('[NotificationService] APNS token after wait: ${apnsToken != null}');
+            debugPrint('[NotificationService] APNS token after extended wait: ${apnsToken != null}');
           } catch (e) {
             debugPrint('[NotificationService] Still no APNS token: $e');
-            // Continue anyway - FCM token might still work
+            // The token will be available via onTokenRefresh listener when ready
           }
         }
       }
@@ -98,7 +119,7 @@ class NotificationService {
         debugPrint('[NotificationService] FCM Token: $token');
         await _saveTokenToDatabase(token);
       } else {
-        debugPrint('[NotificationService] Failed to get FCM token');
+        debugPrint('[NotificationService] Failed to get FCM token - will retry when APNS token is available');
       }
     } catch (e) {
       debugPrint('[NotificationService] Error getting token: $e');

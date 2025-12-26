@@ -16,7 +16,7 @@ import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../widgets/progress_indicator.dart';
 import 'trial_intro_page.dart';
-import '../../../../services/paywall_helper.dart';
+import 'paywall_presentation_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
@@ -184,13 +184,17 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
             );
           }
         } else {
-          // Completed onboarding + NO subscription → Present Superwall paywall
+          // Completed onboarding + NO subscription → Navigate to paywall presentation page
           debugPrint(
-              '[SaveProgress] User has no subscription - presenting Superwall paywall');
+              '[SaveProgress] User has no subscription - navigating to paywall');
           if (mounted) {
-            await PaywallHelper.presentPaywallAndNavigate(
-              context: context,
-              userId: userId,
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => PaywallPresentationPage(
+                  userId: userId,
+                  placement: 'onboarding_paywall',
+                ),
+              ),
             );
           }
         }
