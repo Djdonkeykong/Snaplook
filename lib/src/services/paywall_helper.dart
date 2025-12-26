@@ -47,6 +47,7 @@ class PaywallHelper {
   }
 
   /// Present paywall and navigate to next screen based on onboarding state
+  /// Only navigates forward if user completed purchase
   static Future<void> presentPaywallAndNavigate({
     required BuildContext context,
     required String? userId,
@@ -63,6 +64,12 @@ class PaywallHelper {
       );
 
       if (!context.mounted) return;
+
+      // Only navigate forward if user purchased
+      if (!didPurchase) {
+        debugPrint('[PaywallHelper] User dismissed paywall without purchasing - staying on current page');
+        return;
+      }
 
       if (userId == null) {
         // Should never happen since auth is required before paywall
@@ -82,7 +89,7 @@ class PaywallHelper {
           userResponse?['onboarding_state'] == 'completed';
 
       debugPrint(
-          '[PaywallHelper] Navigating after paywall: hasCompletedOnboarding=$hasCompletedOnboarding, didPurchase=$didPurchase');
+          '[PaywallHelper] User purchased - navigating: hasCompletedOnboarding=$hasCompletedOnboarding');
 
       final nextPage = hasCompletedOnboarding
           ? const MainNavigation()
@@ -95,13 +102,7 @@ class PaywallHelper {
       }
     } catch (e) {
       debugPrint('[PaywallHelper] Error in navigation flow: $e');
-      // Default to continuing onboarding
-      if (context.mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-              builder: (context) => const WelcomeFreeAnalysisPage()),
-        );
-      }
+      // Don't navigate on error - let user stay where they are
     }
   }
 }
