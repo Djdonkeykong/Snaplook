@@ -407,12 +407,13 @@ class _WelcomeFreeAnalysisPageState
                     width: 90,
                     height: 90,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF8E8E93).withOpacity(0.6),
+                      color: const Color(0xFFD1D1D6).withOpacity(0.75),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Center(
                       child: CupertinoActivityIndicator(
                         radius: 14,
+                        color: Colors.white,
                       ),
                     ),
                   ),
