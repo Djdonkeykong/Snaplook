@@ -10,9 +10,11 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_reminder_page.dart';
-import 'paywall_presentation_page.dart';
+import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/onboarding_state_service.dart';
+import '../../../../services/superwall_service.dart';
+import '../../../../services/subscription_sync_service.dart';
 
 class TrialIntroPage extends ConsumerStatefulWidget {
   const TrialIntroPage({super.key});
@@ -76,17 +78,54 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
           _isCheckingEligibility = false;
         });
 
-        // If not eligible, skip directly to paywall
+        // If not eligible, present paywall directly
         if (!isEligible && mounted) {
           final userId = Supabase.instance.client.auth.currentUser?.id;
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => PaywallPresentationPage(
-                userId: userId,
-                placement: 'onboarding_paywall',
-              ),
-            ),
+          final didPurchase = await SuperwallService().presentPaywall(
+            placement: 'onboarding_paywall',
           );
+
+          if (!mounted) return;
+
+          if (didPurchase && userId != null) {
+            // User purchased - sync subscription and navigate
+            debugPrint('[TrialIntro] Purchase completed - syncing subscription');
+
+            try {
+              await Future.delayed(const Duration(milliseconds: 500));
+              await SubscriptionSyncService().syncSubscriptionToSupabase();
+              await OnboardingStateService().markPaymentComplete(userId);
+            } catch (e) {
+              debugPrint('[TrialIntro] Error syncing subscription: $e');
+            }
+
+            if (mounted) {
+              // Check if user has completed onboarding before
+              final userResponse = await Supabase.instance.client
+                  .from('users')
+                  .select('onboarding_state')
+                  .eq('id', userId)
+                  .maybeSingle();
+
+              final hasCompletedOnboarding =
+                  userResponse?['onboarding_state'] == 'completed';
+
+              final nextPage = hasCompletedOnboarding
+                  ? const MainNavigation()
+                  : const TrialReminderPage();
+
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => nextPage),
+              );
+            }
+          } else {
+            // User dismissed paywall - show trial eligibility again
+            if (mounted) {
+              setState(() {
+                _isEligibleForTrial = true;
+              });
+            }
+          }
         }
       }
     } catch (e) {

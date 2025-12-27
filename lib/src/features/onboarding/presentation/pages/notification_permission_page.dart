@@ -13,13 +13,14 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import 'save_progress_page.dart';
 import 'trial_intro_page.dart';
-import 'paywall_presentation_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/paywall_helper.dart';
+import '../../../../services/superwall_service.dart';
+import '../../../../services/subscription_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Provider to store notification permission choice
@@ -263,19 +264,50 @@ class _NotificationPermissionPageState
               );
             }
           } else {
-            // Not eligible for trial - navigate to paywall presentation page
+            // Not eligible for trial - present paywall
             debugPrint(
-                '[NotificationPermission] Not eligible for trial - navigating to paywall');
+                '[NotificationPermission] Not eligible for trial - presenting paywall');
             if (mounted) {
               final userId = Supabase.instance.client.auth.currentUser?.id;
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => PaywallPresentationPage(
-                    userId: userId,
-                    placement: 'onboarding_paywall',
-                  ),
-                ),
+              final didPurchase = await SuperwallService().presentPaywall(
+                placement: 'onboarding_paywall',
               );
+
+              if (!mounted) return;
+
+              if (didPurchase && userId != null) {
+                // User purchased - sync subscription and navigate to home or next step
+                debugPrint('[NotificationPermission] Purchase completed - syncing subscription');
+
+                try {
+                  await Future.delayed(const Duration(milliseconds: 500));
+                  await SubscriptionSyncService().syncSubscriptionToSupabase();
+                  await OnboardingStateService().markPaymentComplete(userId);
+                } catch (e) {
+                  debugPrint('[NotificationPermission] Error syncing subscription: $e');
+                }
+
+                if (mounted) {
+                  // Check if user has completed onboarding before
+                  final userResponse = await Supabase.instance.client
+                      .from('users')
+                      .select('onboarding_state')
+                      .eq('id', userId)
+                      .maybeSingle();
+
+                  final hasCompletedOnboarding =
+                      userResponse?['onboarding_state'] == 'completed';
+
+                  final nextPage = hasCompletedOnboarding
+                      ? const MainNavigation()
+                      : const SaveProgressPage();
+
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (context) => nextPage),
+                  );
+                }
+              }
+              // If user dismissed without purchasing, stay on this page
             }
           }
         }

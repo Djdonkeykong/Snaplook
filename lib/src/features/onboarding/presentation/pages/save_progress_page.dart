@@ -16,12 +16,12 @@ import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../widgets/progress_indicator.dart';
 import 'trial_intro_page.dart';
-import 'paywall_presentation_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/revenuecat_service.dart';
+import '../../../../services/superwall_service.dart';
 import '../../domain/providers/gender_provider.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
 import 'notification_permission_page.dart';
@@ -184,18 +184,40 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
             );
           }
         } else {
-          // Completed onboarding + NO subscription → Navigate to paywall presentation page
-          debugPrint(
-              '[SaveProgress] User has no subscription - navigating to paywall');
+          // Completed onboarding + NO subscription → Present paywall
+          debugPrint('[SaveProgress] User has no subscription - presenting paywall');
           if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => PaywallPresentationPage(
-                  userId: userId,
-                  placement: 'onboarding_paywall',
-                ),
-              ),
+            final didPurchase = await SuperwallService().presentPaywall(
+              placement: 'onboarding_paywall',
             );
+
+            if (!mounted) return;
+
+            if (didPurchase) {
+              // User purchased - sync subscription and navigate to home
+              debugPrint('[SaveProgress] Purchase completed - syncing subscription');
+
+              try {
+                await Future.delayed(const Duration(milliseconds: 500));
+                await SubscriptionSyncService().syncSubscriptionToSupabase();
+                await OnboardingStateService().markPaymentComplete(userId);
+              } catch (e) {
+                debugPrint('[SaveProgress] Error syncing subscription: $e');
+              }
+
+              if (mounted) {
+                _resetMainNavigationState();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(
+                      key: ValueKey('fresh-main-nav'),
+                    ),
+                  ),
+                  (route) => false,
+                );
+              }
+            }
+            // If user dismissed without purchasing, stay on this page
           }
         }
       } else {
