@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
-import '../../../auth/presentation/pages/welcome_free_analysis_page.dart';
-import '../../../../shared/navigation/main_navigation.dart';
+import 'welcome_free_analysis_page.dart';
+import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/superwall_service.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/onboarding_state_service.dart';
