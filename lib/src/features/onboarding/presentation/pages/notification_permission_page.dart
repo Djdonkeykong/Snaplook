@@ -336,22 +336,22 @@ class _NotificationPermissionPageState
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
-        centerTitle: true,
-        title: const OnboardingProgressIndicator(
-          currentStep: 13,
-          totalSteps: 14,
-        ),
-      ),
-      body: Stack(
-        children: [
-          SafeArea(
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.background,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leading: const SnaplookBackButton(enableHaptics: true),
+            centerTitle: true,
+            title: const OnboardingProgressIndicator(
+              currentStep: 13,
+              totalSteps: 14,
+            ),
+          ),
+          body: SafeArea(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: spacing.l),
               child: Column(
@@ -432,30 +432,30 @@ class _NotificationPermissionPageState
               ),
             ),
           ),
-          if (_isRequesting)
-            Container(
-              color: Colors.black.withOpacity(0.5),
-              child: Center(
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(26),
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.secondary,
-                      ),
-                      strokeWidth: 2,
+        ),
+        if (_isRequesting)
+          Container(
+            color: Colors.black.withOpacity(0.5),
+            child: Center(
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.secondary,
                     ),
+                    strokeWidth: 2,
                   ),
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
