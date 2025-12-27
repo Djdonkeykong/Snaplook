@@ -400,19 +400,19 @@ class _WelcomeFreeAnalysisPageState
             color: Colors.black.withOpacity(0.3),
             child: Center(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(20),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                   child: Container(
-                    width: 90,
-                    height: 90,
+                    width: 110,
+                    height: 110,
                     decoration: BoxDecoration(
                       color: const Color(0xFFD1D1D6).withOpacity(0.75),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Center(
                       child: CupertinoActivityIndicator(
-                        radius: 14,
+                        radius: 18,
                         color: Colors.white,
                       ),
                     ),
