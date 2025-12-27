@@ -1,3 +1,6 @@
+import 'dart:ui';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -264,21 +267,21 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
         ),
         if (_isPresenting)
           Container(
-            color: Colors.black.withOpacity(0.5),
-            child: Center(
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(26),
-                ),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.secondary,
+            color: Colors.black.withOpacity(0.35),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
+              child: Center(
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Center(
+                    child: CupertinoActivityIndicator(
+                      radius: 14,
                     ),
-                    strokeWidth: 2,
                   ),
                 ),
               ),
