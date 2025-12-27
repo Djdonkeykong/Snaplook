@@ -29,10 +29,11 @@ class SubscriptionSyncService {
 
       debugPrint('[SubscriptionSync] Starting RevenueCat sync for user ${user.id}');
 
-      // Get RevenueCat customer info
+      // Get FRESH RevenueCat customer info (don't use cache after purchase)
       CustomerInfo? customerInfo;
       try {
-        customerInfo = _revenueCat.currentCustomerInfo ?? await Purchases.getCustomerInfo();
+        customerInfo = await Purchases.getCustomerInfo();
+        debugPrint('[SubscriptionSync] Fetched fresh customer info from RevenueCat');
       } catch (e) {
         debugPrint('[SubscriptionSync] Error fetching RevenueCat customer info: $e');
         return;
@@ -48,6 +49,14 @@ class SubscriptionSyncService {
           ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
           : null;
       final productId = entitlement?.productIdentifier;
+      final revenueCatUserId = customerInfo.originalAppUserId;
+
+      debugPrint('[SubscriptionSync] RevenueCat data:');
+      debugPrint('  - originalAppUserId: $revenueCatUserId');
+      debugPrint('  - hasActiveSubscription: $hasActiveRevenueCat');
+      debugPrint('  - isTrial: $isTrial');
+      debugPrint('  - productId: $productId');
+      debugPrint('  - expiresAt: $expirationDateIso');
 
       // Check if user has credits (users with credits should not have their status overwritten to 'free')
       final userResponse = await _supabase
@@ -66,6 +75,7 @@ class SubscriptionSyncService {
 
         await _supabase.from('users').upsert({
           'id': user.id,
+          'revenue_cat_user_id': revenueCatUserId,
           'subscription_status': subscriptionStatus,
           'subscription_expires_at': expirationDateIso,
           'subscription_product_id': productId,
@@ -75,6 +85,9 @@ class SubscriptionSyncService {
         }, onConflict: 'id');
 
         debugPrint('[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: $isTrial, Expires: $expirationDateIso');
+
+        // Also sync status to Superwall so it knows about the subscription
+        await _superwall.syncSubscriptionStatus();
       } else if (hasCredits && (currentStatus == 'active' || currentStatus == 'expired')) {
         // User has credits but no active RevenueCat subscription
         // Preserve their existing subscription data entirely (don't overwrite with nulls)
@@ -85,6 +98,9 @@ class SubscriptionSyncService {
         }).eq('id', user.id);
 
         debugPrint('[SubscriptionSync] User has credits - preserving existing subscription data. Status: $currentStatus');
+
+        // Sync status to Superwall
+        await _superwall.syncSubscriptionStatus();
       } else {
         // No RevenueCat subscription and no credits - set to free or expired
         String subscriptionStatus = 'free';
@@ -97,6 +113,7 @@ class SubscriptionSyncService {
 
         await _supabase.from('users').upsert({
           'id': user.id,
+          'revenue_cat_user_id': revenueCatUserId,
           'subscription_status': subscriptionStatus,
           'subscription_expires_at': expirationDateIso,
           'subscription_product_id': productId,
@@ -105,6 +122,8 @@ class SubscriptionSyncService {
           'updated_at': DateTime.now().toIso8601String(),
         }, onConflict: 'id');
 
+        // Sync status to Superwall
+        await _superwall.syncSubscriptionStatus();
       }
     } catch (e, stackTrace) {
       debugPrint('[SubscriptionSync] Error syncing subscription: $e');

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:superwallkit_flutter/superwallkit_flutter.dart' as sw;
+import 'package:purchases_flutter/purchases_flutter.dart';
+import 'rc_purchase_controller.dart';
 
 /// Thin wrapper around Superwall to manage configuration, identity, and paywall presentation.
 class SuperwallService {
@@ -18,8 +20,19 @@ class SuperwallService {
   Future<void> initialize({required String apiKey, String? userId}) async {
     if (_configured) return;
 
-    sw.Superwall.configure(apiKey);
+    // Create RevenueCat purchase controller
+    final purchaseController = RCPurchaseController();
+
+    // Configure Superwall with RevenueCat purchase controller
+    sw.Superwall.configure(
+      apiKey,
+      purchaseController: purchaseController,
+    );
     _configured = true;
+
+    if (kDebugMode) {
+      debugPrint('[Superwall] Configured with RevenueCat purchase controller');
+    }
 
     _statusSub = sw.Superwall.shared.subscriptionStatus.listen((status) {
       _latestStatus = status;
@@ -34,7 +47,7 @@ class SuperwallService {
     }
   }
 
-  /// Identify the current user.
+  /// Identify the current user and sync subscription status from RevenueCat.
   Future<void> identify(String userId) async {
     if (!_configured) {
       if (kDebugMode) {
@@ -43,6 +56,53 @@ class SuperwallService {
       return;
     }
     await sw.Superwall.shared.identify(userId);
+
+    // Sync subscription status from RevenueCat to Superwall
+    await _syncSubscriptionStatus();
+  }
+
+  /// Sync RevenueCat subscription status to Superwall
+  /// This ensures Superwall knows about active subscriptions and trial eligibility
+  Future<void> _syncSubscriptionStatus() async {
+    if (!_configured) return;
+
+    try {
+      final customerInfo = await Purchases.getCustomerInfo();
+      final hasActiveEntitlement = customerInfo.entitlements.active.isNotEmpty;
+
+      if (hasActiveEntitlement) {
+        // User has active subscription - tell Superwall
+        // Convert RevenueCat entitlements to Superwall entitlements
+        final entitlements = customerInfo.entitlements.active.keys.map((id) {
+          return sw.Entitlement(id: id);
+        }).toSet();
+
+        await sw.Superwall.shared.setSubscriptionStatus(
+          sw.SubscriptionStatusActive(entitlements: entitlements),
+        );
+
+        if (kDebugMode) {
+          debugPrint('[Superwall] Synced subscription status: active with ${entitlements.length} entitlements');
+        }
+      } else {
+        // User has no active subscription
+        await sw.Superwall.shared.setSubscriptionStatus(sw.SubscriptionStatusInactive());
+
+        if (kDebugMode) {
+          debugPrint('[Superwall] Synced subscription status: inactive');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[Superwall] Error syncing subscription status: $e');
+      }
+    }
+  }
+
+  /// Sync subscription status from RevenueCat to Superwall
+  /// Call this after purchases or when subscription status changes
+  Future<void> syncSubscriptionStatus() async {
+    await _syncSubscriptionStatus();
   }
 
   /// Reset the current user/session.

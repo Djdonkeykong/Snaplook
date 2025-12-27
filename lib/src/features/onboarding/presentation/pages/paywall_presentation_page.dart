@@ -57,6 +57,12 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       if (didPurchase && widget.userId != null) {
         try {
           debugPrint(
+              '[PaywallPresentationPage] Purchase completed - waiting for RevenueCat to process...');
+
+          // Wait briefly for RevenueCat to process the purchase and update entitlements
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          debugPrint(
               '[PaywallPresentationPage] Syncing subscription to Supabase...');
           await SubscriptionSyncService().syncSubscriptionToSupabase();
           await OnboardingStateService().markPaymentComplete(widget.userId!);
