@@ -45,17 +45,20 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
     try {
       debugPrint('[PaywallPresentationPage] Presenting Superwall paywall...');
 
-      // Hide loading overlay while paywall is showing
+      // Keep loading overlay visible while Superwall initializes
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Present Superwall paywall (this will show Superwall's UI over our page)
+      final didPurchase = await SuperwallService().presentPaywall(
+        placement: widget.placement,
+      );
+
+      // Paywall has been dismissed - hide loading overlay
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-
-      // Present Superwall paywall
-      final didPurchase = await SuperwallService().presentPaywall(
-        placement: widget.placement,
-      );
 
       if (!mounted) return;
 
