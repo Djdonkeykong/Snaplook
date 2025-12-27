@@ -447,12 +447,12 @@ class _NotificationPermissionPageState
                     width: 75,
                     height: 75,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD1D1D6).withOpacity(0.75),
+                      color: const Color(0xFF6d6d6d).withOpacity(0.85),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Center(
                       child: CupertinoActivityIndicator(
-                        radius: 14,
+                        radius: 18,
                         color: Colors.white,
                       ),
                     ),
