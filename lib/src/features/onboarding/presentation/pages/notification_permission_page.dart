@@ -437,20 +437,23 @@ class _NotificationPermissionPageState
         ),
         if (_isRequesting)
           Container(
-            color: Colors.black.withOpacity(0.35),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
-              child: Center(
-                child: Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Center(
-                    child: CupertinoActivityIndicator(
-                      radius: 14,
+            color: Colors.black.withOpacity(0.3),
+            child: Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  child: Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8E8E93).withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Center(
+                      child: CupertinoActivityIndicator(
+                        radius: 14,
+                      ),
                     ),
                   ),
                 ),
