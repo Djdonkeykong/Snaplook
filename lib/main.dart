@@ -177,6 +177,26 @@ void main() async {
     ),
   );
 
+  // Handle refresh token errors during session recovery
+  try {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      debugPrint('[Auth] Session exists, attempting to refresh if needed');
+    }
+  } catch (e) {
+    debugPrint('[Auth] Session recovery failed: $e');
+    // Clear invalid session data
+    if (e.toString().contains('refresh_token_not_found') ||
+        e.toString().contains('Invalid Refresh Token')) {
+      debugPrint('[Auth] Clearing invalid session data');
+      try {
+        await Supabase.instance.client.auth.signOut();
+      } catch (signOutError) {
+        debugPrint('[Auth] Error during signOut: $signOutError');
+      }
+    }
+  }
+
   final firebaseInitialized = await _initializeFirebase();
 
   // Sync auth state to share extension
@@ -658,6 +678,17 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       debugPrint('[Auth] Sync complete');
     } catch (e) {
       debugPrint('[Auth] Failed to sync auth state: $e');
+
+      // Handle refresh token errors
+      if (e.toString().contains('refresh_token_not_found') ||
+          e.toString().contains('Invalid Refresh Token')) {
+        debugPrint('[Auth] Refresh token error - clearing session');
+        try {
+          await Supabase.instance.client.auth.signOut();
+        } catch (signOutError) {
+          debugPrint('[Auth] Error during signOut: $signOutError');
+        }
+      }
     }
   }
 
