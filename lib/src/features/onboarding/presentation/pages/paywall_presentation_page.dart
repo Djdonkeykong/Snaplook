@@ -27,7 +27,6 @@ class PaywallPresentationPage extends StatefulWidget {
 class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
   bool _isLoading = true;
   bool _hasPresented = false;
-  String _loadingMessage = 'Loading...';
 
   @override
   void initState() {
@@ -69,7 +68,6 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
         // Show loading overlay while syncing
         if (mounted) {
           setState(() {
-            _loadingMessage = 'Setting up your subscription...';
             _isLoading = true;
           });
         }
@@ -80,12 +78,6 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
           // Wait briefly for RevenueCat to process the purchase and update entitlements
           await Future.delayed(const Duration(milliseconds: 500));
-
-          if (mounted) {
-            setState(() {
-              _loadingMessage = 'Syncing subscription...';
-            });
-          }
 
           debugPrint(
               '[PaywallPresentationPage] Syncing subscription to Supabase...');
@@ -158,45 +150,12 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _isLoading
-          ? Container(
-              color: Colors.black.withOpacity(0.5),
-              child: Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 32),
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.secondary,
-                        ),
-                        strokeWidth: 3,
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        _loadingMessage,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.secondary,
                 ),
+                strokeWidth: 3,
               ),
             )
           : const SizedBox.shrink(),
