@@ -441,14 +441,14 @@ class _NotificationPermissionPageState
                   height: 100,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(26),
                   ),
                   child: const Center(
                     child: CircularProgressIndicator(
                       valueColor: AlwaysStoppedAnimation<Color>(
                         AppColors.secondary,
                       ),
-                      strokeWidth: 3,
+                      strokeWidth: 2,
                     ),
                   ),
                 ),
