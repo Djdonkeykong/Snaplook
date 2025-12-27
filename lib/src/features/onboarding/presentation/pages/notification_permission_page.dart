@@ -15,6 +15,7 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import 'save_progress_page.dart';
 import 'trial_intro_page.dart';
+import 'welcome_free_analysis_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -300,13 +301,26 @@ class _NotificationPermissionPageState
                   final hasCompletedOnboarding =
                       userResponse?['onboarding_state'] == 'completed';
 
-                  final nextPage = hasCompletedOnboarding
-                      ? const MainNavigation()
-                      : const SaveProgressPage();
+                  debugPrint('[NotificationPermission] Has completed onboarding: $hasCompletedOnboarding');
 
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => nextPage),
-                  );
+                  if (hasCompletedOnboarding) {
+                    // Returning user - go directly to home
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => const MainNavigation(
+                          key: ValueKey('fresh-main-nav'),
+                        ),
+                      ),
+                      (route) => false,
+                    );
+                  } else {
+                    // New user - show welcome page first
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (context) => const WelcomeFreeAnalysisPage(),
+                      ),
+                    );
+                  }
                 }
               }
               // If user dismissed without purchasing, stay on this page

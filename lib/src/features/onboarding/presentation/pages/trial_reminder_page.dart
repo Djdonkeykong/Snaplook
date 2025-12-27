@@ -16,6 +16,7 @@ import '../../../../services/superwall_service.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'welcome_free_analysis_page.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
   const TrialReminderPage({super.key});
@@ -210,7 +211,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                     });
 
                     if (didPurchase && userId != null) {
-                      // User purchased - sync subscription and navigate to home
+                      // User purchased - sync subscription and navigate to welcome or home
                       debugPrint('[TrialReminder] Purchase completed - syncing subscription');
 
                       try {
@@ -222,14 +223,36 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                       }
 
                       if (mounted) {
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(
-                            builder: (context) => const MainNavigation(
-                              key: ValueKey('fresh-main-nav'),
+                        // Check if user has completed onboarding before
+                        final userResponse = await Supabase.instance.client
+                            .from('users')
+                            .select('onboarding_state')
+                            .eq('id', userId)
+                            .maybeSingle();
+
+                        final hasCompletedOnboarding =
+                            userResponse?['onboarding_state'] == 'completed';
+
+                        debugPrint('[TrialReminder] Has completed onboarding: $hasCompletedOnboarding');
+
+                        if (hasCompletedOnboarding) {
+                          // Returning user - go directly to home
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const MainNavigation(
+                                key: ValueKey('fresh-main-nav'),
+                              ),
                             ),
-                          ),
-                          (route) => false,
-                        );
+                            (route) => false,
+                          );
+                        } else {
+                          // New user - show welcome page first
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) => const WelcomeFreeAnalysisPage(),
+                            ),
+                          );
+                        }
                       }
                     }
                     // If user dismissed without purchasing, stay on this page

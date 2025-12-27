@@ -10,6 +10,7 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_reminder_page.dart';
+import 'welcome_free_analysis_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -110,13 +111,26 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
               final hasCompletedOnboarding =
                   userResponse?['onboarding_state'] == 'completed';
 
-              final nextPage = hasCompletedOnboarding
-                  ? const MainNavigation()
-                  : const TrialReminderPage();
+              debugPrint('[TrialIntro] Has completed onboarding: $hasCompletedOnboarding');
 
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => nextPage),
-              );
+              if (hasCompletedOnboarding) {
+                // Returning user - go directly to home
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(
+                      key: ValueKey('fresh-main-nav'),
+                    ),
+                  ),
+                  (route) => false,
+                );
+              } else {
+                // New user - show welcome page first
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => const WelcomeFreeAnalysisPage(),
+                  ),
+                );
+              }
             }
           } else {
             // User dismissed paywall - show trial eligibility again
