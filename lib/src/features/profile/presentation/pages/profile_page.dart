@@ -223,17 +223,63 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
 
     if (confirmed == true && mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Account deletion is not available yet.',
-            style: context.snackTextStyle(
-              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+      try {
+        // Show loading indicator
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Deleting account...',
+                style: context.snackTextStyle(
+                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                ),
+              ),
+              duration: const Duration(seconds: 10),
             ),
-          ),
-        ),
-      );
+          );
+        }
+
+        final authService = ref.read(authServiceProvider);
+        final user = authService.currentUser;
+
+        if (user == null) {
+          throw Exception('No user found');
+        }
+
+        // Delete user from Supabase (cascade will delete related data)
+        await authService.deleteAccount();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+        }
+
+        // Reset navigation state
+        _resetMainNavigationState();
+
+        // Navigate to login page
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Error deleting account: ${e.toString()}',
+                style: context.snackTextStyle(
+                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                ),
+              ),
+              duration: const Duration(milliseconds: 3000),
+            ),
+          );
+        }
+      }
     }
   }
 

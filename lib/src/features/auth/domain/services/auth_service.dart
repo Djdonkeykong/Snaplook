@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter/services.dart';
+import '../../../../services/subscription_sync_service.dart';
 
 class AuthService {
   final _supabase = Supabase.instance.client;
@@ -311,6 +312,37 @@ class AuthService {
       await _updateAuthFlag(false);
     } catch (e) {
       print('Sign out error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    try {
+      final user = currentUser;
+      if (user == null) {
+        throw Exception('No user found to delete');
+      }
+
+      print('[Auth] Deleting account for user: ${user.id}');
+
+      // Reset RevenueCat and Superwall identities
+      try {
+        await SubscriptionSyncService().resetOnLogout();
+        print('[Auth] RevenueCat and Superwall identities reset');
+      } catch (e) {
+        print('[Auth] Error resetting RevenueCat/Superwall: $e');
+        // Continue with deletion even if this fails
+      }
+
+      // Delete user from database (cascade will delete all related data)
+      await _supabase.from('users').delete().eq('id', user.id);
+      print('[Auth] User deleted from database');
+
+      // Sign out to clear session and auth state
+      await signOut();
+      print('[Auth] Account deletion complete');
+    } catch (e) {
+      print('[Auth] Delete account error: $e');
       rethrow;
     }
   }
