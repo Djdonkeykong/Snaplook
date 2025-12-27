@@ -349,86 +349,112 @@ class _NotificationPermissionPageState
           totalSteps: 14,
         ),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: spacing.l),
-          child: Column(
-            children: [
-              SizedBox(height: spacing.l),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Get reminders to find\nyour next look',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -1.0,
-                    height: 1.3,
-                  ),
-                ),
-              ),
-              SizedBox(height: spacing.l),
-              const Spacer(flex: 2),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD1D1D6),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(
-                            vertical: 32, horizontal: 24),
-                        child: Text(
-                          'Snaplook Would Like To\nSend You Notifications',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                            fontFamily: 'SF Pro Display',
-                            height: 1.3,
-                          ),
-                        ),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: spacing.l),
+              child: Column(
+                children: [
+                  SizedBox(height: spacing.l),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Get reminders to find\nyour next look',
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -1.0,
+                        height: 1.3,
                       ),
-                      Container(
-                        width: double.infinity,
-                        height: 1,
-                        color: const Color(0xFFB5B5B5),
+                    ),
+                  ),
+                  SizedBox(height: spacing.l),
+                  const Spacer(flex: 2),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD1D1D6),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      Row(
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
                         children: [
-                          Expanded(
-                            child: _DialogButton(
-                              text: "Don't Allow",
-                              isPrimary: false,
-                              onTap: _handleDontAllow,
+                          const Padding(
+                            padding: EdgeInsets.symmetric(
+                                vertical: 32, horizontal: 24),
+                            child: Text(
+                              'Snaplook Would Like To\nSend You Notifications',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                                fontFamily: 'SF Pro Display',
+                                height: 1.3,
+                              ),
                             ),
                           ),
-                          Expanded(
-                            child: _DialogButton(
-                              text: 'Allow',
-                              isPrimary: true,
-                              onTap: _handleAllow,
-                            ),
+                          Container(
+                            width: double.infinity,
+                            height: 1,
+                            color: const Color(0xFFB5B5B5),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _DialogButton(
+                                  text: "Don't Allow",
+                                  isPrimary: false,
+                                  onTap: _handleDontAllow,
+                                ),
+                              ),
+                              Expanded(
+                                child: _DialogButton(
+                                  text: 'Allow',
+                                  isPrimary: true,
+                                  onTap: _handleAllow,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
+                  ),
+                  const Spacer(flex: 3),
+                ],
+              ),
+            ),
+          ),
+          if (_isRequesting)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: Center(
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.secondary,
+                      ),
+                      strokeWidth: 3,
+                    ),
                   ),
                 ),
               ),
-              const Spacer(flex: 3),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
