@@ -10,13 +10,63 @@ import '../widgets/progress_indicator.dart';
 import 'notification_permission_page.dart';
 import '../../../../shared/services/review_prompt_logs_service.dart';
 
-class RatingSocialProofPage extends StatelessWidget {
+class RatingSocialProofPage extends StatefulWidget {
   const RatingSocialProofPage({
     super.key,
     this.continueToTrialFlow = false,
   });
 
   final bool continueToTrialFlow;
+
+  @override
+  State<RatingSocialProofPage> createState() => _RatingSocialProofPageState();
+}
+
+class _RatingSocialProofPageState extends State<RatingSocialProofPage> {
+  bool _canContinue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _requestReview();
+    _startTimer();
+  }
+
+  Future<void> _requestReview() async {
+    // Request in-app review on load
+    final inAppReview = InAppReview.instance;
+    final timestamp = DateTime.now().toIso8601String();
+    try {
+      final available = await inAppReview.isAvailable();
+      await ReviewPromptLogsService.addLog(
+        '[$timestamp] requestReview() available=$available (RatingSocialProofPage - on load)',
+      );
+      if (available) {
+        await inAppReview.requestReview();
+        await ReviewPromptLogsService.addLog(
+          '[$timestamp] requestReview() invoked successfully',
+        );
+      } else {
+        await ReviewPromptLogsService.addLog(
+          '[$timestamp] requestReview() skipped (not available)',
+        );
+      }
+    } catch (e) {
+      await ReviewPromptLogsService.addLog(
+        '[$timestamp] requestReview() error: $e',
+      );
+    }
+  }
+
+  void _startTimer() {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _canContinue = true;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,47 +127,27 @@ class RatingSocialProofPage extends StatelessWidget {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () async {
-              HapticFeedback.mediumImpact();
+            onPressed: _canContinue
+                ? () {
+                    HapticFeedback.mediumImpact();
 
-              // Request in-app review
-              final inAppReview = InAppReview.instance;
-              final timestamp = DateTime.now().toIso8601String();
-              try {
-                final available = await inAppReview.isAvailable();
-                await ReviewPromptLogsService.addLog(
-                  '[$timestamp] requestReview() available=$available (RatingSocialProofPage)',
-                );
-                if (available) {
-                  await inAppReview.requestReview();
-                  await ReviewPromptLogsService.addLog(
-                    '[$timestamp] requestReview() invoked successfully',
-                  );
-                } else {
-                  await ReviewPromptLogsService.addLog(
-                    '[$timestamp] requestReview() skipped (not available)',
-                  );
-                }
-              } catch (e) {
-                await ReviewPromptLogsService.addLog(
-                  '[$timestamp] requestReview() error: $e',
-                );
-              }
-
-              if (context.mounted) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => NotificationPermissionPage(
-                      continueToTrialFlow: continueToTrialFlow,
-                    ),
-                  ),
-                );
-              }
-            },
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => NotificationPermissionPage(
+                          continueToTrialFlow: widget.continueToTrialFlow,
+                        ),
+                      ),
+                    );
+                  }
+                : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
-              foregroundColor: Colors.white,
+              backgroundColor: _canContinue
+                  ? const Color(0xFFf2003c)
+                  : Colors.grey.shade300,
+              foregroundColor: _canContinue ? Colors.white : Colors.grey.shade500,
               elevation: 0,
+              disabledBackgroundColor: Colors.grey.shade300,
+              disabledForegroundColor: Colors.grey.shade500,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
