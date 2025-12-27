@@ -12,7 +12,6 @@ import 'dart:io' show Platform;
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
-import '../../../../shared/widgets/ios_activity_indicator.dart';
 import '../widgets/progress_indicator.dart';
 import 'save_progress_page.dart';
 import 'trial_intro_page.dart';
@@ -452,9 +451,8 @@ class _NotificationPermissionPageState
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Center(
-                      child: IOSActivityIndicator(
+                      child: CupertinoActivityIndicator(
                         radius: 18,
-                        strokeWidth: 2.5,
                         color: Colors.white,
                       ),
                     ),
