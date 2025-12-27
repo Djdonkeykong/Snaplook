@@ -8,6 +8,7 @@ import 'package:lottie/lottie.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../shared/widgets/ios_activity_indicator.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
@@ -281,13 +282,10 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Center(
-                      child: SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
+                      child: IOSActivityIndicator(
+                        radius: 18,
+                        strokeWidth: 2.5,
+                        color: Colors.white,
                       ),
                     ),
                   ),
