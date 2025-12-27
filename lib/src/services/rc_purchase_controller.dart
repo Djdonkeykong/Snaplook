@@ -28,8 +28,14 @@ class RCPurchaseController extends sw.PurchaseController {
       // Find the package with this product identifier
       Package? matchingPackage;
       for (final package in currentOffering.availablePackages) {
+        if (kDebugMode) {
+          debugPrint('[RCPurchaseController] Checking package: ${package.identifier} with product: ${package.storeProduct.identifier}');
+        }
         if (package.storeProduct.identifier == productId) {
           matchingPackage = package;
+          if (kDebugMode) {
+            debugPrint('[RCPurchaseController] ✓ Found matching package: ${package.identifier}');
+          }
           break;
         }
       }
@@ -41,8 +47,18 @@ class RCPurchaseController extends sw.PurchaseController {
         return sw.PurchaseResult.failed('Product not found in offerings');
       }
 
+      if (kDebugMode) {
+        debugPrint('[RCPurchaseController] Purchasing package: ${matchingPackage.identifier}');
+        debugPrint('[RCPurchaseController] Product ID: ${matchingPackage.storeProduct.identifier}');
+      }
+
       // Purchase through RevenueCat
       final customerInfo = await Purchases.purchasePackage(matchingPackage);
+
+      if (kDebugMode) {
+        debugPrint('[RCPurchaseController] Purchase completed');
+        debugPrint('[RCPurchaseController] All purchased product IDs: ${customerInfo.allPurchasedProductIdentifiers}');
+      }
 
       if (kDebugMode) {
         debugPrint('[RCPurchaseController] Purchase successful');
