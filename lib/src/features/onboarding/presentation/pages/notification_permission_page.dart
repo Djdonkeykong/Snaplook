@@ -451,9 +451,13 @@ class _NotificationPermissionPageState
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Center(
-                      child: CupertinoActivityIndicator(
-                        radius: 18,
-                        color: Colors.white,
+                      child: SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
                       ),
                     ),
                   ),
