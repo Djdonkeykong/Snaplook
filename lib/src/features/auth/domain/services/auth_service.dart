@@ -334,8 +334,9 @@ class AuthService {
         // Continue with deletion even if this fails
       }
 
-      // Delete user from database (cascade will delete all related data)
-      await _supabase.from('users').delete().eq('id', user.id);
+      // Delete user from auth.users (using database function with admin privileges)
+      // This will cascade delete from public.users and all related tables
+      await _supabase.rpc('delete_user_account');
       print('[Auth] User deleted from database');
 
       // Sign out to clear session and auth state
