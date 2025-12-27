@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:ui';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,6 +35,7 @@ class _WelcomeFreeAnalysisPageState
   Future<void>? _initializationFuture;
   bool _isInitialized = false;
   bool _animationLoaded = false;
+  bool _isNavigating = false;
   late AnimationController _textAnimationController;
   late Animation<double> _textFadeAnimation;
 
@@ -275,9 +278,11 @@ class _WelcomeFreeAnalysisPageState
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
@@ -334,7 +339,16 @@ class _WelcomeFreeAnalysisPageState
           height: 56,
           child: ElevatedButton(
             onPressed: () async {
+              if (_isNavigating) return;
+
               HapticFeedback.mediumImpact();
+
+              setState(() {
+                _isNavigating = true;
+              });
+
+              // Start minimum delay timer
+              final minDelayFuture = Future.delayed(const Duration(milliseconds: 500));
 
               // Wait for initialization to complete before navigating
               if (_initializationFuture != null) {
@@ -344,6 +358,9 @@ class _WelcomeFreeAnalysisPageState
                 print(
                     '[WelcomePage] Initialization finished, navigating to app');
               }
+
+              // Ensure minimum 500ms has passed
+              await minDelayFuture;
 
               if (mounted) {
                 // Reset to home tab and navigate to main app
@@ -377,6 +394,30 @@ class _WelcomeFreeAnalysisPageState
           ),
         ),
       ),
+        ),
+        if (_isNavigating)
+          Container(
+            color: Colors.black.withOpacity(0.35),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
+              child: Center(
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Center(
+                    child: CupertinoActivityIndicator(
+                      radius: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
