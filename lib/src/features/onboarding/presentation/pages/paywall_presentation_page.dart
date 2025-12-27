@@ -27,6 +27,7 @@ class PaywallPresentationPage extends StatefulWidget {
 class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
   bool _isLoading = true;
   bool _hasPresented = false;
+  String _loadingMessage = 'Loading...';
 
   @override
   void initState() {
@@ -44,6 +45,13 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
     try {
       debugPrint('[PaywallPresentationPage] Presenting Superwall paywall...');
 
+      // Hide loading overlay while paywall is showing
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+
       // Present Superwall paywall
       final didPurchase = await SuperwallService().presentPaywall(
         placement: widget.placement,
@@ -55,12 +63,26 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
       // If user purchased and has account, sync subscription to Supabase
       if (didPurchase && widget.userId != null) {
+        // Show loading overlay while syncing
+        if (mounted) {
+          setState(() {
+            _loadingMessage = 'Setting up your subscription...';
+            _isLoading = true;
+          });
+        }
+
         try {
           debugPrint(
               '[PaywallPresentationPage] Purchase completed - waiting for RevenueCat to process...');
 
           // Wait briefly for RevenueCat to process the purchase and update entitlements
           await Future.delayed(const Duration(milliseconds: 500));
+
+          if (mounted) {
+            setState(() {
+              _loadingMessage = 'Syncing subscription...';
+            });
+          }
 
           debugPrint(
               '[PaywallPresentationPage] Syncing subscription to Supabase...');
@@ -132,13 +154,49 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Center(
-        child: _isLoading
-            ? const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
-              )
-            : const SizedBox.shrink(),
-      ),
+      body: _isLoading
+          ? Container(
+              color: Colors.black.withOpacity(0.5),
+              child: Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 32),
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.secondary,
+                        ),
+                        strokeWidth: 3,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        _loadingMessage,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : const SizedBox.shrink(),
     );
   }
 }
