@@ -15,7 +15,7 @@ class CalculatingProfilePage extends StatefulWidget {
 class _CalculatingProfilePageState extends State<CalculatingProfilePage>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<int> _counterAnimation;
+  late Animation<double> _progressAnimation;
   String _statusText = 'Analyzing your style preferences...';
 
   // Checklist items
@@ -37,11 +37,11 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
       vsync: this,
     );
 
-    _counterAnimation = IntTween(begin: 0, end: 100).animate(
+    _progressAnimation = Tween<double>(begin: 0.0, end: 100.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     )..addListener(() {
         setState(() {
-          final progress = _counterAnimation.value;
+          final progress = _progressAnimation.value;
 
           // Update status text
           if (progress < 25) {
@@ -123,7 +123,7 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
 
               // Large percentage display
               Text(
-                '${_counterAnimation.value}%',
+                '${_progressAnimation.value.round()}%',
                 style: const TextStyle(
                   fontSize: 64,
                   fontWeight: FontWeight.bold,
@@ -153,29 +153,21 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
               SizedBox(height: spacing.xl),
 
               // Progress bar
-              Container(
-                height: 8,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: _counterAnimation.value,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFf2003c),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+              AnimatedBuilder(
+                animation: _progressAnimation,
+                builder: (context, child) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _progressAnimation.value / 100,
+                      minHeight: 8,
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFFf2003c),
                       ),
                     ),
-                    Expanded(
-                      flex: 100 - _counterAnimation.value,
-                      child: const SizedBox(),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
 
               SizedBox(height: spacing.l),
