@@ -672,6 +672,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var currentStatusMessages: [String] = []
     private var currentStatusIndex: Int = 0
     private var backgroundActivity: NSObjectProtocol?
+    private var detectionTask: URLSessionDataTask? // Store detection API task for cancellation
     private var hasPresentedDetectionFailureAlert = false
     private var hasPresentedUnsupportedAlert = false
     private var headerContainerView: UIView?
@@ -3805,11 +3806,25 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         shareLog("Sending detection API request to: \(analyzeEndpoint)")
 
+        // Cancel any existing detection task
+        if let existingTask = detectionTask {
+            shareLog("Cancelling existing detection task")
+            existingTask.cancel()
+        }
+
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
+            guard let self = self else {
+                shareLog("Share extension deallocated during API call")
+                return
+            }
+
+            // Log memory usage after response received
+            let memoryMB = Double(self.getMemoryUsage()) / 1_048_576.0
+            shareLog("Memory usage after API response: \(String(format: "%.1f", memoryMB)) MB")
 
             if let error = error {
                 shareLog("ERROR: Detection API network error: \(error.localizedDescription)")
+                self.detectionTask = nil // Clear task reference
                 self.handleDetectionFailure(reason: "We couldn't reach the detection service (\(error.localizedDescription)).")
                 return
             }
@@ -3845,6 +3860,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 if detectionResponse.success {
                     shareLog("SUCCESS: Detection found \(detectionResponse.total_results) results")
+
+                    // Clear task reference on success
+                    self.detectionTask = nil
 
                     // Store search_id and image_cache_id for favorites/save functionality
                     self.currentSearchId = detectionResponse.search_id
@@ -3885,17 +3903,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     }
                 } else {
                     shareLog("ERROR: Detection failed - \(detectionResponse.message ?? "Unknown error")")
+                    self.detectionTask = nil // Clear task reference
                     let message = detectionResponse.message ?? "We couldn't find any products to show."
                     self.handleDetectionFailure(reason: message)
                 }
             } catch {
                 shareLog("ERROR: Failed to parse detection response: \(error.localizedDescription)")
+                self.detectionTask = nil // Clear task reference
                 self.handleDetectionFailure(reason: "We couldn't read the detection results (\(error.localizedDescription)).")
             }
         }
 
+        // Store task for cancellation if needed
+        detectionTask = task
         task.resume()
-        shareLog("Detection API task started")
+        shareLog("Detection API task started and stored for potential cancellation")
     }
 
     private func handleDetectionFailure(reason: String) {
@@ -4144,6 +4166,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let base64Image = resizedData.base64EncodedString()
         shareLog("Base64 encoded - length: \(base64Image.count) chars")
 
+        // Log memory usage before API call
+        let usedMemoryMB = Double(getMemoryUsage()) / 1_048_576.0
+        shareLog("Memory usage before API call: \(String(format: "%.1f", usedMemoryMB)) MB")
+
         let resolvedUrl = pendingImageUrl?.isEmpty == false ? pendingImageUrl : downloadedImageUrl
         downloadedImageUrl = resolvedUrl
         shareLog("Calling runDetectionAnalysis...")
@@ -4161,6 +4187,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
         DispatchQueue.main.async { [weak self] in
             self?.statusLabel?.text = text
         }
+    }
+
+    // Get current memory usage in bytes
+    private func getMemoryUsage() -> UInt64 {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
+
+        let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+
+        return kerr == KERN_SUCCESS ? info.resident_size : 0
     }
 
     // Check which products are already favorited
@@ -5679,6 +5719,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
     func closeExtension() {
         shareLog("Closing share extension")
 
+        // Cancel any pending detection API call
+        if let task = detectionTask {
+            shareLog("Cancelling pending detection task")
+            task.cancel()
+            detectionTask = nil
+        }
+
         // End extended execution
         endExtendedExecution()
 
@@ -5698,6 +5745,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         clearSharedData()
         hideLoadingUI()
+
+        // Log final memory usage
+        let memoryMB = Double(getMemoryUsage()) / 1_048_576.0
+        shareLog("Memory usage at cleanup: \(String(format: "%.1f", memoryMB)) MB")
 
         // Complete the extension request - this dismisses the share sheet and returns to source app
         let error = NSError(

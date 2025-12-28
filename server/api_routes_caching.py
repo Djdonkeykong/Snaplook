@@ -110,30 +110,58 @@ async def analyze_with_caching(
     """
 
     try:
-        # Log locale parameters for debugging
-        print(f"[ANALYZE] Request country: '{request.country}', language: '{request.language}', search_type: '{request.search_type}'")
+        print(f"\n{'='*80}")
+        print(f"[ANALYZE] 🚀 NEW REQUEST RECEIVED")
+        print(f"{'='*80}")
+        print(f"[ANALYZE] user_id: {request.user_id}")
+        print(f"[ANALYZE] search_type: '{request.search_type}'")
+        print(f"[ANALYZE] country: '{request.country}', language: '{request.language}'")
+        print(f"[ANALYZE] skip_detection: {request.skip_detection}")
+        print(f"[ANALYZE] source_url: {request.source_url}")
+        print(f"[ANALYZE] source_username: {request.source_username}")
 
         # Prepare image and compute hash
         image_url = None
         image_hash = None
         image_obj = None
 
+        print(f"[ANALYZE] 📸 Image source check:")
+        print(f"  - has image_url: {bool(request.image_url)}")
+        print(f"  - has cloudinary_url: {bool(request.cloudinary_url)}")
+        print(f"  - has image_base64: {bool(request.image_base64)}")
+
         if request.image_url:
             image_url = normalize_url(request.image_url)
+            print(f"[ANALYZE] Using image_url: {image_url[:100]}...")
         elif request.cloudinary_url:
             image_url = request.cloudinary_url
+            print(f"[ANALYZE] Using cloudinary_url: {image_url[:100]}...")
 
         # Decode image if base64 provided (for hashing)
         if request.image_base64:
+            base64_len = len(request.image_base64)
+            print(f"[ANALYZE] 🔍 Decoding base64 image ({base64_len} chars, ~{base64_len * 3 / 4 / 1024:.1f}KB)")
             image_data = base64.b64decode(request.image_base64)
+            print(f"[ANALYZE] Decoded to {len(image_data)} bytes ({len(image_data) / 1024:.1f}KB)")
+
+            print(f"[ANALYZE] Opening PIL Image for hashing...")
             image_obj = Image.open(io.BytesIO(image_data))
+            print(f"[ANALYZE] Image size: {image_obj.size}, mode: {image_obj.mode}")
+
+            print(f"[ANALYZE] Computing image hash...")
             image_hash = hash_image(image_obj)
+            print(f"[ANALYZE] Image hash: {image_hash}")
 
         # Cache checking disabled - always run full analysis for location-specific results
-        print(f"Running full analysis (cache disabled for location-aware results)")
+        print(f"[ANALYZE] 🔄 Running full analysis (cache disabled for location-aware results)")
 
         # Import the existing detection function
         from fashion_detector_server import run_full_detection_pipeline
+
+        print(f"[ANALYZE] 🎯 Calling run_full_detection_pipeline...")
+        print(f"[ANALYZE]   - skip_detection: {request.skip_detection}")
+        print(f"[ANALYZE]   - country: {request.country}")
+        print(f"[ANALYZE]   - language: {request.language}")
 
         # Run the full detection pipeline
         detection_result = run_full_detection_pipeline(
@@ -145,8 +173,16 @@ async def analyze_with_caching(
             language=request.language
         )
 
+        print(f"[ANALYZE] ✅ Detection pipeline completed")
+        print(f"[ANALYZE]   - success: {detection_result.get('success')}")
+        print(f"[ANALYZE]   - total_results: {detection_result.get('total_results', 0)}")
+        print(f"[ANALYZE]   - garments_searched: {detection_result.get('garments_searched', 0)}")
+        print(f"[ANALYZE]   - has cloudinary_url: {bool(detection_result.get('cloudinary_url'))}")
+
         if not detection_result['success']:
+            print(f"[ANALYZE] ❌ Detection failed: {detection_result.get('message', 'Unknown error')}")
             if image_obj:
+                print(f"[ANALYZE] 🧹 Closing image_obj (error path)")
                 image_obj.close()
             return AnalyzeResponse(
                 success=False,
@@ -160,8 +196,15 @@ async def analyze_with_caching(
 
         # Store results for user history (cache lookups are disabled)
         cache_id = None
+        print(f"[ANALYZE] 💾 Cache storage check:")
+        print(f"  - supabase_enabled: {supabase_manager.enabled}")
+        print(f"  - has user_id: {bool(request.user_id)}")
+        print(f"  - has cloudinary_url: {bool(detection_result.get('cloudinary_url'))}")
+
         if supabase_manager.enabled and request.user_id and detection_result.get('cloudinary_url'):
             cache_hash = image_hash or (hash_image(image_obj) if image_obj else None) or uuid.uuid4().hex
+            print(f"[ANALYZE] Storing cache with hash: {cache_hash}")
+
             cache_id = supabase_manager.store_cache(
                 image_url=image_url or detection_result.get('cloudinary_url'),
                 image_hash=cache_hash,
@@ -169,24 +212,41 @@ async def analyze_with_caching(
                 detected_garments=detection_result.get('detected_garments', []),
                 search_results=detection_result.get('results', [])
             )
+            print(f"[ANALYZE] ✅ Cache stored with ID: {cache_id}")
+        else:
+            print(f"[ANALYZE] ⏭️  Skipping cache storage")
 
         # Close image object to prevent memory leak
         if image_obj:
+            print(f"[ANALYZE] 🧹 Closing image_obj (success path)")
             image_obj.close()
+            print(f"[ANALYZE] ✅ image_obj closed successfully")
 
         # Also save to Instagram URL cache if this is an Instagram share
         # This allows future requests for the same Instagram URL to skip scraping
+        print(f"[ANALYZE] 📷 Instagram cache check:")
+        print(f"  - search_type: {request.search_type}")
+        print(f"  - has source_url: {bool(request.source_url)}")
+
         if supabase_manager.enabled and request.search_type == "instagram" and request.source_url and detection_result.get('cloudinary_url'):
+            print(f"[ANALYZE] Saving Instagram URL mapping...")
             supabase_manager.save_instagram_url_cache(
                 instagram_url=request.source_url,
                 image_url=detection_result['cloudinary_url'],
                 extraction_method='server_upload'
             )
-            print(f"Saved Instagram URL mapping to cache: {request.source_url} -> Cloudinary")
+            print(f"[ANALYZE] ✅ Instagram URL cached: {request.source_url[:50]}... -> Cloudinary")
+        else:
+            print(f"[ANALYZE] ⏭️  Skipping Instagram URL cache")
 
         # Create user search entry
         search_id = None
+        print(f"[ANALYZE] 📝 User search creation check:")
+        print(f"  - supabase_enabled: {supabase_manager.enabled}")
+        print(f"  - has cache_id: {bool(cache_id)}")
+
         if supabase_manager.enabled and cache_id:
+            print(f"[ANALYZE] Creating user search entry...")
             search_id = supabase_manager.create_user_search(
                 user_id=request.user_id,
                 image_cache_id=cache_id,
@@ -194,6 +254,16 @@ async def analyze_with_caching(
                 source_url=request.source_url,
                 source_username=request.source_username
             )
+            print(f"[ANALYZE] ✅ User search created with ID: {search_id}")
+        else:
+            print(f"[ANALYZE] ⏭️  Skipping user search creation")
+
+        print(f"\n[ANALYZE] 🎉 ANALYSIS COMPLETE")
+        print(f"[ANALYZE]   - search_id: {search_id}")
+        print(f"[ANALYZE]   - cache_id: {cache_id}")
+        print(f"[ANALYZE]   - total_results: {detection_result.get('total_results', 0)}")
+        print(f"[ANALYZE]   - garments_searched: {detection_result.get('garments_searched', 0)}")
+        print(f"{'='*80}\n")
 
         return AnalyzeResponse(
             success=True,
@@ -207,9 +277,15 @@ async def analyze_with_caching(
         )
 
     except Exception as e:
-        print(f"ERROR: Analyze endpoint error: {e}")
+        print(f"\n{'='*80}")
+        print(f"[ANALYZE] ❌❌❌ FATAL ERROR ❌❌❌")
+        print(f"{'='*80}")
+        print(f"[ANALYZE] Error type: {type(e).__name__}")
+        print(f"[ANALYZE] Error message: {e}")
+        print(f"[ANALYZE] Full traceback:")
         import traceback
         traceback.print_exc()
+        print(f"{'='*80}\n")
         raise HTTPException(status_code=500, detail=str(e))
 
 
