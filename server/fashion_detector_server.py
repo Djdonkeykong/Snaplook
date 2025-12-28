@@ -474,6 +474,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 print("🔄 Loading YOLOS model...")
 processor = AutoImageProcessor.from_pretrained(MODEL_ID)
 model = YolosForObjectDetection.from_pretrained(MODEL_ID)
+model.eval()  # Set to evaluation mode
 print("✅ Model loaded.")
 
 # === INPUT SCHEMA ===
