@@ -1672,16 +1672,18 @@ def detect(req: DetectRequest):
             _cloudinary_log(f"[Cloudinary] Uploading {len(crops)} crops in parallel...")
             with ThreadPoolExecutor(max_workers=min(4, len(crops))) as executor:
                 future_to_item = {
-                    executor.submit(upload_to_cloudinary, crop, det.get('label')): (det, bbox)
+                    executor.submit(upload_to_cloudinary, crop, det.get('label')): (det, bbox, crop)
                     for det, crop, bbox in crops
                 }
                 for future in as_completed(future_to_item):
-                    det, bbox = future_to_item[future]
+                    det, bbox, crop = future_to_item[future]
                     upload_url = None
                     try:
                         upload_url = future.result(timeout=25)
                     except Exception as e:
                         _cloudinary_log(f"[Cloudinary] Upload failed for {det['label']}: {e}")
+                    finally:
+                        crop.close()
 
                     results.append({
                         "id": det["id"],
@@ -1702,7 +1704,8 @@ def detect(req: DetectRequest):
                 })
 
         print(f"✅ Detection complete. {len(results)} garments processed.")
-        return {
+
+        response = {
             "count": len(results),
             "results": results,
             # Helps the client filter SerpAPI results more aggressively
@@ -1712,7 +1715,12 @@ def detect(req: DetectRequest):
             }
         }
 
+        image.close()
+        return response
+
     except Exception as e:
+        if 'image' in locals():
+            image.close()
         raise HTTPException(status_code=500, detail=str(e))
 
 # === REUSABLE DETECTION PIPELINE (for caching integration) ===
@@ -1798,8 +1806,12 @@ def run_full_detection_pipeline(
                 uploaded_cloudinary_url = uploaded_url
                 _cloudinary_log(f"[Cloudinary] Full image uploaded for fallback search: {uploaded_url}")
             else:
+                if image is not None:
+                    image.close()
                 return {'success': False, 'message': 'No garments detected and failed to upload image'}
         else:
+            if image is not None:
+                image.close()
             return {'success': False, 'message': 'No garments detected'}
     # Step 3: Crop & upload garments to Cloudinary
     elif skip_detection and uploaded_cloudinary_url:
@@ -1812,6 +1824,8 @@ def run_full_detection_pipeline(
             crops_with_urls = [{"garment": filtered[0], "crop_url": full_image_url}]
             uploaded_cloudinary_url = full_image_url
         else:
+            if image is not None:
+                image.close()
             return {'success': False, 'message': 'Failed to upload image to CDN'}
     elif image is not None:
         context_bbox = compute_person_context_bbox(filtered, image)
@@ -1833,6 +1847,8 @@ def run_full_detection_pipeline(
                     return det, url
             except Exception as e:
                 print(f"Upload failed for {det['label']}: {e}")
+            finally:
+                crop.close()
             return det, None
 
         print(f"Uploading {len(crop_data)} crops in parallel...")
@@ -1854,6 +1870,8 @@ def run_full_detection_pipeline(
                 # Fallback to the first crop if full upload fails.
                 uploaded_cloudinary_url = crops_with_urls[0]["crop_url"]
     else:
+        if image is not None:
+            image.close()
         return {'success': False, 'message': 'No image available for processing'}
 
     if not crops_with_urls:
@@ -1869,8 +1887,12 @@ def run_full_detection_pipeline(
                 crops_with_urls = [{"garment": filtered[0], "crop_url": fallback_url}]
                 uploaded_cloudinary_url = fallback_url
             else:
+                if image is not None:
+                    image.close()
                 return {'success': False, 'message': 'Failed to upload to CDN'}
         else:
+            if image is not None:
+                image.close()
             return {'success': False, 'message': 'Failed to upload to CDN'}
 
     # Step 4: Visual product search
@@ -1939,6 +1961,9 @@ def run_full_detection_pipeline(
 
     deduped_results = deduplicate_and_limit_by_domain(all_results)
     print(f"Pipeline complete ({time.time()-t0:.2f}s total). Returned {len(deduped_results)} results.")
+
+    if image is not None:
+        image.close()
 
     return {
         'success': True,
@@ -2096,6 +2121,8 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                     _cloudinary_log(f"[Cloudinary] Empty response for {det.get('label') or 'unknown'}")
                 except Exception as e:
                     _cloudinary_log(f"[Cloudinary] Upload failed for {det['label']}: {e}")
+                finally:
+                    crop.close()
                 return det, None
 
             def upload_full_image():
@@ -2262,6 +2289,9 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 import traceback
                 traceback.print_exc()
 
+        if image is not None:
+            image.close()
+
         return {
             'success': True,
             'detected_garment': {
@@ -2276,6 +2306,8 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         }
 
     except Exception as e:
+        if 'image' in locals() and image is not None:
+            image.close()
         print(f"❌ detect-and-search failed: {e}")
         import traceback; traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
