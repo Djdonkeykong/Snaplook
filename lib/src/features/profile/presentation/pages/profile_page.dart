@@ -13,7 +13,7 @@ import 'manage_subscription_page.dart';
 import 'notification_settings_page.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
-import '../../../../shared/widgets/share_logs_page.dart';
+import '../../../../shared/widgets/flutter_logs_page.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -476,11 +476,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   onTap: () => _shareApp(context),
                 ),
                 _SimpleSettingItem(
-                  title: 'Share Extension Logs',
+                  title: 'Flutter Logs',
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const ShareLogsPage(),
+                        builder: (_) => const FlutterLogsPage(),
                       ),
                     );
                   },
