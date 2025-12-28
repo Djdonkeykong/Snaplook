@@ -6,6 +6,7 @@ IMPORTANT: user_id must be a valid auth.users.id from Supabase Auth.
 """
 
 import os
+import sys
 import uuid
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
@@ -17,6 +18,9 @@ from datetime import datetime
 
 from supabase_client import supabase_manager
 from hash_utils import hash_image, normalize_url
+
+# Force stdout to flush immediately for debugging
+sys.stdout.reconfigure(line_buffering=True)
 
 router = APIRouter(prefix="/api/v1")
 
@@ -108,11 +112,15 @@ async def analyze_with_caching(
 
     NOTE: user_id must be a valid auth.users.id
     """
+    # Log IMMEDIATELY when function is called, before any processing
+    print(f"\n[ANALYZE] >>> ENDPOINT FUNCTION CALLED <<<", flush=True)
+    sys.stdout.flush()
 
     try:
-        print(f"\n{'='*80}")
-        print(f"[ANALYZE] 🚀 NEW REQUEST RECEIVED")
-        print(f"{'='*80}")
+        print(f"\n{'='*80}", flush=True)
+        print(f"[ANALYZE] 🚀 NEW REQUEST RECEIVED", flush=True)
+        print(f"{'='*80}", flush=True)
+        sys.stdout.flush()  # Force immediate flush
         print(f"[ANALYZE] user_id: {request.user_id}")
         print(f"[ANALYZE] search_type: '{request.search_type}'")
         print(f"[ANALYZE] country: '{request.country}', language: '{request.language}'")

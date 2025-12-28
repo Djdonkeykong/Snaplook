@@ -3802,9 +3802,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = jsonData
-        request.timeoutInterval = 90.0  // Increased from 30s to 90s for multi-garment detection + SerpAPI searches
+        request.timeoutInterval = 150.0  // Increased to 150s to exceed server's 120s timeout for better error handling
 
         shareLog("Sending detection API request to: \(analyzeEndpoint)")
+        shareLog("Request timeout set to: 150.0 seconds")
 
         // Cancel any existing detection task
         if let existingTask = detectionTask {
