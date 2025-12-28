@@ -7,7 +7,7 @@ services:
     rootDir: server
     # Version: 2
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -k uvicorn.workers.UvicornWorker fashion_detector_server:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --threads 1 --max-requests 50 --max-requests-jitter 5
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker fashion_detector_server:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --threads 1 --max-requests 1 --max-requests-jitter 0
     healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
