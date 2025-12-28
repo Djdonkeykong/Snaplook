@@ -46,7 +46,7 @@ final class ShareLogger {
     private let maxEntries = 200
 
     func configure(appGroupId: String) {
-        queue.async {
+        queue.sync {
             self.defaults = UserDefaults(suiteName: appGroupId)
         }
     }
