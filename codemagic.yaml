@@ -7,6 +7,9 @@ workflows:
       flutter: stable
       xcode: 16.4
       cocoapods: default
+      vars:
+        DETECT_ENDPOINT: https://snaplook-fashion-detector.onrender.com/detect
+        DETECT_AND_SEARCH_ENDPOINT: https://snaplook-fashion-detector.onrender.com/detect-and-search
     scripts:
       - name: Set up keychain
         script: |
