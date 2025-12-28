@@ -4141,12 +4141,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let scale = maxDimension / maxDim
         let newSize = CGSize(width: size.width * scale, height: size.height * scale)
 
-        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
         image.draw(in: CGRect(origin: .zero, size: newSize))
         let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
 
-        return resizedImage?.jpegData(compressionQuality: 0.85)
+        return resizedImage?.jpegData(compressionQuality: 0.95)
     }
 
     // Trigger detection using the Cloudinary-backed API
