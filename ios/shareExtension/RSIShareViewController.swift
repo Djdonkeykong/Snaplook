@@ -4105,6 +4105,27 @@ open class RSIShareViewController: SLComposeServiceViewController {
         backButtonView = nil
     }
 
+    // Resize image to max dimension to prevent server timeout and reduce bandwidth
+    private func resizeImageForAPI(_ imageData: Data, maxDimension: CGFloat) -> Data? {
+        guard let image = UIImage(data: imageData) else { return nil }
+
+        let size = image.size
+        let maxDim = max(size.width, size.height)
+
+        // Already small enough, no need to resize
+        if maxDim <= maxDimension { return imageData }
+
+        let scale = maxDimension / maxDim
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        image.draw(in: CGRect(origin: .zero, size: newSize))
+        let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+
+        return resizedImage?.jpegData(compressionQuality: 0.85)
+    }
+
     // Trigger detection using the Cloudinary-backed API
     private func uploadAndDetect(imageData: Data) {
         shareLog("START uploadAndDetect - image size: \(imageData.count) bytes")
@@ -4116,7 +4137,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stopStatusPolling()
         hasPresentedDetectionFailureAlert = false
 
-        let base64Image = imageData.base64EncodedString()
+        // Resize image to max 1600px to prevent server timeout
+        let resizedData = resizeImageForAPI(imageData, maxDimension: 1600) ?? imageData
+        shareLog("Resized image for API - size: \(resizedData.count) bytes (was \(imageData.count) bytes)")
+
+        let base64Image = resizedData.base64EncodedString()
         shareLog("Base64 encoded - length: \(base64Image.count) chars")
 
         let resolvedUrl = pendingImageUrl?.isEmpty == false ? pendingImageUrl : downloadedImageUrl
