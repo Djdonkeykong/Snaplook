@@ -4,6 +4,7 @@ import os  # needed for environment variables
 import json
 import base64
 import time
+import gc
 import torch
 import requests
 import re
@@ -1716,11 +1717,15 @@ def detect(req: DetectRequest):
         }
 
         image.close()
+        torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        gc.collect()
         return response
 
     except Exception as e:
         if 'image' in locals():
             image.close()
+        torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        gc.collect()
         raise HTTPException(status_code=500, detail=str(e))
 
 # === REUSABLE DETECTION PIPELINE (for caching integration) ===
@@ -1964,6 +1969,9 @@ def run_full_detection_pipeline(
 
     if image is not None:
         image.close()
+
+    torch.cuda.empty_cache() if torch.cuda.is_available() else None
+    gc.collect()
 
     return {
         'success': True,
@@ -2292,6 +2300,9 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         if image is not None:
             image.close()
 
+        torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        gc.collect()
+
         return {
             'success': True,
             'detected_garment': {
@@ -2308,6 +2319,8 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
     except Exception as e:
         if 'image' in locals() and image is not None:
             image.close()
+        torch.cuda.empty_cache() if torch.cuda.is_available() else None
+        gc.collect()
         print(f"❌ detect-and-search failed: {e}")
         import traceback; traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
