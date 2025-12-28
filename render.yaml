@@ -2,11 +2,11 @@ services:
   - type: web
     name: snaplook-fashion-detector
     runtime: python
-    plan: free
+    plan: standard
     region: oregon
     rootDir: server
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn -k uvicorn.workers.UvicornWorker fashion_detector_server:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --threads 4
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker fashion_detector_server:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --threads 2 --max-requests 100 --max-requests-jitter 10
     healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
