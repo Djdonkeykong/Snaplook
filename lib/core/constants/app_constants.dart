@@ -53,8 +53,8 @@ class AppConstants {
 
   // === 🌐 API Keys ===
   static String get serpApiKey =>
-      dotenv.env['SERPAPI_API_KEY'] ??
-      'pvMfH1LTuQ37BdoA9wzamK5G';
+      dotenv.env['SEARCHAPI_KEY'] ??
+      'ug8vjazGBpVXMXiar47rdqJM';
 
   static String get apifyApiToken =>
       dotenv.env['APIFY_API_TOKEN'] ?? '';
