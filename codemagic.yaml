@@ -27,8 +27,18 @@ workflows:
       - name: Install dependencies
         script: |
           flutter pub get
-      - name: Generate Freezed code
+      - name: Pre-build script
         script: |
+          cat > .env <<EOF
+          SUPABASE_URL=$SUPABASE_URL
+          SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+          GOOGLE_IOS_CLIENT_ID=$GOOGLE_IOS_CLIENT_ID
+          GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID
+          APIFY_API_TOKEN=$APIFY_API_TOKEN
+          DETECT_ENDPOINT=$DETECT_ENDPOINT
+          DETECT_AND_SEARCH_ENDPOINT=$DETECT_AND_SEARCH_ENDPOINT
+          EOF
+
           flutter pub run build_runner build --delete-conflicting-outputs
       - name: Build iOS
         script: |
