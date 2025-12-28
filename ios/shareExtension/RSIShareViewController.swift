@@ -48,12 +48,17 @@ final class ShareLogger {
     func configure(appGroupId: String) {
         queue.sync {
             self.defaults = UserDefaults(suiteName: appGroupId)
+            NSLog("[ShareLogger] Configured with app group: \(appGroupId)")
+            NSLog("[ShareLogger] UserDefaults initialized: \(self.defaults != nil)")
         }
     }
 
     func append(_ message: String) {
         queue.async {
-            guard let defaults = self.defaults else { return }
+            guard let defaults = self.defaults else {
+                NSLog("[ShareLogger] ERROR: defaults is nil, cannot append log")
+                return
+            }
             let timestamp = self.isoFormatter.string(from: Date())
             var entries = defaults.stringArray(forKey: kShareExtensionLogKey) ?? []
             entries.append("[\(timestamp)] \(message)")
@@ -61,6 +66,9 @@ final class ShareLogger {
                 entries.removeFirst(entries.count - self.maxEntries)
             }
             defaults.set(entries, forKey: kShareExtensionLogKey)
+            defaults.synchronize()
+            let count = defaults.stringArray(forKey: kShareExtensionLogKey)?.count ?? 0
+            NSLog("[ShareLogger] Appended log, total count: \(count)")
         }
     }
 
