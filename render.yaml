@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: snaplook-fashion-detector
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: server
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker fashion_detector_server:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --threads 4
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: SEARCHAPI_KEY
+        sync: false
+      - key: SEARCHAPI_LOCATION
+        value: United States
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CACHE_RESULTS
+        value: "1"
+      - key: CLOUDINARY_CROP_MAX_DIM
+        value: "768"
+      - key: CLOUDINARY_FULL_MAX_DIM
+        value: "1600"
+      - key: CLOUDINARY_CROP_QUALITY
+        value: "72"
+      - key: CLOUDINARY_FULL_QUALITY
+        value: "80"
+      - key: CLOUDINARY_LOG_TIMING
+        value: "0"
+      - key: PORT
+        value: "8000"
