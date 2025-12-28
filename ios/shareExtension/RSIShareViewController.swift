@@ -7100,20 +7100,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Layout constraints
         NSLayoutConstraint.activate([
-            // Header at top
-            headerContainer.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 16),
-            headerContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 16),
+            // Header container
+            headerContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: -5),
             headerContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -16),
-            headerContainer.heightAnchor.constraint(equalToConstant: 44),
+            headerContainer.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 14),
+            headerContainer.heightAnchor.constraint(equalToConstant: 48),
 
-            // Logo centered in header
+            // Logo - centered with offset
+            logo.centerXAnchor.constraint(equalTo: headerContainer.centerXAnchor, constant: 12),
             logo.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
-            logo.centerXAnchor.constraint(equalTo: headerContainer.centerXAnchor),
             logo.heightAnchor.constraint(equalToConstant: 28),
+            logo.widthAnchor.constraint(equalToConstant: 132),
 
-            // Cancel button on right side
-            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
+            // Cancel button
             cancelButton.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
+            cancelButton.centerYAnchor.constraint(equalTo: headerContainer.centerYAnchor),
 
             // Center content container
             contentContainer.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
