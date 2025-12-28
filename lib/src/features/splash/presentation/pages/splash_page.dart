@@ -73,30 +73,33 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         nextPage = const LoginPage();
       } else {
         // User is authenticated - check subscription status
+        bool hasActiveSubscription = false;
+
         try {
           // Get subscription status from RevenueCat
           final customerInfo = await Purchases.getCustomerInfo().timeout(
             const Duration(seconds: 10),
           );
-          final hasActiveSubscription = customerInfo.entitlements.active.isNotEmpty;
+          hasActiveSubscription = customerInfo.entitlements.active.isNotEmpty;
 
           debugPrint('[Splash] User authenticated. Has active subscription: $hasActiveSubscription');
-
-          // Check if user needs credits from share extension
-          if (needsCreditsFromShareExtension) {
-            // User came from share extension with no credits - send to login page
-            nextPage = const LoginPage();
-          } else if (hasActiveSubscription) {
-            // Logged in + active subscription -> Home
-            nextPage = const MainNavigation();
-          } else {
-            // Logged in + NO subscription -> Login page
-            nextPage = const LoginPage();
-          }
         } catch (e) {
           debugPrint('[Splash] Error checking subscription status: $e');
-          // On error, default to login page
-          nextPage = const LoginPage();
+          // On error, assume no subscription but keep user logged in
+          // The app will show paywall when they try to use premium features
+          hasActiveSubscription = false;
+        }
+
+        // Check if user needs credits from share extension
+        if (needsCreditsFromShareExtension) {
+          // User came from share extension with no credits - send to home and show paywall
+          nextPage = const MainNavigation();
+        } else if (hasActiveSubscription) {
+          // Logged in + active subscription -> Home
+          nextPage = const MainNavigation();
+        } else {
+          // Logged in + NO subscription -> Home (paywall will show when needed)
+          nextPage = const MainNavigation();
         }
       }
     } else {
