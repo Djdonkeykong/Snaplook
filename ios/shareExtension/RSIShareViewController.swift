@@ -4130,6 +4130,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     // Resize image to max dimension to prevent server timeout and reduce bandwidth
     private func resizeImageForAPI(_ imageData: Data, maxDimension: CGFloat) -> Data? {
+        // If image is already small in file size, don't resize (would make it bigger)
+        let maxFileSize = 1_000_000 // 1MB
+        if imageData.count <= maxFileSize {
+            return imageData
+        }
+
         guard let image = UIImage(data: imageData) else { return nil }
 
         let size = image.size
@@ -4146,7 +4152,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
 
-        return resizedImage?.jpegData(compressionQuality: 0.95)
+        return resizedImage?.jpegData(compressionQuality: 0.8)
     }
 
     // Trigger detection using the Cloudinary-backed API
