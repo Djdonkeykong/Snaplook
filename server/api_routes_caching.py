@@ -146,6 +146,8 @@ async def analyze_with_caching(
         )
 
         if not detection_result['success']:
+            if image_obj:
+                image_obj.close()
             return AnalyzeResponse(
                 success=False,
                 cached=False,
@@ -167,6 +169,10 @@ async def analyze_with_caching(
                 detected_garments=detection_result.get('detected_garments', []),
                 search_results=detection_result.get('results', [])
             )
+
+        # Close image object to prevent memory leak
+        if image_obj:
+            image_obj.close()
 
         # Also save to Instagram URL cache if this is an Instagram share
         # This allows future requests for the same Instagram URL to skip scraping
