@@ -91,9 +91,9 @@ cloudinary.config(
 )
 
 # SearchAPI.io credentials and configuration
-SERPAPI_KEY = os.getenv("SERPAPI_KEY", "pvMfH1LTuQ37BdoA9wzamK5G")
-SERPAPI_LOCATION = os.getenv("SERPAPI_LOCATION", "United States")  # Location for results
-SERPAPI_DEVICE = os.getenv("SERPAPI_DEVICE", "mobile")  # mobile or desktop
+SEARCHAPI_KEY = os.getenv("SEARCHAPI_KEY", "pvMfH1LTuQ37BdoA9wzamK5G")
+SEARCHAPI_LOCATION = os.getenv("SEARCHAPI_LOCATION", "United States")  # Location for results
+SEARCHAPI_DEVICE = os.getenv("SEARCHAPI_DEVICE", "mobile")  # mobile or desktop
 
 # Tiny/irrelevant crop guard (pixels)
 MIN_CROP_W = 80
@@ -2434,7 +2434,7 @@ def search_visual_products(
 
         params = {
             "engine": "google_lens",
-            "api_key": SERPAPI_KEY,
+            "api_key": SEARCHAPI_KEY,
             "url": image_url,
             "search_type": "products",  # Filter to only product results
             "country": country,  # 2-letter country code for localization
