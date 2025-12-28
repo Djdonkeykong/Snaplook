@@ -1086,6 +1086,31 @@ def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
 
 def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     inputs = processor(images=image, return_tensors="pt")
+
+    # Deep debug logging before model inference
+    print(f"[TENSOR DEBUG] Image mode: {image.mode}, size: {image.size}")
+    print(f"[TENSOR DEBUG] inputs keys: {inputs.keys()}")
+    pixel_values = inputs.get('pixel_values')
+    if pixel_values is not None:
+        print(f"[TENSOR DEBUG] pixel_values.shape: {pixel_values.shape}")
+        print(f"[TENSOR DEBUG] pixel_values.dtype: {pixel_values.dtype}")
+        print(f"[TENSOR DEBUG] pixel_values.device: {pixel_values.device}")
+        print(f"[TENSOR DEBUG] pixel_values.min(): {pixel_values.min().item():.6f}")
+        print(f"[TENSOR DEBUG] pixel_values.max(): {pixel_values.max().item():.6f}")
+        print(f"[TENSOR DEBUG] pixel_values.mean(): {pixel_values.mean().item():.6f}")
+        print(f"[TENSOR DEBUG] has_nan: {torch.isnan(pixel_values).any().item()}")
+        print(f"[TENSOR DEBUG] has_inf: {torch.isinf(pixel_values).any().item()}")
+
+        # Memory info
+        import psutil
+        process = psutil.Process()
+        mem_info = process.memory_info()
+        print(f"[TENSOR DEBUG] Process RSS: {mem_info.rss / 1024 / 1024:.1f} MB")
+        print(f"[TENSOR DEBUG] Process VMS: {mem_info.vms / 1024 / 1024:.1f} MB")
+
+    print(f"[TENSOR DEBUG] About to call model(**inputs)...")
+    sys.stdout.flush()
+
     with torch.no_grad():
         outputs = model(**inputs)
     results = processor.post_process_object_detection(
