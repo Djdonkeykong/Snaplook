@@ -407,6 +407,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   await PaywallHelper.presentPaywallAndNavigate(
                                     context: navigator.context,
                                     userId: userId,
+                                    isReturningUser: true,  // Skip onboarding check - we know they completed it
                                   );
                                 } else {
                                   // User hasn't completed onboarding - resume where they left off
@@ -667,6 +668,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 await PaywallHelper.presentPaywallAndNavigate(
                                   context: navigator.context,
                                   userId: userId,
+                                  isReturningUser: true,  // Skip onboarding check - we know they completed it
                                 );
                               } else {
                                 // User hasn't completed onboarding - resume where they left off

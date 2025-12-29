@@ -49,10 +49,13 @@ class PaywallHelper {
 
   /// Present paywall and navigate to next screen based on onboarding state
   /// Only navigates forward if user completed purchase
+  ///
+  /// [isReturningUser] - If true, skips onboarding check and goes directly to MainNavigation after purchase
   static Future<void> presentPaywallAndNavigate({
     required BuildContext context,
     required String? userId,
     String placement = 'onboarding_paywall',
+    bool isReturningUser = false,
   }) async {
     if (!context.mounted) return;
 
@@ -78,23 +81,31 @@ class PaywallHelper {
         return;
       }
 
-      // Check if user has completed onboarding before
-      final supabase = Supabase.instance.client;
-      final userResponse = await supabase
-          .from('users')
-          .select('onboarding_state')
-          .eq('id', userId)
-          .maybeSingle();
+      // Determine next page based on whether this is a returning user
+      Widget nextPage;
+      if (isReturningUser) {
+        // Returning user (login flow) - go directly to main app
+        debugPrint('[PaywallHelper] Returning user purchased - navigating to MainNavigation');
+        nextPage = const MainNavigation();
+      } else {
+        // New user (onboarding flow) - check onboarding state
+        final supabase = Supabase.instance.client;
+        final userResponse = await supabase
+            .from('users')
+            .select('onboarding_state')
+            .eq('id', userId)
+            .maybeSingle();
 
-      final hasCompletedOnboarding =
-          userResponse?['onboarding_state'] == 'completed';
+        final hasCompletedOnboarding =
+            userResponse?['onboarding_state'] == 'completed';
 
-      debugPrint(
-          '[PaywallHelper] User purchased - navigating: hasCompletedOnboarding=$hasCompletedOnboarding');
+        debugPrint(
+            '[PaywallHelper] New user purchased - hasCompletedOnboarding=$hasCompletedOnboarding');
 
-      final nextPage = hasCompletedOnboarding
-          ? const MainNavigation()
-          : const WelcomeFreeAnalysisPage();
+        nextPage = hasCompletedOnboarding
+            ? const MainNavigation()
+            : const WelcomeFreeAnalysisPage();
+      }
 
       if (context.mounted) {
         Navigator.of(context).pushReplacement(
