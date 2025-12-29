@@ -1089,52 +1089,13 @@ def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
 # === DETECTION CORE ===
 
 def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
-    # Deep debug logging BEFORE processor call to catch the crash
-    print(f"[TENSOR DEBUG] >>> ENTERING get_raw_detections() <<<", flush=True)
-    sys.stdout.flush()
-    print(f"[TENSOR DEBUG] Image mode: {image.mode}, size: {image.size}", flush=True)
-    sys.stdout.flush()
+    # ULTRA MINIMAL - just try to call processor and see what happens
+    _original_print(f"[RAW_DET] Function entered", flush=True)
+    _original_print(f"[RAW_DET] Calling processor...", flush=True)
 
-    # Log memory before processor call
-    try:
-        import psutil
-        process = psutil.Process()
-        mem_info = process.memory_info()
-        print(f"[TENSOR DEBUG] BEFORE PROCESSOR - RSS: {mem_info.rss / 1024 / 1024:.1f} MB", flush=True)
-        sys.stdout.flush()
-        print(f"[TENSOR DEBUG] BEFORE PROCESSOR - VMS: {mem_info.vms / 1024 / 1024:.1f} MB", flush=True)
-        sys.stdout.flush()
-    except ImportError:
-        print(f"[TENSOR DEBUG] psutil not available", flush=True)
-        sys.stdout.flush()
+    inputs = processor(images=image, return_tensors="pt")
 
-    # Check if processor is valid
-    print(f"[TENSOR DEBUG] processor type: {type(processor)}", flush=True)
-    sys.stdout.flush()
-    print(f"[TENSOR DEBUG] processor object id: {id(processor)}", flush=True)
-    sys.stdout.flush()
-
-    # This is where it crashes - add detailed logging
-    print(f"[TENSOR DEBUG] About to call processor(images=image, return_tensors='pt')...", flush=True)
-    sys.stdout.flush()
-
-    try:
-        inputs = processor(images=image, return_tensors="pt")
-        print(f"[TENSOR DEBUG] processor() call completed successfully!", flush=True)
-        sys.stdout.flush()
-    except Exception as e:
-        print(f"[TENSOR DEBUG] !!! PROCESSOR CRASHED !!!", flush=True)
-        sys.stdout.flush()
-        print(f"[TENSOR DEBUG] Exception type: {type(e).__name__}", flush=True)
-        sys.stdout.flush()
-        print(f"[TENSOR DEBUG] Exception message: {str(e)}", flush=True)
-        sys.stdout.flush()
-        import traceback
-        print(f"[TENSOR DEBUG] Traceback:", flush=True)
-        sys.stdout.flush()
-        traceback.print_exc()
-        sys.stdout.flush()
-        raise
+    _original_print(f"[RAW_DET] Processor succeeded!", flush=True)
     print(f"[TENSOR DEBUG] inputs keys: {inputs.keys()}", flush=True)
     sys.stdout.flush()
     pixel_values = inputs.get('pixel_values')
