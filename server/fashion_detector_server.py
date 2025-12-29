@@ -1162,7 +1162,7 @@ def call_runpod_detection(image: Image.Image, threshold: float) -> List[dict]:
         }
     }
 
-    response = requests.post(url, json=payload, headers=headers, timeout=30)
+    response = requests.post(url, json=payload, headers=headers, timeout=60)
     response.raise_for_status()
 
     result = response.json()
