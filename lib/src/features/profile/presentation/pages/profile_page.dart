@@ -329,9 +329,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final fullName = (metadata['full_name'] as String? ?? '').trim();
     final username = (metadata['username'] as String? ?? '').trim();
     final fallbackName = userEmail.split('@').first;
-    final displayName = fullName.isNotEmpty
-        ? fullName
-        : (username.isNotEmpty ? username : fallbackName);
+    final displayName = username.isNotEmpty
+        ? username
+        : (fullName.isNotEmpty ? fullName : fallbackName);
     final profileInitial =
         displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
 
