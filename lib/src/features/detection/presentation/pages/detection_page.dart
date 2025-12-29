@@ -840,13 +840,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
                 if (!mounted) return;
 
-                // If user purchased, refresh credits and proceed
+                // If user purchased, sync credits with subscription and proceed
                 if (didPurchase) {
-                  print('[Detection] User purchased - refreshing credits');
-                  ref.invalidate(creditBalanceProvider);
+                  print('[Detection] User purchased - syncing credits with subscription');
 
-                  // Wait a moment for credit refresh
-                  await Future.delayed(const Duration(milliseconds: 500));
+                  // Sync credits with subscription (clears cache and refills)
+                  await ref.read(creditBalanceProvider.notifier).syncWithSubscription();
 
                   if (!mounted) return;
 
