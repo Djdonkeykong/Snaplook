@@ -37,6 +37,10 @@ from supabase_client import supabase_manager
 # Cache lookup control (disable cache hits but still store history)
 CACHE_RESULTS = os.getenv("CACHE_RESULTS", "").lower() in {"1", "true", "yes"}
 
+# ONNX feature flag - set USE_ONNX=true to enable ONNX inference (2-3x faster)
+# Set USE_ONNX=false or remove to use standard PyTorch (safe default)
+USE_ONNX = os.getenv("USE_ONNX", "false").lower() in {"1", "true", "yes"}
+
 # --- Logging control ---
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 _LOG_LEVELS = {"DEBUG": 10, "INFO": 20, "WARN": 30, "WARNING": 30, "ERROR": 40}
@@ -474,16 +478,45 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Delay loading - load on first use to avoid Gunicorn fork issues
 processor = None
 model = None
+onnx_session = None
 
 def ensure_model_loaded():
-    """Lazy load model on first use in each worker process."""
-    global processor, model
-    if processor is None or model is None:
-        print(f"[MODEL] Loading YOLOS in PID {os.getpid()}...")
-        processor = AutoImageProcessor.from_pretrained(MODEL_ID)
-        model = YolosForObjectDetection.from_pretrained(MODEL_ID)
-        model.eval()
-        print(f"[MODEL] Ready in PID {os.getpid()}")
+    """
+    Lazy load model on first use in each worker process.
+    Loads either PyTorch or ONNX based on USE_ONNX flag.
+
+    To switch back to PyTorch: Set USE_ONNX=false in environment
+    """
+    global processor, model, onnx_session
+
+    if USE_ONNX:
+        # ONNX MODE - 2-3x faster inference
+        if onnx_session is None or processor is None:
+            print(f"[MODEL] Loading ONNX model in PID {os.getpid()}...")
+            import onnxruntime as ort
+
+            processor = AutoImageProcessor.from_pretrained(MODEL_ID)
+
+            onnx_path = Path(__file__).parent / "yolos_fashionpedia.onnx"
+            if not onnx_path.exists():
+                raise FileNotFoundError(
+                    f"ONNX model not found at {onnx_path}. "
+                    f"Run 'python export_model_to_onnx.py' first, or set USE_ONNX=false"
+                )
+
+            onnx_session = ort.InferenceSession(
+                str(onnx_path),
+                providers=['CPUExecutionProvider']
+            )
+            print(f"[MODEL] ONNX ready in PID {os.getpid()}")
+    else:
+        # PYTORCH MODE - Standard, safe, well-tested
+        if processor is None or model is None:
+            print(f"[MODEL] Loading PyTorch YOLOS in PID {os.getpid()}...")
+            processor = AutoImageProcessor.from_pretrained(MODEL_ID)
+            model = YolosForObjectDetection.from_pretrained(MODEL_ID)
+            model.eval()
+            print(f"[MODEL] PyTorch ready in PID {os.getpid()}")
 
 # === INPUT SCHEMA ===
 class DetectRequest(BaseModel):
@@ -1093,12 +1126,34 @@ def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
 # === DETECTION CORE ===
 
 def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
+    """
+    Run object detection on image using either PyTorch or ONNX.
+    Returns list of detected garments with bbox, score, and label.
+
+    Mode is determined by USE_ONNX environment variable.
+    """
     ensure_model_loaded()
 
     inputs = processor(images=image, return_tensors="pt")
 
-    with torch.no_grad():
-        outputs = model(**inputs)
+    if USE_ONNX:
+        # ONNX INFERENCE - Faster execution
+        import numpy as np
+
+        onnx_inputs = {onnx_session.get_inputs()[0].name: inputs['pixel_values'].numpy()}
+        logits, pred_boxes = onnx_session.run(None, onnx_inputs)
+
+        # Convert ONNX outputs to torch format for post-processing
+        outputs = {
+            'logits': torch.from_numpy(logits),
+            'pred_boxes': torch.from_numpy(pred_boxes)
+        }
+    else:
+        # PYTORCH INFERENCE - Standard path
+        with torch.no_grad():
+            outputs = model(**inputs)
+
+    # Post-processing is identical for both modes
     results = processor.post_process_object_detection(
         outputs,
         threshold=threshold,
@@ -1108,7 +1163,7 @@ def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     detections = []
     for box, score, label_idx in zip(results["boxes"], results["scores"], results["labels"]):
         score = score.item()
-        label = model.config.id2label[label_idx.item()]
+        label = model.config.id2label[label_idx.item()] if model else processor.model.config.id2label[label_idx.item()]
         if label not in MAJOR_GARMENTS or score < threshold:
             continue
         x1, y1, x2, y2 = map(int, box.tolist())

@@ -6,6 +6,7 @@ pillow
 torch
 torchvision
 transformers
+onnxruntime
 requests
 safetensors
 python-multipart

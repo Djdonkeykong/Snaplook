@@ -5,8 +5,8 @@ services:
     plan: standard
     region: oregon
     rootDir: server
-    # Version: 2
-    buildCommand: pip install -r requirements.txt
+    # Version: 3 (ONNX support added)
+    buildCommand: pip install -r requirements.txt && python export_model_to_onnx.py
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker fashion_detector_server:app --bind 0.0.0.0:$PORT --timeout 120 --workers 2 --threads 1 --max-requests 50 --max-requests-jitter 10
     healthCheckPath: /
     envVars:
@@ -30,6 +30,8 @@ services:
         value: INFO
       - key: CACHE_RESULTS
         value: "1"
+      - key: USE_ONNX
+        value: "true"
       - key: CLOUDINARY_CROP_MAX_DIM
         value: "768"
       - key: CLOUDINARY_FULL_MAX_DIM
