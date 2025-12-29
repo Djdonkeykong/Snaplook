@@ -1143,16 +1143,17 @@ def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     if USE_ONNX:
         # ONNX INFERENCE - Faster execution
         import numpy as np
+        from types import SimpleNamespace
 
         onnx_inputs = {onnx_session.get_inputs()[0].name: inputs['pixel_values'].numpy()}
         onnx_outputs = onnx_session.run(None, onnx_inputs)
 
-        # ONNX returns outputs as list - map to expected format
-        # Output order: [logits, pred_boxes]
-        outputs = {
-            'logits': torch.from_numpy(onnx_outputs[0]),
-            'pred_boxes': torch.from_numpy(onnx_outputs[1])
-        }
+        # ONNX returns outputs as list - wrap in object with attributes
+        # Post-processor expects .logits and .pred_boxes attributes
+        outputs = SimpleNamespace(
+            logits=torch.from_numpy(onnx_outputs[0]),
+            pred_boxes=torch.from_numpy(onnx_outputs[1])
+        )
     else:
         # PYTORCH INFERENCE - Standard path
         with torch.no_grad():
