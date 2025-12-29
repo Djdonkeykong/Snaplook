@@ -1166,10 +1166,9 @@ def merge_detections(primary: List[dict], extras: List[dict], iou_threshold: flo
 
 
 def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max_crops: int):
+    print(f"=== XYZXYZ NEW CODE DEPLOYED XYZXYZ ===", flush=True)
     print(f"dYsI Using detection threshold: {threshold}", flush=True)
-    sys.stdout.flush()
     print(f"[DEBUG] About to call get_raw_detections()...", flush=True)
-    sys.stdout.flush()
     detections = get_raw_detections(image, threshold)
     print(f"[DEBUG] get_raw_detections() returned {len(detections)} detections", flush=True)
     sys.stdout.flush()
