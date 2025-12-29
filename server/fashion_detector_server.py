@@ -1168,12 +1168,14 @@ def call_runpod_detection(image: Image.Image, threshold: float) -> List[dict]:
     result = response.json()
 
     inference_time = time.time() - inference_start
-    print(f"[PERF] RunPod GPU inference: {inference_time:.3f}s (includes network latency)")
+    _original_print(f"[PERF] RunPod GPU inference: {inference_time:.3f}s (includes network latency)")
 
     # Handle RunPod response format
     if result.get("status") == "COMPLETED":
         output = result.get("output", {})
-        return output.get("detections", [])
+        detections = output.get("detections", [])
+        _original_print(f"[PERF] RunPod returned {len(detections)} detections")
+        return detections
     elif result.get("status") == "FAILED":
         error = result.get("error", "Unknown error")
         raise Exception(f"RunPod detection failed: {error}")
@@ -1191,13 +1193,13 @@ def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     # Priority: RunPod GPU > ONNX > PyTorch
     if USE_RUNPOD:
         if not RUNPOD_API_KEY or not RUNPOD_ENDPOINT_ID:
-            print("[ERROR] USE_RUNPOD=true but RUNPOD_API_KEY or RUNPOD_ENDPOINT_ID not set. Falling back to local.")
+            _original_print("[ERROR] USE_RUNPOD=true but RUNPOD_API_KEY or RUNPOD_ENDPOINT_ID not set. Falling back to local.")
         else:
-            print("[PERF] Using RunPod GPU serverless...")
+            _original_print("[PERF] Using RunPod GPU serverless...")
             try:
                 return call_runpod_detection(image, threshold)
             except Exception as e:
-                print(f"[ERROR] RunPod failed: {e}. Falling back to local detection.")
+                _original_print(f"[ERROR] RunPod failed: {e}. Falling back to local detection.")
 
     ensure_model_loaded()
 
