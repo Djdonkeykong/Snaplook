@@ -1098,12 +1098,21 @@ def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     _original_print(f"[RAW_DET] Processor succeeded!", flush=True)
     _original_print(f"[RAW_DET] Tensor shape: {inputs['pixel_values'].shape}", flush=True)
 
-    # Force clean state before inference to prevent memory corruption
+    # Aggressive cleanup to prevent memory corruption
     gc.collect()
     torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
-    # Ensure tensors are on CPU and contiguous (prevents SIGSEGV in transformers)
+    # Reset model to clean eval state
+    model.eval()
+
+    # Clear any cached gradients (even though we're in no_grad)
+    model.zero_grad(set_to_none=True)
+
+    # Ensure tensors are on CPU and contiguous
     inputs['pixel_values'] = inputs['pixel_values'].cpu().contiguous()
+
+    # Move model to CPU explicitly to match input device
+    model.cpu()
 
     _original_print(f"[RAW_DET] About to call MODEL INFERENCE...", flush=True)
 
