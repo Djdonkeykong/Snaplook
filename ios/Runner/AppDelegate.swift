@@ -696,8 +696,40 @@ class PipTutorialManager: NSObject {
       logHandler?("[PiP] Opening target app \(target) (\(reason))")
       UIApplication.shared.open(url, options: [:], completionHandler: nil)
     } else {
-      logHandler?("[PiP] Cannot open target app \(target) - scheme unavailable (\(reason))")
+      logHandler?("[PiP] Cannot open target app \(target) - app not installed (\(reason))")
+      // App not installed - open App Store page instead
+      if let appStoreURL = appStoreURLForTarget(target) {
+        logHandler?("[PiP] Opening App Store for \(target)")
+        UIApplication.shared.open(appStoreURL, options: [:], completionHandler: nil)
+      }
     }
+  }
+
+  private func appStoreURLForTarget(_ target: String) -> URL? {
+    // App Store URLs for each app
+    let appStoreID: String?
+    switch target {
+    case "instagram":
+      appStoreID = "389801252"
+    case "pinterest":
+      appStoreID = "429047995"
+    case "tiktok":
+      appStoreID = "835599320"
+    case "x":
+      appStoreID = "333903271"
+    case "imdb":
+      appStoreID = "342792525"
+    case "facebook":
+      appStoreID = "284882215"
+    case "photos", "safari":
+      // Built-in iOS apps - no App Store link needed
+      return nil
+    default:
+      return nil
+    }
+
+    guard let id = appStoreID else { return nil }
+    return URL(string: "https://apps.apple.com/app/id\(id)")
   }
 
   private func urlForTarget(_ target: String, deepLink: String?) -> URL? {
