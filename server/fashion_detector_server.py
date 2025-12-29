@@ -478,6 +478,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Delay loading - load on first use to avoid Gunicorn fork issues
 processor = None
 model = None
+model_config = None
 onnx_session = None
 
 def ensure_model_loaded():
@@ -487,15 +488,17 @@ def ensure_model_loaded():
 
     To switch back to PyTorch: Set USE_ONNX=false in environment
     """
-    global processor, model, onnx_session
+    global processor, model, model_config, onnx_session
 
     if USE_ONNX:
         # ONNX MODE - 2-3x faster inference
         if onnx_session is None or processor is None:
             print(f"[MODEL] Loading ONNX model in PID {os.getpid()}...")
             import onnxruntime as ort
+            from transformers import AutoConfig
 
             processor = AutoImageProcessor.from_pretrained(MODEL_ID)
+            model_config = AutoConfig.from_pretrained(MODEL_ID)
 
             onnx_path = Path(__file__).parent / "yolos_fashionpedia.onnx"
             if not onnx_path.exists():
@@ -516,6 +519,7 @@ def ensure_model_loaded():
             processor = AutoImageProcessor.from_pretrained(MODEL_ID)
             model = YolosForObjectDetection.from_pretrained(MODEL_ID)
             model.eval()
+            model_config = model.config
             print(f"[MODEL] PyTorch ready in PID {os.getpid()}")
 
 # === INPUT SCHEMA ===
@@ -1141,12 +1145,13 @@ def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
         import numpy as np
 
         onnx_inputs = {onnx_session.get_inputs()[0].name: inputs['pixel_values'].numpy()}
-        logits, pred_boxes = onnx_session.run(None, onnx_inputs)
+        onnx_outputs = onnx_session.run(None, onnx_inputs)
 
-        # Convert ONNX outputs to torch format for post-processing
+        # ONNX returns outputs as list - map to expected format
+        # Output order: [logits, pred_boxes]
         outputs = {
-            'logits': torch.from_numpy(logits),
-            'pred_boxes': torch.from_numpy(pred_boxes)
+            'logits': torch.from_numpy(onnx_outputs[0]),
+            'pred_boxes': torch.from_numpy(onnx_outputs[1])
         }
     else:
         # PYTORCH INFERENCE - Standard path
@@ -1163,7 +1168,7 @@ def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     detections = []
     for box, score, label_idx in zip(results["boxes"], results["scores"], results["labels"]):
         score = score.item()
-        label = model.config.id2label[label_idx.item()] if model else processor.model.config.id2label[label_idx.item()]
+        label = model_config.id2label[label_idx.item()]
         if label not in MAJOR_GARMENTS or score < threshold:
             continue
         x1, y1, x2, y2 = map(int, box.tolist())
