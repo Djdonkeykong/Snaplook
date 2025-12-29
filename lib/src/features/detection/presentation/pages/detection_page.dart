@@ -28,6 +28,7 @@ import '../../../paywall/presentation/pages/paywall_page.dart';
 import '../../../../shared/services/supabase_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
+import '../../../../services/paywall_helper.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
   final String? imageUrl;
@@ -823,22 +824,60 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
             );
 
             if (!hasCredits) {
-              // User has no credits - show snackbar
-              print('[Detection] User has no credits - showing message');
+              // User has no credits - show paywall
+              print('[Detection] User has no credits - showing paywall');
               HapticFeedback.mediumImpact();
 
               if (mounted) {
-                final messenger = ScaffoldMessenger.of(context);
-                messenger.clearSnackBars();
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'You have no credits available',
-                      style: TextStyle(fontFamily: 'PlusJakartaSans'),
-                    ),
-                    duration: Duration(milliseconds: 2500),
-                  ),
+                final userId = ref.read(authServiceProvider).currentUser?.id;
+
+                // Present paywall with detection-specific placement
+                final didPurchase = await PaywallHelper.presentPaywall(
+                  context: context,
+                  userId: userId,
+                  placement: 'out_of_credits',
                 );
+
+                if (!mounted) return;
+
+                // If user purchased, refresh credits and proceed
+                if (didPurchase) {
+                  print('[Detection] User purchased - refreshing credits');
+                  ref.invalidate(creditBalanceProvider);
+
+                  // Wait a moment for credit refresh
+                  await Future.delayed(const Duration(milliseconds: 500));
+
+                  if (!mounted) return;
+
+                  // Check if credits are now available
+                  final newCreditBalance = ref.read(creditBalanceProvider);
+                  final nowHasCredits = newCreditBalance.when(
+                    data: (balance) => balance.availableCredits > 0,
+                    loading: () => false,
+                    error: (_, __) => false,
+                  );
+
+                  if (nowHasCredits) {
+                    print('[Detection] Credits available after purchase - starting detection');
+                    _startDetection();
+                  } else {
+                    print('[Detection] No credits available after purchase - showing error');
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Credits not available yet. Please try again.',
+                            style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                          ),
+                          duration: Duration(milliseconds: 2500),
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  print('[Detection] User dismissed paywall without purchasing');
+                }
               }
               return;
             }
