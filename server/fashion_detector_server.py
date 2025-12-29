@@ -479,13 +479,11 @@ def ensure_model_loaded():
     """Lazy load model on first use in each worker process."""
     global processor, model
     if processor is None or model is None:
-        _original_print(f"[MODEL_LOAD] Loading YOLOS model in PID {os.getpid()}...", flush=True)
+        print(f"[MODEL] Loading YOLOS in PID {os.getpid()}...")
         processor = AutoImageProcessor.from_pretrained(MODEL_ID)
-        _original_print(f"[MODEL_LOAD] Processor loaded in PID {os.getpid()}", flush=True)
         model = YolosForObjectDetection.from_pretrained(MODEL_ID)
         model.eval()
-        model.cpu()  # Ensure on CPU
-        _original_print(f"[MODEL_LOAD] Model loaded and ready in PID {os.getpid()}", flush=True)
+        print(f"[MODEL] Ready in PID {os.getpid()}")
 
 # === INPUT SCHEMA ===
 class DetectRequest(BaseModel):
@@ -1095,41 +1093,12 @@ def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
 # === DETECTION CORE ===
 
 def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
-    # ULTRA MINIMAL - just try to call processor and see what happens
-    _original_print(f"[RAW_DET] Function entered", flush=True)
-
-    # Ensure model is loaded in this worker process
     ensure_model_loaded()
-    _original_print(f"[RAW_DET] Model ensured loaded", flush=True)
 
-    _original_print(f"[RAW_DET] Calling processor...", flush=True)
     inputs = processor(images=image, return_tensors="pt")
-
-    _original_print(f"[RAW_DET] Processor succeeded!", flush=True)
-    _original_print(f"[RAW_DET] Tensor shape: {inputs['pixel_values'].shape}", flush=True)
-
-    # Aggressive cleanup to prevent memory corruption
-    gc.collect()
-    torch.cuda.empty_cache() if torch.cuda.is_available() else None
-
-    # Reset model to clean eval state
-    model.eval()
-
-    # Clear any cached gradients (even though we're in no_grad)
-    model.zero_grad(set_to_none=True)
-
-    # Ensure tensors are on CPU and contiguous
-    inputs['pixel_values'] = inputs['pixel_values'].cpu().contiguous()
-
-    # Move model to CPU explicitly to match input device
-    model.cpu()
-
-    _original_print(f"[RAW_DET] About to call MODEL INFERENCE...", flush=True)
 
     with torch.no_grad():
         outputs = model(**inputs)
-
-    _original_print(f"[RAW_DET] MODEL INFERENCE SUCCEEDED!", flush=True)
     results = processor.post_process_object_detection(
         outputs,
         threshold=threshold,
@@ -1165,22 +1134,6 @@ def merge_detections(primary: List[dict], extras: List[dict], iou_threshold: flo
 
 
 def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max_crops: int):
-    print(f"=== VERSION ABC123 DEPLOYED 2025-12-29 01:50 UTC ===", flush=True)
-    sys.stdout.flush()
-
-    # Validate image object before proceeding
-    print(f"[VALIDATE] Image type: {type(image)}", flush=True)
-    sys.stdout.flush()
-    print(f"[VALIDATE] Image mode: {image.mode}, size: {image.size}", flush=True)
-    sys.stdout.flush()
-    print(f"[VALIDATE] Image object id: {id(image)}", flush=True)
-    sys.stdout.flush()
-
-    print(f"dYsI Using detection threshold: {threshold}", flush=True)
-    sys.stdout.flush()
-    print(f"[CRITICAL] Line 1210: About to call get_raw_detections()...", flush=True)
-    sys.stdout.flush()
-
     detections = get_raw_detections(image, threshold)
     print(f"[DEBUG] get_raw_detections() returned {len(detections)} detections", flush=True)
     sys.stdout.flush()
