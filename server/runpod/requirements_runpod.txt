@@ -1,6 +1,4 @@
 runpod
-torch
-torchvision
-transformers
+transformers==4.35.2
 pillow
 safetensors
