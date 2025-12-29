@@ -5,7 +5,7 @@ services:
     plan: standard
     region: oregon
     rootDir: server
-    # Version: 5 (ONNX post-processor fix)
+    # Version: 6 (Add performance timing)
     buildCommand: pip install -r requirements.txt && python export_model_to_onnx.py
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker fashion_detector_server:app --bind 0.0.0.0:$PORT --timeout 120 --workers 2 --threads 1 --max-requests 50 --max-requests-jitter 10
     healthCheckPath: /

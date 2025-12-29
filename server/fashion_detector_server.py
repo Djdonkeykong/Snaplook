@@ -1140,6 +1140,7 @@ def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
 
     inputs = processor(images=image, return_tensors="pt")
 
+    inference_start = time.time()
     if USE_ONNX:
         # ONNX INFERENCE - Faster execution
         import numpy as np
@@ -1158,6 +1159,10 @@ def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
         # PYTORCH INFERENCE - Standard path
         with torch.no_grad():
             outputs = model(**inputs)
+
+    inference_time = time.time() - inference_start
+    mode = "ONNX" if USE_ONNX else "PyTorch"
+    print(f"[PERF] {mode} inference: {inference_time:.3f}s")
 
     # Post-processing is identical for both modes
     results = processor.post_process_object_detection(
