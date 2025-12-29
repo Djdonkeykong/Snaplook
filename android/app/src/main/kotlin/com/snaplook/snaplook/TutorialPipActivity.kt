@@ -129,12 +129,11 @@ class TutorialPipActivity : AppCompatActivity() {
 
     private fun openTarget(target: String, deepLink: String?) {
         val cleanedDeepLink = deepLink?.trim()
+        val packageName = getPackageNameForTarget(target)
         val intent = if (!cleanedDeepLink.isNullOrEmpty()) {
             Intent(Intent.ACTION_VIEW, Uri.parse(cleanedDeepLink)).apply {
-                if (target == "instagram") {
-                    setPackage("com.instagram.android")
-                } else if (target == "pinterest") {
-                    setPackage("com.pinterest")
+                if (packageName != null) {
+                    setPackage(packageName)
                 }
             }
         } else {
@@ -152,10 +151,63 @@ class TutorialPipActivity : AppCompatActivity() {
         }
         if (intent != null) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+            // Check if app is installed by verifying if the intent can be resolved
+            val canResolve = packageName == null || packageManager.queryIntentActivities(
+                intent,
+                0
+            ).isNotEmpty()
+
+            if (canResolve) {
+                try {
+                    startActivity(intent)
+                } catch (_: Exception) {
+                    // If still fails, try opening Play Store
+                    openPlayStore(target)
+                }
+            } else {
+                // App not installed - open Play Store
+                Log.d("TutorialPip", "App not installed for target $target, opening Play Store")
+                openPlayStore(target)
+            }
+        }
+    }
+
+    private fun getPackageNameForTarget(target: String): String? {
+        return when (target) {
+            "instagram" -> "com.instagram.android"
+            "pinterest" -> "com.pinterest"
+            "tiktok" -> "com.zhiliaoapp.musically"
+            "photos" -> "com.google.android.apps.photos"
+            "facebook" -> "com.facebook.katana"
+            "imdb" -> "com.imdb.mobile"
+            "x" -> "com.twitter.android"
+            else -> null
+        }
+    }
+
+    private fun openPlayStore(target: String) {
+        val packageName = getPackageNameForTarget(target) ?: return
+
+        // Try to open Play Store app first
+        val playStoreIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName"))
+        playStoreIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+        try {
+            startActivity(playStoreIntent)
+            Log.d("TutorialPip", "Opened Play Store for $packageName")
+        } catch (_: Exception) {
+            // Play Store app not available - open web browser instead
+            val browserIntent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("https://play.google.com/store/apps/details?id=$packageName")
+            )
+            browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             try {
-                startActivity(intent)
+                startActivity(browserIntent)
+                Log.d("TutorialPip", "Opened Play Store web page for $packageName")
             } catch (_: Exception) {
-                // ignore
+                Log.e("TutorialPip", "Failed to open Play Store for $packageName")
             }
         }
     }
