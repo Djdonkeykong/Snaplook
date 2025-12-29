@@ -471,15 +471,21 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 # === MODELS ===
-print(f"🔄 Loading YOLOS model (PID: {os.getpid()})...", flush=True)
-sys.stdout.flush()
-processor = AutoImageProcessor.from_pretrained(MODEL_ID)
-print(f"✅ Processor loaded (PID: {os.getpid()})", flush=True)
-sys.stdout.flush()
-model = YolosForObjectDetection.from_pretrained(MODEL_ID)
-model.eval()  # Set to evaluation mode
-print(f"✅ Model loaded and set to eval mode (PID: {os.getpid()})", flush=True)
-sys.stdout.flush()
+# Delay loading - load on first use to avoid Gunicorn fork issues
+processor = None
+model = None
+
+def ensure_model_loaded():
+    """Lazy load model on first use in each worker process."""
+    global processor, model
+    if processor is None or model is None:
+        _original_print(f"[MODEL_LOAD] Loading YOLOS model in PID {os.getpid()}...", flush=True)
+        processor = AutoImageProcessor.from_pretrained(MODEL_ID)
+        _original_print(f"[MODEL_LOAD] Processor loaded in PID {os.getpid()}", flush=True)
+        model = YolosForObjectDetection.from_pretrained(MODEL_ID)
+        model.eval()
+        model.cpu()  # Ensure on CPU
+        _original_print(f"[MODEL_LOAD] Model loaded and ready in PID {os.getpid()}", flush=True)
 
 # === INPUT SCHEMA ===
 class DetectRequest(BaseModel):
@@ -1091,8 +1097,12 @@ def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
 def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     # ULTRA MINIMAL - just try to call processor and see what happens
     _original_print(f"[RAW_DET] Function entered", flush=True)
-    _original_print(f"[RAW_DET] Calling processor...", flush=True)
 
+    # Ensure model is loaded in this worker process
+    ensure_model_loaded()
+    _original_print(f"[RAW_DET] Model ensured loaded", flush=True)
+
+    _original_print(f"[RAW_DET] Calling processor...", flush=True)
     inputs = processor(images=image, return_tensors="pt")
 
     _original_print(f"[RAW_DET] Processor succeeded!", flush=True)
