@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:ui';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -338,17 +336,12 @@ class _WelcomeFreeAnalysisPageState
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () async {
-              if (_isNavigating) return;
-
+            onPressed: _isNavigating ? null : () async {
               HapticFeedback.mediumImpact();
 
               setState(() {
                 _isNavigating = true;
               });
-
-              // Start minimum delay timer
-              final minDelayFuture = Future.delayed(const Duration(milliseconds: 500));
 
               // Wait for initialization to complete before navigating
               if (_initializationFuture != null) {
@@ -358,9 +351,6 @@ class _WelcomeFreeAnalysisPageState
                 print(
                     '[WelcomePage] Initialization finished, navigating to app');
               }
-
-              // Ensure minimum 500ms has passed
-              await minDelayFuture;
 
               if (mounted) {
                 // Reset to home tab and navigate to main app
@@ -378,49 +368,34 @@ class _WelcomeFreeAnalysisPageState
               backgroundColor: const Color(0xFFf2003c),
               foregroundColor: Colors.white,
               elevation: 0,
+              disabledBackgroundColor: const Color(0xFFf2003c),
+              disabledForegroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
             ),
-            child: const Text(
-              'Start Exploring',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -0.2,
-              ),
-            ),
+            child: _isNavigating
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Text(
+                    'Start Exploring',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -0.2,
+                    ),
+                  ),
           ),
         ),
       ),
         ),
-        if (_isNavigating)
-          Container(
-            color: Colors.black.withOpacity(0.3),
-            child: Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                  child: Container(
-                    width: 75,
-                    height: 75,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6d6d6d).withOpacity(0.85),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Center(
-                      child: CupertinoActivityIndicator(
-                        radius: 18,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }
