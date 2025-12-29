@@ -41,6 +41,12 @@ CACHE_RESULTS = os.getenv("CACHE_RESULTS", "").lower() in {"1", "true", "yes"}
 # Set USE_ONNX=false or remove to use standard PyTorch (safe default)
 USE_ONNX = os.getenv("USE_ONNX", "false").lower() in {"1", "true", "yes"}
 
+# RunPod GPU feature flag - set USE_RUNPOD=true to use GPU serverless (10x faster)
+# Requires RUNPOD_API_KEY and RUNPOD_ENDPOINT_ID environment variables
+USE_RUNPOD = os.getenv("USE_RUNPOD", "false").lower() in {"1", "true", "yes"}
+RUNPOD_API_KEY = os.getenv("RUNPOD_API_KEY", "")
+RUNPOD_ENDPOINT_ID = os.getenv("RUNPOD_ENDPOINT_ID", "")
+
 # --- Logging control ---
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 _LOG_LEVELS = {"DEBUG": 10, "INFO": 20, "WARN": 30, "WARNING": 30, "ERROR": 40}
@@ -1129,13 +1135,70 @@ def deduplicate_and_limit_by_domain(results: List[dict]) -> List[dict]:
 
 # === DETECTION CORE ===
 
+def call_runpod_detection(image: Image.Image, threshold: float) -> List[dict]:
+    """
+    Call RunPod serverless GPU endpoint for detection.
+    Returns detections in same format as local detection.
+    """
+    import base64
+
+    inference_start = time.time()
+
+    # Convert image to base64
+    buffered = io.BytesIO()
+    image.save(buffered, format="JPEG", quality=95)
+    image_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+    # Call RunPod API
+    url = f"https://api.runpod.ai/v2/{RUNPOD_ENDPOINT_ID}/runsync"
+    headers = {
+        "Authorization": f"Bearer {RUNPOD_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "input": {
+            "image_base64": image_base64,
+            "threshold": threshold
+        }
+    }
+
+    response = requests.post(url, json=payload, headers=headers, timeout=30)
+    response.raise_for_status()
+
+    result = response.json()
+
+    inference_time = time.time() - inference_start
+    print(f"[PERF] RunPod GPU inference: {inference_time:.3f}s (includes network latency)")
+
+    # Handle RunPod response format
+    if result.get("status") == "COMPLETED":
+        output = result.get("output", {})
+        return output.get("detections", [])
+    elif result.get("status") == "FAILED":
+        error = result.get("error", "Unknown error")
+        raise Exception(f"RunPod detection failed: {error}")
+    else:
+        raise Exception(f"Unexpected RunPod status: {result.get('status')}")
+
+
 def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     """
-    Run object detection on image using either PyTorch or ONNX.
+    Run object detection on image using PyTorch, ONNX, or RunPod GPU.
     Returns list of detected garments with bbox, score, and label.
 
-    Mode is determined by USE_ONNX environment variable.
+    Mode is determined by USE_RUNPOD or USE_ONNX environment variables.
     """
+    # Priority: RunPod GPU > ONNX > PyTorch
+    if USE_RUNPOD:
+        if not RUNPOD_API_KEY or not RUNPOD_ENDPOINT_ID:
+            print("[ERROR] USE_RUNPOD=true but RUNPOD_API_KEY or RUNPOD_ENDPOINT_ID not set. Falling back to local.")
+        else:
+            print("[PERF] Using RunPod GPU serverless...")
+            try:
+                return call_runpod_detection(image, threshold)
+            except Exception as e:
+                print(f"[ERROR] RunPod failed: {e}. Falling back to local detection.")
+
     ensure_model_loaded()
 
     inputs = processor(images=image, return_tensors="pt")
