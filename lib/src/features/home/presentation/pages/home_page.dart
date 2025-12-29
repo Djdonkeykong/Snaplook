@@ -987,8 +987,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         'https://www.instagram.com/p/DQSaR_FEsU8/?igsh=MTEyNzJuaXF6cDlmNA==';
     const pinterestDeepLink = 'https://pin.it/223au9vpX';
     const tiktokDeepLink = 'https://vm.tiktok.com/ZNRYGe1YY/';
-    const imdbDeepLink =
-        'https://www.imdb.com/name/nm2858875/mediaviewer/rm667585282?ref_=ext_shr_lnk';
+    const imdbDeepLink = 'https://www.imdb.com/';
     const xDeepLink =
         'https://x.com/iamjhud/status/1962314855802651108?s=46'; // specific post
     const safariDeepLink =
