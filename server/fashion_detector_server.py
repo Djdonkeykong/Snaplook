@@ -1096,32 +1096,13 @@ def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     inputs = processor(images=image, return_tensors="pt")
 
     _original_print(f"[RAW_DET] Processor succeeded!", flush=True)
-    print(f"[TENSOR DEBUG] inputs keys: {inputs.keys()}", flush=True)
-    sys.stdout.flush()
-    pixel_values = inputs.get('pixel_values')
-    if pixel_values is not None:
-        print(f"[TENSOR DEBUG] pixel_values.shape: {pixel_values.shape}", flush=True)
-        sys.stdout.flush()
-        print(f"[TENSOR DEBUG] pixel_values.dtype: {pixel_values.dtype}", flush=True)
-        sys.stdout.flush()
-        print(f"[TENSOR DEBUG] pixel_values.device: {pixel_values.device}", flush=True)
-        sys.stdout.flush()
-        print(f"[TENSOR DEBUG] pixel_values.min(): {pixel_values.min().item():.6f}", flush=True)
-        sys.stdout.flush()
-        print(f"[TENSOR DEBUG] pixel_values.max(): {pixel_values.max().item():.6f}", flush=True)
-        sys.stdout.flush()
-        print(f"[TENSOR DEBUG] pixel_values.mean(): {pixel_values.mean().item():.6f}", flush=True)
-        sys.stdout.flush()
-        print(f"[TENSOR DEBUG] has_nan: {torch.isnan(pixel_values).any().item()}", flush=True)
-        sys.stdout.flush()
-        print(f"[TENSOR DEBUG] has_inf: {torch.isinf(pixel_values).any().item()}", flush=True)
-        sys.stdout.flush()
-
-    print(f"[TENSOR DEBUG] About to call model(**inputs)...", flush=True)
-    sys.stdout.flush()
+    _original_print(f"[RAW_DET] Tensor shape: {inputs['pixel_values'].shape}", flush=True)
+    _original_print(f"[RAW_DET] About to call MODEL INFERENCE...", flush=True)
 
     with torch.no_grad():
         outputs = model(**inputs)
+
+    _original_print(f"[RAW_DET] MODEL INFERENCE SUCCEEDED!", flush=True)
     results = processor.post_process_object_detection(
         outputs,
         threshold=threshold,
