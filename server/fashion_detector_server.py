@@ -1135,8 +1135,6 @@ def merge_detections(primary: List[dict], extras: List[dict], iou_threshold: flo
 
 def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max_crops: int):
     detections = get_raw_detections(image, threshold)
-    print(f"[DEBUG] get_raw_detections() returned {len(detections)} detections", flush=True)
-    sys.stdout.flush()
 
     mean_luma, std_luma = get_luma_stats(image)
     if (mean_luma < 65 or (mean_luma < 85 and std_luma < 25)) and len(detections) < max(2, max_crops):
