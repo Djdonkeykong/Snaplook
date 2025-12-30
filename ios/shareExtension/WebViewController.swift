@@ -110,11 +110,11 @@ class WebViewController: UIViewController, WKNavigationDelegate {
             toolbarContainer.topAnchor.constraint(equalTo: view.topAnchor),
             toolbarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             toolbarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            toolbarContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 44),
+            toolbarContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 56),
 
-            // URL bar - left-aligned, takes 75% width, below safe area
+            // URL bar - left-aligned, takes 75% width, below safe area with more padding
             urlBar.leadingAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            urlBar.topAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.topAnchor, constant: 4),
+            urlBar.topAnchor.constraint(equalTo: toolbarContainer.safeAreaLayoutGuide.topAnchor, constant: 12),
             urlBar.heightAnchor.constraint(equalToConstant: 36),
             urlBar.widthAnchor.constraint(equalTo: toolbarContainer.widthAnchor, multiplier: 0.75),
 
