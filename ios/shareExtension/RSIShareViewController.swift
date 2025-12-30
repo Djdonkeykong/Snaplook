@@ -1047,9 +1047,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         super.viewDidAppear(animated)
         suppressKeyboard()
         hideDefaultUI()
-        applySheetCornerRadius(16)
+        applySheetCornerRadius(26)
         DispatchQueue.main.async { [weak self] in
-            self?.applySheetCornerRadius(16)
+            self?.applySheetCornerRadius(26)
         }
 
         // UI is already built in viewDidLoad - just check if we should process attachments
@@ -3964,7 +3964,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        applySheetCornerRadius(16)
+        applySheetCornerRadius(26)
 
         if let cardView = imageComparisonContainerView,
            let widthConstraint = imageComparisonWidthConstraint,
@@ -8007,7 +8007,7 @@ extension RSIShareViewController: UITableViewDelegate, UITableViewDataSource {
         if #available(iOS 15.0, *) {
             if let sheet = navController.sheetPresentationController {
                 sheet.prefersGrabberVisible = false
-                sheet.preferredCornerRadius = 16 // Match iOS 18's larger corner radius
+                sheet.preferredCornerRadius = 26 // Match iOS 18's larger corner radius
             }
         }
 
