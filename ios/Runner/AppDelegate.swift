@@ -688,19 +688,27 @@ class PipTutorialManager: NSObject {
   private func openTargetIfNeeded(reason: String) {
     guard !hasOpenedTarget, let target = pendingTargetApp else { return }
     hasOpenedTarget = true
-    guard let url = urlForTarget(target, deepLink: pendingDeepLink) else {
+
+    // First check if the app is installed using its URL scheme
+    guard let appSchemeURL = urlForTarget(target, deepLink: nil) else {
       logHandler?("[PiP] No URL scheme for target \(target) (\(reason))")
       return
     }
-    if UIApplication.shared.canOpenURL(url) {
+
+    // Check if the target app is installed
+    if UIApplication.shared.canOpenURL(appSchemeURL) {
+      // App is installed - use deep link if available, otherwise use app scheme
+      let finalURL = urlForTarget(target, deepLink: pendingDeepLink) ?? appSchemeURL
       logHandler?("[PiP] Opening target app \(target) (\(reason))")
-      UIApplication.shared.open(url, options: [:], completionHandler: nil)
+      UIApplication.shared.open(finalURL, options: [:], completionHandler: nil)
     } else {
       logHandler?("[PiP] Cannot open target app \(target) - app not installed (\(reason))")
       // App not installed - open App Store page instead
       if let appStoreURL = appStoreURLForTarget(target) {
         logHandler?("[PiP] Opening App Store for \(target)")
         UIApplication.shared.open(appStoreURL, options: [:], completionHandler: nil)
+      } else {
+        logHandler?("[PiP] No App Store URL available for \(target)")
       }
     }
   }

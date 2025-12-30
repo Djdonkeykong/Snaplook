@@ -130,7 +130,25 @@ class TutorialPipActivity : AppCompatActivity() {
     private fun openTarget(target: String, deepLink: String?) {
         val cleanedDeepLink = deepLink?.trim()
         val packageName = getPackageNameForTarget(target)
-        val intent = if (!cleanedDeepLink.isNullOrEmpty()) {
+
+        // First check if the app is installed
+        val isAppInstalled = packageName != null && try {
+            packageManager.getPackageInfo(packageName, 0)
+            true
+        } catch (_: Exception) {
+            false
+        }
+
+        if (!isAppInstalled && packageName != null) {
+            // App not installed - open Play Store
+            Log.d("TutorialPip", "App not installed for target $target, opening Play Store")
+            openPlayStore(target)
+            return
+        }
+
+        // App is installed or no package name (built-in apps) - proceed with opening
+        val intent = if (!cleanedDeepLink.isNullOrEmpty() && isAppInstalled) {
+            // Use deep link only if app is installed
             Intent(Intent.ACTION_VIEW, Uri.parse(cleanedDeepLink)).apply {
                 if (packageName != null) {
                     setPackage(packageName)
@@ -149,26 +167,16 @@ class TutorialPipActivity : AppCompatActivity() {
                 else -> null
             }
         }
+
         if (intent != null) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-            // Check if app is installed by verifying if the intent can be resolved
-            val canResolve = packageName == null || packageManager.queryIntentActivities(
-                intent,
-                0
-            ).isNotEmpty()
-
-            if (canResolve) {
-                try {
-                    startActivity(intent)
-                } catch (_: Exception) {
-                    // If still fails, try opening Play Store
+            try {
+                startActivity(intent)
+            } catch (_: Exception) {
+                // If still fails and we have a package name, try opening Play Store
+                if (packageName != null) {
                     openPlayStore(target)
                 }
-            } else {
-                // App not installed - open Play Store
-                Log.d("TutorialPip", "App not installed for target $target, opening Play Store")
-                openPlayStore(target)
             }
         }
     }
