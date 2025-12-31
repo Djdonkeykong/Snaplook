@@ -196,7 +196,7 @@ class DetectionService {
       Uri.parse(endpoint),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(payload),
-    );
+    ).timeout(const Duration(seconds: 120)); // Match server timeout
 
     if (response.statusCode != 200) {
       throw Exception(

@@ -5,7 +5,7 @@ services:
     plan: standard
     region: oregon
     rootDir: server
-    # Version: 8 (Increase worker lifespan to 200 requests for less model reloading)
+    # Version: 9 (Align client timeouts with server 120s timeout)
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker fashion_detector_server:app --bind 0.0.0.0:$PORT --timeout 120 --workers 2 --threads 1 --max-requests 200 --max-requests-jitter 20
     healthCheckPath: /

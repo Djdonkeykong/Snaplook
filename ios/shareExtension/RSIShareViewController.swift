@@ -3802,10 +3802,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = jsonData
-        request.timeoutInterval = 150.0  // Increased to 150s to exceed server's 120s timeout for better error handling
+        request.timeoutInterval = 120.0  // Match server timeout of 120s
 
         shareLog("Sending detection API request to: \(analyzeEndpoint)")
-        shareLog("Request timeout set to: 150.0 seconds")
+        shareLog("Request timeout set to: 120.0 seconds")
 
         // Cancel any existing detection task
         if let existingTask = detectionTask {
