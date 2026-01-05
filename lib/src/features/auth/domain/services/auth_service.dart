@@ -276,6 +276,11 @@ class AuthService {
       if (e == authCancelledException) rethrow;
 
       // Check if user cancelled the sign-in
+      if (e is SignInWithAppleAuthorizationException) {
+        // User cancelled or authorization failed
+        throw authCancelledException;
+      }
+
       final errorString = e.toString().toLowerCase();
       if (errorString.contains('cancel') ||
           errorString.contains('1001') ||  // Apple's cancellation error code
