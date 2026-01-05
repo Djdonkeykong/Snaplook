@@ -284,7 +284,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _openHelpLink(BuildContext context) async {
-    final uri = Uri.parse('https://truefindr.com/faq/');
+    final uri = Uri.parse('https://snaplook.app/help-center/');
 
     // Use in-app browser only; no fallbacks
     await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
@@ -482,14 +482,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   title: 'Privacy Policy',
                   onTap: () => _openDocumentSheet(
                     title: 'Privacy Policy',
-                    url: 'https://truefindr.com/privacy-policy/',
+                    url: 'https://snaplook.app/privacy-policy/',
                   ),
                 ),
                 _SimpleSettingItem(
                   title: 'Terms of Service',
                   onTap: () => _openDocumentSheet(
                     title: 'Terms of Service',
-                    url: 'https://truefindr.com/terms-of-service/',
+                    url: 'https://snaplook.app/terms-of-service/',
                   ),
                 ),
 

@@ -848,7 +848,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   HapticFeedback.selectionClick();
                                   _openLegalLink(
                                     url:
-                                        'https://truefindr.com/terms-of-service/',
+                                        'https://snaplook.app/terms-of-service/',
                                     fallbackLabel: 'Terms of Service',
                                   );
                                 },
@@ -877,7 +877,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   HapticFeedback.selectionClick();
                                   _openLegalLink(
                                     url:
-                                        'https://truefindr.com/privacy-policy/',
+                                        'https://snaplook.app/privacy-policy/',
                                     fallbackLabel: 'Privacy Policy',
                                   );
                                 },

@@ -271,8 +271,17 @@ class OnboardingStateService {
 
       // Check if onboarding in progress
       if (onboardingState == OnboardingState.inProgress) {
-        // Reset onboarding on app restart if not paid
-        // User must start from beginning
+        final checkpoint = OnboardingCheckpoint.fromString(state['onboarding_checkpoint']);
+
+        // If user reached save_progress or paywall checkpoint, they likely created an account
+        // Send them back to paywall instead of resetting
+        if (checkpoint == OnboardingCheckpoint.saveProgress ||
+            checkpoint == OnboardingCheckpoint.paywall) {
+          debugPrint('[OnboardingState] User abandoned at paywall - sending back to paywall');
+          return 'paywall';
+        }
+
+        // Otherwise, reset onboarding if they closed app before creating account
         await resetOnboarding(userId);
         return 'gender';
       }

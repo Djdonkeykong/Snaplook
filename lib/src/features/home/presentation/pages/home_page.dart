@@ -986,12 +986,12 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     const instagramDeepLink =
         'https://www.instagram.com/p/DQSaR_FEsU8/?igsh=MTEyNzJuaXF6cDlmNA==';
     const pinterestDeepLink = 'https://pin.it/223au9vpX';
-    const tiktokDeepLink = 'https://vm.tiktok.com/ZNRYGe1YY/';
+    const String? tiktokDeepLink = null; // Use URL scheme instead of web link
     const imdbDeepLink = 'https://www.imdb.com/';
     const xDeepLink =
         'https://x.com/iamjhud/status/1962314855802651108?s=46'; // specific post
     const safariDeepLink =
-        'https://www.google.com/imgres?imgurl=https%3A%2F%2Fmedia.glamour.com%2Fphotos%2F5ae09534ed441129f636ed0b%2Fmaster%2Fw_1600%252Cc_limit%2FAimee_song_of_style_caroline_constas_polka_dot_puffer_sleeves_top_amo_distressed_jeans_dior_kitten_heels_pumps_le_specs_adam_selman_sunglasses_straw_bag_earrings.jpg&tbnid=JSIMQ6gKiEoIIM&vet=1&imgrefurl=https%3A%2F%2Fwww.glamour.com%2Fstory%2Fafter-almost-a-decade-aimee-song-influence-is-more-bankable-than-ever&docid=1-gN0KwlJ8FQ3M&w=800&h=1198&hl=en-us&source=sh%2Fx%2Fim%2Fm4%2F0&kgs=b74b63e1f5e69c79';
+        'https://media.glamour.com/photos/5ae09534ed441129f636ed0b/master/w_1600%2Cc_limit/Aimee_song_of_style_caroline_constas_polka_dot_puffer_sleeves_top_amo_distressed_jeans_dior_kitten_heels_pumps_le_specs_adam_selman_sunglasses_straw_bag_earrings.jpg';
     final videoAsset = switch (target) {
       PipTutorialTarget.instagram => 'assets/videos/instagram-tutorial.mp4',
       PipTutorialTarget.pinterest => 'assets/videos/pinterest-tutorial.mp4',
@@ -1830,37 +1830,19 @@ class _AdaptiveProductImage extends StatefulWidget {
 }
 
 class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
-  BoxFit? _boxFit;
-
   @override
   Widget build(BuildContext context) {
-    // Default fit based on category
-    final defaultFit = widget.isShoeCategory ? BoxFit.contain : BoxFit.cover;
-    final currentFit = _boxFit ?? defaultFit;
-
+    // All images use cover to fill the container
     return SizedBox.expand(
       child: CachedNetworkImage(
         imageUrl: widget.imageUrl,
-        fit: currentFit,
+        fit: BoxFit.cover,
         alignment: Alignment.center,
         fadeInDuration: const Duration(milliseconds: 200),
         fadeOutDuration: Duration.zero,
         placeholderFadeInDuration: Duration.zero,
         httpHeaders: const {
           'User-Agent': 'Mozilla/5.0 (compatible; Flutter app)',
-        },
-        imageBuilder: (context, imageProvider) {
-          // Image loaded, check if we need to adjust fit for shoes
-          if (widget.isShoeCategory && _boxFit == null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _determineOptimalFit();
-            });
-          }
-          return Image(
-            image: imageProvider,
-            fit: currentFit,
-            alignment: Alignment.center,
-          );
         },
         placeholder: (context, url) => Container(
           color: AppColors.surface,
@@ -1893,37 +1875,6 @@ class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
           ),
         ),
       ),
-    );
-  }
-
-  void _determineOptimalFit() {
-    if (!mounted || !widget.isShoeCategory) return;
-
-    // For shoes, check if the image would look better with cover vs contain
-    final image = NetworkImage(widget.imageUrl);
-
-    image.resolve(const ImageConfiguration()).addListener(
-      ImageStreamListener((ImageInfo info, bool _) {
-        if (!mounted) return;
-
-        final imageAspectRatio = info.image.width / info.image.height;
-        const containerAspectRatio = 0.85; // Our grid aspect ratio
-
-        // If the image aspect ratio is close to container ratio, use cover
-        // If it's very different (too wide or too tall), use contain
-        final aspectRatioDifference =
-            (imageAspectRatio - containerAspectRatio).abs();
-
-        // If difference is small (< 0.3), the image should fit well with cover
-        // If difference is large, keep using contain to show full product
-        final shouldUseCover = aspectRatioDifference < 0.3;
-
-        if (mounted && shouldUseCover && _boxFit != BoxFit.cover) {
-          setState(() {
-            _boxFit = BoxFit.cover;
-          });
-        }
-      }),
     );
   }
 }

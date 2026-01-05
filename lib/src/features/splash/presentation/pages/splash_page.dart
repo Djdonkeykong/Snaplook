@@ -7,6 +7,9 @@ import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../shared/services/image_preloader.dart';
+import '../../../../services/onboarding_state_service.dart';
+import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
+import '../../../onboarding/presentation/pages/paywall_presentation_page.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -72,34 +75,46 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         // No user - go to login
         nextPage = const LoginPage();
       } else {
-        // User is authenticated - check subscription status
-        bool hasActiveSubscription = false;
+        // User is authenticated - check onboarding state
+        final onboardingService = OnboardingStateService();
 
         try {
-          // Get subscription status from RevenueCat
-          final customerInfo = await Purchases.getCustomerInfo().timeout(
-            const Duration(seconds: 10),
-          );
-          hasActiveSubscription = customerInfo.entitlements.active.isNotEmpty;
+          // Determine where user should go based on onboarding completion
+          final onboardingRoute = await onboardingService.determineOnboardingRoute(user.id);
 
-          debugPrint('[Splash] User authenticated. Has active subscription: $hasActiveSubscription');
+          if (onboardingRoute == null) {
+            // Onboarding complete - go to home
+            debugPrint('[Splash] User has completed onboarding - routing to home');
+            nextPage = const MainNavigation();
+          } else if (onboardingRoute == 'welcome') {
+            // Payment complete but need to finish onboarding
+            debugPrint('[Splash] User paid but needs to complete onboarding - routing to welcome');
+            nextPage = const WelcomeFreeAnalysisPage();
+          } else if (onboardingRoute == 'paywall') {
+            // User abandoned at paywall - send them back to complete payment
+            debugPrint('[Splash] User abandoned at paywall - routing back to paywall');
+            nextPage = PaywallPresentationPage(userId: user.id);
+          } else {
+            // Onboarding not started or abandoned before account creation - send to login
+            debugPrint('[Splash] User onboarding not started or incomplete - routing to login');
+            nextPage = const LoginPage();
+          }
         } catch (e) {
-          debugPrint('[Splash] Error checking subscription status: $e');
-          // On error, assume no subscription but keep user logged in
-          // The app will show paywall when they try to use premium features
-          hasActiveSubscription = false;
-        }
-
-        // Check if user needs credits from share extension
-        if (needsCreditsFromShareExtension) {
-          // User came from share extension with no credits - send to home and show paywall
-          nextPage = const MainNavigation();
-        } else if (hasActiveSubscription) {
-          // Logged in + active subscription -> Home
-          nextPage = const MainNavigation();
-        } else {
-          // Logged in + NO subscription -> Home (paywall will show when needed)
-          nextPage = const MainNavigation();
+          debugPrint('[Splash] Error determining onboarding route: $e');
+          // On error, check if they can access home as fallback
+          try {
+            final canAccess = await onboardingService.canAccessHome(user.id);
+            if (canAccess) {
+              nextPage = const MainNavigation();
+            } else {
+              // Default to login
+              nextPage = const LoginPage();
+            }
+          } catch (e2) {
+            debugPrint('[Splash] Error checking home access: $e2');
+            // Last resort - go to login
+            nextPage = const LoginPage();
+          }
         }
       }
     } else {
