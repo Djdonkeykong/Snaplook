@@ -5618,9 +5618,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func generateShareCard(heroImage: UIImage, products: [DetectionResult]) -> UIImage? {
-        // Card dimensions
-        let cardWidth: CGFloat = 1080
-        let cardHeight: CGFloat = 1350
+        // Card dimensions - 9:16 aspect ratio for social media
+        let canvasWidth: CGFloat = 1080
+        let canvasHeight: CGFloat = 1920
         let scale: CGFloat = 2.0
 
         // Scaled values
@@ -5628,190 +5628,177 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return value
         }
 
-        let heroSize = s(520)
-        let heroRadius = s(40)
-        let cardWidth_ = s(980)
+        let cardWidth = canvasWidth * 0.88
+        let cardPadding = s(40)
+        let heroHeight = s(600)
+        let heroRadius = s(24)
         let cardRadius = s(32)
-        let rowImageSize = s(108)
-        let rowVerticalPadding = s(20)
-        let rowHeight = rowImageSize + (rowVerticalPadding * 2)
 
         // Create rendering context
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: cardWidth, height: cardHeight), format: UIGraphicsImageRendererFormat())
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: canvasWidth, height: canvasHeight), format: UIGraphicsImageRendererFormat())
 
         return renderer.image { context in
             let ctx = context.cgContext
 
-            // Background
-            UIColor.white.setFill()
-            ctx.fill(CGRect(x: 0, y: 0, width: cardWidth, height: cardHeight))
+            // Background - warm beige
+            UIColor(red: 245/255, green: 243/255, blue: 240/255, alpha: 1.0).setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: canvasWidth, height: canvasHeight))
 
-            // Logo
-            if let logoImage = UIImage(named: "logo") {
-                let logoHeight = s(52)
-                let logoY = s(52)
-                let logoAspect = logoImage.size.width / logoImage.size.height
-                let logoWidth = logoHeight * logoAspect
-                let logoX = (cardWidth - logoWidth) / 2
-                logoImage.draw(in: CGRect(x: logoX, y: logoY, width: logoWidth, height: logoHeight))
-            }
+            // White card with shadow
+            let cardX = (canvasWidth - cardWidth) / 2
+            var currentY: CGFloat = s(60)
+
+            let cardPath = UIBezierPath(roundedRect: CGRect(x: cardX, y: currentY, width: cardWidth, height: canvasHeight - currentY * 2), cornerRadius: cardRadius)
+            ctx.saveGState()
+            ctx.setShadow(offset: CGSize(width: 0, height: s(20)), blur: s(40), color: UIColor.black.withAlphaComponent(0.08).cgColor)
+            UIColor.white.setFill()
+            cardPath.fill()
+            ctx.restoreGState()
+
+            // "I snapped this 📸"
+            currentY += s(60)
+            let topText = "I snapped this 📸"
+            let topFont = UIFont(name: "PlusJakartaSans-Regular", size: s(16)) ?? UIFont.systemFont(ofSize: s(16))
+            let topAttributes: [NSAttributedString.Key: Any] = [
+                .font: topFont,
+                .foregroundColor: UIColor(red: 107/255, green: 107/255, blue: 107/255, alpha: 1.0),
+                .kern: 0.3
+            ]
+            let topSize = (topText as NSString).size(withAttributes: topAttributes)
+            (topText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - topSize.width / 2, y: currentY), withAttributes: topAttributes)
 
             // Hero image
-            let heroY = s(52) + s(52) + s(36)
-            let heroX = (cardWidth - heroSize) / 2
-            let heroPath = UIBezierPath(roundedRect: CGRect(x: heroX, y: heroY, width: heroSize, height: heroSize), cornerRadius: heroRadius)
+            currentY += topSize.height + s(32)
+            let heroX = cardX + cardPadding
+            let heroWidth = cardWidth - cardPadding * 2
+            let heroPath = UIBezierPath(roundedRect: CGRect(x: heroX, y: currentY, width: heroWidth, height: heroHeight), cornerRadius: heroRadius)
             ctx.saveGState()
             heroPath.addClip()
-            heroImage.draw(in: CGRect(x: heroX, y: heroY, width: heroSize, height: heroSize))
+            heroImage.draw(in: CGRect(x: heroX, y: currentY, width: heroWidth, height: heroHeight))
             ctx.restoreGState()
 
-            // Hero shadow
-            ctx.saveGState()
-            ctx.setShadow(offset: CGSize(width: 0, height: s(14)), blur: s(28), color: UIColor.black.withAlphaComponent(0.12).cgColor)
-            heroPath.stroke()
-            ctx.restoreGState()
-
-            // Heart badge
-            let badgeSize = s(120)
-            let badgeX = heroX + s(-48)
-            let badgeY = heroY + s(24)
-            let badgePath = UIBezierPath(ovalIn: CGRect(x: badgeX, y: badgeY, width: badgeSize, height: badgeSize))
-
-            ctx.saveGState()
-            ctx.setShadow(offset: CGSize(width: 0, height: badgeSize * 0.12), blur: badgeSize * 0.25, color: UIColor.black.withAlphaComponent(0.18).cgColor)
-            UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1.0).setFill()
-            badgePath.fill()
-            ctx.restoreGState()
-
-            // Heart icon
-            let heartIconSize = badgeSize * 0.44
-            let heartIconX = badgeX + (badgeSize - heartIconSize) / 2
-            let heartIconY = badgeY + (badgeSize - heartIconSize) / 2
-            if let heartImage = UIImage(systemName: "heart.fill")?.withTintColor(UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0), renderingMode: .alwaysOriginal) {
-                heartImage.draw(in: CGRect(x: heartIconX, y: heartIconY, width: heartIconSize, height: heartIconSize))
-            }
-
-            // TOP MATCHES tag
-            let tagHeight = s(74)
-            let tagY = heroY + heroSize - 36
-            let tagText = "TOP MATCHES 🔥"
-            let tagFont = UIFont(name: "PlusJakartaSans-ExtraBold", size: tagHeight * 0.38) ?? UIFont.boldSystemFont(ofSize: tagHeight * 0.38)
-            let tagAttributes: [NSAttributedString.Key: Any] = [
-                .font: tagFont,
-                .foregroundColor: UIColor.black,
+            // "MY PHOTO" label
+            let labelText = "MY PHOTO"
+            let labelFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(10)) ?? UIFont.systemFont(ofSize: s(10), weight: .semibold)
+            let labelAttributes: [NSAttributedString.Key: Any] = [
+                .font: labelFont,
+                .foregroundColor: UIColor(red: 155/255, green: 155/255, blue: 155/255, alpha: 1.0),
                 .kern: 0.8
             ]
-            let tagSize = (tagText as NSString).size(withAttributes: tagAttributes)
-            let tagWidth = tagSize.width + s(34) * 2
-            let tagX = (cardWidth - tagWidth) / 2
+            let labelSize = (labelText as NSString).size(withAttributes: labelAttributes)
+            let labelPadding = s(12)
+            let labelPath = UIBezierPath(roundedRect: CGRect(x: heroX + s(16), y: currentY + s(16), width: labelSize.width + labelPadding * 2, height: labelSize.height + s(12)), cornerRadius: s(6))
+            UIColor.white.withAlphaComponent(0.85).setFill()
+            labelPath.fill()
+            (labelText as NSString).draw(at: CGPoint(x: heroX + s(16) + labelPadding, y: currentY + s(16) + s(6)), withAttributes: labelAttributes)
 
-            let tagPath = UIBezierPath(roundedRect: CGRect(x: tagX, y: tagY, width: tagWidth, height: tagHeight), cornerRadius: tagHeight * 0.35)
-            ctx.saveGState()
-            ctx.setShadow(offset: CGSize(width: 0, height: tagHeight * 0.25), blur: tagHeight * 0.5, color: UIColor.black.withAlphaComponent(0.1).cgColor)
-            UIColor.white.setFill()
-            tagPath.fill()
-            ctx.restoreGState()
+            // "↓ Snaplook found"
+            currentY += heroHeight + s(40)
+            let dividerText = "↓ Snaplook found"
+            let dividerFont = UIFont(name: "PlusJakartaSans-Regular", size: s(14)) ?? UIFont.systemFont(ofSize: s(14))
+            let dividerAttributes: [NSAttributedString.Key: Any] = [
+                .font: dividerFont,
+                .foregroundColor: UIColor(red: 155/255, green: 155/255, blue: 155/255, alpha: 1.0),
+                .kern: 0.2
+            ]
+            let dividerSize = (dividerText as NSString).size(withAttributes: dividerAttributes)
+            (dividerText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - dividerSize.width / 2, y: currentY), withAttributes: dividerAttributes)
 
-            (tagText as NSString).draw(at: CGPoint(x: tagX + s(34), y: tagY + (tagHeight - tagSize.height) / 2), withAttributes: tagAttributes)
+            // "Top Visual Match 🔥" badge
+            currentY += dividerSize.height + s(32)
+            let badgeText = "Top Visual Match 🔥"
+            let badgeFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(15)) ?? UIFont.systemFont(ofSize: s(15), weight: .semibold)
+            let badgeAttributes: [NSAttributedString.Key: Any] = [
+                .font: badgeFont,
+                .foregroundColor: UIColor(red: 43/255, green: 43/255, blue: 43/255, alpha: 1.0),
+                .kern: 0.3
+            ]
+            let badgeSize = (badgeText as NSString).size(withAttributes: badgeAttributes)
+            let badgePadding = s(24)
+            let badgeHeight = badgeSize.height + s(24)
+            let badgeWidth = badgeSize.width + badgePadding * 2
+            let badgePath = UIBezierPath(roundedRect: CGRect(x: canvasWidth / 2 - badgeWidth / 2, y: currentY, width: badgeWidth, height: badgeHeight), cornerRadius: s(20))
+            UIColor(red: 250/255, green: 250/255, blue: 250/255, alpha: 1.0).setFill()
+            badgePath.fill()
+            ctx.setStrokeColor(UIColor(red: 238/255, green: 238/255, blue: 238/255, alpha: 1.0).cgColor)
+            ctx.setLineWidth(1)
+            badgePath.stroke()
+            (badgeText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - badgeSize.width / 2, y: currentY + s(12)), withAttributes: badgeAttributes)
 
-            // Products list
-            let listY = tagY + tagHeight + s(36)
-            let listHeight = rowHeight * 4.2
-            let listX = (cardWidth - cardWidth_) / 2
+            // Stacked product images (top 3 only)
+            currentY += badgeHeight + s(40)
+            let stackHeight = s(360)
+            let stackCenterY = currentY + stackHeight / 2
 
-            // Products background
-            let productsPath = UIBezierPath(roundedRect: CGRect(x: listX, y: listY, width: cardWidth_, height: listHeight), cornerRadius: cardRadius)
-            UIColor.white.setFill()
-            productsPath.fill()
-
-            // Draw products
-            for (index, product) in products.enumerated() {
-                let rowY = listY + CGFloat(index) * rowHeight
-
-                // Product image
-                let productImageX = listX + s(30)
-                let productImageY = rowY + rowVerticalPadding
-                let productImagePath = UIBezierPath(roundedRect: CGRect(x: productImageX, y: productImageY, width: rowImageSize, height: rowImageSize), cornerRadius: rowImageSize * 0.2)
-
+            // Download product images first
+            var productImages: [UIImage] = []
+            for product in products.prefix(3) {
                 if !product.image_url.isEmpty, let imageUrl = URL(string: product.image_url),
                    let imageData = try? Data(contentsOf: imageUrl), let productImage = UIImage(data: imageData) {
-                    ctx.saveGState()
-                    productImagePath.addClip()
-                    productImage.draw(in: CGRect(x: productImageX, y: productImageY, width: rowImageSize, height: rowImageSize))
-                    ctx.restoreGState()
-                } else {
-                    UIColor(red: 242/255, green: 242/255, blue: 242/255, alpha: 1.0).setFill()
-                    productImagePath.fill()
-                }
-
-                // Product text
-                let textX = productImageX + rowImageSize + (rowImageSize * 0.18)
-                let textWidth = rowImageSize * 3.6
-
-                // Brand
-                let brand = (product.brand ?? "Brand").uppercased()
-                let brandFont = UIFont(name: "PlusJakartaSans-Bold", size: rowImageSize * 0.24) ?? UIFont.boldSystemFont(ofSize: rowImageSize * 0.24)
-                let brandAttributes: [NSAttributedString.Key: Any] = [
-                    .font: brandFont,
-                    .foregroundColor: UIColor(red: 17/255, green: 17/255, blue: 17/255, alpha: 1.0)
-                ]
-                (brand as NSString).draw(in: CGRect(x: textX, y: productImageY, width: textWidth, height: rowImageSize * 0.24), withAttributes: brandAttributes)
-
-                // Title
-                let title = product.product_name
-                let titleFont = UIFont(name: "PlusJakartaSans-Medium", size: rowImageSize * 0.2) ?? UIFont.systemFont(ofSize: rowImageSize * 0.2, weight: .medium)
-                let titleAttributes: [NSAttributedString.Key: Any] = [
-                    .font: titleFont,
-                    .foregroundColor: UIColor(red: 52/255, green: 52/255, blue: 52/255, alpha: 1.0)
-                ]
-                let titleY = productImageY + rowImageSize * 0.24 + rowImageSize * 0.08
-                (title as NSString).draw(in: CGRect(x: textX, y: titleY, width: textWidth, height: rowImageSize * 0.4), withAttributes: titleAttributes)
-
-                // "See store" link
-                let linkText = "See store"
-                let linkFont = UIFont(name: "PlusJakartaSans-Bold", size: rowImageSize * 0.23) ?? UIFont.boldSystemFont(ofSize: rowImageSize * 0.23)
-                let linkAttributes: [NSAttributedString.Key: Any] = [
-                    .font: linkFont,
-                    .foregroundColor: UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
-                ]
-                let linkY = titleY + rowImageSize * 0.4 + rowImageSize * 0.12
-                (linkText as NSString).draw(at: CGPoint(x: textX, y: linkY), withAttributes: linkAttributes)
-
-                // Separator
-                if index < products.count - 1 {
-                    ctx.setStrokeColor(UIColor(red: 237/255, green: 237/255, blue: 237/255, alpha: 1.0).cgColor)
-                    ctx.setLineWidth(1)
-                    ctx.move(to: CGPoint(x: listX + s(30), y: rowY + rowHeight))
-                    ctx.addLine(to: CGPoint(x: listX + cardWidth_ - s(30), y: rowY + rowHeight))
-                    ctx.strokePath()
+                    productImages.append(productImage)
                 }
             }
 
-            // Gradient overlay at bottom
-            if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
-                                        colors: [
-                                            UIColor.white.withAlphaComponent(0).cgColor,
-                                            UIColor.white.withAlphaComponent(0.7).cgColor,
-                                            UIColor.white.cgColor
-                                        ] as CFArray,
-                                        locations: [0, 0.5, 1]) {
+            // Draw stacked images (back to front)
+            if productImages.count > 2 {
+                // Third image (furthest back, left side)
+                let size3 = s(180)
+                let x3 = cardX + s(80)
+                let y3 = stackCenterY - size3 / 2 + s(60)
                 ctx.saveGState()
-                let gradientPath = UIBezierPath(roundedRect: CGRect(x: listX, y: listY, width: cardWidth_, height: listHeight), cornerRadius: cardRadius)
-                gradientPath.addClip()
-                let gradientHeight = s(110)
-                let gradientY = listY + listHeight - gradientHeight
-                ctx.drawLinearGradient(gradient,
-                                      start: CGPoint(x: listX + cardWidth_ / 2, y: gradientY),
-                                      end: CGPoint(x: listX + cardWidth_ / 2, y: gradientY + gradientHeight),
-                                      options: [])
+                ctx.rotate(by: -0.08)
+                let adjustedX3 = x3 * cos(-0.08) - y3 * sin(-0.08)
+                let adjustedY3 = x3 * sin(-0.08) + y3 * cos(-0.08)
+                ctx.setShadow(offset: CGSize(width: 0, height: s(4)), blur: s(8), color: UIColor.black.withAlphaComponent(0.12).cgColor)
+                let path3 = UIBezierPath(roundedRect: CGRect(x: adjustedX3, y: adjustedY3, width: size3, height: size3), cornerRadius: s(16))
+                path3.addClip()
+                productImages[2].draw(in: CGRect(x: adjustedX3, y: adjustedY3, width: size3, height: size3))
                 ctx.restoreGState()
             }
+
+            if productImages.count > 1 {
+                // Second image (middle, right side)
+                let size2 = s(200)
+                let x2 = cardX + cardWidth - s(80) - size2
+                let y2 = stackCenterY - size2 / 2 + s(40)
+                ctx.saveGState()
+                ctx.setShadow(offset: CGSize(width: 0, height: s(8)), blur: s(16), color: UIColor.black.withAlphaComponent(0.12).cgColor)
+                let path2 = UIBezierPath(roundedRect: CGRect(x: x2, y: y2, width: size2, height: size2), cornerRadius: s(16))
+                path2.addClip()
+                productImages[1].draw(in: CGRect(x: x2, y: y2, width: size2, height: size2))
+                ctx.restoreGState()
+            }
+
+            if productImages.count > 0 {
+                // First image (front, center)
+                let size1 = s(240)
+                let x1 = canvasWidth / 2 - size1 / 2
+                let y1 = stackCenterY - size1 / 2
+                ctx.saveGState()
+                ctx.setShadow(offset: CGSize(width: 0, height: s(16)), blur: s(32), color: UIColor.black.withAlphaComponent(0.12).cgColor)
+                let path1 = UIBezierPath(roundedRect: CGRect(x: x1, y: y1, width: size1, height: size1), cornerRadius: s(20))
+                path1.addClip()
+                productImages[0].draw(in: CGRect(x: x1, y: y1, width: size1, height: size1))
+                ctx.restoreGState()
+            }
+
+            // "snaplook" logo
+            currentY += stackHeight + s(50)
+            let logoText = "snaplook"
+            let logoFont = UIFont(name: "PlusJakartaSans-Bold", size: s(18)) ?? UIFont.boldSystemFont(ofSize: s(18))
+            let logoAttributes: [NSAttributedString.Key: Any] = [
+                .font: logoFont,
+                .foregroundColor: UIColor(red: 28/255, green: 28/255, blue: 28/255, alpha: 1.0),
+                .kern: -0.5
+            ]
+            let logoSize = (logoText as NSString).size(withAttributes: logoAttributes)
+            (logoText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - logoSize.width / 2, y: currentY), withAttributes: logoAttributes)
         }
     }
 
     private func prepareAndPresentShare(loadingView: UIView) {
-        // Get top 5 products for sharing
-        let topProducts = Array(detectionResults.prefix(5))
+        // Get top 3 products for sharing - stacked display
+        let topProducts = Array(detectionResults.prefix(3))
         let totalResults = detectionResults.count
 
         // Create share text

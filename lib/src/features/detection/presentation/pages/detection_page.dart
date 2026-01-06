@@ -80,8 +80,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   final DraggableScrollableController _resultsSheetController =
       DraggableScrollableController();
 
-  // Share card constants
-  static const Size _shareCardSize = Size(1080, 1350);
+  // Share card constants - 9:16 aspect ratio for social media
+  static const Size _shareCardSize = Size(1080, 1920);
   static const double _shareCardPixelRatio = 2.0;
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
@@ -531,9 +531,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       final message = sharePayload.message;
       final subject = sharePayload.subject;
 
-      // Build share card items from results
+      // Build share card items from results - take top 3 for stacked display
       final shareItems = <_ShareCardItem>[];
-      for (final result in _results.take(5)) {
+      for (final result in _results.take(3)) {
         final item = _ShareCardItem.fromDetectionResult(result);
         if (item != null) {
           shareItems.add(item);
@@ -2101,86 +2101,96 @@ class _DetectionShareCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
         final scale = width / 1080;
         double s(double value) => value * scale;
 
-        final heroSize = s(520);
-        final heroRadius = s(40);
-        final cardWidth = s(980);
-        final cardRadius = s(32);
-        final rowImageSize = s(108);
-        final rowVerticalPadding = s(20);
-        final rowHeight = rowImageSize + (rowVerticalPadding * 2);
-        final listHeight = rowHeight * 4.2;
+        final cardWidth = width * 0.88;
+        final cardPadding = s(40);
+        final heroHeight = s(600);
+        final heroRadius = s(24);
 
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(s(52)),
-          child: Container(
-            color: Colors.white,
-            child: Column(
-              children: [
-                SizedBox(height: s(52)),
-                Image.asset(
-                  'assets/images/logo.png',
-                  height: s(52),
-                  fit: BoxFit.contain,
-                ),
-                SizedBox(height: s(36)),
-                Center(
-                  child: SizedBox(
-                    width: heroSize,
-                    height: heroSize,
+        return Container(
+          width: width,
+          height: height,
+          color: const Color(0xFFF5F3F0),
+          child: Center(
+            child: Container(
+              width: cardWidth,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(s(32)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: s(40),
+                    offset: Offset(0, s(20)),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: s(60)),
+
+                  Text(
+                    'I snapped this 📸',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: s(16),
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF6B6B6B),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+
+                  SizedBox(height: s(32)),
+
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: cardPadding),
                     child: Stack(
-                      clipBehavior: Clip.none,
                       children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(heroRadius),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.12),
-                                blurRadius: s(28),
-                                offset: Offset(0, s(14)),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(heroRadius),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(heroRadius),
+                          child: Container(
+                            height: heroHeight,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(heroRadius),
+                            ),
                             child: heroImage != null
                                 ? Image(
                                     image: heroImage!,
                                     fit: BoxFit.cover,
                                   )
-                                : Container(
-                                    color: const Color(0xFFEFEFEF),
-                                    child: const Icon(
-                                      Icons.image_rounded,
-                                      color: Color(0xFFBDBDBD),
-                                      size: 48,
-                                    ),
+                                : const Icon(
+                                    Icons.image_rounded,
+                                    color: Color(0xFFBDBDBD),
+                                    size: 64,
                                   ),
                           ),
                         ),
                         Positioned(
-                          left: s(-48),
-                          top: s(24),
-                          child: _ShareBadge(
-                            size: s(120),
-                            icon: Icons.favorite,
-                            iconColor: AppColors.secondary,
-                            backgroundColor: const Color(0xFFF0F0F0),
-                            shadowOpacity: 0.18,
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: -36,
-                          child: Center(
-                            child: _TopMatchesTag(
-                              height: s(74),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: s(34),
+                          top: s(16),
+                          left: s(16),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: s(12),
+                              vertical: s(6),
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.85),
+                              borderRadius: BorderRadius.circular(s(6)),
+                            ),
+                            child: Text(
+                              'MY PHOTO',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                fontSize: s(10),
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF9B9B9B),
+                                letterSpacing: 0.8,
                               ),
                             ),
                           ),
@@ -2188,72 +2198,112 @@ class _DetectionShareCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                ),
-                SizedBox(height: s(36)),
-                if (shareItems.isNotEmpty)
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: SizedBox(
-                        width: cardWidth,
-                        height: listHeight,
+
+                  SizedBox(height: s(40)),
+
+                  Text(
+                    '↓ Snaplook found',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: s(14),
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF9B9B9B),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+
+                  SizedBox(height: s(32)),
+
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: s(24),
+                      vertical: s(12),
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAFAFA),
+                      borderRadius: BorderRadius.circular(s(20)),
+                      border: Border.all(
+                        color: const Color(0xFFEEEEEE),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      'Top Visual Match 🔥',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: s(15),
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF2B2B2B),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: s(40)),
+
+                  if (shareItems.isNotEmpty)
+                    SizedBox(
+                      height: s(360),
+                      child: Center(
                         child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
                           children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(cardRadius),
-                              child: Container(
-                                color: Colors.white,
-                                child: ListView.separated(
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  padding: EdgeInsets.zero,
-                                  itemCount: shareItems.length,
-                                  itemBuilder: (context, index) {
-                                    return _ShareResultRow(
-                                      item: shareItems[index],
-                                      imageSize: rowImageSize,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: s(30),
-                                        vertical: rowVerticalPadding,
-                                      ),
-                                    );
-                                  },
-                                  separatorBuilder: (context, index) => Divider(
-                                    height: 1,
-                                    thickness: 1,
-                                    color: const Color(0xFFEDEDED),
-                                    indent: s(30),
-                                    endIndent: s(30),
+                            if (shareItems.length > 2)
+                              Positioned(
+                                left: s(40),
+                                top: s(60),
+                                child: Transform.rotate(
+                                  angle: -0.08,
+                                  child: _StackedProductImage(
+                                    item: shareItems[2],
+                                    size: s(180),
+                                    radius: s(16),
+                                    elevation: 2,
                                   ),
                                 ),
                               ),
-                            ),
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              child: IgnorePointer(
-                                child: Container(
-                                  height: s(110),
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Color(0x00FFFFFF),
-                                        Color(0xB3FFFFFF),
-                                        Color(0xFFFFFFFF),
-                                      ],
-                                    ),
+                            if (shareItems.length > 1)
+                              Positioned(
+                                right: s(40),
+                                top: s(40),
+                                child: Transform.rotate(
+                                  angle: 0.08,
+                                  child: _StackedProductImage(
+                                    item: shareItems[1],
+                                    size: s(200),
+                                    radius: s(16),
+                                    elevation: 4,
                                   ),
                                 ),
                               ),
+                            _StackedProductImage(
+                              item: shareItems[0],
+                              size: s(240),
+                              radius: s(20),
+                              elevation: 8,
                             ),
                           ],
                         ),
                       ),
                     ),
+
+                  SizedBox(height: s(50)),
+
+                  Text(
+                    'snaplook',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: s(18),
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1C1C1C),
+                      letterSpacing: -0.5,
+                    ),
                   ),
-              ],
+
+                  SizedBox(height: s(60)),
+                ],
+              ),
             ),
           ),
         );
@@ -2262,110 +2312,17 @@ class _DetectionShareCard extends StatelessWidget {
   }
 }
 
-class _ShareResultRow extends StatelessWidget {
+class _StackedProductImage extends StatelessWidget {
   final _ShareCardItem item;
-  final double imageSize;
-  final EdgeInsets padding;
-
-  const _ShareResultRow({
-    required this.item,
-    required this.imageSize,
-    required this.padding,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final textWidth = imageSize * 3.6;
-    return Padding(
-      padding: padding,
-      child: Align(
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(imageSize * 0.2),
-              child: SizedBox(
-                width: imageSize,
-                height: imageSize,
-                child: item.imageProvider != null
-                    ? Image(
-                        image: item.imageProvider!,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        color: const Color(0xFFF2F2F2),
-                        child: const Icon(
-                          Icons.image_rounded,
-                          color: Color(0xFFBDBDBD),
-                          size: 28,
-                        ),
-                      ),
-              ),
-            ),
-            SizedBox(width: imageSize * 0.18),
-            SizedBox(
-              width: textWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.brand.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w700,
-                      fontSize: imageSize * 0.24,
-                      color: const Color(0xFF111111),
-                    ),
-                  ),
-                  SizedBox(height: imageSize * 0.08),
-                  Text(
-                    item.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w500,
-                      fontSize: imageSize * 0.2,
-                      color: const Color(0xFF343434),
-                    ),
-                  ),
-                  SizedBox(height: imageSize * 0.12),
-                  Text(
-                    'See store',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.w700,
-                      fontSize: imageSize * 0.23,
-                      color: AppColors.secondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ShareBadge extends StatelessWidget {
   final double size;
-  final IconData icon;
-  final Color iconColor;
-  final Color backgroundColor;
-  final double shadowOpacity;
+  final double radius;
+  final double elevation;
 
-  const _ShareBadge({
+  const _StackedProductImage({
+    required this.item,
     required this.size,
-    required this.icon,
-    required this.iconColor,
-    required this.backgroundColor,
-    required this.shadowOpacity,
+    required this.radius,
+    required this.elevation,
   });
 
   @override
@@ -2374,69 +2331,30 @@ class _ShareBadge extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: backgroundColor,
+        borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(shadowOpacity),
-            blurRadius: size * 0.25,
-            offset: Offset(0, size * 0.12),
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: elevation * 2,
+            offset: Offset(0, elevation),
           ),
         ],
       ),
-      child: Icon(
-        icon,
-        size: size * 0.44,
-        color: iconColor,
-      ),
-    );
-  }
-}
-
-class _TopMatchesTag extends StatelessWidget {
-  final double height;
-  final EdgeInsets padding;
-
-  const _TopMatchesTag({
-    required this.height,
-    required this.padding,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(height * 0.35),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: height * 0.5,
-            offset: Offset(0, height * 0.25),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'TOP MATCHES',
-            style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: height * 0.38,
-              fontWeight: FontWeight.w800,
-              color: Colors.black,
-              letterSpacing: 0.8,
-            ),
-          ),
-          SizedBox(width: height * 0.22),
-          Text(
-            '🔥',
-            style: TextStyle(fontSize: height * 0.42),
-          ),
-        ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: item.imageProvider != null
+            ? Image(
+                image: item.imageProvider!,
+                fit: BoxFit.cover,
+              )
+            : Container(
+                color: const Color(0xFFF5F5F5),
+                child: Icon(
+                  Icons.image_rounded,
+                  color: const Color(0xFFCCCCCC),
+                  size: size * 0.4,
+                ),
+              ),
       ),
     );
   }
