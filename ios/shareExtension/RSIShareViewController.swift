@@ -5629,7 +5629,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         let cardWidth = canvasWidth * 0.88
         let cardPadding = s(40)
-        let heroHeight = s(600)
+        let heroHeight = s(400)
         let heroRadius = s(24)
         let cardRadius = s(32)
 
@@ -5657,7 +5657,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // "I snapped this 📸"
             currentY += s(60)
             let topText = "I snapped this 📸"
-            let topFont = UIFont(name: "PlusJakartaSans-Regular", size: s(16)) ?? UIFont.systemFont(ofSize: s(16))
+            let topFont = UIFont(name: "PlusJakartaSans-Medium", size: s(24)) ?? UIFont.systemFont(ofSize: s(24), weight: .medium)
             let topAttributes: [NSAttributedString.Key: Any] = [
                 .font: topFont,
                 .foregroundColor: UIColor(red: 107/255, green: 107/255, blue: 107/255, alpha: 1.0),
@@ -5676,58 +5676,40 @@ open class RSIShareViewController: SLComposeServiceViewController {
             heroImage.draw(in: CGRect(x: heroX, y: currentY, width: heroWidth, height: heroHeight))
             ctx.restoreGState()
 
-            // "MY PHOTO" label
-            let labelText = "MY PHOTO"
-            let labelFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(10)) ?? UIFont.systemFont(ofSize: s(10), weight: .semibold)
-            let labelAttributes: [NSAttributedString.Key: Any] = [
-                .font: labelFont,
-                .foregroundColor: UIColor(red: 155/255, green: 155/255, blue: 155/255, alpha: 1.0),
-                .kern: 0.8
-            ]
-            let labelSize = (labelText as NSString).size(withAttributes: labelAttributes)
-            let labelPadding = s(12)
-            let labelPath = UIBezierPath(roundedRect: CGRect(x: heroX + s(16), y: currentY + s(16), width: labelSize.width + labelPadding * 2, height: labelSize.height + s(12)), cornerRadius: s(6))
-            UIColor.white.withAlphaComponent(0.85).setFill()
-            labelPath.fill()
-            (labelText as NSString).draw(at: CGPoint(x: heroX + s(16) + labelPadding, y: currentY + s(16) + s(6)), withAttributes: labelAttributes)
-
-            // "↓ Snaplook found"
-            currentY += heroHeight + s(40)
-            let dividerText = "↓ Snaplook found"
-            let dividerFont = UIFont(name: "PlusJakartaSans-Regular", size: s(14)) ?? UIFont.systemFont(ofSize: s(14))
+            // "↓" Arrow
+            currentY += heroHeight + s(32)
+            let dividerText = "↓"
+            let dividerFont = UIFont.systemFont(ofSize: s(48))
             let dividerAttributes: [NSAttributedString.Key: Any] = [
                 .font: dividerFont,
-                .foregroundColor: UIColor(red: 155/255, green: 155/255, blue: 155/255, alpha: 1.0),
-                .kern: 0.2
+                .foregroundColor: UIColor(red: 155/255, green: 155/255, blue: 155/255, alpha: 1.0)
             ]
             let dividerSize = (dividerText as NSString).size(withAttributes: dividerAttributes)
             (dividerText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - dividerSize.width / 2, y: currentY), withAttributes: dividerAttributes)
 
             // "Top Visual Match 🔥" badge
-            currentY += dividerSize.height + s(32)
+            currentY += dividerSize.height + s(24)
             let badgeText = "Top Visual Match 🔥"
-            let badgeFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(15)) ?? UIFont.systemFont(ofSize: s(15), weight: .semibold)
+            let badgeFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(24)) ?? UIFont.systemFont(ofSize: s(24), weight: .semibold)
             let badgeAttributes: [NSAttributedString.Key: Any] = [
                 .font: badgeFont,
                 .foregroundColor: UIColor(red: 43/255, green: 43/255, blue: 43/255, alpha: 1.0),
                 .kern: 0.3
             ]
             let badgeSize = (badgeText as NSString).size(withAttributes: badgeAttributes)
-            let badgePadding = s(24)
-            let badgeHeight = badgeSize.height + s(24)
+            let badgePadding = s(32)
+            let badgeHeight = badgeSize.height + s(32)
             let badgeWidth = badgeSize.width + badgePadding * 2
-            let badgePath = UIBezierPath(roundedRect: CGRect(x: canvasWidth / 2 - badgeWidth / 2, y: currentY, width: badgeWidth, height: badgeHeight), cornerRadius: s(20))
+            let badgePath = UIBezierPath(roundedRect: CGRect(x: canvasWidth / 2 - badgeWidth / 2, y: currentY, width: badgeWidth, height: badgeHeight), cornerRadius: s(24))
             UIColor(red: 250/255, green: 250/255, blue: 250/255, alpha: 1.0).setFill()
             badgePath.fill()
             ctx.setStrokeColor(UIColor(red: 238/255, green: 238/255, blue: 238/255, alpha: 1.0).cgColor)
             ctx.setLineWidth(1)
             badgePath.stroke()
-            (badgeText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - badgeSize.width / 2, y: currentY + s(12)), withAttributes: badgeAttributes)
+            (badgeText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - badgeSize.width / 2, y: currentY + s(16)), withAttributes: badgeAttributes)
 
-            // Stacked product images (top 3 only)
+            // Product images in a row (top 3 only)
             currentY += badgeHeight + s(40)
-            let stackHeight = s(360)
-            let stackCenterY = currentY + stackHeight / 2
 
             // Download product images first
             var productImages: [UIImage] = []
@@ -5738,60 +5720,31 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
             }
 
-            // Draw stacked images (back to front)
-            if productImages.count > 2 {
-                // Third image (furthest back, left side)
-                let size3 = s(180)
-                let x3 = cardX + s(80)
-                let y3 = stackCenterY - size3 / 2 + s(60)
-                ctx.saveGState()
-                ctx.rotate(by: -0.08)
-                let adjustedX3 = x3 * cos(-0.08) - y3 * sin(-0.08)
-                let adjustedY3 = x3 * sin(-0.08) + y3 * cos(-0.08)
-                ctx.setShadow(offset: CGSize(width: 0, height: s(4)), blur: s(8), color: UIColor.black.withAlphaComponent(0.12).cgColor)
-                let path3 = UIBezierPath(roundedRect: CGRect(x: adjustedX3, y: adjustedY3, width: size3, height: size3), cornerRadius: s(16))
-                path3.addClip()
-                productImages[2].draw(in: CGRect(x: adjustedX3, y: adjustedY3, width: size3, height: size3))
-                ctx.restoreGState()
-            }
+            // Draw products in a horizontal row
+            let productSize = s(200)
+            let productGap = s(12)
+            let totalProductWidth = CGFloat(productImages.count) * productSize + CGFloat(productImages.count - 1) * productGap
+            var productX = heroX + (heroWidth - totalProductWidth) / 2
 
-            if productImages.count > 1 {
-                // Second image (middle, right side)
-                let size2 = s(200)
-                let x2 = cardX + cardWidth - s(80) - size2
-                let y2 = stackCenterY - size2 / 2 + s(40)
+            for productImage in productImages {
                 ctx.saveGState()
                 ctx.setShadow(offset: CGSize(width: 0, height: s(8)), blur: s(16), color: UIColor.black.withAlphaComponent(0.12).cgColor)
-                let path2 = UIBezierPath(roundedRect: CGRect(x: x2, y: y2, width: size2, height: size2), cornerRadius: s(16))
-                path2.addClip()
-                productImages[1].draw(in: CGRect(x: x2, y: y2, width: size2, height: size2))
+                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(16))
+                productPath.addClip()
+                productImage.draw(in: CGRect(x: productX, y: currentY, width: productSize, height: productSize))
                 ctx.restoreGState()
+                productX += productSize + productGap
             }
 
-            if productImages.count > 0 {
-                // First image (front, center)
-                let size1 = s(240)
-                let x1 = canvasWidth / 2 - size1 / 2
-                let y1 = stackCenterY - size1 / 2
-                ctx.saveGState()
-                ctx.setShadow(offset: CGSize(width: 0, height: s(16)), blur: s(32), color: UIColor.black.withAlphaComponent(0.12).cgColor)
-                let path1 = UIBezierPath(roundedRect: CGRect(x: x1, y: y1, width: size1, height: size1), cornerRadius: s(20))
-                path1.addClip()
-                productImages[0].draw(in: CGRect(x: x1, y: y1, width: size1, height: size1))
-                ctx.restoreGState()
+            // Logo
+            currentY += productSize + s(50)
+            if let logoImage = UIImage(named: "logo") {
+                let logoHeight = s(32)
+                let logoAspect = logoImage.size.width / logoImage.size.height
+                let logoWidth = logoHeight * logoAspect
+                let logoX = canvasWidth / 2 - logoWidth / 2
+                logoImage.draw(in: CGRect(x: logoX, y: currentY, width: logoWidth, height: logoHeight))
             }
-
-            // "snaplook" logo
-            currentY += stackHeight + s(50)
-            let logoText = "snaplook"
-            let logoFont = UIFont(name: "PlusJakartaSans-Bold", size: s(18)) ?? UIFont.boldSystemFont(ofSize: s(18))
-            let logoAttributes: [NSAttributedString.Key: Any] = [
-                .font: logoFont,
-                .foregroundColor: UIColor(red: 28/255, green: 28/255, blue: 28/255, alpha: 1.0),
-                .kern: -0.5
-            ]
-            let logoSize = (logoText as NSString).size(withAttributes: logoAttributes)
-            (logoText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - logoSize.width / 2, y: currentY), withAttributes: logoAttributes)
         }
     }
 

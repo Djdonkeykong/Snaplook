@@ -2108,7 +2108,7 @@ class _DetectionShareCard extends StatelessWidget {
 
         final cardWidth = width * 0.88;
         final cardPadding = s(40);
-        final heroHeight = s(600);
+        final heroHeight = s(400);
         final heroRadius = s(24);
 
         return Container(
@@ -2138,8 +2138,8 @@ class _DetectionShareCard extends StatelessWidget {
                     'I snapped this 📸',
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: s(16),
-                      fontWeight: FontWeight.w400,
+                      fontSize: s(24),
+                      fontWeight: FontWeight.w500,
                       color: const Color(0xFF6B6B6B),
                       letterSpacing: 0.3,
                     ),
@@ -2149,80 +2149,49 @@ class _DetectionShareCard extends StatelessWidget {
 
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: cardPadding),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(heroRadius),
+                      child: Container(
+                        height: heroHeight,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F5F5),
                           borderRadius: BorderRadius.circular(heroRadius),
-                          child: Container(
-                            height: heroHeight,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF5F5F5),
-                              borderRadius: BorderRadius.circular(heroRadius),
-                            ),
-                            child: heroImage != null
-                                ? Image(
-                                    image: heroImage!,
-                                    fit: BoxFit.cover,
-                                  )
-                                : const Icon(
-                                    Icons.image_rounded,
-                                    color: Color(0xFFBDBDBD),
-                                    size: 64,
-                                  ),
-                          ),
                         ),
-                        Positioned(
-                          top: s(16),
-                          left: s(16),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: s(12),
-                              vertical: s(6),
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.85),
-                              borderRadius: BorderRadius.circular(s(6)),
-                            ),
-                            child: Text(
-                              'MY PHOTO',
-                              style: TextStyle(
-                                fontFamily: 'PlusJakartaSans',
-                                fontSize: s(10),
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF9B9B9B),
-                                letterSpacing: 0.8,
+                        child: heroImage != null
+                            ? Image(
+                                image: heroImage!,
+                                fit: BoxFit.cover,
+                              )
+                            : const Icon(
+                                Icons.image_rounded,
+                                color: Color(0xFFBDBDBD),
+                                size: 64,
                               ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: s(40)),
-
-                  Text(
-                    '↓ Snaplook found',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: s(14),
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFF9B9B9B),
-                      letterSpacing: 0.2,
+                      ),
                     ),
                   ),
 
                   SizedBox(height: s(32)),
 
+                  Text(
+                    '↓',
+                    style: TextStyle(
+                      fontSize: s(48),
+                      color: const Color(0xFF9B9B9B),
+                    ),
+                  ),
+
+                  SizedBox(height: s(24)),
+
                   Container(
                     padding: EdgeInsets.symmetric(
-                      horizontal: s(24),
-                      vertical: s(12),
+                      horizontal: s(32),
+                      vertical: s(16),
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFAFAFA),
-                      borderRadius: BorderRadius.circular(s(20)),
+                      borderRadius: BorderRadius.circular(s(24)),
                       border: Border.all(
                         color: const Color(0xFFEEEEEE),
                         width: 1,
@@ -2232,7 +2201,7 @@ class _DetectionShareCard extends StatelessWidget {
                       'Top Visual Match 🔥',
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: s(15),
+                        fontSize: s(24),
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF2B2B2B),
                         letterSpacing: 0.3,
@@ -2243,63 +2212,32 @@ class _DetectionShareCard extends StatelessWidget {
                   SizedBox(height: s(40)),
 
                   if (shareItems.isNotEmpty)
-                    SizedBox(
-                      height: s(360),
-                      child: Center(
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          alignment: Alignment.center,
-                          children: [
-                            if (shareItems.length > 2)
-                              Positioned(
-                                left: s(40),
-                                top: s(60),
-                                child: Transform.rotate(
-                                  angle: -0.08,
-                                  child: _StackedProductImage(
-                                    item: shareItems[2],
-                                    size: s(180),
-                                    radius: s(16),
-                                    elevation: 2,
-                                  ),
-                                ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: cardPadding),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: shareItems.take(3).map((item) {
+                          return Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: s(6)),
+                              child: _StackedProductImage(
+                                item: item,
+                                size: s(200),
+                                radius: s(16),
+                                elevation: 4,
                               ),
-                            if (shareItems.length > 1)
-                              Positioned(
-                                right: s(40),
-                                top: s(40),
-                                child: Transform.rotate(
-                                  angle: 0.08,
-                                  child: _StackedProductImage(
-                                    item: shareItems[1],
-                                    size: s(200),
-                                    radius: s(16),
-                                    elevation: 4,
-                                  ),
-                                ),
-                              ),
-                            _StackedProductImage(
-                              item: shareItems[0],
-                              size: s(240),
-                              radius: s(20),
-                              elevation: 8,
                             ),
-                          ],
-                        ),
+                          );
+                        }).toList(),
                       ),
                     ),
 
                   SizedBox(height: s(50)),
 
-                  Text(
-                    'snaplook',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: s(18),
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1C1C1C),
-                      letterSpacing: -0.5,
-                    ),
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: s(32),
+                    fit: BoxFit.contain,
                   ),
 
                   SizedBox(height: s(60)),
