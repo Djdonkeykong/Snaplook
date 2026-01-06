@@ -302,12 +302,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                       icon: Icons.info_outline,
                       iconSize: 20,
                       onPressed: _showAnalysisInfoDialog,
-                      backgroundColor: Colors.transparent,
-                      iconColor: Colors.black,
+                      backgroundColor: AppColors.secondary,
+                      iconColor: Colors.white,
                       tooltip: 'Analysis info',
                       semanticLabel: 'Analysis information',
                       margin: const EdgeInsets.all(8),
-                      elevation: 0,
+                      elevation: 10,
                     ),
                   SnaplookCircularIconButton(
                     icon: showShareAction
