@@ -5617,6 +5617,198 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
+    private func generateShareCard(heroImage: UIImage, products: [DetectionResult]) -> UIImage? {
+        // Card dimensions
+        let cardWidth: CGFloat = 1080
+        let cardHeight: CGFloat = 1350
+        let scale: CGFloat = 2.0
+
+        // Scaled values
+        func s(_ value: CGFloat) -> CGFloat {
+            return value
+        }
+
+        let heroSize = s(520)
+        let heroRadius = s(40)
+        let cardWidth_ = s(980)
+        let cardRadius = s(32)
+        let rowImageSize = s(108)
+        let rowVerticalPadding = s(20)
+        let rowHeight = rowImageSize + (rowVerticalPadding * 2)
+
+        // Create rendering context
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: cardWidth, height: cardHeight), format: UIGraphicsImageRendererFormat())
+
+        return renderer.image { context in
+            let ctx = context.cgContext
+
+            // Background
+            UIColor.white.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: cardWidth, height: cardHeight))
+
+            // Logo
+            if let logoImage = UIImage(named: "logo") {
+                let logoHeight = s(52)
+                let logoY = s(52)
+                let logoAspect = logoImage.size.width / logoImage.size.height
+                let logoWidth = logoHeight * logoAspect
+                let logoX = (cardWidth - logoWidth) / 2
+                logoImage.draw(in: CGRect(x: logoX, y: logoY, width: logoWidth, height: logoHeight))
+            }
+
+            // Hero image
+            let heroY = s(52) + s(52) + s(36)
+            let heroX = (cardWidth - heroSize) / 2
+            let heroPath = UIBezierPath(roundedRect: CGRect(x: heroX, y: heroY, width: heroSize, height: heroSize), cornerRadius: heroRadius)
+            ctx.saveGState()
+            heroPath.addClip()
+            heroImage.draw(in: CGRect(x: heroX, y: heroY, width: heroSize, height: heroSize))
+            ctx.restoreGState()
+
+            // Hero shadow
+            ctx.saveGState()
+            ctx.setShadow(offset: CGSize(width: 0, height: s(14)), blur: s(28), color: UIColor.black.withAlphaComponent(0.12).cgColor)
+            heroPath.stroke()
+            ctx.restoreGState()
+
+            // Heart badge
+            let badgeSize = s(120)
+            let badgeX = heroX + s(-48)
+            let badgeY = heroY + s(24)
+            let badgePath = UIBezierPath(ovalIn: CGRect(x: badgeX, y: badgeY, width: badgeSize, height: badgeSize))
+
+            ctx.saveGState()
+            ctx.setShadow(offset: CGSize(width: 0, height: badgeSize * 0.12), blur: badgeSize * 0.25, color: UIColor.black.withAlphaComponent(0.18).cgColor)
+            UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1.0).setFill()
+            badgePath.fill()
+            ctx.restoreGState()
+
+            // Heart icon
+            let heartIconSize = badgeSize * 0.44
+            let heartIconX = badgeX + (badgeSize - heartIconSize) / 2
+            let heartIconY = badgeY + (badgeSize - heartIconSize) / 2
+            if let heartImage = UIImage(systemName: "heart.fill")?.withTintColor(UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0), renderingMode: .alwaysOriginal) {
+                heartImage.draw(in: CGRect(x: heartIconX, y: heartIconY, width: heartIconSize, height: heartIconSize))
+            }
+
+            // TOP MATCHES tag
+            let tagHeight = s(74)
+            let tagY = heroY + heroSize - 36
+            let tagText = "TOP MATCHES 🔥"
+            let tagFont = UIFont(name: "PlusJakartaSans-ExtraBold", size: tagHeight * 0.38) ?? UIFont.boldSystemFont(ofSize: tagHeight * 0.38)
+            let tagAttributes: [NSAttributedString.Key: Any] = [
+                .font: tagFont,
+                .foregroundColor: UIColor.black,
+                .kern: 0.8
+            ]
+            let tagSize = (tagText as NSString).size(withAttributes: tagAttributes)
+            let tagWidth = tagSize.width + s(34) * 2
+            let tagX = (cardWidth - tagWidth) / 2
+
+            let tagPath = UIBezierPath(roundedRect: CGRect(x: tagX, y: tagY, width: tagWidth, height: tagHeight), cornerRadius: tagHeight * 0.35)
+            ctx.saveGState()
+            ctx.setShadow(offset: CGSize(width: 0, height: tagHeight * 0.25), blur: tagHeight * 0.5, color: UIColor.black.withAlphaComponent(0.1).cgColor)
+            UIColor.white.setFill()
+            tagPath.fill()
+            ctx.restoreGState()
+
+            (tagText as NSString).draw(at: CGPoint(x: tagX + s(34), y: tagY + (tagHeight - tagSize.height) / 2), withAttributes: tagAttributes)
+
+            // Products list
+            let listY = tagY + tagHeight + s(36)
+            let listHeight = rowHeight * 4.2
+            let listX = (cardWidth - cardWidth_) / 2
+
+            // Products background
+            let productsPath = UIBezierPath(roundedRect: CGRect(x: listX, y: listY, width: cardWidth_, height: listHeight), cornerRadius: cardRadius)
+            UIColor.white.setFill()
+            productsPath.fill()
+
+            // Draw products
+            for (index, product) in products.enumerated() {
+                let rowY = listY + CGFloat(index) * rowHeight
+
+                // Product image
+                let productImageX = listX + s(30)
+                let productImageY = rowY + rowVerticalPadding
+                let productImagePath = UIBezierPath(roundedRect: CGRect(x: productImageX, y: productImageY, width: rowImageSize, height: rowImageSize), cornerRadius: rowImageSize * 0.2)
+
+                if !product.image_url.isEmpty, let imageUrl = URL(string: product.image_url),
+                   let imageData = try? Data(contentsOf: imageUrl), let productImage = UIImage(data: imageData) {
+                    ctx.saveGState()
+                    productImagePath.addClip()
+                    productImage.draw(in: CGRect(x: productImageX, y: productImageY, width: rowImageSize, height: rowImageSize))
+                    ctx.restoreGState()
+                } else {
+                    UIColor(red: 242/255, green: 242/255, blue: 242/255, alpha: 1.0).setFill()
+                    productImagePath.fill()
+                }
+
+                // Product text
+                let textX = productImageX + rowImageSize + (rowImageSize * 0.18)
+                let textWidth = rowImageSize * 3.6
+
+                // Brand
+                let brand = (product.brand ?? "Brand").uppercased()
+                let brandFont = UIFont(name: "PlusJakartaSans-Bold", size: rowImageSize * 0.24) ?? UIFont.boldSystemFont(ofSize: rowImageSize * 0.24)
+                let brandAttributes: [NSAttributedString.Key: Any] = [
+                    .font: brandFont,
+                    .foregroundColor: UIColor(red: 17/255, green: 17/255, blue: 17/255, alpha: 1.0)
+                ]
+                (brand as NSString).draw(in: CGRect(x: textX, y: productImageY, width: textWidth, height: rowImageSize * 0.24), withAttributes: brandAttributes)
+
+                // Title
+                let title = product.product_name
+                let titleFont = UIFont(name: "PlusJakartaSans-Medium", size: rowImageSize * 0.2) ?? UIFont.systemFont(ofSize: rowImageSize * 0.2, weight: .medium)
+                let titleAttributes: [NSAttributedString.Key: Any] = [
+                    .font: titleFont,
+                    .foregroundColor: UIColor(red: 52/255, green: 52/255, blue: 52/255, alpha: 1.0)
+                ]
+                let titleY = productImageY + rowImageSize * 0.24 + rowImageSize * 0.08
+                (title as NSString).draw(in: CGRect(x: textX, y: titleY, width: textWidth, height: rowImageSize * 0.4), withAttributes: titleAttributes)
+
+                // "See store" link
+                let linkText = "See store"
+                let linkFont = UIFont(name: "PlusJakartaSans-Bold", size: rowImageSize * 0.23) ?? UIFont.boldSystemFont(ofSize: rowImageSize * 0.23)
+                let linkAttributes: [NSAttributedString.Key: Any] = [
+                    .font: linkFont,
+                    .foregroundColor: UIColor(red: 242/255, green: 0, blue: 60/255, alpha: 1.0)
+                ]
+                let linkY = titleY + rowImageSize * 0.4 + rowImageSize * 0.12
+                (linkText as NSString).draw(at: CGPoint(x: textX, y: linkY), withAttributes: linkAttributes)
+
+                // Separator
+                if index < products.count - 1 {
+                    ctx.setStrokeColor(UIColor(red: 237/255, green: 237/255, blue: 237/255, alpha: 1.0).cgColor)
+                    ctx.setLineWidth(1)
+                    ctx.move(to: CGPoint(x: listX + s(30), y: rowY + rowHeight))
+                    ctx.addLine(to: CGPoint(x: listX + cardWidth_ - s(30), y: rowY + rowHeight))
+                    ctx.strokePath()
+                }
+            }
+
+            // Gradient overlay at bottom
+            if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                        colors: [
+                                            UIColor.white.withAlphaComponent(0).cgColor,
+                                            UIColor.white.withAlphaComponent(0.7).cgColor,
+                                            UIColor.white.cgColor
+                                        ] as CFArray,
+                                        locations: [0, 0.5, 1]) {
+                ctx.saveGState()
+                let gradientPath = UIBezierPath(roundedRect: CGRect(x: listX, y: listY, width: cardWidth_, height: listHeight), cornerRadius: cardRadius)
+                gradientPath.addClip()
+                let gradientHeight = s(110)
+                let gradientY = listY + listHeight - gradientHeight
+                ctx.drawLinearGradient(gradient,
+                                      start: CGPoint(x: listX + cardWidth_ / 2, y: gradientY),
+                                      end: CGPoint(x: listX + cardWidth_ / 2, y: gradientY + gradientHeight),
+                                      options: [])
+                ctx.restoreGState()
+            }
+        }
+    }
+
     private func prepareAndPresentShare(loadingView: UIView) {
         // Get top 5 products for sharing
         let topProducts = Array(detectionResults.prefix(5))
@@ -5641,12 +5833,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Prepare items to share - build array with image first for proper iOS preview
         var itemsToShare: [Any] = []
         var shareImage: UIImage?
+        var heroImage: UIImage?
 
         // Try to get the analyzed image
         if let imageData = analyzedImageData {
             shareLog("Attempting to create UIImage from \(imageData.count) bytes")
             if let image = UIImage(data: imageData) {
-                shareImage = image
+                heroImage = image
                 shareLog("[SUCCESS] Successfully loaded analyzed image (size: \(image.size))")
             } else {
                 shareLog("[ERROR] Failed to create UIImage from imageData")
@@ -5656,7 +5849,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         // Fallback: Try to use the first product's image if original image unavailable
-        if shareImage == nil && !detectionResults.isEmpty {
+        if heroImage == nil && !detectionResults.isEmpty {
             if let firstProduct = detectionResults.first {
                 let imageUrlString = firstProduct.image_url
                 if !imageUrlString.isEmpty, let imageUrl = URL(string: imageUrlString) {
@@ -5665,7 +5858,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     // Download image synchronously (we're already in share flow)
                     if let imageData = try? Data(contentsOf: imageUrl),
                        let image = UIImage(data: imageData) {
-                        shareImage = image
+                        heroImage = image
                         shareLog("[SUCCESS] Successfully loaded product image as fallback (size: \(image.size))")
                     } else {
                         shareLog("[ERROR] Failed to download fallback image")
@@ -5674,20 +5867,35 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
         }
 
+        // Generate share card if we have hero image and products
+        if let hero = heroImage, !topProducts.isEmpty {
+            shareLog("Generating share card with hero image and \(topProducts.count) products")
+            if let card = generateShareCard(heroImage: hero, products: topProducts) {
+                shareImage = card
+                shareLog("[SUCCESS] Share card generated successfully (size: \(card.size))")
+            } else {
+                shareLog("[WARNING] Share card generation failed - using hero image as fallback")
+                shareImage = hero
+            }
+        } else {
+            shareLog("[WARNING] Cannot generate share card - missing hero image or products")
+            shareImage = heroImage
+        }
+
         // Build items array: image MUST be first for iOS preview thumbnail
         // iOS share sheet preview works best with file URLs, not UIImage objects
         if let image = shareImage {
             // Simple, clean filename
             let tempDir = FileManager.default.temporaryDirectory
-            let imageFileName = "snaplook_fashion_search.jpg"
+            let imageFileName = "snaplook_share_card.png"
             let imageURL = tempDir.appendingPathComponent(imageFileName)
 
             // Consistent subject for share sheet
-            let subject = "snaplook_fashion_search"
+            let subject = "snaplook_share_card"
 
-            if let jpegData = image.jpegData(compressionQuality: 0.9) {
+            if let pngData = image.pngData() {
                 do {
-                    try jpegData.write(to: imageURL)
+                    try pngData.write(to: imageURL)
 
                     // Use custom activity item source for rich metadata
                     let shareItem = SnaplookShareItem(
@@ -5707,10 +5915,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     shareLog("[WARNING] Fallback: using UIImage instead of file URL")
                 }
             } else {
-                shareLog("[ERROR] Failed to convert image to JPEG")
+                shareLog("[ERROR] Failed to convert image to PNG")
                 itemsToShare.append(image)
                 itemsToShare.append(shareText)
-                shareLog("[WARNING] Fallback: using UIImage instead of JPEG")
+                shareLog("[WARNING] Fallback: using UIImage instead of PNG")
             }
         } else {
             itemsToShare.append(shareText)
