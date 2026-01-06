@@ -5621,9 +5621,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Card dimensions - 9:16 aspect ratio for social media
         let canvasWidth: CGFloat = 1080
         let canvasHeight: CGFloat = 1920
-        let scale: CGFloat = 2.0
 
-        // Scaled values
+        // Helper for readability
         func s(_ value: CGFloat) -> CGFloat {
             return value
         }
