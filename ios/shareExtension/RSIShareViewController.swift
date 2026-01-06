@@ -975,19 +975,37 @@ open class RSIShareViewController: SLComposeServiceViewController {
         buttonStack.addArrangedSubview(analyzeInAppButton)
         buttonStack.addArrangedSubview(analyzeNowButton)
 
-        // Disclaimer label
-        let disclaimerLabel = UILabel()
-        disclaimerLabel.text = "Tip: Cropping can help you save credits because each garment scanned uses one."
-        disclaimerLabel.font = .systemFont(ofSize: 12, weight: .regular)
-        disclaimerLabel.textColor = UIColor.secondaryLabel
-        disclaimerLabel.textAlignment = .center
-        disclaimerLabel.numberOfLines = 0
-        disclaimerLabel.translatesAutoresizingMaskIntoConstraints = false
-        disclaimerLabel.tag = 9997 // Tag for disclaimer
+        // Time disclaimer with container
+        let timeDisclaimerContainer = UIView()
+        timeDisclaimerContainer.backgroundColor = UIColor.secondarySystemBackground.withAlphaComponent(0.6)
+        timeDisclaimerContainer.layer.cornerRadius = 12
+        timeDisclaimerContainer.translatesAutoresizingMaskIntoConstraints = false
 
-        // Add button stack and disclaimer to overlay
+        let timeDisclaimerLabel = UILabel()
+        timeDisclaimerLabel.text = "Analyses take 5-15 seconds on average. During peak hours, you may experience longer wait times."
+        timeDisclaimerLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        timeDisclaimerLabel.textColor = UIColor.label
+        timeDisclaimerLabel.textAlignment = .center
+        timeDisclaimerLabel.numberOfLines = 0
+        timeDisclaimerLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        timeDisclaimerContainer.addSubview(timeDisclaimerLabel)
+        timeDisclaimerContainer.tag = 9996 // Tag for time disclaimer
+
+        // Credits disclaimer label
+        let creditsDisclaimerLabel = UILabel()
+        creditsDisclaimerLabel.text = "Tip: Cropping can help you save credits because each garment scanned uses one."
+        creditsDisclaimerLabel.font = .systemFont(ofSize: 12, weight: .regular)
+        creditsDisclaimerLabel.textColor = UIColor.secondaryLabel
+        creditsDisclaimerLabel.textAlignment = .center
+        creditsDisclaimerLabel.numberOfLines = 0
+        creditsDisclaimerLabel.translatesAutoresizingMaskIntoConstraints = false
+        creditsDisclaimerLabel.tag = 9997 // Tag for credits disclaimer
+
+        // Add button stack and disclaimers to overlay
         overlay.addSubview(buttonStack)
-        overlay.addSubview(disclaimerLabel)
+        overlay.addSubview(timeDisclaimerContainer)
+        overlay.addSubview(creditsDisclaimerLabel)
 
         // Set up constraints
         NSLayoutConstraint.activate([
@@ -1001,10 +1019,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
             analyzeInAppButton.heightAnchor.constraint(equalToConstant: 56),
             analyzeNowButton.heightAnchor.constraint(equalToConstant: 56),
 
-            // Disclaimer at bottom
-            disclaimerLabel.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
-            disclaimerLabel.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
-            disclaimerLabel.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -32)
+            // Credits disclaimer at bottom
+            creditsDisclaimerLabel.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            creditsDisclaimerLabel.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
+            creditsDisclaimerLabel.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -32),
+
+            // Time disclaimer container above credits disclaimer
+            timeDisclaimerContainer.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 32),
+            timeDisclaimerContainer.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -32),
+            timeDisclaimerContainer.bottomAnchor.constraint(equalTo: creditsDisclaimerLabel.topAnchor, constant: -12),
+
+            // Time disclaimer label inside container
+            timeDisclaimerLabel.topAnchor.constraint(equalTo: timeDisclaimerContainer.topAnchor, constant: 12),
+            timeDisclaimerLabel.bottomAnchor.constraint(equalTo: timeDisclaimerContainer.bottomAnchor, constant: -12),
+            timeDisclaimerLabel.leadingAnchor.constraint(equalTo: timeDisclaimerContainer.leadingAnchor, constant: 16),
+            timeDisclaimerLabel.trailingAnchor.constraint(equalTo: timeDisclaimerContainer.trailingAnchor, constant: -16)
         ])
 
         loadingView = overlay

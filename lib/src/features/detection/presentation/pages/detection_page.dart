@@ -297,6 +297,18 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           actions: _isAnalysisOverlayVisible || _isLoadingExistingResults
               ? null
               : [
+                  if (!showShareAction)
+                    SnaplookCircularIconButton(
+                      icon: Icons.info_outline,
+                      iconSize: 20,
+                      onPressed: _showAnalysisInfoDialog,
+                      backgroundColor: const Color(0xFFF3F4F6),
+                      iconColor: Colors.black,
+                      tooltip: 'Analysis info',
+                      semanticLabel: 'Analysis information',
+                      margin: const EdgeInsets.all(8),
+                      elevation: 10,
+                    ),
                   SnaplookCircularIconButton(
                     icon: showShareAction
                         ? Icons.share_outlined
@@ -1330,6 +1342,103 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       _hasEnteredSearchPhase = false;
       _statusIndex = 0;
     });
+  }
+
+  void _showAnalysisInfoDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Analysis Tips',
+          style: TextStyle(
+            fontFamily: 'PlusJakartaSans',
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.schedule_outlined,
+                    size: 20,
+                    color: Colors.grey.shade700,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Analyses take 5-15 seconds on average. During peak hours, you may experience longer wait times.',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 13,
+                        color: Colors.grey.shade800,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.crop_free,
+                    size: 20,
+                    color: Colors.grey.shade700,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Cropping can help you save credits because each garment scanned uses one.',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 13,
+                        color: Colors.grey.shade800,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.secondary,
+            ),
+            child: const Text(
+              'Got it',
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showNoResultsDialog() {
