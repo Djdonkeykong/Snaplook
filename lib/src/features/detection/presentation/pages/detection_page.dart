@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -78,6 +79,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   static const double _resultsMaxExtent = 0.85;
   final DraggableScrollableController _resultsSheetController =
       DraggableScrollableController();
+
+  // Share card constants
+  static const Size _shareCardSize = Size(1080, 1350);
+  static const double _shareCardPixelRatio = 2.0;
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
   List<DetectionResult> _results = [];
@@ -525,20 +530,46 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       final sharePayload = _buildSharePayload();
       final message = sharePayload.message;
       final subject = sharePayload.subject;
-      final imageFile = await _resolveShareImage();
-      final shareFile =
-          imageFile != null ? await _squareImageForShare(imageFile) : null;
 
-      if (shareFile != null) {
+      // Build share card items from results
+      final shareItems = <_ShareCardItem>[];
+      for (final result in _results.take(5)) {
+        final item = _ShareCardItem.fromDetectionResult(result);
+        if (item != null) {
+          shareItems.add(item);
+        }
+      }
+
+      // Get hero image
+      ImageProvider<Object>? heroImage;
+      final imageFile = await _resolveShareImage();
+      if (imageFile != null) {
+        heroImage = FileImage(File(imageFile.path));
+      } else if (_loadedImageUrl != null && _loadedImageUrl!.isNotEmpty) {
+        heroImage = CachedNetworkImageProvider(_loadedImageUrl!);
+      } else if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty) {
+        heroImage = CachedNetworkImageProvider(widget.imageUrl!);
+      }
+
+      // Generate share card
+      final shareCard = await _buildShareCardFile(
+        context,
+        heroImage: heroImage,
+        shareItems: shareItems,
+      );
+
+      final primaryFile = shareCard ?? imageFile;
+
+      if (primaryFile != null) {
         final handled = await NativeShareHelper.shareImageFirst(
-          file: shareFile,
+          file: primaryFile,
           text: message,
           subject: subject,
           origin: origin,
         );
         if (!handled) {
           await Share.shareXFiles(
-            [shareFile],
+            [primaryFile],
             text: message,
             subject: subject,
             sharePositionOrigin: origin,
@@ -1853,6 +1884,116 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       }
     }
   }
+
+  Future<XFile?> _buildShareCardFile(
+    BuildContext context, {
+    required ImageProvider<Object>? heroImage,
+    required List<_ShareCardItem> shareItems,
+  }) async {
+    try {
+      await _precacheShareImages(
+        context,
+        [
+          heroImage,
+          ...shareItems.map((item) => item.imageProvider),
+        ],
+      );
+      final bytes = await _captureShareCardBytes(
+        context,
+        heroImage: heroImage,
+        shareItems: shareItems,
+      );
+      if (bytes == null || bytes.isEmpty) return null;
+
+      final filePath =
+          '${Directory.systemTemp.path}/snaplook_share_card_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File(filePath);
+      await file.writeAsBytes(bytes, flush: true);
+      return XFile(
+        filePath,
+        mimeType: 'image/png',
+        name: 'snaplook_share_card.png',
+      );
+    } catch (e) {
+      debugPrint('Error creating share card: $e');
+      return null;
+    }
+  }
+
+  Future<void> _precacheShareImages(
+    BuildContext context,
+    List<ImageProvider<Object>?> images,
+  ) async {
+    for (final image in images) {
+      if (image == null) continue;
+      try {
+        await precacheImage(image, context);
+      } catch (e) {
+        debugPrint('Error precaching share image: $e');
+      }
+    }
+  }
+
+  Future<Uint8List?> _captureShareCardBytes(
+    BuildContext context, {
+    required ImageProvider<Object>? heroImage,
+    required List<_ShareCardItem> shareItems,
+  }) async {
+    final overlay = Overlay.of(context, rootOverlay: true);
+    if (overlay == null) return null;
+
+    final boundaryKey = GlobalKey();
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (overlayContext) {
+        return Positioned(
+          left: -_shareCardSize.width - 20,
+          top: 0,
+          child: Material(
+            type: MaterialType.transparency,
+            child: MediaQuery(
+              data: MediaQuery.of(overlayContext).copyWith(
+                size: _shareCardSize,
+              ),
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: RepaintBoundary(
+                  key: boundaryKey,
+                  child: SizedBox(
+                    width: _shareCardSize.width,
+                    height: _shareCardSize.height,
+                    child: _DetectionShareCard(
+                      heroImage: heroImage,
+                      shareItems: shareItems,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 30));
+      final boundary =
+          boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      final image = await boundary.toImage(pixelRatio: _shareCardPixelRatio);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return null;
+      return byteData.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('Error capturing share card: $e');
+      return null;
+    } finally {
+      entry.remove();
+    }
+  }
 }
 
 class _CropOverlayPainter extends CustomPainter {
@@ -1943,5 +2084,391 @@ class _CornerBracketPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CornerBracketPainter oldDelegate) {
     return oldDelegate.alignment != alignment;
+  }
+}
+
+class _DetectionShareCard extends StatelessWidget {
+  final ImageProvider<Object>? heroImage;
+  final List<_ShareCardItem> shareItems;
+
+  const _DetectionShareCard({
+    required this.heroImage,
+    required this.shareItems,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final scale = width / 1080;
+        double s(double value) => value * scale;
+
+        final heroSize = s(520);
+        final heroRadius = s(40);
+        final cardWidth = s(980);
+        final cardRadius = s(32);
+        final rowImageSize = s(108);
+        final rowVerticalPadding = s(20);
+        final rowHeight = rowImageSize + (rowVerticalPadding * 2);
+        final listHeight = rowHeight * 4.2;
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(s(52)),
+          child: Container(
+            color: Colors.white,
+            child: Column(
+              children: [
+                SizedBox(height: s(52)),
+                Image.asset(
+                  'assets/images/logo.png',
+                  height: s(52),
+                  fit: BoxFit.contain,
+                ),
+                SizedBox(height: s(36)),
+                Center(
+                  child: SizedBox(
+                    width: heroSize,
+                    height: heroSize,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(heroRadius),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: s(28),
+                                offset: Offset(0, s(14)),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(heroRadius),
+                            child: heroImage != null
+                                ? Image(
+                                    image: heroImage!,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    color: const Color(0xFFEFEFEF),
+                                    child: const Icon(
+                                      Icons.image_rounded,
+                                      color: Color(0xFFBDBDBD),
+                                      size: 48,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        Positioned(
+                          left: s(-48),
+                          top: s(24),
+                          child: _ShareBadge(
+                            size: s(120),
+                            icon: Icons.favorite,
+                            iconColor: AppColors.secondary,
+                            backgroundColor: const Color(0xFFF0F0F0),
+                            shadowOpacity: 0.18,
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: -36,
+                          child: Center(
+                            child: _TopMatchesTag(
+                              height: s(74),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: s(34),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: s(36)),
+                if (shareItems.isNotEmpty)
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: SizedBox(
+                        width: cardWidth,
+                        height: listHeight,
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(cardRadius),
+                              child: Container(
+                                color: Colors.white,
+                                child: ListView.separated(
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  padding: EdgeInsets.zero,
+                                  itemCount: shareItems.length,
+                                  itemBuilder: (context, index) {
+                                    return _ShareResultRow(
+                                      item: shareItems[index],
+                                      imageSize: rowImageSize,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: s(30),
+                                        vertical: rowVerticalPadding,
+                                      ),
+                                    );
+                                  },
+                                  separatorBuilder: (context, index) => Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: const Color(0xFFEDEDED),
+                                    indent: s(30),
+                                    endIndent: s(30),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: IgnorePointer(
+                                child: Container(
+                                  height: s(110),
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Color(0x00FFFFFF),
+                                        Color(0xB3FFFFFF),
+                                        Color(0xFFFFFFFF),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ShareResultRow extends StatelessWidget {
+  final _ShareCardItem item;
+  final double imageSize;
+  final EdgeInsets padding;
+
+  const _ShareResultRow({
+    required this.item,
+    required this.imageSize,
+    required this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textWidth = imageSize * 3.6;
+    return Padding(
+      padding: padding,
+      child: Align(
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(imageSize * 0.2),
+              child: SizedBox(
+                width: imageSize,
+                height: imageSize,
+                child: item.imageProvider != null
+                    ? Image(
+                        image: item.imageProvider!,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        color: const Color(0xFFF2F2F2),
+                        child: const Icon(
+                          Icons.image_rounded,
+                          color: Color(0xFFBDBDBD),
+                          size: 28,
+                        ),
+                      ),
+              ),
+            ),
+            SizedBox(width: imageSize * 0.18),
+            SizedBox(
+              width: textWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.brand.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: imageSize * 0.24,
+                      color: const Color(0xFF111111),
+                    ),
+                  ),
+                  SizedBox(height: imageSize * 0.08),
+                  Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w500,
+                      fontSize: imageSize * 0.2,
+                      color: const Color(0xFF343434),
+                    ),
+                  ),
+                  SizedBox(height: imageSize * 0.12),
+                  Text(
+                    'See store',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: imageSize * 0.23,
+                      color: AppColors.secondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ShareBadge extends StatelessWidget {
+  final double size;
+  final IconData icon;
+  final Color iconColor;
+  final Color backgroundColor;
+  final double shadowOpacity;
+
+  const _ShareBadge({
+    required this.size,
+    required this.icon,
+    required this.iconColor,
+    required this.backgroundColor,
+    required this.shadowOpacity,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: backgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(shadowOpacity),
+            blurRadius: size * 0.25,
+            offset: Offset(0, size * 0.12),
+          ),
+        ],
+      ),
+      child: Icon(
+        icon,
+        size: size * 0.44,
+        color: iconColor,
+      ),
+    );
+  }
+}
+
+class _TopMatchesTag extends StatelessWidget {
+  final double height;
+  final EdgeInsets padding;
+
+  const _TopMatchesTag({
+    required this.height,
+    required this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(height * 0.35),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: height * 0.5,
+            offset: Offset(0, height * 0.25),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'TOP MATCHES',
+            style: TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: height * 0.38,
+              fontWeight: FontWeight.w800,
+              color: Colors.black,
+              letterSpacing: 0.8,
+            ),
+          ),
+          SizedBox(width: height * 0.22),
+          Text(
+            '🔥',
+            style: TextStyle(fontSize: height * 0.42),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShareCardItem {
+  final String brand;
+  final String title;
+  final String? priceText;
+  final ImageProvider<Object>? imageProvider;
+
+  const _ShareCardItem({
+    required this.brand,
+    required this.title,
+    required this.priceText,
+    required this.imageProvider,
+  });
+
+  static _ShareCardItem? fromDetectionResult(DetectionResult result) {
+    final brand = result.brand.isNotEmpty ? result.brand : 'Brand';
+    final title = result.productName.isNotEmpty ? result.productName : 'Item';
+    final priceText = result.price;
+    final imageUrl = result.imageUrl;
+    final imageProvider = imageUrl != null && imageUrl.isNotEmpty
+        ? CachedNetworkImageProvider(imageUrl)
+        : null;
+
+    return _ShareCardItem(
+      brand: brand,
+      title: title,
+      priceText: priceText,
+      imageProvider: imageProvider,
+    );
   }
 }
