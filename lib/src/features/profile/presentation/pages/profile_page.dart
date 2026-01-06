@@ -471,15 +471,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   onTap: () => _openHelpLink(context),
                 ),
                 _SimpleSettingItem(
-                  title: 'Invite Friends',
-                  onTap: () => _shareApp(context),
-                ),
-                _SimpleSettingItem(
                   title: 'Feedback Board',
                   onTap: () => _openDocumentSheet(
                     title: 'Feedback Board',
                     url: 'https://snaplook.userjot.com/',
                   ),
+                ),
+                _SimpleSettingItem(
+                  title: 'Invite Friends',
+                  onTap: () => _shareApp(context),
                 ),
                 SizedBox(height: spacing.l),
 
