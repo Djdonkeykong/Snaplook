@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -2376,7 +2377,7 @@ class _ShareCardItem {
   static _ShareCardItem? fromDetectionResult(DetectionResult result) {
     final brand = result.brand.isNotEmpty ? result.brand : 'Brand';
     final title = result.productName.isNotEmpty ? result.productName : 'Item';
-    final priceText = result.price;
+    final priceText = result.priceDisplay;
     final imageUrl = result.imageUrl;
     final imageProvider = imageUrl != null && imageUrl.isNotEmpty
         ? CachedNetworkImageProvider(imageUrl)
