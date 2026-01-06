@@ -5617,7 +5617,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
-    private func generateShareCard(heroImage: UIImage, products: [DetectionResult]) -> UIImage? {
+    private func generateShareCard(heroImage: UIImage, products: [DetectionResultItem]) -> UIImage? {
         // Card dimensions - 9:16 aspect ratio for social media
         let canvasWidth: CGFloat = 1080
         let canvasHeight: CGFloat = 1920
