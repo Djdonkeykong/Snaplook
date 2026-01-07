@@ -562,6 +562,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       final primaryFile = shareCard ?? imageFile;
 
       if (primaryFile != null) {
+        debugPrint('[Share] primaryFile: ${primaryFile.path}');
+        debugPrint('[Share] thumbnailPath (imageFile): ${imageFile?.path}');
         final handled = await NativeShareHelper.shareImageFirst(
           file: primaryFile,
           text: message,

@@ -389,8 +389,11 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
             var items: [Any] = []
 
             // Use custom share item if we have a thumbnail
+            print("[Share] thumbnailPath: \(thumbnailPath ?? "nil")")
             if let thumbPath = thumbnailPath,
                let thumbnailImage = UIImage(contentsOfFile: thumbPath) {
+              print("[Share] Using custom thumbnail from: \(thumbPath)")
+              print("[Share] Thumbnail image size: \(thumbnailImage.size)")
               let shareItem = ShareItemWithThumbnail(
                 imageURL: fileURL,
                 thumbnailImage: thumbnailImage,
@@ -398,6 +401,7 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
               )
               items.append(shareItem)
             } else {
+              print("[Share] No thumbnail - using fileURL directly")
               items.append(fileURL)
             }
 
