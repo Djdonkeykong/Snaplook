@@ -5778,6 +5778,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 ctx.saveGState()
 
+                // Draw square product card with shadow
+                let productRect = CGRect(x: productX, y: productY, width: productSize, height: productSize)
+                let productPath = UIBezierPath(roundedRect: productRect, cornerRadius: productRadius)
+
                 // Shadow matching Flutter elevation
                 let elevation = 8.0 + (Double(index) * 3.0)
                 ctx.setShadow(
@@ -5786,12 +5790,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     color: UIColor.black.withAlphaComponent(0.12).cgColor
                 )
 
-                // Draw square product card
-                let productRect = CGRect(x: productX, y: productY, width: productSize, height: productSize)
-                let productPath = UIBezierPath(roundedRect: productRect, cornerRadius: productRadius)
-                productPath.addClip()
+                // Fill path with white to create shadow
+                UIColor.white.setFill()
+                productPath.fill()
 
-                // Draw image with cover fit (like Flutter)
+                // Clear shadow for image drawing
+                ctx.setShadow(offset: .zero, blur: 0, color: nil)
+
+                // Clip and draw image
+                productPath.addClip()
                 productImage.draw(in: productRect, blendMode: .normal, alpha: 1.0)
 
                 ctx.restoreGState()
