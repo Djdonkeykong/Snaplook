@@ -393,9 +393,6 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                       );
 
                       final thumbnailFile = await _downloadProductImage();
-                      debugPrint('[ProductShare] Share card: ${shareCard?.path}');
-                      debugPrint('[ProductShare] Thumbnail: ${thumbnailFile?.path}');
-                      debugPrint('[ProductShare] Subject: $shareSubject');
 
                       final primaryFile = shareCard ?? thumbnailFile;
 
@@ -407,7 +404,6 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                           origin: shareOrigin,
                           thumbnailPath: thumbnailFile?.path,
                         );
-                        debugPrint('[ProductShare] Native handled: $handled');
                         if (!handled) {
                           await Share.shareXFiles(
                             [primaryFile],
