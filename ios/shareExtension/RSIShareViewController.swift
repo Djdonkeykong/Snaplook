@@ -5627,7 +5627,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return value
         }
 
-        let cardWidth = canvasWidth * 0.65
+        let cardWidth = canvasWidth * 0.4
         let cardPadding = s(40)
         let heroHeight = s(400)
         let heroRadius = s(24)
