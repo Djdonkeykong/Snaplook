@@ -5721,7 +5721,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             // "Top Visual Match 🔥" badge
-            currentY += dividerSize.height + s(24)
+            currentY += s(24)
             let badgeText = "Top Visual Match 🔥"
             let badgeFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(48)) ?? UIFont.systemFont(ofSize: s(48), weight: .semibold)
             let badgeAttributes: [NSAttributedString.Key: Any] = [
