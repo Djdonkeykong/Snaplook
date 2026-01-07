@@ -5618,16 +5618,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func generateShareCard(heroImage: UIImage, products: [DetectionResultItem]) -> UIImage? {
-        // Card dimensions - 9:16 aspect ratio for social media
-        let canvasWidth: CGFloat = 1080
-        let canvasHeight: CGFloat = 1920
+        // Card dimensions - just the card itself, no extra space
+        let canvasWidth: CGFloat = 540
+        let canvasHeight: CGFloat = 1600
 
-        // Helper for readability
+        // Helper for scaling
+        let scale = canvasWidth / 1080
         func s(_ value: CGFloat) -> CGFloat {
-            return value
+            return value * scale
         }
 
-        let cardWidth = canvasWidth * 0.5
         let cardPadding = s(40)
         let heroHeight = s(400)
         let heroRadius = s(24)
@@ -5639,15 +5639,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return renderer.image { context in
             let ctx = context.cgContext
 
-            // Background - transparent
-            UIColor.clear.setFill()
-            ctx.fill(CGRect(x: 0, y: 0, width: canvasWidth, height: canvasHeight))
-
-            // White card with shadow
-            let cardX = (canvasWidth - cardWidth) / 2
-            var currentY: CGFloat = s(60)
-
-            let cardPath = UIBezierPath(roundedRect: CGRect(x: cardX, y: currentY, width: cardWidth, height: canvasHeight - currentY * 2), cornerRadius: cardRadius)
+            // White card background with shadow - fills entire canvas
+            let cardPath = UIBezierPath(roundedRect: CGRect(x: 0, y: 0, width: canvasWidth, height: canvasHeight), cornerRadius: cardRadius)
             ctx.saveGState()
             ctx.setShadow(offset: CGSize(width: 0, height: s(20)), blur: s(40), color: UIColor.black.withAlphaComponent(0.08).cgColor)
             UIColor.white.setFill()
@@ -5655,7 +5648,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             ctx.restoreGState()
 
             // "I snapped this 📸"
-            currentY += s(60)
+            var currentY: CGFloat = s(60)
             let topText = "I snapped this 📸"
             let topFont = UIFont(name: "PlusJakartaSans-Medium", size: s(24)) ?? UIFont.systemFont(ofSize: s(24), weight: .medium)
             let topAttributes: [NSAttributedString.Key: Any] = [
@@ -5668,8 +5661,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Hero image
             currentY += topSize.height + s(32)
-            let heroX = cardX + cardPadding
-            let heroWidth = cardWidth - cardPadding * 2
+            let heroX = cardPadding
+            let heroWidth = canvasWidth - cardPadding * 2
             let heroPath = UIBezierPath(roundedRect: CGRect(x: heroX, y: currentY, width: heroWidth, height: heroHeight), cornerRadius: heroRadius)
             ctx.saveGState()
             heroPath.addClip()

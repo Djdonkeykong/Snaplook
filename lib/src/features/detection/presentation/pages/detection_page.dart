@@ -82,7 +82,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       DraggableScrollableController();
 
   // Share card constants - 9:16 aspect ratio for social media
-  static const Size _shareCardSize = Size(1080, 1920);
+  static const Size _shareCardSize = Size(540, 1600);
   static const double _shareCardPixelRatio = 2.0;
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
@@ -2106,7 +2106,6 @@ class _DetectionShareCard extends StatelessWidget {
         final scale = width / 1080;
         double s(double value) => value * scale;
 
-        final cardWidth = width * 0.5;
         final cardPadding = s(40);
         final heroHeight = s(400);
         final heroRadius = s(24);
@@ -2114,22 +2113,18 @@ class _DetectionShareCard extends StatelessWidget {
         return Container(
           width: width,
           height: height,
-          color: Colors.transparent,
-          child: Center(
-            child: Container(
-              width: cardWidth,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(s(32)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: s(40),
-                    offset: Offset(0, s(20)),
-                  ),
-                ],
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(s(32)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: s(40),
+                offset: Offset(0, s(20)),
               ),
-              child: Column(
+            ],
+          ),
+          child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(height: s(60)),
@@ -2215,13 +2210,13 @@ class _DetectionShareCard extends StatelessWidget {
                     Center(
                       child: SizedBox(
                         height: s(200),
-                        width: cardWidth,
+                        width: width,
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
                             for (int i = 0; i < shareItems.take(3).length; i++)
                               Positioned(
-                                left: (cardWidth - s(440)) / 2 + (i * s(120)),
+                                left: (width - s(440)) / 2 + (i * s(120)),
                                 child: _StackedProductImage(
                                   item: shareItems[i],
                                   size: s(200),
@@ -2245,8 +2240,6 @@ class _DetectionShareCard extends StatelessWidget {
                   SizedBox(height: s(60)),
                 ],
               ),
-            ),
-          ),
         );
       },
     );
