@@ -82,7 +82,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       DraggableScrollableController();
 
   // Share card constants - adjusted height for content
-  static const Size _shareCardSize = Size(1080, 2050);
+  static const Size _shareCardSize = Size(1080, 2300);
   static const double _shareCardPixelRatio = 2.0;
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
@@ -2136,7 +2136,7 @@ class _DetectionShareCard extends StatelessWidget {
                     'I snapped this 📸',
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: s(40),
+                      fontSize: s(80),
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF2B2B2B),
                       letterSpacing: 0.3,
@@ -2175,7 +2175,7 @@ class _DetectionShareCard extends StatelessWidget {
                   Text(
                     '↓',
                     style: TextStyle(
-                      fontSize: s(64),
+                      fontSize: s(128),
                       color: const Color(0xFF9B9B9B),
                     ),
                   ),
@@ -2184,22 +2184,22 @@ class _DetectionShareCard extends StatelessWidget {
 
                   Container(
                     padding: EdgeInsets.symmetric(
-                      horizontal: s(32),
-                      vertical: s(16),
+                      horizontal: s(64),
+                      vertical: s(32),
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFAFAFA),
-                      borderRadius: BorderRadius.circular(s(24)),
+                      borderRadius: BorderRadius.circular(s(48)),
                       border: Border.all(
                         color: const Color(0xFFEEEEEE),
-                        width: 1,
+                        width: 2,
                       ),
                     ),
                     child: Text(
                       'Top Visual Match 🔥',
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: s(40),
+                        fontSize: s(80),
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF2B2B2B),
                         letterSpacing: 0.3,

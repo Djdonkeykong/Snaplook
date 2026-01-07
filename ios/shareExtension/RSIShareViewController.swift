@@ -5620,7 +5620,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func generateShareCard(heroImage: UIImage, products: [DetectionResultItem]) -> UIImage? {
         // Card dimensions - adjusted height for content
         let canvasWidth: CGFloat = 1080
-        let canvasHeight: CGFloat = 2050
+        let canvasHeight: CGFloat = 2300
 
         // Helper for scaling
         let scale = canvasWidth / 1080
@@ -5651,7 +5651,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // "I snapped this 📸"
             var currentY: CGFloat = s(60)
             let topText = "I snapped this 📸"
-            let topFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(40)) ?? UIFont.systemFont(ofSize: s(40), weight: .semibold)
+            let topFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(80)) ?? UIFont.systemFont(ofSize: s(80), weight: .semibold)
             let topAttributes: [NSAttributedString.Key: Any] = [
                 .font: topFont,
                 .foregroundColor: UIColor(red: 43/255, green: 43/255, blue: 43/255, alpha: 1.0),
@@ -5689,7 +5689,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // "↓" Arrow
             currentY += heroHeight + s(32)
             let dividerText = "↓"
-            let dividerFont = UIFont.systemFont(ofSize: s(64))
+            let dividerFont = UIFont.systemFont(ofSize: s(128))
             let dividerAttributes: [NSAttributedString.Key: Any] = [
                 .font: dividerFont,
                 .foregroundColor: UIColor(red: 155/255, green: 155/255, blue: 155/255, alpha: 1.0)
@@ -5700,23 +5700,23 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // "Top Visual Match 🔥" badge
             currentY += dividerSize.height + s(24)
             let badgeText = "Top Visual Match 🔥"
-            let badgeFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(40)) ?? UIFont.systemFont(ofSize: s(40), weight: .semibold)
+            let badgeFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(80)) ?? UIFont.systemFont(ofSize: s(80), weight: .semibold)
             let badgeAttributes: [NSAttributedString.Key: Any] = [
                 .font: badgeFont,
                 .foregroundColor: UIColor(red: 43/255, green: 43/255, blue: 43/255, alpha: 1.0),
                 .kern: 0.3
             ]
             let badgeSize = (badgeText as NSString).size(withAttributes: badgeAttributes)
-            let badgePadding = s(32)
-            let badgeHeight = badgeSize.height + s(32)
+            let badgePadding = s(64)
+            let badgeHeight = badgeSize.height + s(64)
             let badgeWidth = badgeSize.width + badgePadding * 2
-            let badgePath = UIBezierPath(roundedRect: CGRect(x: canvasWidth / 2 - badgeWidth / 2, y: currentY, width: badgeWidth, height: badgeHeight), cornerRadius: s(24))
+            let badgePath = UIBezierPath(roundedRect: CGRect(x: canvasWidth / 2 - badgeWidth / 2, y: currentY, width: badgeWidth, height: badgeHeight), cornerRadius: s(48))
             UIColor(red: 250/255, green: 250/255, blue: 250/255, alpha: 1.0).setFill()
             badgePath.fill()
             ctx.setStrokeColor(UIColor(red: 238/255, green: 238/255, blue: 238/255, alpha: 1.0).cgColor)
-            ctx.setLineWidth(1)
+            ctx.setLineWidth(2)
             badgePath.stroke()
-            (badgeText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - badgeSize.width / 2, y: currentY + s(16)), withAttributes: badgeAttributes)
+            (badgeText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - badgeSize.width / 2, y: currentY + s(32)), withAttributes: badgeAttributes)
 
             // Product images in a row (top 3 only)
             currentY += badgeHeight + s(40)
