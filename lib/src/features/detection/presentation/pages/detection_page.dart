@@ -2106,7 +2106,7 @@ class _DetectionShareCard extends StatelessWidget {
         final scale = width / 1080;
         double s(double value) => value * scale;
 
-        final cardWidth = width * 0.75;
+        final cardWidth = width * 0.65;
         final cardPadding = s(40);
         final heroHeight = s(400);
         final heroRadius = s(24);
@@ -2219,7 +2219,7 @@ class _DetectionShareCard extends StatelessWidget {
                         children: [
                           for (int i = 0; i < shareItems.take(3).length; i++)
                             Positioned(
-                              left: cardWidth / 2 - s(300) / 2 + (i * s(90)),
+                              left: cardWidth / 2 - s(300) / 2 + (i * s(120)),
                               child: _StackedProductImage(
                                 item: shareItems[i],
                                 size: s(200),

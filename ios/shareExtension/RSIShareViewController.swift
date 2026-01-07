@@ -5627,7 +5627,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return value
         }
 
-        let cardWidth = canvasWidth * 0.75
+        let cardWidth = canvasWidth * 0.65
         let cardPadding = s(40)
         let heroHeight = s(400)
         let heroRadius = s(24)
@@ -5722,7 +5722,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Draw products with slight overlap
             let productSize = s(200)
-            let productOverlap = s(90)
+            let productOverlap = s(120)
             let startX = canvasWidth / 2 - s(300) / 2
 
             for (index, productImage) in productImages.enumerated() {
