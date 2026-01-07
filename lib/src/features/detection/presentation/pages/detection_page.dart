@@ -2186,7 +2186,7 @@ class _DetectionShareCard extends StatelessWidget {
 
                   Image.asset(
                     'assets/images/arrow-share-card.png',
-                    height: s(60),
+                    height: s(120),
                     fit: BoxFit.contain,
                   ),
 

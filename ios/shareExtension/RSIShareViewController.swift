@@ -5691,7 +5691,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Arrow image
             currentY += heroHeight + s(32)
             if let arrowImage = UIImage(named: "arrow-share-card") {
-                let arrowHeight = s(60)
+                let arrowHeight = s(120)
                 let arrowAspect = arrowImage.size.width / arrowImage.size.height
                 let arrowWidth = arrowHeight * arrowAspect
                 let arrowX = canvasWidth / 2 - arrowWidth / 2
