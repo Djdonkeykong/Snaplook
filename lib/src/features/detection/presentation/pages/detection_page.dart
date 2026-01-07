@@ -2106,7 +2106,7 @@ class _DetectionShareCard extends StatelessWidget {
         final scale = width / 1080;
         double s(double value) => value * scale;
 
-        final cardWidth = width * 0.4;
+        final cardWidth = width * 0.5;
         final cardPadding = s(40);
         final heroHeight = s(400);
         final heroRadius = s(24);
@@ -2114,7 +2114,7 @@ class _DetectionShareCard extends StatelessWidget {
         return Container(
           width: width,
           height: height,
-          color: const Color(0xFFF5F3F0),
+          color: Colors.transparent,
           child: Center(
             child: Container(
               width: cardWidth,
@@ -2212,22 +2212,25 @@ class _DetectionShareCard extends StatelessWidget {
                   SizedBox(height: s(40)),
 
                   if (shareItems.isNotEmpty)
-                    SizedBox(
-                      height: s(200),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          for (int i = 0; i < shareItems.take(3).length; i++)
-                            Positioned(
-                              left: cardWidth / 2 - s(300) / 2 + (i * s(120)),
-                              child: _StackedProductImage(
-                                item: shareItems[i],
-                                size: s(200),
-                                radius: s(16),
-                                elevation: 4 + (i * 2).toDouble(),
+                    Center(
+                      child: SizedBox(
+                        height: s(200),
+                        width: cardWidth,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            for (int i = 0; i < shareItems.take(3).length; i++)
+                              Positioned(
+                                left: cardWidth / 2 - s(300) / 2 + (i * s(120)),
+                                child: _StackedProductImage(
+                                  item: shareItems[i],
+                                  size: s(200),
+                                  radius: s(16),
+                                  elevation: 4 + (i * 2).toDouble(),
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
 

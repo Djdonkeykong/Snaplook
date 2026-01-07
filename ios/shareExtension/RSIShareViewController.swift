@@ -5627,7 +5627,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return value
         }
 
-        let cardWidth = canvasWidth * 0.4
+        let cardWidth = canvasWidth * 0.5
         let cardPadding = s(40)
         let heroHeight = s(400)
         let heroRadius = s(24)
@@ -5639,8 +5639,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return renderer.image { context in
             let ctx = context.cgContext
 
-            // Background - warm beige
-            UIColor(red: 245/255, green: 243/255, blue: 240/255, alpha: 1.0).setFill()
+            // Background - transparent
+            UIColor.clear.setFill()
             ctx.fill(CGRect(x: 0, y: 0, width: canvasWidth, height: canvasHeight))
 
             // White card with shadow
