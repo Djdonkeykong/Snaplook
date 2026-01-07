@@ -5618,9 +5618,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func generateShareCard(heroImage: UIImage, products: [DetectionResultItem]) -> UIImage? {
-        // Card dimensions - adjusted height for content
-        let canvasWidth: CGFloat = 1080
-        let canvasHeight: CGFloat = 2150
+        // Card dimensions - scaled down 40% (60% of original)
+        let canvasWidth: CGFloat = 648
+        let canvasHeight: CGFloat = 1290
 
         // Helper for scaling
         let scale = canvasWidth / 1080

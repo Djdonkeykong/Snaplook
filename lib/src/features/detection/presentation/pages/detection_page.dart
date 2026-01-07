@@ -81,8 +81,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   final DraggableScrollableController _resultsSheetController =
       DraggableScrollableController();
 
-  // Share card constants - adjusted height for content
-  static const Size _shareCardSize = Size(1080, 2150);
+  // Share card constants - scaled down 40% (60% of original)
+  static const Size _shareCardSize = Size(648, 1290);
   static const double _shareCardPixelRatio = 2.0;
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
