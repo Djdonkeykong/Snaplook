@@ -82,7 +82,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       DraggableScrollableController();
 
   // Share card constants - 9:16 aspect ratio for social media
-  static const Size _shareCardSize = Size(540, 1600);
+  static const Size _shareCardSize = Size(540, 1100);
   static const double _shareCardPixelRatio = 2.0;
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
@@ -2107,7 +2107,8 @@ class _DetectionShareCard extends StatelessWidget {
         double s(double value) => value * scale;
 
         final cardPadding = s(40);
-        final heroHeight = s(400);
+        final heroPadding = s(80);
+        final heroHeight = s(350);
         final heroRadius = s(32);
 
         return Container(
@@ -2143,7 +2144,7 @@ class _DetectionShareCard extends StatelessWidget {
                   SizedBox(height: s(32)),
 
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: cardPadding),
+                    padding: EdgeInsets.symmetric(horizontal: heroPadding),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(heroRadius),
                       child: Container(

@@ -5620,7 +5620,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func generateShareCard(heroImage: UIImage, products: [DetectionResultItem]) -> UIImage? {
         // Card dimensions - just the card itself, no extra space
         let canvasWidth: CGFloat = 540
-        let canvasHeight: CGFloat = 1600
+        let canvasHeight: CGFloat = 1100
 
         // Helper for scaling
         let scale = canvasWidth / 1080
@@ -5629,7 +5629,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         let cardPadding = s(40)
-        let heroHeight = s(400)
+        let heroPadding = s(80)
+        let heroHeight = s(350)
         let heroRadius = s(32)
         let cardRadius = s(48)
 
@@ -5661,8 +5662,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             // Hero image
             currentY += topSize.height + s(32)
-            let heroX = cardPadding
-            let heroWidth = canvasWidth - cardPadding * 2
+            let heroX = heroPadding
+            let heroWidth = canvasWidth - heroPadding * 2
             let heroPath = UIBezierPath(roundedRect: CGRect(x: heroX, y: currentY, width: heroWidth, height: heroHeight), cornerRadius: heroRadius)
             ctx.saveGState()
             heroPath.addClip()
