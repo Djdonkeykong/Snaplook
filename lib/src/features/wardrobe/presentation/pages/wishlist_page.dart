@@ -1162,6 +1162,7 @@ class _HistoryCard extends ConsumerWidget {
         text: payload.message,
         subject: payload.subject,
         origin: origin,
+        thumbnailPath: shareImage?.path,
       );
       if (!handled) {
         await Share.shareXFiles(
