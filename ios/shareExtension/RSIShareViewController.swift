@@ -5630,9 +5630,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         let cardPadding = s(40)
         let heroPadding = s(240)
-        let heroHeight = s(400)
+        let heroHeight = s(500)
         let heroRadius = s(48)
-        let cardRadius = s(24)
+        let cardRadius = s(64)
 
         // Create rendering context
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: canvasWidth, height: canvasHeight), format: UIGraphicsImageRendererFormat())
@@ -5746,9 +5746,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
 
             // Logo
-            currentY += productSize + s(50)
+            currentY += productSize + s(60)
             if let logoImage = UIImage(named: "logo") {
-                let logoHeight = s(48)
+                let logoHeight = s(64)
                 let logoAspect = logoImage.size.width / logoImage.size.height
                 let logoWidth = logoHeight * logoAspect
                 let logoX = canvasWidth / 2 - logoWidth / 2

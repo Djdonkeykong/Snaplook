@@ -2108,7 +2108,7 @@ class _DetectionShareCard extends StatelessWidget {
 
         final cardPadding = s(40);
         final heroPadding = s(240);
-        final heroHeight = s(400);
+        final heroHeight = s(500);
         final heroRadius = s(48);
 
         return Container(
@@ -2116,7 +2116,7 @@ class _DetectionShareCard extends StatelessWidget {
           height: height,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(s(24)),
+            borderRadius: BorderRadius.circular(s(64)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -2230,15 +2230,15 @@ class _DetectionShareCard extends StatelessWidget {
                       ),
                     ),
 
-                  SizedBox(height: s(50)),
+                  SizedBox(height: s(60)),
 
                   Image.asset(
                     'assets/images/logo.png',
-                    height: s(48),
+                    height: s(64),
                     fit: BoxFit.contain,
                   ),
 
-                  SizedBox(height: s(60)),
+                  SizedBox(height: s(80)),
                 ],
               ),
         );
