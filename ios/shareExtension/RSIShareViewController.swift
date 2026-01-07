@@ -5741,8 +5741,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             for (index, productImage) in productImages.enumerated() {
                 let productX = startX + CGFloat(index) * productOverlap
                 ctx.saveGState()
-                ctx.setShadow(offset: CGSize(width: 0, height: s(8)), blur: s(16), color: UIColor.black.withAlphaComponent(0.12).cgColor)
-                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(40))
+                // Enhanced shadow with more blur and opacity for splash effect
+                let shadowIntensity = 0.20 + (CGFloat(index) * 0.05)
+                ctx.setShadow(offset: CGSize(width: 0, height: s(16)), blur: s(40), color: UIColor.black.withAlphaComponent(shadowIntensity).cgColor)
+                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(80))
                 productPath.addClip()
                 productImage.draw(in: CGRect(x: productX, y: currentY, width: productSize, height: productSize))
                 ctx.restoreGState()

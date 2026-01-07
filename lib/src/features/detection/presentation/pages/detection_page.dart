@@ -2224,8 +2224,8 @@ class _DetectionShareCard extends StatelessWidget {
                                 child: _StackedProductImage(
                                   item: shareItems[i],
                                   size: s(400),
-                                  radius: s(40),
-                                  elevation: 4 + (i * 2).toDouble(),
+                                  radius: s(80),
+                                  elevation: 8 + (i * 3).toDouble(),
                                 ),
                               ),
                           ],
