@@ -5573,10 +5573,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
             let metadata = LPLinkMetadata()
             metadata.title = imageSubject
-            metadata.originalURL = imageURL
-            metadata.url = imageURL
-            metadata.iconProvider = NSItemProvider(contentsOf: imageURL)
-            metadata.imageProvider = NSItemProvider(contentsOf: imageURL)
+
+            if let thumbnail = thumbnailImage {
+                metadata.imageProvider = NSItemProvider(object: thumbnail)
+                metadata.iconProvider = NSItemProvider(object: thumbnail)
+            }
+
             return metadata
         }
     }
