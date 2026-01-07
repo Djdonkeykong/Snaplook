@@ -2127,6 +2127,8 @@ class _DetectionShareCard extends StatelessWidget {
           ),
           child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SizedBox(height: s(60)),
 
