@@ -5618,9 +5618,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
     }
 
     private func generateShareCard(heroImage: UIImage, products: [DetectionResultItem]) -> UIImage? {
-        // Card dimensions - just the card itself, no extra space
-        let canvasWidth: CGFloat = 540
-        let canvasHeight: CGFloat = 1100
+        // Card dimensions - 4:5 aspect ratio for Instagram
+        let canvasWidth: CGFloat = 1080
+        let canvasHeight: CGFloat = 1350
 
         // Helper for scaling
         let scale = canvasWidth / 1080
@@ -5632,7 +5632,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let heroPadding = s(80)
         let heroHeight = s(350)
         let heroRadius = s(32)
-        let cardRadius = s(48)
+        let cardRadius = s(24)
 
         // Create rendering context
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: canvasWidth, height: canvasHeight), format: UIGraphicsImageRendererFormat())

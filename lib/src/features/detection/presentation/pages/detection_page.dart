@@ -81,8 +81,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   final DraggableScrollableController _resultsSheetController =
       DraggableScrollableController();
 
-  // Share card constants - 9:16 aspect ratio for social media
-  static const Size _shareCardSize = Size(540, 1100);
+  // Share card constants - 4:5 aspect ratio for Instagram
+  static const Size _shareCardSize = Size(1080, 1350);
   static const double _shareCardPixelRatio = 2.0;
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
@@ -2116,7 +2116,7 @@ class _DetectionShareCard extends StatelessWidget {
           height: height,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(s(48)),
+            borderRadius: BorderRadius.circular(s(24)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
