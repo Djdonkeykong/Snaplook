@@ -81,8 +81,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   final DraggableScrollableController _resultsSheetController =
       DraggableScrollableController();
 
-  // Share card constants - 4:5 aspect ratio for Instagram
-  static const Size _shareCardSize = Size(1080, 1350);
+  // Share card constants - narrower card for testing
+  static const Size _shareCardSize = Size(750, 1350);
   static const double _shareCardPixelRatio = 2.0;
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
