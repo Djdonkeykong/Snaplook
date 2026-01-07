@@ -2147,37 +2147,47 @@ class _DetectionShareCard extends StatelessWidget {
 
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: heroPadding),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(heroRadius),
-                      child: Container(
-                        height: heroHeight,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF5F5F5),
-                          borderRadius: BorderRadius.circular(heroRadius),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(heroRadius),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.20),
+                            blurRadius: s(40),
+                            offset: Offset(0, s(16)),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(heroRadius),
+                        child: Container(
+                          height: heroHeight,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(heroRadius),
+                          ),
+                          child: heroImage != null
+                              ? Image(
+                                  image: heroImage!,
+                                  fit: BoxFit.fitWidth,
+                                )
+                              : const Icon(
+                                  Icons.image_rounded,
+                                  color: Color(0xFFBDBDBD),
+                                  size: 64,
+                                ),
                         ),
-                        child: heroImage != null
-                            ? Image(
-                                image: heroImage!,
-                                fit: BoxFit.fitWidth,
-                              )
-                            : const Icon(
-                                Icons.image_rounded,
-                                color: Color(0xFFBDBDBD),
-                                size: 64,
-                              ),
                       ),
                     ),
                   ),
 
                   SizedBox(height: s(32)),
 
-                  Text(
-                    '↓',
-                    style: TextStyle(
-                      fontSize: s(77),
-                      color: const Color(0xFF9B9B9B),
-                    ),
+                  Image.asset(
+                    'assets/images/arrow-share-card.png',
+                    height: s(60),
+                    fit: BoxFit.contain,
                   ),
 
                   SizedBox(height: s(24)),

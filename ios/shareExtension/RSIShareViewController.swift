@@ -5660,12 +5660,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let topSize = (topText as NSString).size(withAttributes: topAttributes)
             (topText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - topSize.width / 2, y: currentY), withAttributes: topAttributes)
 
-            // Hero image
+            // Hero image with shadow
             currentY += topSize.height + s(32)
             let heroX = heroPadding
             let heroWidth = canvasWidth - heroPadding * 2
             let heroPath = UIBezierPath(roundedRect: CGRect(x: heroX, y: currentY, width: heroWidth, height: heroHeight), cornerRadius: heroRadius)
             ctx.saveGState()
+            // Add shadow to hero image
+            ctx.setShadow(offset: CGSize(width: 0, height: s(16)), blur: s(40), color: UIColor.black.withAlphaComponent(0.20).cgColor)
             heroPath.addClip()
 
             // Draw background
@@ -5686,16 +5688,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
             heroImage.draw(in: drawRect)
             ctx.restoreGState()
 
-            // "↓" Arrow
+            // Arrow image
             currentY += heroHeight + s(32)
-            let dividerText = "↓"
-            let dividerFont = UIFont.systemFont(ofSize: s(77))
-            let dividerAttributes: [NSAttributedString.Key: Any] = [
-                .font: dividerFont,
-                .foregroundColor: UIColor(red: 155/255, green: 155/255, blue: 155/255, alpha: 1.0)
-            ]
-            let dividerSize = (dividerText as NSString).size(withAttributes: dividerAttributes)
-            (dividerText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - dividerSize.width / 2, y: currentY), withAttributes: dividerAttributes)
+            if let arrowImage = UIImage(named: "arrow-share-card") {
+                let arrowHeight = s(60)
+                let arrowAspect = arrowImage.size.width / arrowImage.size.height
+                let arrowWidth = arrowHeight * arrowAspect
+                let arrowX = canvasWidth / 2 - arrowWidth / 2
+                arrowImage.draw(in: CGRect(x: arrowX, y: currentY, width: arrowWidth, height: arrowHeight))
+                currentY += arrowHeight
+            }
 
             // "Top Visual Match 🔥" badge
             currentY += dividerSize.height + s(24)
