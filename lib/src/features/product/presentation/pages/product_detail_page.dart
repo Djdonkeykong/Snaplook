@@ -1,22 +1,24 @@
-﻿import 'dart:math';
+﻿import 'dart:io';
+import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../../../core/theme/app_colors.dart';
+import 'package:http/http.dart' as http;
+import '../../../../shared/utils/native_share_helper.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
-import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../home/domain/services/inspiration_service.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../favorites/domain/providers/favorites_provider.dart';
-import 'visual_search_page.dart';
 
 String _resolveProductUrl(Map<String, dynamic> product) {
   final candidates = [
@@ -35,6 +37,38 @@ String _resolveProductUrl(Map<String, dynamic> product) {
     }
   }
   return '';
+}
+
+class _ShareCardItem {
+  final String brand;
+  final String title;
+  final String? priceText;
+  final ImageProvider<Object>? imageProvider;
+
+  const _ShareCardItem({
+    required this.brand,
+    required this.title,
+    required this.priceText,
+    required this.imageProvider,
+  });
+
+  static _ShareCardItem fromProduct(Map<String, dynamic> product) {
+    final brand = (product['brand'] ?? 'Brand').toString();
+    final title = (product['title'] ?? product['product_name'] ?? 'Item').toString();
+    final price = product['price'];
+    final priceText = price != null ? '\$$price' : null;
+    final imageUrl = product['image_url'] as String?;
+    final imageProvider = imageUrl != null && imageUrl.isNotEmpty
+        ? CachedNetworkImageProvider(imageUrl)
+        : null;
+
+    return _ShareCardItem(
+      brand: brand,
+      title: title,
+      priceText: priceText,
+      imageProvider: imageProvider,
+    );
+  }
 }
 
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -176,6 +210,9 @@ class _ProductDetailCard extends ConsumerStatefulWidget {
 
 class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
     with SingleTickerProviderStateMixin {
+  static const Size _shareCardSize = Size(648, 1290);
+  static const double _shareCardPixelRatio = 2.0;
+
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -332,17 +369,59 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                 _ProductDetailSheetItem(
                   icon: Icons.share_outlined,
                   label: 'Share product',
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(context);
-                    final shareTitle = '$productBrand $productTitle'.trim();
-                    final message = productUrl.isNotEmpty
-                        ? 'Check out this $productBrand $productTitle on Snaplook! $productUrl'
-                        : 'Check out this $productBrand $productTitle on Snaplook!';
-                    Share.share(
-                      message,
-                      subject: shareTitle.isEmpty ? null : shareTitle,
-                      sharePositionOrigin: shareOrigin,
-                    );
+
+                    try {
+                      final shareTitle = '$productBrand $productTitle'.trim();
+                      final message = productUrl.isNotEmpty
+                          ? 'Check out this $productBrand $productTitle on Snaplook! $productUrl'
+                          : 'Check out this $productBrand $productTitle on Snaplook!';
+
+                      final shareItem = _ShareCardItem.fromProduct(product);
+                      final imageUrl = product['image_url'] as String?;
+                      ImageProvider<Object>? heroImage;
+
+                      if (imageUrl != null && imageUrl.isNotEmpty) {
+                        heroImage = CachedNetworkImageProvider(imageUrl);
+                      }
+
+                      final shareCard = await _buildShareCardFile(
+                        context,
+                        heroImage: heroImage,
+                        shareItems: [shareItem],
+                      );
+
+                      final thumbnailFile = await _downloadProductImage();
+
+                      final primaryFile = shareCard ?? thumbnailFile;
+
+                      if (primaryFile != null) {
+                        final handled = await NativeShareHelper.shareImageFirst(
+                          file: primaryFile,
+                          text: message,
+                          subject: shareTitle.isEmpty ? null : shareTitle,
+                          origin: shareOrigin,
+                          thumbnailPath: thumbnailFile?.path,
+                        );
+                        if (!handled) {
+                          await Share.shareXFiles(
+                            [primaryFile],
+                            text: message,
+                            subject: shareTitle.isEmpty ? null : shareTitle,
+                            sharePositionOrigin: shareOrigin,
+                          );
+                        }
+                      } else {
+                        await Share.share(
+                          message,
+                          subject: shareTitle.isEmpty ? null : shareTitle,
+                          sharePositionOrigin: shareOrigin,
+                        );
+                      }
+                    } catch (e) {
+                      debugPrint('Error sharing product: $e');
+                    }
                   },
                 ),
                 const SizedBox(height: 8),
@@ -365,6 +444,141 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
         );
       },
     );
+  }
+
+  Future<XFile?> _downloadProductImage() async {
+    try {
+      final imageUrl = widget.product['image_url'] as String?;
+      if (imageUrl == null || imageUrl.isEmpty) return null;
+
+      final response = await http.get(Uri.parse(imageUrl));
+      if (response.statusCode != 200) return null;
+
+      final bytes = response.bodyBytes;
+      final filePath = '${Directory.systemTemp.path}/product_share_image.jpg';
+      final file = File(filePath);
+      await file.writeAsBytes(bytes, flush: true);
+
+      return XFile(
+        filePath,
+        mimeType: 'image/jpeg',
+        name: 'product_share_image.jpg',
+      );
+    } catch (e) {
+      debugPrint('Error downloading product image: $e');
+      return null;
+    }
+  }
+
+  Future<XFile?> _buildShareCardFile(
+    BuildContext context, {
+    required ImageProvider<Object>? heroImage,
+    required List<_ShareCardItem> shareItems,
+  }) async {
+    try {
+      await _precacheShareImages(
+        context,
+        [
+          heroImage,
+          ...shareItems.map((item) => item.imageProvider),
+        ],
+      );
+      final bytes = await _captureShareCardBytes(
+        context,
+        heroImage: heroImage,
+        shareItems: shareItems,
+      );
+      if (bytes == null || bytes.isEmpty) return null;
+
+      final filePath =
+          '${Directory.systemTemp.path}/snaplook_share_product.png';
+      final file = File(filePath);
+      await file.writeAsBytes(bytes, flush: true);
+      return XFile(
+        filePath,
+        mimeType: 'image/png',
+        name: 'snaplook_share_product.png',
+      );
+    } catch (e) {
+      debugPrint('Error creating share card: $e');
+      return null;
+    }
+  }
+
+  Future<void> _precacheShareImages(
+    BuildContext context,
+    List<ImageProvider<Object>?> images,
+  ) async {
+    for (final image in images) {
+      if (image == null) continue;
+      try {
+        await precacheImage(image, context);
+      } catch (e) {
+        debugPrint('Error precaching share image: $e');
+      }
+    }
+  }
+
+  Future<Uint8List?> _captureShareCardBytes(
+    BuildContext context, {
+    required ImageProvider<Object>? heroImage,
+    required List<_ShareCardItem> shareItems,
+  }) async {
+    if (!context.mounted) return null;
+    final overlay = Overlay.of(context, rootOverlay: true);
+    if (overlay == null) return null;
+
+    final boundaryKey = GlobalKey();
+    late OverlayEntry entry;
+
+    entry = OverlayEntry(
+      builder: (overlayContext) {
+        return Positioned(
+          left: -_shareCardSize.width - 20,
+          top: 0,
+          child: Material(
+            type: MaterialType.transparency,
+            child: MediaQuery(
+              data: MediaQuery.of(overlayContext).copyWith(
+                size: _shareCardSize,
+              ),
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: RepaintBoundary(
+                  key: boundaryKey,
+                  child: SizedBox(
+                    width: _shareCardSize.width,
+                    height: _shareCardSize.height,
+                    child: _ProductShareCard(
+                      heroImage: heroImage,
+                      shareItems: shareItems,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 30));
+      final boundary =
+          boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      final image = await boundary.toImage(pixelRatio: _shareCardPixelRatio);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return null;
+      return byteData.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('Error capturing share card: $e');
+      return null;
+    } finally {
+      entry.remove();
+    }
   }
 
   @override
@@ -671,6 +885,303 @@ class _AdaptiveMainProductImageState extends State<_AdaptiveMainProductImage> {
           });
         }
       }),
+    );
+  }
+}
+
+class _ProductShareCard extends StatelessWidget {
+  final ImageProvider<Object>? heroImage;
+  final List<_ShareCardItem> shareItems;
+
+  const _ProductShareCard({
+    required this.heroImage,
+    required this.shareItems,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+        final scale = width / 1080;
+        double s(double value) => value * scale;
+
+        final heroPadding = s(240);
+        final heroHeight = s(600);
+        final heroRadius = s(72);
+
+        return Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(s(96)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: s(40),
+                offset: Offset(0, s(20)),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(height: s(60)),
+
+              Text(
+                'I snapped this',
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: s(48),
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2B2B2B),
+                  letterSpacing: 0.3,
+                ),
+              ),
+
+              SizedBox(height: s(32)),
+
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: heroPadding),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(heroRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.20),
+                        blurRadius: s(40),
+                        offset: Offset(0, s(16)),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(heroRadius),
+                    child: Container(
+                      height: heroHeight,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(heroRadius),
+                      ),
+                      child: heroImage != null
+                          ? Image(
+                              image: heroImage!,
+                              fit: BoxFit.fitWidth,
+                            )
+                          : const Icon(
+                              Icons.image_rounded,
+                              color: Color(0xFFBDBDBD),
+                              size: 64,
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: s(32)),
+
+              Image.asset(
+                'assets/images/arrow-share-card.png',
+                height: s(120),
+                fit: BoxFit.contain,
+              ),
+
+              SizedBox(height: s(24)),
+
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: s(38),
+                  vertical: s(19),
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFAFAFA),
+                  borderRadius: BorderRadius.circular(s(29)),
+                  border: Border.all(
+                    color: const Color(0xFFEEEEEE),
+                    width: 1.2,
+                  ),
+                ),
+                child: Text(
+                  'Top Visual Match',
+                  style: TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: s(48),
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF2B2B2B),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+
+              SizedBox(height: s(40)),
+
+              if (shareItems.isNotEmpty)
+                Center(
+                  child: SizedBox(
+                    height: s(480),
+                    width: width,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        for (int i = shareItems.length - 1; i >= 0; i--)
+                          _buildProductCard(
+                            shareItems[i],
+                            index: i,
+                            total: shareItems.length,
+                            scale: s,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              SizedBox(height: s(48)),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/images/icon-rounded.png',
+                    width: s(80),
+                    height: s(80),
+                  ),
+                  SizedBox(width: s(16)),
+                  Text(
+                    'snaplook',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: s(52),
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF2B2B2B),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: s(60)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProductCard(
+    _ShareCardItem item, {
+    required int index,
+    required int total,
+    required double Function(double) scale,
+  }) {
+    final s = scale;
+    final rotation = total > 1
+        ? (index == 0 ? -0.02 : (index == 2 ? 0.02 : 0.0))
+        : 0.0;
+    final offsetY = total > 1 ? (index * s(12)) : 0.0;
+
+    return Transform.translate(
+      offset: Offset(0, offsetY),
+      child: Transform.rotate(
+        angle: rotation,
+        child: Container(
+          width: s(540),
+          height: s(360),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(s(32)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: s(24),
+                offset: Offset(0, s(8)),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: s(220),
+                height: s(360),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F8F8),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(s(32)),
+                    bottomLeft: Radius.circular(s(32)),
+                  ),
+                ),
+                child: item.imageProvider != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(s(32)),
+                          bottomLeft: Radius.circular(s(32)),
+                        ),
+                        child: Image(
+                          image: item.imageProvider!,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Icon(
+                        Icons.image_rounded,
+                        size: s(80),
+                        color: const Color(0xFFCCCCCC),
+                      ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(s(24)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        item.brand,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: s(30),
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF666666),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: s(8)),
+                      Text(
+                        item.title,
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: s(36),
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF2B2B2B),
+                          height: 1.2,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (item.priceText != null) ...[
+                        SizedBox(height: s(12)),
+                        Text(
+                          item.priceText!,
+                          style: TextStyle(
+                            fontFamily: 'PlusJakartaSans',
+                            fontSize: s(32),
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFf2003c),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
