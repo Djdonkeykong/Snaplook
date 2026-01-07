@@ -5741,17 +5741,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             for (index, productImage) in productImages.enumerated() {
                 let productX = startX + CGFloat(index) * productOverlap
+                let productY = currentY + (CGFloat(index) * s(30))
                 ctx.saveGState()
                 // Enhanced shadow with more blur and opacity for splash effect
                 let shadowIntensity = 0.20 + (CGFloat(index) * 0.05)
                 ctx.setShadow(offset: CGSize(width: 0, height: s(16)), blur: s(40), color: UIColor.black.withAlphaComponent(shadowIntensity).cgColor)
-                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productWidth, height: productHeight), cornerRadius: s(68))
+                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: productY, width: productWidth, height: productHeight), cornerRadius: s(68))
                 productPath.addClip()
 
                 // Draw image maintaining aspect ratio within the taller container
                 let imageAspect = productImage.size.width / productImage.size.height
                 let containerAspect = productWidth / productHeight
-                var imageRect = CGRect(x: productX, y: currentY, width: productWidth, height: productHeight)
+                var imageRect = CGRect(x: productX, y: productY, width: productWidth, height: productHeight)
                 if imageAspect > containerAspect {
                     // Image is wider - fit to width
                     let scaledHeight = productWidth / imageAspect
@@ -5768,8 +5769,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 ctx.restoreGState()
             }
 
-            // Logo
-            currentY += productHeight + s(100)
+            // Logo (account for diagonal offset of last product)
+            currentY += productHeight + (CGFloat(productImages.count - 1) * s(30)) + s(100)
             if let logoImage = UIImage(named: "logo") {
                 let logoHeight = s(64)
                 let logoAspect = logoImage.size.width / logoImage.size.height
