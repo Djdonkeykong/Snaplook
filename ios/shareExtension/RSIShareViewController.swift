@@ -5545,7 +5545,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         func activityViewController(_ activityViewController: UIActivityViewController, thumbnailImageForActivityType activityType: UIActivity.ActivityType?, suggestedSize size: CGSize) -> UIImage? {
-            return UIImage(contentsOfFile: imageURL.path)
+            guard let fullImage = UIImage(contentsOfFile: imageURL.path) else {
+                return nil
+            }
+
+            // Calculate aspect-fit size to show entire card in thumbnail
+            let imageSize = fullImage.size
+            let widthRatio = size.width / imageSize.width
+            let heightRatio = size.height / imageSize.height
+            let scaleFactor = min(widthRatio, heightRatio)
+
+            let scaledSize = CGSize(
+                width: imageSize.width * scaleFactor,
+                height: imageSize.height * scaleFactor
+            )
+
+            // Render thumbnail at proper size
+            let renderer = UIGraphicsImageRenderer(size: scaledSize)
+            return renderer.image { _ in
+                fullImage.draw(in: CGRect(origin: .zero, size: scaledSize))
+            }
         }
 
         @available(iOS 13.0, *)
