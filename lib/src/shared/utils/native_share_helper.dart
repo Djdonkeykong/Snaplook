@@ -16,6 +16,7 @@ class NativeShareHelper {
     required String text,
     String? subject,
     Rect? origin,
+    String? thumbnailPath,
   }) async {
     if (!Platform.isIOS) return false;
 
@@ -24,6 +25,7 @@ class NativeShareHelper {
         'path': file.path,
         'text': text,
         'subject': subject ?? '',
+        'thumbnailPath': thumbnailPath,
         'origin': origin != null
             ? {
                 'x': origin.left,

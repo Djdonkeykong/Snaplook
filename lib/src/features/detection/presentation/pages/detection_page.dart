@@ -567,6 +567,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           text: message,
           subject: subject,
           origin: origin,
+          thumbnailPath: imageFile?.path,
         );
         if (!handled) {
           await Share.shareXFiles(

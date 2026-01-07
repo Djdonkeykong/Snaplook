@@ -6,6 +6,55 @@ import AVFoundation
 import FirebaseCore
 import FirebaseMessaging
 
+// Custom activity item source for sharing with thumbnail
+private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
+    let imageURL: URL
+    let thumbnailImage: UIImage?
+    let subject: String
+
+    init(imageURL: URL, thumbnailImage: UIImage?, subject: String) {
+        self.imageURL = imageURL
+        self.thumbnailImage = thumbnailImage
+        self.subject = subject
+        super.init()
+    }
+
+    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+        return imageURL
+    }
+
+    func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+        return imageURL
+    }
+
+    func activityViewController(_ activityViewController: UIActivityViewController, subjectForActivityType activityType: UIActivity.ActivityType?) -> String {
+        return subject
+    }
+
+    func activityViewController(_ activityViewController: UIActivityViewController, thumbnailImageForActivityType activityType: UIActivity.ActivityType?, suggestedSize size: CGSize) -> UIImage? {
+        guard let heroImage = thumbnailImage else {
+            return nil
+        }
+
+        // Calculate aspect-fit size to show entire analyzed image in thumbnail
+        let imageSize = heroImage.size
+        let widthRatio = size.width / imageSize.width
+        let heightRatio = size.height / imageSize.height
+        let scaleFactor = min(widthRatio, heightRatio)
+
+        let scaledSize = CGSize(
+            width: imageSize.width * scaleFactor,
+            height: imageSize.height * scaleFactor
+        )
+
+        // Render thumbnail at proper size
+        let renderer = UIGraphicsImageRenderer(size: scaledSize)
+        return renderer.image { _ in
+            heroImage.draw(in: CGRect(origin: .zero, size: scaledSize))
+        }
+    }
+}
+
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   private let shareStatusChannelName = "com.snaplook.snaplook/share_status"
@@ -328,6 +377,7 @@ import FirebaseMessaging
 
           let subject = (args["subject"] as? String) ?? ""
           let origin = args["origin"] as? [String: Double]
+          let thumbnailPath = args["thumbnailPath"] as? String
           let fileURL = URL(fileURLWithPath: path)
 
           guard FileManager.default.fileExists(atPath: fileURL.path) else {
@@ -336,13 +386,27 @@ import FirebaseMessaging
           }
 
           DispatchQueue.main.async {
-            var items: [Any] = [fileURL]
+            var items: [Any] = []
+
+            // Use custom share item if we have a thumbnail
+            if let thumbPath = thumbnailPath,
+               let thumbnailImage = UIImage(contentsOfFile: thumbPath) {
+              let shareItem = ShareItemWithThumbnail(
+                imageURL: fileURL,
+                thumbnailImage: thumbnailImage,
+                subject: subject
+              )
+              items.append(shareItem)
+            } else {
+              items.append(fileURL)
+            }
+
             if !text.isEmpty {
               items.append(text)
             }
 
             let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
-            if !subject.isEmpty {
+            if !subject.isEmpty && thumbnailPath == nil {
               activityVC.setValue(subject, forKey: "subject")
             }
 
