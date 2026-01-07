@@ -5886,7 +5886,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let imageURL = tempDir.appendingPathComponent(imageFileName)
 
             // Consistent subject for share sheet
-            let subject = "snaplook_share_fashion"
+            let subject = "Snaplook Fashion Share"
 
             if let pngData = image.pngData() {
                 do {
@@ -5895,7 +5895,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     // Use custom activity item source for rich metadata
                     let shareItem = SnaplookShareItem(
                         imageURL: imageURL,
-                        title: imageFileName,
+                        title: subject,
                         subject: subject,
                         thumbnailImage: heroImage
                     )
