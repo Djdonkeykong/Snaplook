@@ -471,9 +471,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   onTap: () => _openHelpLink(context),
                 ),
                 _SimpleSettingItem(
-                  title: 'Feedback Board',
+                  title: 'Give Feedback',
                   onTap: () => _openDocumentSheet(
-                    title: 'Feedback Board',
+                    title: 'Give Feedback',
                     url: 'https://snaplook.userjot.com/',
                   ),
                 ),
