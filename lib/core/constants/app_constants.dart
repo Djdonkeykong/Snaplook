@@ -174,16 +174,4 @@ class AppConstants {
         : 'https://snaplook-fashion-detector.onrender.com/detect-and-search';
   }
 
-  // === 🐝 ScrapingBee Keys ===
-  // SECURITY: No hardcoded keys - use environment variables only
-  static String get scrapingBeeApiKey {
-    final envValue = dotenv.env['SCRAPINGBEE_API_KEY'];
-    if (envValue == null || envValue.isEmpty) {
-      throw Exception(
-        'SCRAPINGBEE_API_KEY not found in environment variables. '
-        'Please ensure .env file is properly configured.',
-      );
-    }
-    return envValue;
-  }
 }

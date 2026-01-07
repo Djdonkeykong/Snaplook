@@ -270,24 +270,6 @@ void main() async {
   // Preload video immediately on app startup
   VideoPreloader.instance.preloadShareVideo();
 
-  final scrapingBeeKey = AppConstants.scrapingBeeApiKey;
-  if (scrapingBeeKey.isEmpty) {
-    debugPrint(
-      "[CONFIG WARNING] SCRAPINGBEE_API_KEY is empty - Instagram downloads will fail until configured.",
-    );
-  } else {
-    final visible = scrapingBeeKey.length <= 6
-        ? scrapingBeeKey
-        : "${scrapingBeeKey.substring(0, 4)}…${scrapingBeeKey.substring(scrapingBeeKey.length - 2)}";
-    debugPrint("[CONFIG] Loaded ScrapingBee API key ($visible)");
-  }
-
-  unawaited(
-    ShareImportStatus.configure(
-      scrapingBeeApiKey: AppConstants.scrapingBeeApiKey,
-    ),
-  );
-
   // Initialize shared config for iOS share extension
   unawaited(ShareExtensionConfigService.initializeSharedConfig());
 

@@ -950,51 +950,9 @@ class InstagramService {
   static Future<List<XFile>> downloadImageFromSnapchatUrl(
     String snapchatUrl,
   ) async {
-    try {
-      print('Fetching Snapchat Spotlight: $snapchatUrl');
-
-      // Use ScrapingBee to scrape Snapchat page
-      final apiKey = AppConstants.scrapingBeeApiKey;
-      if (apiKey.isEmpty ||
-          apiKey.startsWith('your_') ||
-          apiKey.contains('***')) {
-        print('ScrapingBee API key not configured');
-        return [];
-      }
-
-      final encodedUrl = Uri.encodeComponent(snapchatUrl);
-      final scrapingBeeUrl = 'https://app.scrapingbee.com/api/v1/'
-          '?api_key=$apiKey'
-          '&url=$encodedUrl'
-          '&render_js=true'
-          '&wait=2000'
-          '&premium_proxy=true';
-
-      print('Calling ScrapingBee for Snapchat...');
-      final response = await http.get(Uri.parse(scrapingBeeUrl)).timeout(
-            const Duration(seconds: 30),
-          );
-
-      if (response.statusCode != 200) {
-        print('ScrapingBee request failed with status ${response.statusCode}');
-        return [];
-      }
-
-      print(
-          'ScrapingBee Snapchat response received, HTML length: ${response.body.length} chars');
-
-      // Extract image/video thumbnail from Snapchat HTML
-      final images =
-          await _extractImagesFromSnapchatHtml(response.body, snapchatUrl);
-      if (images.isNotEmpty) {
-        print(
-            'Successfully extracted ${images.length} image(s) from Snapchat!');
-      }
-      return images;
-    } catch (e) {
-      print('Error downloading Snapchat image: $e');
-      return [];
-    }
+    // ScrapingBee removed - Snapchat downloads no longer supported
+    print('Snapchat downloads not supported (ScrapingBee removed)');
+    return [];
   }
 
   static Future<List<XFile>> _extractImagesFromSnapchatHtml(

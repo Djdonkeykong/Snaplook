@@ -53,7 +53,6 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
   private let authChannelName = "snaplook/auth"
   private let processingStatusKey = "ShareProcessingStatus"
   private let processingSessionKey = "ShareProcessingSession"
-  private let scrapingBeeApiKeyKey = "ScrapingBeeApiKey"
   private let serpApiKeyKey = "SerpApiKey"
   private let detectorEndpointKey = "DetectorEndpoint"
   private let apifyApiTokenKey = "ApifyApiToken"
@@ -276,21 +275,6 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
         }
 
         switch call.method {
-        case "configureShareExtension":
-          guard let defaults = self.sharedUserDefaults() else {
-            result(nil)
-            return
-          }
-          if let args = call.arguments as? [String: Any],
-             let apiKey = args["scrapingBeeApiKey"] as? String {
-            if apiKey.isEmpty {
-              defaults.removeObject(forKey: self.scrapingBeeApiKeyKey)
-            } else {
-              defaults.set(apiKey, forKey: self.scrapingBeeApiKeyKey)
-            }
-            defaults.synchronize()
-          }
-          result(nil)
         case "updateShareProcessingStatus":
           guard
             let args = call.arguments as? [String: Any],
