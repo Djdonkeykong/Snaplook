@@ -1190,7 +1190,7 @@ class _HistoryCard extends ConsumerWidget {
         : 'Snaplook analyzed this look.';
 
     return SharePayload(
-      subject: 'Snaplook Matches',
+      subject: 'Snaplook Fashion Share',
       message: message,
     );
   }

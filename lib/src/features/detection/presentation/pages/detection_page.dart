@@ -612,7 +612,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     buffer.write('Get Snaplook to find your fashion matches: https://snaplook.app');
 
     return SharePayload(
-      subject: 'Snaplook Fashion Matches',
+      subject: 'Snaplook Fashion Share',
       message: buffer.toString(),
     );
   }

@@ -373,7 +373,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                     Navigator.pop(context);
 
                     try {
-                      final shareTitle = '$productBrand $productTitle'.trim();
+                      const shareSubject = 'Snaplook Fashion Share';
                       final message = productUrl.isNotEmpty
                           ? 'Check out this $productBrand $productTitle on Snaplook! $productUrl'
                           : 'Check out this $productBrand $productTitle on Snaplook!';
@@ -400,7 +400,7 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                         final handled = await NativeShareHelper.shareImageFirst(
                           file: primaryFile,
                           text: message,
-                          subject: shareTitle.isEmpty ? null : shareTitle,
+                          subject: shareSubject,
                           origin: shareOrigin,
                           thumbnailPath: thumbnailFile?.path,
                         );
@@ -408,14 +408,14 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                           await Share.shareXFiles(
                             [primaryFile],
                             text: message,
-                            subject: shareTitle.isEmpty ? null : shareTitle,
+                            subject: shareSubject,
                             sharePositionOrigin: shareOrigin,
                           );
                         }
                       } else {
                         await Share.share(
                           message,
-                          subject: shareTitle.isEmpty ? null : shareTitle,
+                          subject: shareSubject,
                           sharePositionOrigin: shareOrigin,
                         );
                       }
