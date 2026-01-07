@@ -32,10 +32,13 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
     }
 
     func activityViewController(_ activityViewController: UIActivityViewController, thumbnailImageForActivityType activityType: UIActivity.ActivityType?, suggestedSize size: CGSize) -> UIImage? {
+        print("[Share] thumbnailImageForActivityType called! suggestedSize: \(size)")
         guard let heroImage = thumbnailImage else {
+            print("[Share] No thumbnailImage available")
             return nil
         }
 
+        print("[Share] Rendering thumbnail from hero image: \(heroImage.size)")
         // Calculate aspect-fit size to show entire analyzed image in thumbnail
         let imageSize = heroImage.size
         let widthRatio = size.width / imageSize.width
@@ -49,9 +52,11 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
 
         // Render thumbnail at proper size
         let renderer = UIGraphicsImageRenderer(size: scaledSize)
-        return renderer.image { _ in
+        let result = renderer.image { _ in
             heroImage.draw(in: CGRect(origin: .zero, size: scaledSize))
         }
+        print("[Share] Thumbnail rendered: \(result.size)")
+        return result
     }
 }
 
