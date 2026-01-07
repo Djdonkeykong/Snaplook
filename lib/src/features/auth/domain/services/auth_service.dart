@@ -418,6 +418,28 @@ class AuthService {
     required String token,
   }) async {
     try {
+      // Test/Demo mode for App Store reviewers
+      // Accept hardcoded OTP for the reviewer test account
+      if (email.toLowerCase() == 'appstore@snaplook.app' && token == '123456') {
+        print('[Auth] Test account detected - using demo OTP bypass');
+
+        // Sign in with password for the test account
+        // This allows reviewers to use a fixed OTP code instead of checking email
+        final response = await _supabase.auth.signInWithPassword(
+          email: email,
+          password: 'SnaplookReview2026!',
+        );
+
+        // Update auth flag for share extension
+        await _updateAuthFlag(
+          true,
+          userId: response.user?.id,
+        );
+
+        return response;
+      }
+
+      // Normal OTP verification for all other users
       final response = await _supabase.auth.verifyOTP(
         email: email,
         token: token,
