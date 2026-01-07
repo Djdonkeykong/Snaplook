@@ -5743,11 +5743,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             badgePath.stroke()
             (badgeText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - badgeSize.width / 2, y: currentY + s(19)), withAttributes: badgeAttributes)
 
-            // Product images in a row (top 3 only)
+            // Product images in Stack container (top 3 only)
             currentY += badgeHeight + s(40)
-
-            // Add padding above products for shadow space
-            currentY += s(15)
 
             // Download product images first
             var productImages: [UIImage] = []
@@ -5758,44 +5755,41 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
             }
 
-            // Draw products with slight overlap (width: 340, height: 390 - 15% taller)
-            let productWidth = s(340)
-            let productHeight = s(390)
+            // Stack container for products - 480px height like Flutter
+            let stackHeight = s(480)
+            let productSize = s(390)  // Square like Flutter
             let productOverlap = s(170)
-            let startX = canvasWidth / 2 - s(680) / 2
+            let productRadius = s(68)
+            let startX = (canvasWidth - s(680)) / 2
 
-            for (index, productImage) in productImages.enumerated() {
-                let productX = startX + CGFloat(index) * productOverlap
+            // Draw products in stack (bottom to top for proper layering)
+            for (index, productImage) in productImages.enumerated().reversed() {
+                let productX = startX + (CGFloat(index) * productOverlap)
                 let productY = currentY + (CGFloat(index) * s(30))
+
                 ctx.saveGState()
-                // Enhanced shadow with more blur and opacity for splash effect
-                let shadowIntensity = 0.20 + (CGFloat(index) * 0.05)
-                ctx.setShadow(offset: CGSize(width: 0, height: s(16)), blur: s(40), color: UIColor.black.withAlphaComponent(shadowIntensity).cgColor)
-                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: productY, width: productWidth, height: productHeight), cornerRadius: s(68))
+
+                // Shadow matching Flutter elevation
+                let elevation = 8.0 + (Double(index) * 3.0)
+                ctx.setShadow(
+                    offset: CGSize(width: 0, height: elevation),
+                    blur: elevation * 2,
+                    color: UIColor.black.withAlphaComponent(0.12).cgColor
+                )
+
+                // Draw square product card
+                let productRect = CGRect(x: productX, y: productY, width: productSize, height: productSize)
+                let productPath = UIBezierPath(roundedRect: productRect, cornerRadius: productRadius)
                 productPath.addClip()
 
-                // Draw image maintaining aspect ratio within the taller container
-                let imageAspect = productImage.size.width / productImage.size.height
-                let containerAspect = productWidth / productHeight
-                var imageRect = CGRect(x: productX, y: productY, width: productWidth, height: productHeight)
-                if imageAspect > containerAspect {
-                    // Image is wider - fit to width
-                    let scaledHeight = productWidth / imageAspect
-                    imageRect.origin.y += (productHeight - scaledHeight) / 2
-                    imageRect.size.height = scaledHeight
-                } else {
-                    // Image is taller - fit to height
-                    let scaledWidth = productHeight * imageAspect
-                    imageRect.origin.x += (productWidth - scaledWidth) / 2
-                    imageRect.size.width = scaledWidth
-                }
+                // Draw image with cover fit (like Flutter)
+                productImage.draw(in: productRect, blendMode: .normal, alpha: 1.0)
 
-                productImage.draw(in: imageRect)
                 ctx.restoreGState()
             }
 
-            // Logo (account for diagonal offset of last product)
-            currentY += productHeight + (CGFloat(productImages.count - 1) * s(30)) + s(100)
+            // Logo - 100px spacing after stack container + 80px bottom padding
+            currentY += stackHeight + s(100)
             if let logoImage = UIImage(named: "logo") {
                 let logoHeight = s(64)
                 let logoAspect = logoImage.size.width / logoImage.size.height
