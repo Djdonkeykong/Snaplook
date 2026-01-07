@@ -1101,7 +1101,7 @@ class _HistoryCard extends ConsumerWidget {
     'photos',
     'home',
   };
-  static const Size _shareCardSize = Size(1080, 1350);
+  static const Size _shareCardSize = Size(648, 1290);
   static const double _shareCardPixelRatio = 2.0;
 
   const _HistoryCard({
