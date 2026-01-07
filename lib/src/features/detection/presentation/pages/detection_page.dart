@@ -2221,7 +2221,7 @@ class _DetectionShareCard extends StatelessWidget {
                           children: [
                             for (int i = 0; i < shareItems.take(3).length; i++)
                               Positioned(
-                                left: cardWidth / 2 - s(300) / 2 + (i * s(120)),
+                                left: (cardWidth - s(440)) / 2 + (i * s(120)),
                                 child: _StackedProductImage(
                                   item: shareItems[i],
                                   size: s(200),

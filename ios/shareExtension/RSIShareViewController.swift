@@ -5723,7 +5723,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Draw products with slight overlap
             let productSize = s(200)
             let productOverlap = s(120)
-            let startX = canvasWidth / 2 - s(300) / 2
+            let startX = canvasWidth / 2 - s(440) / 2
 
             for (index, productImage) in productImages.enumerated() {
                 let productX = startX + CGFloat(index) * productOverlap
