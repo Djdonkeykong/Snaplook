@@ -2212,18 +2212,19 @@ class _DetectionShareCard extends StatelessWidget {
                   if (shareItems.isNotEmpty)
                     Center(
                       child: SizedBox(
-                        height: s(200),
+                        height: s(280),
                         width: width,
                         child: Stack(
                           alignment: Alignment.center,
+                          clipBehavior: Clip.none,
                           children: [
                             for (int i = 0; i < shareItems.take(3).length; i++)
                               Positioned(
-                                left: (width - s(440)) / 2 + (i * s(120)),
+                                left: (width - s(560)) / 2 + (i * s(140)),
                                 child: _StackedProductImage(
                                   item: shareItems[i],
-                                  size: s(200),
-                                  radius: s(24),
+                                  size: s(250),
+                                  radius: s(32),
                                   elevation: 4 + (i * 2).toDouble(),
                                 ),
                               ),

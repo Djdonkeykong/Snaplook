@@ -5721,6 +5721,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Product images in a row (top 3 only)
             currentY += badgeHeight + s(40)
 
+            // Add padding above products for shadow space
+            currentY += s(15)
+
             // Download product images first
             var productImages: [UIImage] = []
             for product in products.prefix(3) {
@@ -5730,16 +5733,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
             }
 
-            // Draw products with slight overlap
-            let productSize = s(200)
-            let productOverlap = s(120)
-            let startX = canvasWidth / 2 - s(440) / 2
+            // Draw products with slight overlap (larger size)
+            let productSize = s(250)
+            let productOverlap = s(140)
+            let startX = canvasWidth / 2 - s(560) / 2
 
             for (index, productImage) in productImages.enumerated() {
                 let productX = startX + CGFloat(index) * productOverlap
                 ctx.saveGState()
                 ctx.setShadow(offset: CGSize(width: 0, height: s(8)), blur: s(16), color: UIColor.black.withAlphaComponent(0.12).cgColor)
-                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(24))
+                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(32))
                 productPath.addClip()
                 productImage.draw(in: CGRect(x: productX, y: currentY, width: productSize, height: productSize))
                 ctx.restoreGState()
