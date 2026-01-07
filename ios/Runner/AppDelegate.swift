@@ -5,8 +5,9 @@ import AVKit
 import AVFoundation
 import FirebaseCore
 import FirebaseMessaging
+import LinkPresentation
 
-// Custom activity item source for sharing with thumbnail
+// Custom activity item source for sharing with thumbnail via LPLinkMetadata
 private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
     let imageURL: URL
     let thumbnailImage: UIImage?
@@ -31,32 +32,21 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
         return subject
     }
 
-    func activityViewController(_ activityViewController: UIActivityViewController, thumbnailImageForActivityType activityType: UIActivity.ActivityType?, suggestedSize size: CGSize) -> UIImage? {
-        print("[Share] thumbnailImageForActivityType called! suggestedSize: \(size)")
-        guard let heroImage = thumbnailImage else {
-            print("[Share] No thumbnailImage available")
-            return nil
+    @available(iOS 13.0, *)
+    func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
+        print("[Share] activityViewControllerLinkMetadata called!")
+        let metadata = LPLinkMetadata()
+        metadata.title = subject
+
+        if let thumbnail = thumbnailImage {
+            print("[Share] Setting thumbnail in LPLinkMetadata: \(thumbnail.size)")
+            metadata.imageProvider = NSItemProvider(object: thumbnail)
+            metadata.iconProvider = NSItemProvider(object: thumbnail)
+        } else {
+            print("[Share] No thumbnail available for LPLinkMetadata")
         }
 
-        print("[Share] Rendering thumbnail from hero image: \(heroImage.size)")
-        // Calculate aspect-fit size to show entire analyzed image in thumbnail
-        let imageSize = heroImage.size
-        let widthRatio = size.width / imageSize.width
-        let heightRatio = size.height / imageSize.height
-        let scaleFactor = min(widthRatio, heightRatio)
-
-        let scaledSize = CGSize(
-            width: imageSize.width * scaleFactor,
-            height: imageSize.height * scaleFactor
-        )
-
-        // Render thumbnail at proper size
-        let renderer = UIGraphicsImageRenderer(size: scaledSize)
-        let result = renderer.image { _ in
-            heroImage.draw(in: CGRect(origin: .zero, size: scaledSize))
-        }
-        print("[Share] Thumbnail rendered: \(result.size)")
-        return result
+        return metadata
     }
 }
 
