@@ -5627,7 +5627,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return value
         }
 
-        let cardWidth = canvasWidth * 0.88
+        let cardWidth = canvasWidth * 0.75
         let cardPadding = s(40)
         let heroHeight = s(400)
         let heroRadius = s(24)
@@ -5720,20 +5720,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
             }
 
-            // Draw products in a horizontal row
+            // Draw products with slight overlap
             let productSize = s(200)
-            let productGap = s(12)
-            let totalProductWidth = CGFloat(productImages.count) * productSize + CGFloat(productImages.count - 1) * productGap
-            var productX = heroX + (heroWidth - totalProductWidth) / 2
+            let productOverlap = s(90)
+            let startX = canvasWidth / 2 - s(300) / 2
 
-            for productImage in productImages {
+            for (index, productImage) in productImages.enumerated() {
+                let productX = startX + CGFloat(index) * productOverlap
                 ctx.saveGState()
                 ctx.setShadow(offset: CGSize(width: 0, height: s(8)), blur: s(16), color: UIColor.black.withAlphaComponent(0.12).cgColor)
                 let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(16))
                 productPath.addClip()
                 productImage.draw(in: CGRect(x: productX, y: currentY, width: productSize, height: productSize))
                 ctx.restoreGState()
-                productX += productSize + productGap
             }
 
             // Logo
