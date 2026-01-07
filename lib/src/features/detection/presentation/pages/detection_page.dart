@@ -82,7 +82,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       DraggableScrollableController();
 
   // Share card constants - adjusted height for content
-  static const Size _shareCardSize = Size(1080, 1600);
+  static const Size _shareCardSize = Size(1080, 1900);
   static const double _shareCardPixelRatio = 2.0;
   double _currentResultsExtent = _resultsInitialExtent;
   bool _isResultsSheetVisible = false;
@@ -2212,7 +2212,7 @@ class _DetectionShareCard extends StatelessWidget {
                   if (shareItems.isNotEmpty)
                     Center(
                       child: SizedBox(
-                        height: s(280),
+                        height: s(450),
                         width: width,
                         child: Stack(
                           alignment: Alignment.center,
@@ -2220,11 +2220,11 @@ class _DetectionShareCard extends StatelessWidget {
                           children: [
                             for (int i = 0; i < shareItems.take(3).length; i++)
                               Positioned(
-                                left: (width - s(560)) / 2 + (i * s(140)),
+                                left: (width - s(800)) / 2 + (i * s(200)),
                                 child: _StackedProductImage(
                                   item: shareItems[i],
-                                  size: s(250),
-                                  radius: s(32),
+                                  size: s(400),
+                                  radius: s(40),
                                   elevation: 4 + (i * 2).toDouble(),
                                 ),
                               ),

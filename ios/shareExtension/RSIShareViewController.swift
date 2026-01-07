@@ -5620,7 +5620,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func generateShareCard(heroImage: UIImage, products: [DetectionResultItem]) -> UIImage? {
         // Card dimensions - adjusted height for content
         let canvasWidth: CGFloat = 1080
-        let canvasHeight: CGFloat = 1600
+        let canvasHeight: CGFloat = 1900
 
         // Helper for scaling
         let scale = canvasWidth / 1080
@@ -5733,16 +5733,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
             }
 
-            // Draw products with slight overlap (larger size)
-            let productSize = s(250)
-            let productOverlap = s(140)
-            let startX = canvasWidth / 2 - s(560) / 2
+            // Draw products with slight overlap (way larger size)
+            let productSize = s(400)
+            let productOverlap = s(200)
+            let startX = canvasWidth / 2 - s(800) / 2
 
             for (index, productImage) in productImages.enumerated() {
                 let productX = startX + CGFloat(index) * productOverlap
                 ctx.saveGState()
                 ctx.setShadow(offset: CGSize(width: 0, height: s(8)), blur: s(16), color: UIColor.black.withAlphaComponent(0.12).cgColor)
-                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(32))
+                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(40))
                 productPath.addClip()
                 productImage.draw(in: CGRect(x: productX, y: currentY, width: productSize, height: productSize))
                 ctx.restoreGState()
