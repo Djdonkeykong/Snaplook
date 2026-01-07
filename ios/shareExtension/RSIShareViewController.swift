@@ -5671,8 +5671,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             cardPath.fill()
             ctx.restoreGState()
 
-            // "I snapped this 📸"
-            var currentY: CGFloat = s(60)
+            // Pre-calculate text sizes for vertical centering
             let topText = "I snapped this 📸"
             let topFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(48)) ?? UIFont.systemFont(ofSize: s(48), weight: .semibold)
             let topAttributes: [NSAttributedString.Key: Any] = [
@@ -5681,6 +5680,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 .kern: 0.3
             ]
             let topSize = (topText as NSString).size(withAttributes: topAttributes)
+
+            let badgeText = "Top Visual Matches 🔥"
+            let badgeFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(48)) ?? UIFont.systemFont(ofSize: s(48), weight: .semibold)
+            let badgeAttributes: [NSAttributedString.Key: Any] = [
+                .font: badgeFont,
+                .foregroundColor: UIColor(red: 43/255, green: 43/255, blue: 43/255, alpha: 1.0),
+                .kern: 0.3
+            ]
+            let badgeSize = (badgeText as NSString).size(withAttributes: badgeAttributes)
+            let badgePadding = s(38)
+            let badgeHeight = badgeSize.height + s(38)
+
+            // Calculate total content height to center vertically (matching Flutter's Column with center alignment)
+            let totalContentHeight = s(60) + topSize.height + s(32) + heroHeight + s(32) + s(120) + s(24) + badgeHeight + s(40) + s(480) + s(100) + s(64) + s(80)
+
+            // Center content vertically in canvas
+            let startY = (canvasHeight - totalContentHeight) / 2
+
+            // "I snapped this 📸"
+            var currentY: CGFloat = startY + s(60)
             (topText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - topSize.width / 2, y: currentY), withAttributes: topAttributes)
 
             // Hero image with shadow
@@ -5722,18 +5741,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 currentY += arrowHeight
             }
 
-            // "Top Visual Match 🔥" badge
+            // "Top Visual Matches 🔥" badge
             currentY += s(24)
-            let badgeText = "Top Visual Match 🔥"
-            let badgeFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(48)) ?? UIFont.systemFont(ofSize: s(48), weight: .semibold)
-            let badgeAttributes: [NSAttributedString.Key: Any] = [
-                .font: badgeFont,
-                .foregroundColor: UIColor(red: 43/255, green: 43/255, blue: 43/255, alpha: 1.0),
-                .kern: 0.3
-            ]
-            let badgeSize = (badgeText as NSString).size(withAttributes: badgeAttributes)
-            let badgePadding = s(38)
-            let badgeHeight = badgeSize.height + s(38)
             let badgeWidth = badgeSize.width + badgePadding * 2
             let badgePath = UIBezierPath(roundedRect: CGRect(x: canvasWidth / 2 - badgeWidth / 2, y: currentY, width: badgeWidth, height: badgeHeight), cornerRadius: s(29))
             UIColor(red: 250/255, green: 250/255, blue: 250/255, alpha: 1.0).setFill()
@@ -5762,27 +5771,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let productRadius = s(68)
             let startX = (canvasWidth - s(680)) / 2
 
-            // Draw products in stack (bottom to top for proper layering)
-            for (index, productImage) in productImages.enumerated().reversed() {
+            // Draw products in stack (back to front for proper layering)
+            for (index, productImage) in productImages.enumerated() {
                 let productX = startX + (CGFloat(index) * productOverlap)
                 let productY = currentY + (CGFloat(index) * s(30))
 
                 ctx.saveGState()
-
-                // Apply rotation matching Flutter (-0.02, 0, 0.02 radians)
-                let rotation: CGFloat
-                if productImages.count > 1 {
-                    rotation = index == 0 ? -0.02 : (index == 2 ? 0.02 : 0.0)
-                } else {
-                    rotation = 0.0
-                }
-
-                // Translate to center of product, rotate, translate back
-                let centerX = productX + productSize / 2
-                let centerY = productY + productSize / 2
-                ctx.translateBy(x: centerX, y: centerY)
-                ctx.rotate(by: rotation)
-                ctx.translateBy(x: -centerX, y: -centerY)
 
                 // Shadow matching Flutter elevation
                 let elevation = 8.0 + (Double(index) * 3.0)

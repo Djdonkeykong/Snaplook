@@ -1814,163 +1814,209 @@ class _HistoryShareCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
         final scale = width / 1080;
         double s(double value) => value * scale;
 
-        final heroSize = s(520);
-        final heroRadius = s(40);
-        final cardWidth = s(980);
-        final cardRadius = s(32);
-        final rowImageSize = s(108);
-        final rowVerticalPadding = s(20);
-        final rowHeight = rowImageSize + (rowVerticalPadding * 2);
-        final listHeight = rowHeight * 4.2;
+        final cardPadding = s(40);
+        final heroPadding = s(240);
+        final heroHeight = s(600);
+        final heroRadius = s(72);
 
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(s(52)),
-          child: Container(
+        return Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
             color: Colors.white,
-            child: Column(
-              children: [
-                SizedBox(height: s(52)),
-                Image.asset(
-                  'assets/images/logo.png',
-                  height: s(52),
-                  fit: BoxFit.contain,
-                ),
-                SizedBox(height: s(36)),
-                Center(
-                  child: SizedBox(
-                    width: heroSize,
-                    height: heroSize,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(heroRadius),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.12),
-                                blurRadius: s(28),
-                                offset: Offset(0, s(14)),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(heroRadius),
-                            child: heroImage != null
-                                ? Image(
-                                    image: heroImage!,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Container(
-                                    color: const Color(0xFFEFEFEF),
-                                    child: const Icon(
-                                      Icons.image_rounded,
-                                      color: Color(0xFFBDBDBD),
-                                      size: 48,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        Positioned(
-                        left: s(-48),
-                        top: s(24),
-                          child: _ShareBadge(
-                          size: s(120),
-                            icon: Icons.favorite,
-                            iconColor: AppColors.secondary,
-                            backgroundColor: const Color(0xFFF0F0F0),
-                            shadowOpacity: 0.18,
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: -36,
-                          child: Center(
-                            child: _TopMatchesTag(
-                              height: s(74),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: s(34),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+            borderRadius: BorderRadius.circular(s(96)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: s(40),
+                offset: Offset(0, s(20)),
+              ),
+            ],
+          ),
+          child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(height: s(60)),
+
+                  Text(
+                    'I snapped this 📸',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: s(48),
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF2B2B2B),
+                      letterSpacing: 0.3,
                     ),
                   ),
-                ),
-                SizedBox(height: s(36)),
-                if (shareItems.isNotEmpty)
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: SizedBox(
-                        width: cardWidth,
-                        height: listHeight,
-                        child: Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(cardRadius),
-                              child: Container(
-                                color: Colors.white,
-                                child: ListView.separated(
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  padding: EdgeInsets.zero,
-                                  itemCount: shareItems.length,
-                                  itemBuilder: (context, index) {
-                                    return _ShareResultRow(
-                                      item: shareItems[index],
-                                      imageSize: rowImageSize,
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: s(30),
-                                        vertical: rowVerticalPadding,
-                                      ),
-                                    );
-                                  },
-                                  separatorBuilder: (context, index) => Divider(
-                                    height: 1,
-                                    thickness: 1,
-                                    color: const Color(0xFFEDEDED),
-                                    indent: s(30),
-                                    endIndent: s(30),
-                                  ),
+
+                  SizedBox(height: s(32)),
+
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: heroPadding),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(heroRadius),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.20),
+                            blurRadius: s(40),
+                            offset: Offset(0, s(16)),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(heroRadius),
+                        child: Container(
+                          height: heroHeight,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(heroRadius),
+                          ),
+                          child: heroImage != null
+                              ? Image(
+                                  image: heroImage!,
+                                  fit: BoxFit.fitWidth,
+                                )
+                              : const Icon(
+                                  Icons.image_rounded,
+                                  color: Color(0xFFBDBDBD),
+                                  size: 64,
                                 ),
-                              ),
-                            ),
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              child: IgnorePointer(
-                                child: Container(
-                                  height: s(110),
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Color(0x00FFFFFF),
-                                        Color(0xB3FFFFFF),
-                                        Color(0xFFFFFFFF),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
                         ),
                       ),
                     ),
                   ),
-              ],
-            ),
-          ),
+
+                  SizedBox(height: s(32)),
+
+                  Image.asset(
+                    'assets/images/arrow-share-card.png',
+                    height: s(120),
+                    fit: BoxFit.contain,
+                  ),
+
+                  SizedBox(height: s(24)),
+
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: s(38),
+                      vertical: s(19),
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAFAFA),
+                      borderRadius: BorderRadius.circular(s(29)),
+                      border: Border.all(
+                        color: const Color(0xFFEEEEEE),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Text(
+                      'Top Visual Matches 🔥',
+                      style: TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: s(48),
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF2B2B2B),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: s(40)),
+
+                  if (shareItems.isNotEmpty)
+                    Center(
+                      child: SizedBox(
+                        height: s(480),
+                        width: width,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          clipBehavior: Clip.none,
+                          children: [
+                            for (int i = 0; i < shareItems.take(3).length; i++)
+                              Positioned(
+                                left: (width - s(680)) / 2 + (i * s(170)),
+                                top: i * s(30),
+                                child: _StackedProductImage(
+                                  item: shareItems[i],
+                                  size: s(390),
+                                  radius: s(68),
+                                  elevation: 8 + (i * 3).toDouble(),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  SizedBox(height: s(100)),
+
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: s(64),
+                    fit: BoxFit.contain,
+                  ),
+
+                  SizedBox(height: s(80)),
+                ],
+              ),
         );
       },
+    );
+  }
+}
+
+class _StackedProductImage extends StatelessWidget {
+  final _ShareCardItem item;
+  final double size;
+  final double radius;
+  final double elevation;
+
+  const _StackedProductImage({
+    required this.item,
+    required this.size,
+    required this.radius,
+    required this.elevation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: elevation * 2,
+            offset: Offset(0, elevation),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: item.imageProvider != null
+            ? Image(
+                image: item.imageProvider!,
+                fit: BoxFit.cover,
+              )
+            : Container(
+                color: const Color(0xFFF5F5F5),
+                child: Icon(
+                  Icons.image_rounded,
+                  color: const Color(0xFFCCCCCC),
+                  size: size * 0.4,
+                ),
+              ),
+      ),
     );
   }
 }

@@ -1006,7 +1006,7 @@ class _ProductShareCard extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  'Top Visual Match',
+                  'Top Visual Matches',
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontSize: s(48),
