@@ -244,4 +244,14 @@ class CreditService {
     _cachedBalance = null;
     debugPrint('[CreditService] Cache cleared');
   }
+
+  /// SECURITY: Clear all sensitive credit data on logout
+  Future<void> clearOnLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_creditBalanceKey);
+    await prefs.remove(_lastRefillDateKey);
+    await prefs.remove(_freeTrialUsedKey);
+    _cachedBalance = null;
+    debugPrint('[Security] Credit data cleared on logout');
+  }
 }

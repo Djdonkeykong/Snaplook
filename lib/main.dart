@@ -12,6 +12,7 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:async';
@@ -82,33 +83,64 @@ Future<void> _precacheSplashLogo() async {
 class SharedPreferencesLocalStorage extends LocalStorage {
   static const _sessionKey = 'supabaseSession';
 
+  // SECURITY: Use FlutterSecureStorage for sensitive authentication tokens
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+  );
+
   @override
   Future<void> initialize() async {
-    // No initialization needed for SharedPreferences
+    // No initialization needed
   }
 
   @override
   Future<bool> hasAccessToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey(_sessionKey);
+    try {
+      final token = await _secureStorage.read(key: _sessionKey);
+      return token != null && token.isNotEmpty;
+    } catch (e) {
+      debugPrint('[SecureStorage] Error checking token: $e');
+      return false;
+    }
   }
 
   @override
   Future<String?> accessToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_sessionKey);
+    try {
+      return await _secureStorage.read(key: _sessionKey);
+    } catch (e) {
+      debugPrint('[SecureStorage] Error reading token: $e');
+      return null;
+    }
   }
 
   @override
   Future<void> removePersistedSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_sessionKey);
+    try {
+      await _secureStorage.delete(key: _sessionKey);
+      debugPrint('[SecureStorage] Session removed');
+    } catch (e) {
+      debugPrint('[SecureStorage] Error removing session: $e');
+    }
   }
 
   @override
   Future<void> persistSession(String persistSessionString) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_sessionKey, persistSessionString);
+    try {
+      await _secureStorage.write(key: _sessionKey, value: persistSessionString);
+      debugPrint('[SecureStorage] Session persisted securely');
+    } catch (e) {
+      debugPrint('[SecureStorage] Error persisting session: $e');
+      // Fallback to SharedPreferences if secure storage fails
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_sessionKey, persistSessionString);
+      debugPrint('[SecureStorage] Fallback to SharedPreferences');
+    }
   }
 }
 
@@ -223,9 +255,14 @@ void main() async {
   // Initialize Superwall for subscriptions (DEPRECATED - migrating to RevenueCat)
   // TODO: Remove after full migration to RevenueCat
   try {
-    final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'] ?? 'pk_JerHRerDi63JoAtFh1MtT';
-    await SuperwallService().initialize(apiKey: superwallApiKey);
-    debugPrint('[Superwall] Initialized successfully');
+    // SECURITY: Only use environment variable, no hardcoded fallback
+    final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'];
+    if (superwallApiKey != null && superwallApiKey.isNotEmpty) {
+      await SuperwallService().initialize(apiKey: superwallApiKey);
+      debugPrint('[Superwall] Initialized successfully');
+    } else {
+      debugPrint('[Superwall] Skipped - SUPERWALL_API_KEY not found in .env');
+    }
   } catch (e) {
     debugPrint('[Superwall] Initialization failed: $e');
   }

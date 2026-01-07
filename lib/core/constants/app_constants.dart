@@ -34,11 +34,16 @@ class AppConstants {
   static String get supabaseUrl =>
       dotenv.env['SUPABASE_URL'] ?? 'https://tlqpkoknwfptfzejpchy.supabase.co';
 
-  static String get supabaseAnonKey =>
-      dotenv.env['SUPABASE_ANON_KEY'] ??
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
-          'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscXBrb2tud2ZwdGZ6ZWpwY2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwMzMzNzEsImV4cCI6MjA2OTYwOTM3MX0.'
-          'oHT9O_Aak8sUiAKX7P1J036ZSYIBDNveZqS1EMCLcJA';
+  static String get supabaseAnonKey {
+    final key = dotenv.env['SUPABASE_ANON_KEY'];
+    if (key == null || key.isEmpty) {
+      throw Exception(
+        'SUPABASE_ANON_KEY not found in environment variables. '
+        'Please ensure .env file is properly configured.',
+      );
+    }
+    return key;
+  }
 
   // === 🎨 UI constants ===
   static const double defaultPadding = 16.0;
@@ -170,32 +175,15 @@ class AppConstants {
   }
 
   // === 🐝 ScrapingBee Keys ===
-  static const List<String> _scrapingBeeKeyPriority = [
-    'JZ123377KP6AIVDKOSDZOXYCY5VGAPNFJRFAJR0PA7DNOCO2VQ2MYARURP80689586DKWMXG9SJJDRCH',
-  ];
-
-  static List<String> _parseScrapingBeeEnv(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return const [];
-    return raw
-        .split(RegExp(r'[,\s;]+'))
-        .map((v) => v.trim())
-        .where((v) => v.isNotEmpty)
-        .toList(growable: false);
-  }
-
+  // SECURITY: No hardcoded keys - use environment variables only
   static String get scrapingBeeApiKey {
     final envValue = dotenv.env['SCRAPINGBEE_API_KEY'];
-    final envCandidates = _parseScrapingBeeEnv(envValue);
-
-    for (final preferred in _scrapingBeeKeyPriority) {
-      if (envCandidates.contains(preferred)) return preferred;
+    if (envValue == null || envValue.isEmpty) {
+      throw Exception(
+        'SCRAPINGBEE_API_KEY not found in environment variables. '
+        'Please ensure .env file is properly configured.',
+      );
     }
-
-    if (envCandidates.isNotEmpty) return envCandidates.first;
-    for (final preferred in _scrapingBeeKeyPriority) {
-      if (preferred.isNotEmpty) return preferred;
-    }
-
-    return '';
+    return envValue;
   }
 }

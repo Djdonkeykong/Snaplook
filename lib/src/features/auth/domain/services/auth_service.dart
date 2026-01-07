@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter/services.dart';
 import '../../../../services/subscription_sync_service.dart';
+import '../../../../services/credit_service.dart';
 
 class AuthService {
   final _supabase = Supabase.instance.client;
@@ -315,6 +316,9 @@ class AuthService {
 
       // Clear auth flag for share extension
       await _updateAuthFlag(false);
+
+      // SECURITY: Clear sensitive credit data on logout
+      await CreditService().clearOnLogout();
     } catch (e) {
       print('Sign out error: $e');
       rethrow;
