@@ -6619,7 +6619,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         status.font = UIFont.systemFont(ofSize: 17, weight: .medium)
         status.textAlignment = .center
         status.textColor = UIColor.label
-        status.numberOfLines = 2
+        status.numberOfLines = 0  // Allow unlimited lines for long error messages
         stack.addArrangedSubview(status)
         statusLabel = status
 
@@ -6647,7 +6647,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         overlay.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor)
+            stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: overlay.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: overlay.trailingAnchor, constant: -32)
         ])
 
         overlay.tag = 9999 // Tag to identify our custom view
