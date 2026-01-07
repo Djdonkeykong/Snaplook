@@ -1291,6 +1291,7 @@ class _HistoryCard extends ConsumerWidget {
       await _precacheShareImages(
         context,
         [
+          const AssetImage('assets/images/arrow-share-card.png'),
           heroImage,
           ...shareItems.map((item) => item.imageProvider),
         ],
@@ -1896,10 +1897,21 @@ class _HistoryShareCard extends StatelessWidget {
 
                   SizedBox(height: s(32)),
 
-                  Image.asset(
-                    'assets/images/arrow-share-card.png',
+                  SizedBox(
                     height: s(120),
-                    fit: BoxFit.contain,
+                    child: Image.asset(
+                      'assets/images/arrow-share-card.png',
+                      height: s(120),
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: s(120),
+                          width: s(100),
+                          color: Colors.red.withOpacity(0.3),
+                          child: const Center(child: Icon(Icons.error)),
+                        );
+                      },
+                    ),
                   ),
 
                   SizedBox(height: s(24)),
