@@ -94,42 +94,49 @@ class SupabaseManager:
             print(f"Cache check by source error: {e}")
             return None
 
-    def check_cache(self, image_url: Optional[str] = None, image_hash: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def check_cache(self, image_url: Optional[str] = None, image_hash: Optional[str] = None, country: str = 'US') -> Optional[Dict[str, Any]]:
         """
-        Check if image exists in cache by URL or hash.
+        Check if image exists in cache by URL or hash for a specific country.
         Returns cache entry if found and not expired, None otherwise.
+
+        Args:
+            image_url: URL of the image to check
+            image_hash: Hash of the image to check
+            country: Country code (e.g., 'US', 'GB', 'FR') - results are country-specific
         """
         if not self.enabled:
             return None
 
         try:
-            # Try to find by URL first (fastest)
+            # Try to find by URL first (fastest) - must match country
             if image_url:
                 response = self.client.table('image_cache')\
                     .select('*')\
                     .eq('image_url', image_url)\
+                    .eq('country', country)\
                     .gt('expires_at', datetime.now().isoformat())\
                     .limit(1)\
                     .execute()
 
                 if response.data and len(response.data) > 0:
-                    print(f"Cache HIT for URL: {image_url[:50]}...")
+                    print(f"Cache HIT for URL in {country}: {image_url[:50]}...")
                     return response.data[0]
 
-            # Try by hash if URL miss
+            # Try by hash if URL miss - must match country
             if image_hash:
                 response = self.client.table('image_cache')\
                     .select('*')\
                     .eq('image_hash', image_hash)\
+                    .eq('country', country)\
                     .gt('expires_at', datetime.now().isoformat())\
                     .limit(1)\
                     .execute()
 
                 if response.data and len(response.data) > 0:
-                    print(f"Cache HIT for hash: {image_hash[:16]}...")
+                    print(f"Cache HIT for hash in {country}: {image_hash[:16]}...")
                     return response.data[0]
 
-            print(f"Cache MISS for image")
+            print(f"Cache MISS for image in {country}")
             return None
 
         except Exception as e:
@@ -143,11 +150,21 @@ class SupabaseManager:
         cloudinary_url: str,
         detected_garments: List[Dict],
         search_results: List[Dict],
+        country: str = 'US',
         expires_in_days: int = 30
     ) -> Optional[str]:
         """
-        Store analysis results in cache.
+        Store analysis results in cache for a specific country.
         Returns cache ID if successful, None otherwise.
+
+        Args:
+            image_url: URL of the image
+            image_hash: Hash of the image
+            cloudinary_url: Cloudinary URL of the processed image
+            detected_garments: List of detected garments
+            search_results: List of search results
+            country: Country code (e.g., 'US', 'GB', 'FR') - results are country-specific
+            expires_in_days: Number of days before cache expires
         """
         if not self.enabled:
             return None
@@ -162,27 +179,19 @@ class SupabaseManager:
                 'detected_garments': detected_garments,
                 'search_results': search_results,
                 'total_results': len(search_results),
+                'country': country,
                 'expires_at': expires_at.isoformat(),
                 'cache_hits': 0
             }
 
             response = self.client.table('image_cache')\
-                .upsert(cache_entry, on_conflict='image_hash')\
+                .insert(cache_entry)\
                 .execute()
 
             if response.data:
                 cache_id = response.data[0]['id']
-                print(f"Stored in cache: {cache_id}")
+                print(f"Stored in cache for {country}: {cache_id}")
                 return cache_id
-
-            # Fallback: fetch existing row if upsert returns no data
-            existing = self.client.table('image_cache')\
-                .select('id')\
-                .eq('image_hash', image_hash)\
-                .limit(1)\
-                .execute()
-            if existing.data and len(existing.data) > 0:
-                return existing.data[0]['id']
 
             return None
 

@@ -2145,12 +2145,13 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
         print(f"\U0001f680 Starting detect-and-search pipeline for: {source_desc}...")
         print(f"[DEBUG] Request country: '{req.country}', language: '{req.language}', search_type: '{req.search_type}'")
 
-        # Step 0: Check cache first (by source_url or image_url)
+        # Step 0: Check cache first (by source_url or image_url) - must match country
         cache_lookup_url = req.source_url or req.image_url
+        request_country = req.country or 'US'
         if CACHE_RESULTS and cache_lookup_url and supabase_manager.enabled:
-            cache_entry = supabase_manager.check_cache(image_url=cache_lookup_url)
+            cache_entry = supabase_manager.check_cache(image_url=cache_lookup_url, country=request_country)
             if cache_entry:
-                print(f"[Cache] HIT - returning cached results for {cache_lookup_url[:50]}...")
+                print(f"[Cache] HIT for {request_country} - returning cached results for {cache_lookup_url[:50]}...")
 
                 # Create or update user_search entry for this cache hit (avoid duplicates)
                 search_id = None
@@ -2419,7 +2420,8 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                         'score': round(filtered[0]['score'], 3),
                         'bbox': filtered[0].get('expanded_bbox', filtered[0]['bbox'])
                     }],
-                    search_results=deduped_results
+                    search_results=deduped_results,
+                    country=request_country  # Cache results are country-specific
                 )
 
                 # Create or update user_search entry (avoid duplicates)
