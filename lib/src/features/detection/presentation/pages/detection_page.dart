@@ -2109,7 +2109,7 @@ class _DetectionShareCard extends StatelessWidget {
         final cardPadding = s(40);
         final heroPadding = s(200);
         final heroHeight = s(400);
-        final heroRadius = s(32);
+        final heroRadius = s(48);
 
         return Container(
           width: width,
@@ -2134,8 +2134,8 @@ class _DetectionShareCard extends StatelessWidget {
                     'I snapped this 📸',
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: s(24),
-                      fontWeight: FontWeight.w500,
+                      fontSize: s(32),
+                      fontWeight: FontWeight.w700,
                       color: const Color(0xFF6B6B6B),
                       letterSpacing: 0.3,
                     ),
@@ -2157,7 +2157,7 @@ class _DetectionShareCard extends StatelessWidget {
                         child: heroImage != null
                             ? Image(
                                 image: heroImage!,
-                                fit: BoxFit.contain,
+                                fit: BoxFit.fitWidth,
                               )
                             : const Icon(
                                 Icons.image_rounded,

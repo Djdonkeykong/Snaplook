@@ -5631,7 +5631,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let cardPadding = s(40)
         let heroPadding = s(200)
         let heroHeight = s(400)
-        let heroRadius = s(32)
+        let heroRadius = s(48)
         let cardRadius = s(24)
 
         // Create rendering context
@@ -5651,7 +5651,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // "I snapped this 📸"
             var currentY: CGFloat = s(60)
             let topText = "I snapped this 📸"
-            let topFont = UIFont(name: "PlusJakartaSans-Medium", size: s(24)) ?? UIFont.systemFont(ofSize: s(24), weight: .medium)
+            let topFont = UIFont(name: "PlusJakartaSans-Bold", size: s(32)) ?? UIFont.systemFont(ofSize: s(32), weight: .bold)
             let topAttributes: [NSAttributedString.Key: Any] = [
                 .font: topFont,
                 .foregroundColor: UIColor(red: 107/255, green: 107/255, blue: 107/255, alpha: 1.0),
@@ -5672,22 +5672,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
             UIColor(red: 245/255, green: 245/255, blue: 245/255, alpha: 1.0).setFill()
             heroPath.fill()
 
-            // Calculate aspect fit rect for the image
+            // Calculate fitWidth rect for the image (fills width, centers vertically)
             let imageSize = heroImage.size
             let imageAspect = imageSize.width / imageSize.height
-            let containerAspect = heroWidth / heroHeight
+            let scaledHeight = heroWidth / imageAspect
 
-            var drawRect = CGRect(x: heroX, y: currentY, width: heroWidth, height: heroHeight)
-            if imageAspect > containerAspect {
-                // Image is wider - fit to width
-                let scaledHeight = heroWidth / imageAspect
+            var drawRect = CGRect(x: heroX, y: currentY, width: heroWidth, height: scaledHeight)
+            // Center vertically if image is smaller than container
+            if scaledHeight < heroHeight {
                 drawRect.origin.y += (heroHeight - scaledHeight) / 2
-                drawRect.size.height = scaledHeight
-            } else {
-                // Image is taller - fit to height
-                let scaledWidth = heroHeight * imageAspect
-                drawRect.origin.x += (heroWidth - scaledWidth) / 2
-                drawRect.size.width = scaledWidth
             }
 
             heroImage.draw(in: drawRect)
