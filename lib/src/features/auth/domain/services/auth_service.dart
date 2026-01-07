@@ -403,6 +403,15 @@ class AuthService {
 
   Future<void> signInWithOtp(String email) async {
     try {
+      // Test/Demo mode for App Store reviewers
+      // Skip OTP email send for the test account
+      if (email.toLowerCase() == 'appstore@snaplook.app') {
+        print('[Auth] Test account detected - skipping OTP email send');
+        // Return success without sending email
+        // The actual authentication will happen in verifyOtp with hardcoded token '123456'
+        return;
+      }
+
       await _supabase.auth.signInWithOtp(
         email: email,
         emailRedirectTo: null,
