@@ -5620,7 +5620,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func generateShareCard(heroImage: UIImage, products: [DetectionResultItem]) -> UIImage? {
         // Card dimensions - adjusted height for content
         let canvasWidth: CGFloat = 1080
-        let canvasHeight: CGFloat = 1900
+        let canvasHeight: CGFloat = 2000
 
         // Helper for scaling
         let scale = canvasWidth / 1080
@@ -5733,10 +5733,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
             }
 
-            // Draw products with slight overlap (way larger size)
-            let productSize = s(400)
-            let productOverlap = s(200)
-            let startX = canvasWidth / 2 - s(800) / 2
+            // Draw products with slight overlap (15% narrower)
+            let productSize = s(340)
+            let productOverlap = s(170)
+            let startX = canvasWidth / 2 - s(680) / 2
 
             for (index, productImage) in productImages.enumerated() {
                 let productX = startX + CGFloat(index) * productOverlap
@@ -5744,7 +5744,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // Enhanced shadow with more blur and opacity for splash effect
                 let shadowIntensity = 0.20 + (CGFloat(index) * 0.05)
                 ctx.setShadow(offset: CGSize(width: 0, height: s(16)), blur: s(40), color: UIColor.black.withAlphaComponent(shadowIntensity).cgColor)
-                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(80))
+                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(68))
                 productPath.addClip()
                 productImage.draw(in: CGRect(x: productX, y: currentY, width: productSize, height: productSize))
                 ctx.restoreGState()
