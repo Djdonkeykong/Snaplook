@@ -5769,6 +5769,21 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                 ctx.saveGState()
 
+                // Apply rotation matching Flutter (-0.02, 0, 0.02 radians)
+                let rotation: CGFloat
+                if productImages.count > 1 {
+                    rotation = index == 0 ? -0.02 : (index == 2 ? 0.02 : 0.0)
+                } else {
+                    rotation = 0.0
+                }
+
+                // Translate to center of product, rotate, translate back
+                let centerX = productX + productSize / 2
+                let centerY = productY + productSize / 2
+                ctx.translateBy(x: centerX, y: centerY)
+                ctx.rotate(by: rotation)
+                ctx.translateBy(x: -centerX, y: -centerY)
+
                 // Shadow matching Flutter elevation
                 let elevation = 8.0 + (Double(index) * 3.0)
                 ctx.setShadow(
