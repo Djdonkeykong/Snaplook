@@ -5520,11 +5520,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let imageURL: URL
         let imageTitle: String
         let imageSubject: String
+        let thumbnailImage: UIImage?
 
-        init(imageURL: URL, title: String, subject: String) {
+        init(imageURL: URL, title: String, subject: String, thumbnailImage: UIImage?) {
             self.imageURL = imageURL
             self.imageTitle = title
             self.imageSubject = subject
+            self.thumbnailImage = thumbnailImage
             super.init()
         }
 
@@ -5545,12 +5547,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         func activityViewController(_ activityViewController: UIActivityViewController, thumbnailImageForActivityType activityType: UIActivity.ActivityType?, suggestedSize size: CGSize) -> UIImage? {
-            guard let fullImage = UIImage(contentsOfFile: imageURL.path) else {
+            guard let heroImage = thumbnailImage else {
                 return nil
             }
 
-            // Calculate aspect-fit size to show entire card in thumbnail
-            let imageSize = fullImage.size
+            // Calculate aspect-fit size to show entire analyzed image in thumbnail
+            let imageSize = heroImage.size
             let widthRatio = size.width / imageSize.width
             let heightRatio = size.height / imageSize.height
             let scaleFactor = min(widthRatio, heightRatio)
@@ -5563,7 +5565,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Render thumbnail at proper size
             let renderer = UIGraphicsImageRenderer(size: scaledSize)
             return renderer.image { _ in
-                fullImage.draw(in: CGRect(origin: .zero, size: scaledSize))
+                heroImage.draw(in: CGRect(origin: .zero, size: scaledSize))
             }
         }
 
@@ -5894,7 +5896,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     let shareItem = SnaplookShareItem(
                         imageURL: imageURL,
                         title: imageFileName,
-                        subject: subject
+                        subject: subject,
+                        thumbnailImage: heroImage
                     )
                     itemsToShare.append(shareItem)
                     itemsToShare.append(shareText)
