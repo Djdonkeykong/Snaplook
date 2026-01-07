@@ -2107,7 +2107,7 @@ class _DetectionShareCard extends StatelessWidget {
         double s(double value) => value * scale;
 
         final cardPadding = s(40);
-        final heroPadding = s(80);
+        final heroPadding = s(140);
         final heroHeight = s(350);
         final heroRadius = s(32);
 

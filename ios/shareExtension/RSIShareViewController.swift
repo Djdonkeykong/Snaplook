@@ -5629,7 +5629,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         let cardPadding = s(40)
-        let heroPadding = s(80)
+        let heroPadding = s(140)
         let heroHeight = s(350)
         let heroRadius = s(32)
         let cardRadius = s(24)
