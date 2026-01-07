@@ -5629,8 +5629,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         let cardPadding = s(40)
-        let heroPadding = s(140)
-        let heroHeight = s(350)
+        let heroPadding = s(200)
+        let heroHeight = s(400)
         let heroRadius = s(32)
         let cardRadius = s(24)
 
@@ -5667,7 +5667,30 @@ open class RSIShareViewController: SLComposeServiceViewController {
             let heroPath = UIBezierPath(roundedRect: CGRect(x: heroX, y: currentY, width: heroWidth, height: heroHeight), cornerRadius: heroRadius)
             ctx.saveGState()
             heroPath.addClip()
-            heroImage.draw(in: CGRect(x: heroX, y: currentY, width: heroWidth, height: heroHeight))
+
+            // Draw background
+            UIColor(red: 245/255, green: 245/255, blue: 245/255, alpha: 1.0).setFill()
+            heroPath.fill()
+
+            // Calculate aspect fit rect for the image
+            let imageSize = heroImage.size
+            let imageAspect = imageSize.width / imageSize.height
+            let containerAspect = heroWidth / heroHeight
+
+            var drawRect = CGRect(x: heroX, y: currentY, width: heroWidth, height: heroHeight)
+            if imageAspect > containerAspect {
+                // Image is wider - fit to width
+                let scaledHeight = heroWidth / imageAspect
+                drawRect.origin.y += (heroHeight - scaledHeight) / 2
+                drawRect.size.height = scaledHeight
+            } else {
+                // Image is taller - fit to height
+                let scaledWidth = heroHeight * imageAspect
+                drawRect.origin.x += (heroWidth - scaledWidth) / 2
+                drawRect.size.width = scaledWidth
+            }
+
+            heroImage.draw(in: drawRect)
             ctx.restoreGState()
 
             // "↓" Arrow

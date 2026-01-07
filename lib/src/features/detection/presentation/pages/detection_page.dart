@@ -2107,8 +2107,8 @@ class _DetectionShareCard extends StatelessWidget {
         double s(double value) => value * scale;
 
         final cardPadding = s(40);
-        final heroPadding = s(140);
-        final heroHeight = s(350);
+        final heroPadding = s(200);
+        final heroHeight = s(400);
         final heroRadius = s(32);
 
         return Container(
@@ -2157,7 +2157,7 @@ class _DetectionShareCard extends StatelessWidget {
                         child: heroImage != null
                             ? Image(
                                 image: heroImage!,
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
                               )
                             : const Icon(
                                 Icons.image_rounded,
