@@ -5861,11 +5861,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if let image = shareImage {
             // Simple, clean filename
             let tempDir = FileManager.default.temporaryDirectory
-            let imageFileName = "snaplook_share_card.png"
+            let imageFileName = "snaplook_share_fashion.png"
             let imageURL = tempDir.appendingPathComponent(imageFileName)
 
             // Consistent subject for share sheet
-            let subject = "snaplook_share_card"
+            let subject = "snaplook_share_fashion"
 
             if let pngData = image.pngData() {
                 do {
