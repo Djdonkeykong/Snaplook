@@ -5620,7 +5620,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func generateShareCard(heroImage: UIImage, products: [DetectionResultItem]) -> UIImage? {
         // Card dimensions - adjusted height for content
         let canvasWidth: CGFloat = 1080
-        let canvasHeight: CGFloat = 2000
+        let canvasHeight: CGFloat = 2050
 
         // Helper for scaling
         let scale = canvasWidth / 1080
@@ -5733,8 +5733,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
             }
 
-            // Draw products with slight overlap (15% narrower)
-            let productSize = s(340)
+            // Draw products with slight overlap (width: 340, height: 390 - 15% taller)
+            let productWidth = s(340)
+            let productHeight = s(390)
             let productOverlap = s(170)
             let startX = canvasWidth / 2 - s(680) / 2
 
@@ -5744,14 +5745,31 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // Enhanced shadow with more blur and opacity for splash effect
                 let shadowIntensity = 0.20 + (CGFloat(index) * 0.05)
                 ctx.setShadow(offset: CGSize(width: 0, height: s(16)), blur: s(40), color: UIColor.black.withAlphaComponent(shadowIntensity).cgColor)
-                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(68))
+                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productWidth, height: productHeight), cornerRadius: s(68))
                 productPath.addClip()
-                productImage.draw(in: CGRect(x: productX, y: currentY, width: productSize, height: productSize))
+
+                // Draw image maintaining aspect ratio within the taller container
+                let imageAspect = productImage.size.width / productImage.size.height
+                let containerAspect = productWidth / productHeight
+                var imageRect = CGRect(x: productX, y: currentY, width: productWidth, height: productHeight)
+                if imageAspect > containerAspect {
+                    // Image is wider - fit to width
+                    let scaledHeight = productWidth / imageAspect
+                    imageRect.origin.y += (productHeight - scaledHeight) / 2
+                    imageRect.size.height = scaledHeight
+                } else {
+                    // Image is taller - fit to height
+                    let scaledWidth = productHeight * imageAspect
+                    imageRect.origin.x += (productWidth - scaledWidth) / 2
+                    imageRect.size.width = scaledWidth
+                }
+
+                productImage.draw(in: imageRect)
                 ctx.restoreGState()
             }
 
             // Logo
-            currentY += productSize + s(100)
+            currentY += productHeight + s(100)
             if let logoImage = UIImage(named: "logo") {
                 let logoHeight = s(64)
                 let logoAspect = logoImage.size.width / logoImage.size.height
