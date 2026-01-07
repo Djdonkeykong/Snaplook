@@ -34,16 +34,12 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
 
     @available(iOS 13.0, *)
     func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
-        print("[Share] activityViewControllerLinkMetadata called!")
         let metadata = LPLinkMetadata()
         metadata.title = subject
 
         if let thumbnail = thumbnailImage {
-            print("[Share] Setting thumbnail in LPLinkMetadata: \(thumbnail.size)")
             metadata.imageProvider = NSItemProvider(object: thumbnail)
             metadata.iconProvider = NSItemProvider(object: thumbnail)
-        } else {
-            print("[Share] No thumbnail available for LPLinkMetadata")
         }
 
         return metadata
@@ -384,11 +380,8 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
             var items: [Any] = []
 
             // Use custom share item if we have a thumbnail
-            print("[Share] thumbnailPath: \(thumbnailPath ?? "nil")")
             if let thumbPath = thumbnailPath,
                let thumbnailImage = UIImage(contentsOfFile: thumbPath) {
-              print("[Share] Using custom thumbnail from: \(thumbPath)")
-              print("[Share] Thumbnail image size: \(thumbnailImage.size)")
               let shareItem = ShareItemWithThumbnail(
                 imageURL: fileURL,
                 thumbnailImage: thumbnailImage,
@@ -396,7 +389,6 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
               )
               items.append(shareItem)
             } else {
-              print("[Share] No thumbnail - using fileURL directly")
               items.append(fileURL)
             }
 
