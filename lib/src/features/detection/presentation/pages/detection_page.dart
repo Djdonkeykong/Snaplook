@@ -2107,7 +2107,7 @@ class _DetectionShareCard extends StatelessWidget {
         double s(double value) => value * scale;
 
         final cardPadding = s(40);
-        final heroPadding = s(200);
+        final heroPadding = s(240);
         final heroHeight = s(400);
         final heroRadius = s(48);
 
@@ -2134,9 +2134,9 @@ class _DetectionShareCard extends StatelessWidget {
                     'I snapped this 📸',
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
-                      fontSize: s(32),
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF6B6B6B),
+                      fontSize: s(40),
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF2B2B2B),
                       letterSpacing: 0.3,
                     ),
                   ),
@@ -2173,7 +2173,7 @@ class _DetectionShareCard extends StatelessWidget {
                   Text(
                     '↓',
                     style: TextStyle(
-                      fontSize: s(48),
+                      fontSize: s(64),
                       color: const Color(0xFF9B9B9B),
                     ),
                   ),
@@ -2197,7 +2197,7 @@ class _DetectionShareCard extends StatelessWidget {
                       'Top Visual Match 🔥',
                       style: TextStyle(
                         fontFamily: 'PlusJakartaSans',
-                        fontSize: s(24),
+                        fontSize: s(40),
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF2B2B2B),
                         letterSpacing: 0.3,
@@ -2234,7 +2234,7 @@ class _DetectionShareCard extends StatelessWidget {
 
                   Image.asset(
                     'assets/images/logo.png',
-                    height: s(32),
+                    height: s(48),
                     fit: BoxFit.contain,
                   ),
 

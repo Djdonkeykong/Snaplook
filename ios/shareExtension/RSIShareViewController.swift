@@ -5629,7 +5629,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         let cardPadding = s(40)
-        let heroPadding = s(200)
+        let heroPadding = s(240)
         let heroHeight = s(400)
         let heroRadius = s(48)
         let cardRadius = s(24)
@@ -5651,10 +5651,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // "I snapped this 📸"
             var currentY: CGFloat = s(60)
             let topText = "I snapped this 📸"
-            let topFont = UIFont(name: "PlusJakartaSans-Bold", size: s(32)) ?? UIFont.systemFont(ofSize: s(32), weight: .bold)
+            let topFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(40)) ?? UIFont.systemFont(ofSize: s(40), weight: .semibold)
             let topAttributes: [NSAttributedString.Key: Any] = [
                 .font: topFont,
-                .foregroundColor: UIColor(red: 107/255, green: 107/255, blue: 107/255, alpha: 1.0),
+                .foregroundColor: UIColor(red: 43/255, green: 43/255, blue: 43/255, alpha: 1.0),
                 .kern: 0.3
             ]
             let topSize = (topText as NSString).size(withAttributes: topAttributes)
@@ -5689,7 +5689,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // "↓" Arrow
             currentY += heroHeight + s(32)
             let dividerText = "↓"
-            let dividerFont = UIFont.systemFont(ofSize: s(48))
+            let dividerFont = UIFont.systemFont(ofSize: s(64))
             let dividerAttributes: [NSAttributedString.Key: Any] = [
                 .font: dividerFont,
                 .foregroundColor: UIColor(red: 155/255, green: 155/255, blue: 155/255, alpha: 1.0)
@@ -5700,7 +5700,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // "Top Visual Match 🔥" badge
             currentY += dividerSize.height + s(24)
             let badgeText = "Top Visual Match 🔥"
-            let badgeFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(24)) ?? UIFont.systemFont(ofSize: s(24), weight: .semibold)
+            let badgeFont = UIFont(name: "PlusJakartaSans-SemiBold", size: s(40)) ?? UIFont.systemFont(ofSize: s(40), weight: .semibold)
             let badgeAttributes: [NSAttributedString.Key: Any] = [
                 .font: badgeFont,
                 .foregroundColor: UIColor(red: 43/255, green: 43/255, blue: 43/255, alpha: 1.0),
@@ -5748,7 +5748,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             // Logo
             currentY += productSize + s(50)
             if let logoImage = UIImage(named: "logo") {
-                let logoHeight = s(32)
+                let logoHeight = s(48)
                 let logoAspect = logoImage.size.width / logoImage.size.height
                 let logoWidth = logoHeight * logoAspect
                 let logoX = canvasWidth / 2 - logoWidth / 2
