@@ -491,13 +491,13 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
       if (bytes == null || bytes.isEmpty) return null;
 
       final filePath =
-          '${Directory.systemTemp.path}/snaplook_share_product.png';
+          '${Directory.systemTemp.path}/snaplook_share_fashion.png';
       final file = File(filePath);
       await file.writeAsBytes(bytes, flush: true);
       return XFile(
         filePath,
         mimeType: 'image/png',
-        name: 'snaplook_share_product.png',
+        name: 'snaplook_share_fashion.png',
       );
     } catch (e) {
       debugPrint('Error creating share card: $e');
