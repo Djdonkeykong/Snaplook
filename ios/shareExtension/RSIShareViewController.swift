@@ -5630,8 +5630,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         let cardPadding = s(40)
         let heroHeight = s(400)
-        let heroRadius = s(24)
-        let cardRadius = s(32)
+        let heroRadius = s(32)
+        let cardRadius = s(48)
 
         // Create rendering context
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: canvasWidth, height: canvasHeight), format: UIGraphicsImageRendererFormat())
@@ -5722,7 +5722,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 let productX = startX + CGFloat(index) * productOverlap
                 ctx.saveGState()
                 ctx.setShadow(offset: CGSize(width: 0, height: s(8)), blur: s(16), color: UIColor.black.withAlphaComponent(0.12).cgColor)
-                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(16))
+                let productPath = UIBezierPath(roundedRect: CGRect(x: productX, y: currentY, width: productSize, height: productSize), cornerRadius: s(24))
                 productPath.addClip()
                 productImage.draw(in: CGRect(x: productX, y: currentY, width: productSize, height: productSize))
                 ctx.restoreGState()

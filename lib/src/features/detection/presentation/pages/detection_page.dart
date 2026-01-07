@@ -2108,14 +2108,14 @@ class _DetectionShareCard extends StatelessWidget {
 
         final cardPadding = s(40);
         final heroHeight = s(400);
-        final heroRadius = s(24);
+        final heroRadius = s(32);
 
         return Container(
           width: width,
           height: height,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(s(32)),
+            borderRadius: BorderRadius.circular(s(48)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -2220,7 +2220,7 @@ class _DetectionShareCard extends StatelessWidget {
                                 child: _StackedProductImage(
                                   item: shareItems[i],
                                   size: s(200),
-                                  radius: s(16),
+                                  radius: s(24),
                                   elevation: 4 + (i * 2).toDouble(),
                                 ),
                               ),
