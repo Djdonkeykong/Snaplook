@@ -1182,16 +1182,9 @@ class _HistoryCard extends ConsumerWidget {
   }
 
   SharePayload _buildSharePayload(Map<String, dynamic> searchData) {
-    final totalResults = (searchData['total_results'] as num?)?.toInt() ?? 0;
-    final matchLabel =
-        totalResults == 1 ? '1 match' : '$totalResults matches';
-    final message = totalResults > 0
-        ? 'Snaplook found $matchLabel for this look.'
-        : 'Snaplook analyzed this look.';
-
     return SharePayload(
       subject: 'Snaplook Fashion Share',
-      message: message,
+      message: 'Get Snaplook and try for yourself: https://snaplook.app',
     );
   }
 

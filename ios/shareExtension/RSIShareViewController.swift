@@ -5822,20 +5822,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let totalResults = detectionResults.count
 
         // Create share text
-        var shareText = "I analyzed this look on Snaplook and found \(totalResults) matches!\n\n"
-
-        if !topProducts.isEmpty {
-            shareText += "Top finds:\n"
-            for (index, product) in topProducts.enumerated() {
-                let productName = product.product_name
-                let brand = product.brand ?? "Unknown brand"
-                let url = product.purchase_url ?? "URL not available"
-                shareText += "\(index + 1). \(brand) - \(productName) - \(url)\n"
-            }
-            shareText += "\n"
-        }
-
-        shareText += "Get Snaplook to find your fashion matches: https://snaplook.app"
+        let shareText = "Get Snaplook and try for yourself: https://snaplook.app"
 
         // Prepare items to share - build array with image first for proper iOS preview
         var itemsToShare: [Any] = []

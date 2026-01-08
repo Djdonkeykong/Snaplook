@@ -591,30 +591,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   }
 
   SharePayload _buildSharePayload() {
-    final buffer = StringBuffer();
-    final topResults = _results.take(5).toList();
-    final totalResults = _results.length;
-
-    buffer.writeln('I analyzed this look on Snaplook and found $totalResults matches!\n');
-
-    if (topResults.isNotEmpty) {
-      buffer.writeln('Top finds:');
-      for (var i = 0; i < topResults.length; i++) {
-        final r = topResults[i];
-        final name = r.productName.isNotEmpty ? r.productName : 'Item';
-        final brand = r.brand.isNotEmpty ? r.brand : 'Unknown brand';
-        final link = r.purchaseUrl ?? 'URL not available';
-
-        buffer.writeln('${i + 1}. $brand - $name - $link');
-      }
-      buffer.writeln();
-    }
-
-    buffer.write('Get Snaplook to find your fashion matches: https://snaplook.app');
-
     return SharePayload(
       subject: 'Snaplook Fashion Share',
-      message: buffer.toString(),
+      message: 'Get Snaplook and try for yourself: https://snaplook.app',
     );
   }
 
