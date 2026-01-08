@@ -986,7 +986,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     const instagramDeepLink =
         'https://www.instagram.com/p/DQSaR_FEsU8/?igsh=MTEyNzJuaXF6cDlmNA==';
     const pinterestDeepLink = 'https://pin.it/223au9vpX';
-    const String? tiktokDeepLink = null; // Use URL scheme instead of web link
+    const tiktokDeepLink = 'https://vm.tiktok.com/ZNRr4FE31/';
     const imdbDeepLink = 'https://www.imdb.com/';
     const xDeepLink =
         'https://x.com/iamjhud/status/1962314855802651108?s=46'; // specific post
