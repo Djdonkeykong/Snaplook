@@ -37,7 +37,7 @@ import 'src/features/favorites/domain/providers/favorites_provider.dart';
 import 'src/services/superwall_service.dart';
 import 'src/services/revenuecat_service.dart';
 import 'src/services/notification_service.dart';
-import 'src/shared/services/debug_log_service.dart';
+import 'src/services/debug_log_service.dart';
 import 'dart:io';
 
 // Top-level background message handler for push notifications
@@ -257,17 +257,18 @@ void main() async {
   try {
     // SECURITY: Only use environment variable, no hardcoded fallback
     final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'];
-    debugPrint('[Superwall] API key from .env: ${superwallApiKey != null ? "present (${superwallApiKey.substring(0, 5)}...)" : "NULL"}');
+    final debugLog = DebugLogService();
+    debugLog.log('API key from .env: ${superwallApiKey != null ? "present (${superwallApiKey.substring(0, 5)}...)" : "NULL"}', tag: 'Main', level: LogLevel.info);
     if (superwallApiKey != null && superwallApiKey.isNotEmpty) {
-      debugPrint('[Superwall] Starting initialization...');
+      debugLog.log('Starting Superwall initialization...', tag: 'Main', level: LogLevel.info);
       await SuperwallService().initialize(apiKey: superwallApiKey);
-      debugPrint('[Superwall] Initialized successfully');
+      debugLog.log('Superwall initialized successfully', tag: 'Main', level: LogLevel.info);
     } else {
-      debugPrint('[Superwall] ERROR - SUPERWALL_API_KEY not found in .env');
+      debugLog.log('ERROR - SUPERWALL_API_KEY not found in .env', tag: 'Main', level: LogLevel.error);
     }
   } catch (e, stackTrace) {
-    debugPrint('[Superwall] Initialization failed: $e');
-    debugPrint('[Superwall] Stack trace: $stackTrace');
+    final debugLog = DebugLogService();
+    debugLog.log('Superwall initialization failed: $e\nStack trace: $stackTrace', tag: 'Main', level: LogLevel.error);
   }
 
   // Preload video immediately on app startup

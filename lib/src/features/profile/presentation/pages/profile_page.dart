@@ -11,6 +11,7 @@ import 'edit_profile_page.dart';
 import 'feed_preferences_page.dart';
 import 'manage_subscription_page.dart';
 import 'notification_settings_page.dart';
+import 'debug_logs_page.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
@@ -457,6 +458,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const NotificationSettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+
+                SizedBox(height: spacing.l),
+
+                // Developer Section
+                _SectionHeader(title: 'Developer'),
+                _SimpleSettingItem(
+                  title: 'Debug Logs',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const DebugLogsPage(),
                       ),
                     );
                   },
