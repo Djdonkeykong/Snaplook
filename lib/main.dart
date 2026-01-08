@@ -258,17 +258,17 @@ void main() async {
     // SECURITY: Only use environment variable, no hardcoded fallback
     final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'];
     final debugLog = DebugLogService();
-    debugLog.log('API key from .env: ${superwallApiKey != null ? "present (${superwallApiKey.substring(0, 5)}...)" : "NULL"}', tag: 'Main', level: LogLevel.info);
+    debugLog.log('API key from .env: ${superwallApiKey != null ? "present (${superwallApiKey.substring(0, 5)}...)" : "NULL"}', tag: 'Main', level: DebugLogLevel.info);
     if (superwallApiKey != null && superwallApiKey.isNotEmpty) {
-      debugLog.log('Starting Superwall initialization...', tag: 'Main', level: LogLevel.info);
+      debugLog.log('Starting Superwall initialization...', tag: 'Main', level: DebugLogLevel.info);
       await SuperwallService().initialize(apiKey: superwallApiKey);
-      debugLog.log('Superwall initialized successfully', tag: 'Main', level: LogLevel.info);
+      debugLog.log('Superwall initialized successfully', tag: 'Main', level: DebugLogLevel.info);
     } else {
-      debugLog.log('ERROR - SUPERWALL_API_KEY not found in .env', tag: 'Main', level: LogLevel.error);
+      debugLog.log('ERROR - SUPERWALL_API_KEY not found in .env', tag: 'Main', level: DebugLogLevel.error);
     }
   } catch (e, stackTrace) {
     final debugLog = DebugLogService();
-    debugLog.log('Superwall initialization failed: $e\nStack trace: $stackTrace', tag: 'Main', level: LogLevel.error);
+    debugLog.log('Superwall initialization failed: $e\nStack trace: $stackTrace', tag: 'Main', level: DebugLogLevel.error);
   }
 
   // Preload video immediately on app startup

@@ -9,15 +9,15 @@ import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 class DebugLogsPage extends ConsumerWidget {
   const DebugLogsPage({super.key});
 
-  Color _getColorForLevel(LogLevel level) {
+  Color _getColorForLevel(DebugLogLevel level) {
     switch (level) {
-      case LogLevel.debug:
+      case DebugLogLevel.debug:
         return Colors.grey;
-      case LogLevel.info:
+      case DebugLogLevel.info:
         return Colors.blue;
-      case LogLevel.warning:
+      case DebugLogLevel.warning:
         return Colors.orange;
-      case LogLevel.error:
+      case DebugLogLevel.error:
         return Colors.red;
     }
   }

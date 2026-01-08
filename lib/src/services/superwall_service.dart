@@ -18,7 +18,7 @@ class SuperwallService {
   bool _configured = false;
   final _debugLog = DebugLogService();
 
-  void _log(String message, {LogLevel level = LogLevel.info}) {
+  void _log(String message, {DebugLogLevel level = DebugLogLevel.info}) {
     _debugLog.log(message, level: level, tag: 'Superwall');
     if (kDebugMode) {
       debugPrint('[Superwall] $message');
@@ -61,7 +61,7 @@ class SuperwallService {
 
       _log('Initialization complete; user=${userId ?? 'anon'}');
     } catch (e, stackTrace) {
-      _log('ERROR during initialization: $e\nStack trace: $stackTrace', level: LogLevel.error);
+      _log('ERROR during initialization: $e\nStack trace: $stackTrace', level: DebugLogLevel.error);
       rethrow;
     }
   }
@@ -69,7 +69,7 @@ class SuperwallService {
   /// Identify the current user and sync subscription status from RevenueCat.
   Future<void> identify(String userId) async {
     if (!_configured) {
-      _log('identify called but not configured - skipping', level: LogLevel.warning);
+      _log('identify called but not configured - skipping', level: DebugLogLevel.warning);
       return;
     }
     _log('Identifying user: $userId');
@@ -107,7 +107,7 @@ class SuperwallService {
         _log('Synced subscription status: inactive');
       }
     } catch (e) {
-      _log('Error syncing subscription status: $e', level: LogLevel.error);
+      _log('Error syncing subscription status: $e', level: DebugLogLevel.error);
     }
   }
 
@@ -120,7 +120,7 @@ class SuperwallService {
   /// Reset the current user/session.
   Future<void> reset() async {
     if (!_configured) {
-      _log('reset called but not configured - skipping', level: LogLevel.warning);
+      _log('reset called but not configured - skipping', level: DebugLogLevel.warning);
       return;
     }
     _log('Resetting Superwall identity');
@@ -136,7 +136,7 @@ class SuperwallService {
     _log('_configured = $_configured');
 
     if (!_configured) {
-      _log('ERROR - presentPaywall called but not configured - skipping', level: LogLevel.error);
+      _log('ERROR - presentPaywall called but not configured - skipping', level: DebugLogLevel.error);
       return false;
     }
 
@@ -173,7 +173,7 @@ class SuperwallService {
       });
 
       handler.onError((error) {
-        _log('Paywall error: $error', level: LogLevel.error);
+        _log('Paywall error: $error', level: DebugLogLevel.error);
         completer.complete(false);
       });
 
@@ -185,7 +185,7 @@ class SuperwallService {
       // Wait for the result
       return await completer.future;
     } catch (e, stackTrace) {
-      _log('presentPaywall error: $e\nStack trace: $stackTrace', level: LogLevel.error);
+      _log('presentPaywall error: $e\nStack trace: $stackTrace', level: DebugLogLevel.error);
       return false;
     }
   }
@@ -193,7 +193,7 @@ class SuperwallService {
   /// Current cached subscription status.
   SubscriptionStatusSnapshot getSubscriptionSnapshot() {
     if (!_configured) {
-      _log('getSubscriptionSnapshot called but not configured - returning inactive', level: LogLevel.warning);
+      _log('getSubscriptionSnapshot called but not configured - returning inactive', level: DebugLogLevel.warning);
       return SubscriptionStatusSnapshot.initial();
     }
     return SubscriptionStatusSnapshot.fromSuperwall(_latestStatus);

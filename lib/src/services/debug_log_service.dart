@@ -10,33 +10,37 @@ class DebugLogService {
   final List<LogEntry> _logs = [];
   final _logsController = StreamController<List<LogEntry>>.broadcast();
   static const int _maxLogs = 500; // Keep last 500 logs
+  DebugPrintCallback? _originalDebugPrint;
+  bool _initialized = false;
 
   Stream<List<LogEntry>> get logsStream => _logsController.stream;
   List<LogEntry> get logs => List.unmodifiable(_logs);
 
+  void initialize() {
+    if (_initialized) return;
+    _originalDebugPrint ??= debugPrint;
+    debugPrint = (String? message, {int? wrapWidth}) {
+      if (message == null) return;
+      _addEntry(message, level: DebugLogLevel.debug, tag: 'Flutter');
+      _originalDebugPrint?.call(message, wrapWidth: wrapWidth);
+    };
+    _initialized = true;
+    _originalDebugPrint?.call('[DebugLogService] Initialized - logs will be captured');
+  }
+
   /// Add a log entry
-  void log(String message, {LogLevel level = LogLevel.info, String? tag}) {
-    final entry = LogEntry(
-      timestamp: DateTime.now(),
-      message: message,
-      level: level,
-      tag: tag,
-    );
-
-    _logs.add(entry);
-
-    // Keep only the last _maxLogs entries
-    if (_logs.length > _maxLogs) {
-      _logs.removeAt(0);
-    }
-
-    _logsController.add(_logs);
+  void log(String message, {DebugLogLevel level = DebugLogLevel.info, String? tag}) {
+    _addEntry(message, level: level, tag: tag);
 
     // Also print to console in debug mode
     if (kDebugMode) {
       final prefix = tag != null ? '[$tag]' : '';
       final levelStr = level.name.toUpperCase();
-      debugPrint('$prefix [$levelStr] $message');
+      if (_originalDebugPrint != null) {
+        _originalDebugPrint!.call('$prefix [$levelStr] $message');
+      } else {
+        debugPrintSynchronously('$prefix [$levelStr] $message');
+      }
     }
   }
 
@@ -71,9 +75,27 @@ class DebugLogService {
   void dispose() {
     _logsController.close();
   }
+
+  void _addEntry(String message, {required DebugLogLevel level, String? tag}) {
+    final entry = LogEntry(
+      timestamp: DateTime.now(),
+      message: message,
+      level: level,
+      tag: tag,
+    );
+
+    _logs.add(entry);
+
+    // Keep only the last _maxLogs entries
+    if (_logs.length > _maxLogs) {
+      _logs.removeAt(0);
+    }
+
+    _logsController.add(_logs);
+  }
 }
 
-enum LogLevel {
+enum DebugLogLevel {
   debug,
   info,
   warning,
@@ -83,7 +105,7 @@ enum LogLevel {
 class LogEntry {
   final DateTime timestamp;
   final String message;
-  final LogLevel level;
+  final DebugLogLevel level;
   final String? tag;
 
   LogEntry({
