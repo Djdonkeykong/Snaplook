@@ -789,7 +789,7 @@ class PipTutorialManager: NSObject {
     case "pinterest":
       return URL(string: "pinterest://")
     case "tiktok":
-      return URL(string: "snssdk1233://")
+      return URL(string: "tiktok://")
     case "photos":
       return URL(string: "photos-redirect://")
     case "facebook":

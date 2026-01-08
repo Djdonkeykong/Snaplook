@@ -31,6 +31,7 @@ import '../../../../shared/services/supabase_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../../services/paywall_helper.dart';
+import '../../../wardrobe/presentation/pages/wishlist_page.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
   final String? imageUrl;
@@ -1860,6 +1861,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
           _currentResultsExtent = _resultsInitialExtent;
         });
         _hideAnalysisOverlay();
+
+        // Refresh history list so new analysis appears immediately
+        ref.invalidate(historyProvider);
       } else {
         _hideAnalysisOverlay();
         if (mounted) {
