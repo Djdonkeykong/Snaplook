@@ -257,14 +257,17 @@ void main() async {
   try {
     // SECURITY: Only use environment variable, no hardcoded fallback
     final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'];
+    debugPrint('[Superwall] API key from .env: ${superwallApiKey != null ? "present (${superwallApiKey.substring(0, 5)}...)" : "NULL"}');
     if (superwallApiKey != null && superwallApiKey.isNotEmpty) {
+      debugPrint('[Superwall] Starting initialization...');
       await SuperwallService().initialize(apiKey: superwallApiKey);
       debugPrint('[Superwall] Initialized successfully');
     } else {
-      debugPrint('[Superwall] Skipped - SUPERWALL_API_KEY not found in .env');
+      debugPrint('[Superwall] ERROR - SUPERWALL_API_KEY not found in .env');
     }
-  } catch (e) {
+  } catch (e, stackTrace) {
     debugPrint('[Superwall] Initialization failed: $e');
+    debugPrint('[Superwall] Stack trace: $stackTrace');
   }
 
   // Preload video immediately on app startup

@@ -18,32 +18,59 @@ class SuperwallService {
 
   /// Configure Superwall with the provided API key and optional user.
   Future<void> initialize({required String apiKey, String? userId}) async {
-    if (_configured) return;
-
-    // Create RevenueCat purchase controller
-    final purchaseController = RCPurchaseController();
-
-    // Configure Superwall with RevenueCat purchase controller
-    sw.Superwall.configure(
-      apiKey,
-      purchaseController: purchaseController,
-    );
-    _configured = true;
-
-    if (kDebugMode) {
-      debugPrint('[Superwall] Configured with RevenueCat purchase controller');
-    }
-
-    _statusSub = sw.Superwall.shared.subscriptionStatus.listen((status) {
-      _latestStatus = status;
-    });
-
-    if (userId != null && userId.isNotEmpty) {
-      await identify(userId);
+    if (_configured) {
+      if (kDebugMode) {
+        debugPrint('[Superwall] Already configured, skipping...');
+      }
+      return;
     }
 
     if (kDebugMode) {
-      debugPrint('[Superwall] configured; user=${userId ?? 'anon'}');
+      debugPrint('[Superwall] Creating RevenueCat purchase controller...');
+    }
+
+    try {
+      // Create RevenueCat purchase controller
+      final purchaseController = RCPurchaseController();
+
+      if (kDebugMode) {
+        debugPrint('[Superwall] Configuring Superwall with API key: ${apiKey.substring(0, 5)}...');
+      }
+
+      // Configure Superwall with RevenueCat purchase controller
+      sw.Superwall.configure(
+        apiKey,
+        purchaseController: purchaseController,
+      );
+      _configured = true;
+
+      if (kDebugMode) {
+        debugPrint('[Superwall] Configured with RevenueCat purchase controller');
+      }
+
+      _statusSub = sw.Superwall.shared.subscriptionStatus.listen((status) {
+        _latestStatus = status;
+        if (kDebugMode) {
+          debugPrint('[Superwall] Subscription status changed: ${status.runtimeType}');
+        }
+      });
+
+      if (userId != null && userId.isNotEmpty) {
+        if (kDebugMode) {
+          debugPrint('[Superwall] Identifying user: $userId');
+        }
+        await identify(userId);
+      }
+
+      if (kDebugMode) {
+        debugPrint('[Superwall] Initialization complete; user=${userId ?? 'anon'}');
+      }
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('[Superwall] ERROR during initialization: $e');
+        debugPrint('[Superwall] Stack trace: $stackTrace');
+      }
+      rethrow;
     }
   }
 
@@ -121,14 +148,22 @@ class SuperwallService {
   Future<bool> presentPaywall({
     String placement = defaultPlacement,
   }) async {
+    if (kDebugMode) {
+      debugPrint('[Superwall] presentPaywall called with placement: $placement');
+      debugPrint('[Superwall] _configured = $_configured');
+    }
+
     if (!_configured) {
       if (kDebugMode) {
-        debugPrint('[Superwall] presentPaywall called but not configured - skipping');
+        debugPrint('[Superwall] ERROR - presentPaywall called but not configured - skipping');
       }
       return false;
     }
 
     try {
+      if (kDebugMode) {
+        debugPrint('[Superwall] Creating PaywallPresentationHandler...');
+      }
       final completer = Completer<bool>();
       final handler = sw.PaywallPresentationHandler();
 
@@ -179,13 +214,20 @@ class SuperwallService {
       });
 
       // Register the placement with the handler
+      if (kDebugMode) {
+        debugPrint('[Superwall] Registering placement: $placement');
+      }
       await sw.Superwall.shared.registerPlacement(placement, handler: handler);
+      if (kDebugMode) {
+        debugPrint('[Superwall] Placement registered successfully, waiting for user action...');
+      }
 
       // Wait for the result
       return await completer.future;
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (kDebugMode) {
         debugPrint('[Superwall] presentPaywall error: $e');
+        debugPrint('[Superwall] Stack trace: $stackTrace');
       }
       return false;
     }
