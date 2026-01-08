@@ -1909,28 +1909,14 @@ class _HistoryShareCard extends StatelessWidget {
 
                   SizedBox(height: s(24)),
 
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: s(38),
-                      vertical: s(19),
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFAFAFA),
-                      borderRadius: BorderRadius.circular(s(29)),
-                      border: Border.all(
-                        color: const Color(0xFFEEEEEE),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: Text(
-                      'Top Visual Matches 🔥',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: s(48),
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF2B2B2B),
-                        letterSpacing: 0.3,
-                      ),
+                  Text(
+                    'Top Visual Matches 🔥',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: s(48),
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF2B2B2B),
+                      letterSpacing: 0.3,
                     ),
                   ),
 

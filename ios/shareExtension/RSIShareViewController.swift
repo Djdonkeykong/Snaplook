@@ -5689,11 +5689,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 .kern: 0.3
             ]
             let badgeSize = (badgeText as NSString).size(withAttributes: badgeAttributes)
-            let badgePadding = s(38)
-            let badgeHeight = badgeSize.height + s(38)
 
             // Calculate total content height to center vertically (matching Flutter's Column with center alignment)
-            let totalContentHeight = s(60) + topSize.height + s(32) + heroHeight + s(32) + s(120) + s(24) + badgeHeight + s(40) + s(480) + s(100) + s(64) + s(80)
+            let totalContentHeight = s(60) + topSize.height + s(32) + heroHeight + s(32) + s(120) + s(24) + badgeSize.height + s(40) + s(480) + s(100) + s(64) + s(80)
 
             // Center content vertically in canvas
             let startY = (canvasHeight - totalContentHeight) / 2
@@ -5741,19 +5739,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 currentY += arrowHeight
             }
 
-            // "Top Visual Matches 🔥" badge
+            // "Top Visual Matches 🔥" text (clean, no container)
             currentY += s(24)
-            let badgeWidth = badgeSize.width + badgePadding * 2
-            let badgePath = UIBezierPath(roundedRect: CGRect(x: canvasWidth / 2 - badgeWidth / 2, y: currentY, width: badgeWidth, height: badgeHeight), cornerRadius: s(29))
-            UIColor(red: 250/255, green: 250/255, blue: 250/255, alpha: 1.0).setFill()
-            badgePath.fill()
-            ctx.setStrokeColor(UIColor(red: 238/255, green: 238/255, blue: 238/255, alpha: 1.0).cgColor)
-            ctx.setLineWidth(1.2)
-            badgePath.stroke()
-            (badgeText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - badgeSize.width / 2, y: currentY + s(19)), withAttributes: badgeAttributes)
+            (badgeText as NSString).draw(at: CGPoint(x: canvasWidth / 2 - badgeSize.width / 2, y: currentY), withAttributes: badgeAttributes)
 
             // Product images in Stack container (top 3 only)
-            currentY += badgeHeight + s(40)
+            currentY += badgeSize.height + s(40)
 
             // Download product images first
             var productImages: [UIImage] = []
