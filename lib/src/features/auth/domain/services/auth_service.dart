@@ -418,6 +418,15 @@ class AuthService {
       );
     } catch (e) {
       print('OTP sign in error: $e');
+
+      // Show more specific error messages based on the error type
+      final errorString = e.toString().toLowerCase();
+      if (errorString.contains('invalid') || errorString.contains('email')) {
+        throw Exception('This email address cannot be used. Please try a different email.');
+      } else if (errorString.contains('rate') || errorString.contains('too many')) {
+        throw Exception('Too many attempts. Please wait a minute and try again.');
+      }
+
       throw Exception('Could not send the code. Please try again.');
     }
   }
