@@ -6856,7 +6856,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self.startSmoothProgress()
 
             // Unified progress profile for all platforms
-            self.progressRateMultiplier = 0.35  // Reach 95% in ~5-6 seconds
+            self.progressRateMultiplier = 0.28  // Reach 95% in ~6-7 seconds
             self.targetProgress = 0.95  // Cap at 95% until API responds
 
             let rotatingMessages = [
@@ -6946,13 +6946,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 // Smoothly increment toward target with adaptive speed
                 if self.currentProgress < self.targetProgress {
                     let remaining = max(self.targetProgress - self.currentProgress, 0)
-                    // Adaptive increment: faster when far, slower when close; scaled per source
-                    let baseIncrement: Float = max(remaining * 0.08 * self.progressRateMultiplier,
+                    // More linear progression - reduced adaptive coefficient for slower start
+                    let baseIncrement: Float = max(remaining * 0.05 * self.progressRateMultiplier,
                                                    0.004 * self.progressRateMultiplier)
-                    // Slow slightly once we cross 80% to stretch the final climb
-                    let slowdownFactor: Float = self.currentProgress >= 0.70 ? 0.65 : 1.0
+                    // Slow slightly once we cross 70% to stretch the final climb
+                    let slowdownFactor: Float = self.currentProgress >= 0.70 ? 0.7 : 1.0
                     let increment = baseIncrement * slowdownFactor
-                    let cappedIncrement = min(increment, 0.03) // prevent huge jumps
+                    let cappedIncrement = min(increment, 0.02) // prevent huge jumps
                     self.currentProgress = min(self.currentProgress + cappedIncrement, self.targetProgress)
                     self.progressView?.setProgress(self.currentProgress, animated: true)
                 }
