@@ -3909,27 +3909,33 @@ open class RSIShareViewController: SLComposeServiceViewController {
                         self.deductCredits(garmentCount: garmentCount)
                     }
 
-                    self.updateProgress(1.0, status: "Analysis complete")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        self.stopSmoothProgress()
-                        let serverResults = detectionResponse.results
-                        let sanitized = self.sanitize(results: serverResults)
-                        if sanitized.count != serverResults.count {
-                            shareLog("Sanitized \(serverResults.count - sanitized.count) banned keyword results")
-                        }
-                        self.detectionResults = sanitized
-                        self.isShowingDetectionResults = true
+                    // Set target to 100% and wait for progress bar to reach it
+                    DispatchQueue.main.async {
+                        self.targetProgress = 1.0
+                        self.updateProgress(1.0, status: "Analysis complete")
 
-                        // Haptic feedback for successful analysis
-                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                        generator.impactOccurred()
+                        // Wait for progress bar to actually reach 100% before showing results
+                        self.waitForProgressCompletion {
+                            self.stopSmoothProgress()
+                            let serverResults = detectionResponse.results
+                            let sanitized = self.sanitize(results: serverResults)
+                            if sanitized.count != serverResults.count {
+                                shareLog("Sanitized \(serverResults.count - sanitized.count) banned keyword results")
+                            }
+                            self.detectionResults = sanitized
+                            self.isShowingDetectionResults = true
 
-                        shareLog("Calling showDetectionResults with \(self.detectionResults.count) items")
-                        for (index, item) in self.detectionResults.prefix(10).enumerated() {
-                            let categories = item.normalizedCategories.map { $0.displayName }.joined(separator: ", ")
-                            shareLog("Category normalization [\(index)]: \(categories) => \(item.categoryGroup.displayName) (confidence: \(item.normalizedCategoryConfidence)) for \(item.product_name)")
+                            // Haptic feedback for successful analysis
+                            let generator = UIImpactFeedbackGenerator(style: .medium)
+                            generator.impactOccurred()
+
+                            shareLog("Calling showDetectionResults with \(self.detectionResults.count) items")
+                            for (index, item) in self.detectionResults.prefix(10).enumerated() {
+                                let categories = item.normalizedCategories.map { $0.displayName }.joined(separator: ", ")
+                                shareLog("Category normalization [\(index)]: \(categories) => \(item.categoryGroup.displayName) (confidence: \(item.normalizedCategoryConfidence)) for \(item.product_name)")
+                            }
+                            self.showDetectionResults()
                         }
-                        self.showDetectionResults()
                     }
                 } else {
                     shareLog("ERROR: Detection failed - \(detectionResponse.message ?? "Unknown error")")
@@ -6850,8 +6856,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             self.startSmoothProgress()
 
             // Unified progress profile for all platforms
-            self.progressRateMultiplier = 0.25
-            self.targetProgress = 1.0
+            self.progressRateMultiplier = 0.35  // Reach 95% in ~5-6 seconds
+            self.targetProgress = 0.95  // Cap at 95% until API responds
 
             let rotatingMessages = [
                 "Analyzing look...",
@@ -6958,6 +6964,37 @@ open class RSIShareViewController: SLComposeServiceViewController {
         progressTimer?.invalidate()
         progressTimer = nil
         stopStatusRotation()
+    }
+
+    /// Waits for progress bar to reach 100% before calling completion
+    private func waitForProgressCompletion(completion: @escaping () -> Void) {
+        let startTime = Date()
+        let maxWaitTime: TimeInterval = 5.0  // Safety timeout
+
+        // Poll every 0.1 seconds to check if progress reached target
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                completion()
+                return
+            }
+
+            // Check if progress bar reached 99% or higher (close enough to 100%)
+            if self.currentProgress >= 0.99 {
+                timer.invalidate()
+                shareLog("Progress bar reached 100% - showing results")
+                completion()
+                return
+            }
+
+            // Safety timeout - don't wait forever
+            if Date().timeIntervalSince(startTime) > maxWaitTime {
+                timer.invalidate()
+                shareLog("Progress completion timeout - showing results anyway")
+                completion()
+                return
+            }
+        }
     }
 
     private func updateProgress(_ progress: Float, status: String) {
