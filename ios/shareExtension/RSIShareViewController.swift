@@ -2079,7 +2079,53 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 return
             }
 
-            completion(.failure(self.makeDownloadError("tiktok", "No TikTok thumbnail found")))
+            // oEmbed failed (likely slideshow/photo mode) - fallback to HTML scraping
+            shareLog("TikTok oEmbed failed, attempting HTML scraping for slideshow/photo content...")
+            self.resolveTikTokRedirect(urlString: urlString) { [weak self] resolvedUrl in
+                guard let self = self else { return }
+
+                let targetUrl = resolvedUrl ?? urlString
+                guard let url = URL(string: targetUrl) else {
+                    completion(.failure(self.makeDownloadError("tiktok", "Invalid URL")))
+                    return
+                }
+
+                var request = URLRequest(url: url)
+                request.timeoutInterval = 15.0
+                request.setValue(
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+                    forHTTPHeaderField: "User-Agent"
+                )
+
+                let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+                    guard let self = self else { return }
+
+                    guard error == nil,
+                          let httpResponse = response as? HTTPURLResponse,
+                          httpResponse.statusCode == 200,
+                          let data = data,
+                          let html = String(data: data, encoding: .utf8) else {
+                        completion(.failure(self.makeDownloadError("tiktok", "Failed to fetch HTML")))
+                        return
+                    }
+
+                    let imageUrls = self.extractTikTokImageUrls(from: html)
+                    if imageUrls.isEmpty {
+                        completion(.failure(self.makeDownloadError("tiktok", "No images found in slideshow")))
+                        return
+                    }
+
+                    shareLog("Found \(imageUrls.count) slideshow image(s), downloading first one...")
+                    self.downloadFirstValidImage(
+                        from: imageUrls,
+                        platform: "tiktok",
+                        session: URLSession.shared,
+                        cropToAspect: 9.0 / 16.0,
+                        completion: completion
+                    )
+                }
+                task.resume()
+            }
         }
     }
 
