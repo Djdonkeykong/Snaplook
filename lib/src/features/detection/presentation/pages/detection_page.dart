@@ -31,6 +31,7 @@ import '../../../../shared/services/supabase_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../../services/paywall_helper.dart';
+import '../../../../services/superwall_service.dart';
 import '../../../wardrobe/presentation/pages/wishlist_page.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
@@ -849,12 +850,48 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
             );
 
             if (!hasCredits) {
-              // User has no credits - show paywall
-              print('[Detection] User has no credits - showing paywall');
+              // User has no credits - check subscription type
+              print('[Detection] User has no credits - checking subscription type');
               HapticFeedback.mediumImpact();
 
               if (mounted) {
                 final userId = ref.read(authServiceProvider).currentUser?.id;
+
+                // Get current subscription plan
+                final creditBalance = await ref.read(creditBalanceProvider.future);
+                final isYearlySubscriber = creditBalance.subscriptionPlanId == 'snaplook_premium_yearly';
+
+                if (isYearlySubscriber) {
+                  // Yearly subscriber - show snackbar with refill date instead of paywall
+                  print('[Detection] Yearly subscriber out of credits - showing refill reminder');
+                  if (mounted) {
+                    final refillDate = creditBalance.nextRefillDate;
+                    final refillDateStr = refillDate != null
+                        ? '${refillDate.month}/${refillDate.day}/${refillDate.year}'
+                        : 'soon';
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'You\'ve used all your credits for this month. They will refill on $refillDateStr.',
+                          style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                        ),
+                        duration: const Duration(milliseconds: 3500),
+                        action: SnackBarAction(
+                          label: 'OK',
+                          onPressed: () {},
+                        ),
+                      ),
+                    );
+                  }
+                  return;
+                }
+
+                // Monthly subscriber or no subscription - show paywall
+                print('[Detection] Showing paywall for monthly/free user');
+
+                // Sync subscription status to Superwall before presenting paywall
+                await SuperwallService().syncSubscriptionStatus();
 
                 // Present paywall with detection-specific placement
                 final didPurchase = await PaywallHelper.presentPaywall(
