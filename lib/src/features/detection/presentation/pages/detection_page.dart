@@ -874,7 +874,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                       SnackBar(
                         content: Text(
                           'You\'ve used all your credits for this month. They will refill on $refillDateStr.',
-                          style: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                          style: context.snackTextStyle(
+                            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                          ),
                         ),
                         duration: const Duration(milliseconds: 3500),
                         action: SnackBarAction(
