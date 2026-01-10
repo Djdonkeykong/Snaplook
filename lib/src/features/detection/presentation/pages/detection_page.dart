@@ -857,15 +857,17 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               if (mounted) {
                 final userId = ref.read(authServiceProvider).currentUser?.id;
 
-                // Get current subscription plan
-                final creditBalance = await ref.read(creditBalanceProvider.future);
-                final isYearlySubscriber = creditBalance.subscriptionPlanId == 'snaplook_premium_yearly';
+                // Get current subscription plan from AsyncValue
+                final creditBalanceAsync = ref.read(creditBalanceProvider);
+                final creditBalanceData = creditBalanceAsync.value;
+
+                final isYearlySubscriber = creditBalanceData?.subscriptionPlanId == 'snaplook_premium_yearly';
 
                 if (isYearlySubscriber) {
                   // Yearly subscriber - show snackbar with refill date instead of paywall
                   print('[Detection] Yearly subscriber out of credits - showing refill reminder');
                   if (mounted) {
-                    final refillDate = creditBalance.nextRefillDate;
+                    final refillDate = creditBalanceData?.nextRefillDate;
                     final refillDateStr = refillDate != null
                         ? '${refillDate.month}/${refillDate.day}/${refillDate.year}'
                         : 'soon';
