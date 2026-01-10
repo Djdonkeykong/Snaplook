@@ -3736,6 +3736,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func runDetectionAnalysis(imageUrl: String?, imageBase64: String) {
         let urlForLog = imageUrl ?? "<nil>"
         shareLog("START runDetectionAnalysis - imageUrl: \(urlForLog), base64 length: \(imageBase64.count)")
+        shareLog("DEBUG: pendingInstagramUrl = \(pendingInstagramUrl ?? "<NIL>")")
+        shareLog("DEBUG: pendingPlatformType = \(pendingPlatformType ?? "<NIL>")")
 
         guard let serverBaseUrl = getServerBaseUrl() else {
             shareLog("ERROR: Could not determine server base URL")
@@ -3766,6 +3768,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         if let pendingUrl = pendingInstagramUrl {
             sourceUrl = pendingUrl
+            shareLog("DEBUG: Using pendingInstagramUrl as sourceUrl: \(pendingUrl)")
             let lowercased = pendingUrl.lowercased()
 
             // Detect platform from URL
@@ -3807,6 +3810,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         if let sourceUrl = sourceUrl {
             requestBody["source_url"] = sourceUrl
+            shareLog("DEBUG: Adding source_url to request: \(sourceUrl)")
+        } else {
+            shareLog("DEBUG: NO source_url - will not benefit from cache")
         }
 
         if let sourceUsername = sourceUsername {

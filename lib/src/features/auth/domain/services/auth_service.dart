@@ -403,9 +403,10 @@ class AuthService {
 
   Future<void> signInWithOtp(String email) async {
     try {
-      // Test/Demo mode for App Store reviewers
-      // Skip OTP email send for the test account
-      if (email.toLowerCase() == 'appstore@snaplook.app') {
+      // Test/Demo mode for App Store/Google Play reviewers
+      // Skip OTP email send for the test accounts
+      final reviewerEmails = ['appstore@snaplook.app', 'googleplay@snaplook.app'];
+      if (reviewerEmails.contains(email.toLowerCase())) {
         print('[Auth] Test account detected - skipping OTP email send');
         // Return success without sending email
         // The actual authentication will happen in verifyOtp with hardcoded token '123456'
@@ -436,9 +437,10 @@ class AuthService {
     required String token,
   }) async {
     try {
-      // Test/Demo mode for App Store reviewers
-      // Accept hardcoded OTP for the reviewer test account
-      if (email.toLowerCase() == 'appstore@snaplook.app' && token == '123456') {
+      // Test/Demo mode for App Store/Google Play reviewers
+      // Accept hardcoded OTP for the reviewer test accounts
+      final reviewerEmails = ['appstore@snaplook.app', 'googleplay@snaplook.app'];
+      if (reviewerEmails.contains(email.toLowerCase()) && token == '123456') {
         print('[Auth] Test account detected - using demo OTP bypass');
 
         // Sign in with password for the test account
