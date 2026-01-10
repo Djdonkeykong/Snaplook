@@ -3906,13 +3906,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     if let searchId = detectionResponse.search_id {
                         shareLog("Stored search_id: \(searchId)")
                     }
-                    if let cached = detectionResponse.cached {
-                        shareLog("Cache status: \(cached ? "HIT" : "MISS")")
+                    let wasCacheHit = detectionResponse.cached ?? false
+                    if wasCacheHit {
+                        shareLog("Cache status: HIT")
+                    } else {
+                        shareLog("Cache status: MISS")
                     }
 
-                    // Deduct credits based on garment count
-                    if let garmentCount = detectionResponse.garments_searched, garmentCount > 0 {
-                        self.deductCredits(garmentCount: garmentCount)
+                    // Deduct credits based on garment count (skip for cache hits)
+                    if !wasCacheHit {
+                        if let garmentCount = detectionResponse.garments_searched, garmentCount > 0 {
+                            self.deductCredits(garmentCount: garmentCount)
+                        }
+                    } else {
+                        shareLog("[Credits] Cache hit - no credits deducted")
                     }
 
                     // Set target to 100% and wait for progress bar to reach it

@@ -1798,40 +1798,44 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         // Trigger haptic feedback when results appear
         HapticFeedback.mediumImpact();
 
-        // Deduct credits based on garment count
-        try {
-          // Get the actual number of garments searched from the server response
-          final garmentCount = ref.read(detectionServiceProvider).lastGarmentsSearched;
+        // Deduct credits based on garment count (skip for cache hits)
+        if (!wasCacheHit) {
+          try {
+            // Get the actual number of garments searched from the server response
+            final garmentCount = ref.read(detectionServiceProvider).lastGarmentsSearched;
 
-          print('[Credits] Server reported $garmentCount garments searched');
+            print('[Credits] Server reported $garmentCount garments searched');
 
-          // Call Supabase function to deduct credits
-          final userId = Supabase.instance.client.auth.currentUser?.id;
-          if (userId != null) {
-            final response = await Supabase.instance.client
-                .rpc('deduct_credits', params: {
-              'p_user_id': userId,
-              'p_garment_count': garmentCount,
-            });
+            // Call Supabase function to deduct credits
+            final userId = Supabase.instance.client.auth.currentUser?.id;
+            if (userId != null) {
+              final response = await Supabase.instance.client
+                  .rpc('deduct_credits', params: {
+                'p_user_id': userId,
+                'p_garment_count': garmentCount,
+              });
 
-            print('[Credits] Deduction response: $response');
+              print('[Credits] Deduction response: $response');
 
-            if (response != null && response is List && response.isNotEmpty) {
-              final result = response.first;
-              if (result['success'] == true) {
-                print('[Credits] Successfully deducted $garmentCount credits');
-                print('[Credits] Remaining: ${result['paid_credits_remaining']}');
+              if (response != null && response is List && response.isNotEmpty) {
+                final result = response.first;
+                if (result['success'] == true) {
+                  print('[Credits] Successfully deducted $garmentCount credits');
+                  print('[Credits] Remaining: ${result['paid_credits_remaining']}');
 
-                // Re-sync auth state to update credits in iOS share extension
-                await ref.read(authServiceProvider).syncAuthState();
-              } else {
-                print('[Credits] Deduction failed: ${result['message']}');
+                  // Re-sync auth state to update credits in iOS share extension
+                  await ref.read(authServiceProvider).syncAuthState();
+                } else {
+                  print('[Credits] Deduction failed: ${result['message']}');
+                }
               }
             }
+          } catch (e) {
+            print('[Credits] Error deducting credits: $e');
+            // Don't block the user from seeing results if credit deduction fails
           }
-        } catch (e) {
-          print('[Credits] Error deducting credits: $e');
-          // Don't block the user from seeing results if credit deduction fails
+        } else {
+          print('[Credits] Cache hit - no credits deducted');
         }
 
         setState(() {

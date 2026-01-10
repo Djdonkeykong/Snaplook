@@ -601,9 +601,29 @@ class _ProductDetailCardState extends ConsumerState<_ProductDetailCard>
                   child: widget.product['image_url'] != null
                       ? Hero(
                           tag: widget.heroTag,
-                          child: _AdaptiveMainProductImage(
+                          child: CachedNetworkImage(
                             imageUrl: widget.product['image_url'],
-                            category: (widget.product['category'] as String?)?.toLowerCase() ?? '',
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            alignment: Alignment.center,
+                            fadeInDuration: Duration.zero,
+                            fadeOutDuration: Duration.zero,
+                            placeholderFadeInDuration: Duration.zero,
+                            placeholder: (context, url) => const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFFf2003c),
+                                strokeWidth: 2,
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 50,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ),
                         )
                       : Container(
@@ -790,101 +810,6 @@ class _ProductDetailSheetItem extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _AdaptiveMainProductImage extends StatefulWidget {
-  final String imageUrl;
-  final String category;
-
-  const _AdaptiveMainProductImage({
-    required this.imageUrl,
-    required this.category,
-  });
-
-  @override
-  State<_AdaptiveMainProductImage> createState() => _AdaptiveMainProductImageState();
-}
-
-class _AdaptiveMainProductImageState extends State<_AdaptiveMainProductImage> {
-  BoxFit? _boxFit;
-
-  @override
-  Widget build(BuildContext context) {
-    final isShoeCategory = widget.category.contains('shoe') ||
-                          widget.category.contains('sneaker') ||
-                          widget.category.contains('boot');
-
-    // Default fit based on category
-    final defaultFit = isShoeCategory ? BoxFit.contain : BoxFit.cover;
-    final currentFit = _boxFit ?? defaultFit;
-
-    return CachedNetworkImage(
-      imageUrl: widget.imageUrl,
-      fit: currentFit,
-      width: double.infinity,
-      height: double.infinity,
-      alignment: Alignment.center,
-      fadeInDuration: Duration.zero,
-      fadeOutDuration: Duration.zero,
-      placeholderFadeInDuration: Duration.zero,
-      imageBuilder: (context, imageProvider) {
-        // Image loaded, check if we need to adjust fit for shoes
-        if (isShoeCategory && _boxFit == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _determineOptimalFit();
-          });
-        }
-        return Image(
-          image: imageProvider,
-          fit: currentFit,
-          width: double.infinity,
-          height: double.infinity,
-          alignment: Alignment.center,
-        );
-      },
-      placeholder: (context, url) => Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFFf2003c),
-          strokeWidth: 2,
-        ),
-      ),
-      errorWidget: (context, url, error) => Container(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Icon(
-          Icons.image_not_supported,
-          size: 50,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-
-  void _determineOptimalFit() {
-    if (!mounted) return;
-
-    final image = NetworkImage(widget.imageUrl);
-
-    image.resolve(const ImageConfiguration()).addListener(
-      ImageStreamListener((ImageInfo info, bool _) {
-        if (!mounted) return;
-
-        final imageAspectRatio = info.image.width / info.image.height;
-        const containerAspectRatio = 0.5; // Detail page aspect ratio (50% height)
-
-        // If the image aspect ratio is close to container ratio, use cover
-        final aspectRatioDifference = (imageAspectRatio - containerAspectRatio).abs();
-
-        // If difference is small (< 0.3), the image should fit well with cover
-        final shouldUseCover = aspectRatioDifference < 0.3;
-
-        if (mounted && shouldUseCover && _boxFit != BoxFit.cover) {
-          setState(() {
-            _boxFit = BoxFit.cover;
-          });
-        }
-      }),
     );
   }
 }
