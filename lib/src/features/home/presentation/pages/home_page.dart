@@ -1491,6 +1491,7 @@ class _StaggeredInspirationImageCardState
         builder: (context) => DetectionPage(
           imageUrl: imageUrl,
           searchType: 'home',
+          sourceUrl: imageUrl, // Use imageUrl as cache key for inspiration feed
         ),
       ),
     );
@@ -1642,6 +1643,7 @@ class _MagazineStyleImageCard extends ConsumerWidget {
         builder: (context) => DetectionPage(
           imageUrl: imageUrl,
           searchType: 'home',
+          sourceUrl: imageUrl, // Use imageUrl as cache key for inspiration feed
         ),
       ),
     );
