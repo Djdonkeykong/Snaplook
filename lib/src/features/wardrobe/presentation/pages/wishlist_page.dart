@@ -905,12 +905,18 @@ class _FavoriteCard extends ConsumerWidget {
       return;
     }
 
+    // For cache lookup: use product purchase URL if available,
+    // otherwise use imageUrl as fallback
+    final sourceUrl = (favorite.purchaseUrl?.isNotEmpty == true)
+        ? favorite.purchaseUrl
+        : imageUrl;
+
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => DetectionPage(
           imageUrl: imageUrl,
           searchType: 'favorite_rescan',
-          sourceUrl: favorite.purchaseUrl,
+          sourceUrl: sourceUrl,
         ),
       ),
     );
@@ -1442,12 +1448,16 @@ class _HistoryCard extends ConsumerWidget {
       return;
     }
 
+    // For cache lookup: use original source_url if available (Instagram/TikTok/etc),
+    // otherwise use cloudinaryUrl (for camera/photo scans that have no source_url)
+    final sourceUrl = (search['source_url'] as String?) ?? cloudinaryUrl;
+
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => DetectionPage(
           imageUrl: cloudinaryUrl,
           searchType: 'history_rescan',
-          sourceUrl: search['source_url'] as String?,
+          sourceUrl: sourceUrl,
         ),
       ),
     );
