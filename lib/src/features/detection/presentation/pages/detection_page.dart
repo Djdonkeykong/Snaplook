@@ -864,9 +864,11 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
                 final subscriptionPlanId = creditBalanceData?.subscriptionPlanId;
                 final isYearlySubscriber = subscriptionPlanId == 'com.snaplook.snaplook.yearly';
+                final isMonthlySubscriber = subscriptionPlanId == 'com.snaplook.snaplook.monthly';
 
                 print('[Detection] Subscription plan ID: $subscriptionPlanId');
                 print('[Detection] Is yearly subscriber: $isYearlySubscriber');
+                print('[Detection] Is monthly subscriber: $isMonthlySubscriber');
 
                 if (isYearlySubscriber) {
                   // Yearly subscriber - show snackbar with refill date instead of paywall
@@ -896,8 +898,61 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                   return;
                 }
 
-                // Monthly subscriber or no subscription - show paywall
-                print('[Detection] Showing paywall for monthly/free user');
+                if (isMonthlySubscriber) {
+                  // Monthly subscriber - show snackbar with option to upgrade
+                  print('[Detection] Monthly subscriber out of credits - showing refill reminder with paywall option');
+                  if (mounted) {
+                    final refillDate = creditBalanceData?.nextRefillDate;
+                    final refillDateStr = refillDate != null
+                        ? '${refillDate.month}/${refillDate.day}/${refillDate.year}'
+                        : 'soon';
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'You\'ve used all your credits for this month. They will refill on $refillDateStr.',
+                          style: context.snackTextStyle(
+                            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                          ),
+                        ),
+                        duration: const Duration(milliseconds: 4000),
+                        action: SnackBarAction(
+                          label: 'Upgrade',
+                          onPressed: () async {
+                            // Show paywall for upgrade options
+                            await SuperwallService().syncSubscriptionStatus();
+                            final didUpgrade = await PaywallHelper.presentPaywall(
+                              context: context,
+                              userId: userId,
+                              placement: 'out_of_credits',
+                            );
+
+                            if (didUpgrade && context.mounted) {
+                              // Only refill if they actually upgraded (changed subscription)
+                              final oldPlanId = subscriptionPlanId;
+                              await ref.read(creditBalanceProvider.notifier).syncWithSubscription();
+
+                              final newCreditBalance = ref.read(creditBalanceProvider);
+                              final newPlanId = newCreditBalance.value?.subscriptionPlanId;
+
+                              // Only proceed if plan changed (upgraded)
+                              if (newPlanId != oldPlanId) {
+                                print('[Detection] User upgraded from $oldPlanId to $newPlanId');
+                                _startDetection();
+                              } else {
+                                print('[Detection] No plan change detected - user still has same subscription');
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  }
+                  return;
+                }
+
+                // No subscription - show paywall
+                print('[Detection] Showing paywall for free user');
 
                 // Sync subscription status to Superwall before presenting paywall
                 await SuperwallService().syncSubscriptionStatus();
