@@ -88,6 +88,20 @@ class AppConstants {
     return value;
   }
 
+
+  // === Analytics ===
+  static String? get amplitudeApiKey {
+    final value = dotenv.env['AMPLITUDE_API_KEY'];
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  static bool get enableAnalytics {
+    final value = dotenv.env['ENABLE_ANALYTICS'];
+    if (value == null || value.isEmpty) return true;
+    return value.toLowerCase() == 'true' || value == '1';
+  }
+
   // === 🧠 Smart Detector Endpoints ===
   static String get serpDetectEndpoint {
     final detect = _firstEndpoint(_detectEndpointKeyCandidates);

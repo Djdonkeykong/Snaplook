@@ -27,6 +27,9 @@ dependencies:
   html: ^0.15.4
   flutter_dotenv: ^5.1.0
 
+  # Analytics
+  amplitude_flutter: ^4.0.0
+
   # Database & Auth
   supabase_flutter: ^2.6.0
   google_sign_in: ^7.1.1

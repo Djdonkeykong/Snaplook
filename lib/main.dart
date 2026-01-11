@@ -34,6 +34,7 @@ import 'src/features/auth/domain/services/auth_service.dart';
 import 'src/features/auth/domain/providers/auth_provider.dart';
 import 'src/features/auth/presentation/pages/login_page.dart';
 import 'src/features/favorites/domain/providers/favorites_provider.dart';
+import 'src/services/analytics_service.dart';
 import 'src/services/superwall_service.dart';
 import 'src/services/revenuecat_service.dart';
 import 'src/services/notification_service.dart';
@@ -188,6 +189,22 @@ void main() async {
     );
   }
 
+
+  // Initialize analytics (Amplitude)
+  try {
+    final amplitudeApiKey = AppConstants.amplitudeApiKey;
+    if (amplitudeApiKey != null) {
+      await AnalyticsService().initialize(
+        apiKey: amplitudeApiKey,
+        enabled: AppConstants.enableAnalytics,
+      );
+      debugPrint('[Analytics] Amplitude initialized');
+    } else {
+      debugPrint('[Analytics] AMPLITUDE_API_KEY not set - skipping');
+    }
+  } catch (e) {
+    debugPrint('[Analytics] Initialization failed: $e');
+  }
   // 🧠 Log which endpoint is active
   debugPrint(
       '[Config] SERP_DETECT_ENDPOINT = ${AppConstants.serpDetectEndpoint}');

@@ -5,6 +5,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter/services.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/credit_service.dart';
+import '../../../../services/analytics_service.dart';
 
 class AuthService {
   final _supabase = Supabase.instance.client;
@@ -176,6 +177,18 @@ class AuthService {
       });
 
       print('[Auth] Method channel call completed, result: $result');
+
+      if (isAuthenticated && effectiveUserId != null) {
+        unawaited(AnalyticsService().identifyUser(
+          userId: effectiveUserId,
+          userProperties: {
+            'has_active_subscription': hasActiveSubscription,
+            'available_credits': availableCredits,
+          },
+        ));
+      } else if (!isAuthenticated) {
+        unawaited(AnalyticsService().reset());
+      }
 
       if (isAuthenticated && effectiveUserId != null) {
         print(

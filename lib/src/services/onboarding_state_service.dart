@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'superwall_service.dart';
 import 'revenuecat_service.dart';
 import 'fraud_prevention_service.dart';
+import 'analytics_service.dart';
 
 /// States of the onboarding process
 enum OnboardingState {
@@ -68,6 +70,9 @@ class OnboardingStateService {
       }).eq('id', userId);
 
       debugPrint('[OnboardingState] Started onboarding for user $userId');
+      unawaited(AnalyticsService().track('onboarding_started', properties: {
+        'checkpoint': OnboardingCheckpoint.gender.value,
+      }));
     } catch (e) {
       debugPrint('[OnboardingState] Error starting onboarding: $e');
       rethrow;
@@ -83,6 +88,9 @@ class OnboardingStateService {
       }).eq('id', userId);
 
       debugPrint('[OnboardingState] Updated checkpoint to ${checkpoint.value} for user $userId');
+      unawaited(AnalyticsService().track('onboarding_checkpoint_updated', properties: {
+        'checkpoint': checkpoint.value,
+      }));
     } catch (e) {
       debugPrint('[OnboardingState] Error updating checkpoint: $e');
     }
@@ -115,6 +123,9 @@ class OnboardingStateService {
       }
 
       debugPrint('[OnboardingState] Marked payment complete for user $userId (trial: $isInTrial)');
+      unawaited(AnalyticsService().track('onboarding_payment_complete', properties: {
+        'is_trial': isInTrial,
+      }));
     } catch (e) {
       debugPrint('[OnboardingState] Error marking payment complete: $e');
       rethrow;
@@ -132,6 +143,9 @@ class OnboardingStateService {
       }).eq('id', userId);
 
       debugPrint('[OnboardingState] Completed onboarding for user $userId');
+      unawaited(AnalyticsService().track('onboarding_completed', properties: {
+        'checkpoint': OnboardingCheckpoint.welcome.value,
+      }));
     } catch (e) {
       debugPrint('[OnboardingState] Error completing onboarding: $e');
       rethrow;
@@ -150,6 +164,7 @@ class OnboardingStateService {
       }).eq('id', userId);
 
       debugPrint('[OnboardingState] Reset onboarding for user $userId');
+      unawaited(AnalyticsService().track('onboarding_reset'));
     } catch (e) {
       debugPrint('[OnboardingState] Error resetting onboarding: $e');
     }
@@ -212,6 +227,34 @@ class OnboardingStateService {
 
       debugPrint('[OnboardingState] SUCCESS: Saved preferences for user $userId');
       debugPrint('[OnboardingState] =======================================');
+
+      final analyticsProperties = <String, dynamic>{};
+      if (preferredGenderFilter != null) {
+        analyticsProperties['preferred_gender_filter'] = preferredGenderFilter;
+      }
+      if (notificationEnabled != null) {
+        analyticsProperties['notification_enabled'] = notificationEnabled;
+      }
+      if (styleDirection != null && styleDirection.isNotEmpty) {
+        analyticsProperties['style_direction'] = styleDirection;
+      }
+      if (whatYouWant != null && whatYouWant.isNotEmpty) {
+        analyticsProperties['what_you_want'] = whatYouWant;
+      }
+      if (budget != null) {
+        analyticsProperties['budget'] = budget;
+      }
+      if (discoverySource != null) {
+        analyticsProperties['discovery_source'] = discoverySource;
+      }
+
+      if (analyticsProperties.isNotEmpty) {
+        unawaited(AnalyticsService().track(
+          'user_preferences_saved',
+          properties: analyticsProperties,
+        ));
+        unawaited(AnalyticsService().setUserProperties(analyticsProperties));
+      }
     } catch (e, stackTrace) {
       debugPrint('[OnboardingState] ERROR saving preferences: $e');
       debugPrint('[OnboardingState] Stack trace: $stackTrace');
