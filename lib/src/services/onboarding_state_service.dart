@@ -243,18 +243,46 @@ class OnboardingStateService {
   Future<String?> determineOnboardingRoute(String userId) async {
     try {
       final state = await getOnboardingState(userId);
-      if (state == null) return 'gender';
 
-      final onboardingState = OnboardingState.fromString(state['onboarding_state'] ?? 'not_started');
-      final subscriptionStatus = state['subscription_status'] ?? 'free';
+      debugPrint('[OnboardingState] determineOnboardingRoute for $userId:');
+      debugPrint('[OnboardingState]   - Raw state object: $state');
+
+      if (state == null) {
+        debugPrint('[OnboardingState]   - State is null → routing to gender');
+        return 'gender';
+      }
+
+      final onboardingStateRaw = state['onboarding_state'];
+      final onboardingState = OnboardingState.fromString(onboardingStateRaw ?? 'not_started');
+      final subscriptionStatusRaw = state['subscription_status'];
+      final subscriptionStatus = subscriptionStatusRaw ?? 'free';
       final isTrial = state['is_trial'] == true;
+      final checkpoint = state['onboarding_checkpoint'];
+
+      debugPrint('[OnboardingState]   - onboarding_state (raw): $onboardingStateRaw');
+      debugPrint('[OnboardingState]   - onboarding_state (parsed): $onboardingState');
+      debugPrint('[OnboardingState]   - onboarding_state (enum comparison): ${onboardingState == OnboardingState.completed}');
+      debugPrint('[OnboardingState]   - onboarding_checkpoint: $checkpoint');
+      debugPrint('[OnboardingState]   - subscription_status (raw): $subscriptionStatusRaw');
+      debugPrint('[OnboardingState]   - subscription_status (processed): $subscriptionStatus');
+      debugPrint('[OnboardingState]   - subscription_status == "active": ${subscriptionStatus == 'active'}');
+      debugPrint('[OnboardingState]   - is_trial: $isTrial');
 
       // Check if user has completed onboarding
       if (onboardingState == OnboardingState.completed) {
+        debugPrint('[OnboardingState]   - Onboarding IS completed');
         // Check if subscription is active or in trial
-        if (subscriptionStatus == 'active' || isTrial) {
+        final hasActiveSubscription = subscriptionStatus == 'active';
+        final hasAccess = hasActiveSubscription || isTrial;
+        debugPrint('[OnboardingState]   - hasActiveSubscription: $hasActiveSubscription');
+        debugPrint('[OnboardingState]   - hasAccess (active || trial): $hasAccess');
+
+        if (hasAccess) {
+          debugPrint('[OnboardingState]   - Has active subscription/trial → routing to home (return null)');
           return null; // Go to home screen
         } else {
+          debugPrint('[OnboardingState]   - No active subscription/trial → routing to resubscribe paywall');
+          debugPrint('[OnboardingState]   - (subscription_status="$subscriptionStatus", is_trial=$isTrial)');
           // Subscription expired - show paywall
           return 'resubscribe_paywall';
         }
@@ -262,6 +290,7 @@ class OnboardingStateService {
 
       // Check if payment completed but onboarding not finished
       if (onboardingState == OnboardingState.paymentComplete) {
+        debugPrint('[OnboardingState]   - Onboarding state is paymentComplete → routing to welcome');
         final checkpoint = OnboardingCheckpoint.fromString(state['onboarding_checkpoint']);
 
         // If payment complete but no account created, go to welcome
@@ -271,6 +300,7 @@ class OnboardingStateService {
 
       // Check if onboarding in progress
       if (onboardingState == OnboardingState.inProgress) {
+        debugPrint('[OnboardingState]   - Onboarding state is inProgress');
         final checkpoint = OnboardingCheckpoint.fromString(state['onboarding_checkpoint']);
 
         // If user reached save_progress or paywall checkpoint, they likely created an account
