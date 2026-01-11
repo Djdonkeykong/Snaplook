@@ -333,11 +333,37 @@ class OnboardingStateService {
 
       // Check if payment completed but onboarding not finished
       if (onboardingState == OnboardingState.paymentComplete) {
-        debugPrint('[OnboardingState]   - Onboarding state is paymentComplete → routing to welcome');
-        final checkpoint = OnboardingCheckpoint.fromString(state['onboarding_checkpoint']);
+        debugPrint('[OnboardingState]   - Onboarding state is paymentComplete');
 
-        // If payment complete but no account created, go to welcome
-        // (account creation would have happened at payment)
+        // BUGFIX: If user has active subscription and payment was completed a while ago,
+        // they likely completed onboarding but it wasn't persisted. Auto-complete and send to home.
+        final hasActiveSubscription = subscriptionStatus == 'active';
+        final hasAccess = hasActiveSubscription || isTrial;
+        final paymentCompletedAtStr = state['payment_completed_at'];
+
+        if (hasAccess && paymentCompletedAtStr != null) {
+          try {
+            final paymentCompletedAt = DateTime.parse(paymentCompletedAtStr);
+            final now = DateTime.now();
+            final minutesSincePayment = now.difference(paymentCompletedAt).inMinutes;
+
+            // If payment was more than 5 minutes ago and they have subscription, auto-complete
+            if (minutesSincePayment > 5) {
+              debugPrint('[OnboardingState]   - Payment completed $minutesSincePayment minutes ago with active subscription');
+              debugPrint('[OnboardingState]   - Auto-completing onboarding and routing to home');
+
+              // Auto-complete the onboarding silently
+              await completeOnboarding(userId);
+
+              return null; // Go to home screen
+            }
+          } catch (e) {
+            debugPrint('[OnboardingState]   - Error parsing payment_completed_at: $e');
+            // Continue with normal flow
+          }
+        }
+
+        debugPrint('[OnboardingState]   - Routing to welcome to complete onboarding');
         return 'welcome';
       }
 
