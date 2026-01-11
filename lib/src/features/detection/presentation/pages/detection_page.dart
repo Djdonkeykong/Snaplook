@@ -1766,6 +1766,35 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         return;
       }
 
+      await ref.read(creditBalanceProvider.notifier).refresh();
+      final latestBalance = ref.read(creditBalanceProvider).value;
+      final hasCredits =
+          latestBalance != null && latestBalance.availableCredits > 0;
+      if (!hasCredits) {
+        if (mounted) {
+          final refillDate = latestBalance?.nextRefillDate;
+          final refillDateStr = refillDate != null
+              ? '${refillDate.month}/${refillDate.day}/${refillDate.year}'
+              : 'soon';
+          final message = (latestBalance?.hasActiveSubscription ?? false)
+              ? 'You\'ve used all your credits for this month. They will refill on $refillDateStr.'
+              : 'You are out of credits. Please subscribe to continue.';
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                message,
+                style: context.snackTextStyle(
+                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                ),
+              ),
+              duration: const Duration(milliseconds: 3500),
+            ),
+          );
+        }
+        return;
+      }
+
       if (_isResultsSheetVisible || _results.isNotEmpty) {
         setState(() {
           _isResultsSheetVisible = false;
