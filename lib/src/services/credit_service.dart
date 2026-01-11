@@ -39,7 +39,8 @@ class CreditService {
       // Fetch credits from Supabase users table
       final userResponse = await Supabase.instance.client
           .from('users')
-          .select('paid_credits_remaining, subscription_status, is_trial')
+          .select(
+              'paid_credits_remaining, subscription_status, is_trial, subscription_product_id, credits_reset_date')
           .eq('id', userId)
           .maybeSingle()
           .timeout(const Duration(seconds: 5));
@@ -52,6 +53,11 @@ class CreditService {
       final paidCredits = userResponse['paid_credits_remaining'] ?? 0;
       final subscriptionStatus = userResponse['subscription_status'] ?? 'free';
       final isTrial = userResponse['is_trial'] == true;
+      final subscriptionProductId =
+          userResponse['subscription_product_id'] as String?;
+      final creditsResetRaw = userResponse['credits_reset_date'] as String?;
+      final creditsResetDate =
+          creditsResetRaw != null ? DateTime.tryParse(creditsResetRaw) : null;
       final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
 
       // Get subscription status from Superwall for product ID
@@ -63,8 +69,10 @@ class CreditService {
         hasActiveSubscription: hasActiveSubscription,
         hasUsedFreeTrial: true, // All users are now paid users
         isTrialSubscription: isTrial,
-        nextRefillDate: _calculateNextRefillDate(),
-        subscriptionPlanId: superwallStatus.productIdentifier,
+        nextRefillDate:
+            creditsResetDate ?? _calculateNextRefillDate(),
+        subscriptionPlanId:
+            subscriptionProductId ?? superwallStatus.productIdentifier,
       );
 
       debugPrint('[CreditService] Loaded balance from Supabase: $paidCredits credits, active: $hasActiveSubscription');
@@ -167,10 +175,10 @@ class CreditService {
     return (to.year - from.year) * 12 + to.month - from.month;
   }
 
-  /// Calculate next refill date (1 month from now)
+  /// Calculate next refill date (start of next month)
   DateTime _calculateNextRefillDate() {
     final now = DateTime.now();
-    return DateTime(now.year, now.month + 1, now.day);
+    return DateTime(now.year, now.month + 1, 1);
   }
 
   /// Save credit balance to local storage
@@ -209,16 +217,9 @@ class CreditService {
   /// Sync credits with subscription status (call after purchase/restore)
   Future<CreditBalance> syncWithSubscription() async {
     try {
-      final subscriptionStatus = _superwallService.getSubscriptionSnapshot();
-
-      if (subscriptionStatus.isActive) {
-        // User has active subscription - refill credits
-        return await refillCredits();
-      } else {
-        // No active subscription - use current balance
-        _cachedBalance = null; // Clear cache to force reload
-        return await getCreditBalance();
-      }
+      // Always re-fetch from Supabase to avoid local drift.
+      _cachedBalance = null;
+      return await getCreditBalance();
     } catch (e) {
       debugPrint('Error syncing with subscription: $e');
       rethrow;
