@@ -862,7 +862,11 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                 final creditBalanceAsync = ref.read(creditBalanceProvider);
                 final creditBalanceData = creditBalanceAsync.value;
 
-                final isYearlySubscriber = creditBalanceData?.subscriptionPlanId == 'snaplook_premium_yearly';
+                final subscriptionPlanId = creditBalanceData?.subscriptionPlanId;
+                final isYearlySubscriber = subscriptionPlanId == 'com.snaplook.snaplook.yearly';
+
+                print('[Detection] Subscription plan ID: $subscriptionPlanId');
+                print('[Detection] Is yearly subscriber: $isYearlySubscriber');
 
                 if (isYearlySubscriber) {
                   // Yearly subscriber - show snackbar with refill date instead of paywall
