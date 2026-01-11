@@ -841,7 +841,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(40),
           onTap: () async {
-            // Check if user has credits before starting detection
+            // Check if user has credits
+            // ALL users (including subscribers) have 100 credit limit per month
             final creditBalance = ref.read(creditBalanceProvider);
             final hasCredits = creditBalance.when(
               data: (balance) => balance.availableCredits > 0,
