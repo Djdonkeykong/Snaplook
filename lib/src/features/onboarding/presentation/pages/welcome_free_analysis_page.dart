@@ -352,6 +352,20 @@ class _WelcomeFreeAnalysisPageState
                     '[WelcomePage] Initialization finished, navigating to app');
               }
 
+              // CRITICAL: Ensure onboarding is marked as completed before navigating
+              // This is a failsafe in case initialization didn't complete properly
+              final userId = ref.read(authServiceProvider).currentUser?.id;
+              if (userId != null) {
+                try {
+                  print('[WelcomePage] FAILSAFE: Ensuring onboarding is marked as completed...');
+                  await OnboardingStateService().completeOnboarding(userId);
+                  print('[WelcomePage] FAILSAFE: Onboarding completion ensured');
+                } catch (e) {
+                  print('[WelcomePage] FAILSAFE: Error completing onboarding: $e');
+                  // Continue anyway - non-critical
+                }
+              }
+
               if (mounted) {
                 // Reset to home tab and navigate to main app
                 ref.read(selectedIndexProvider.notifier).state = 0;
