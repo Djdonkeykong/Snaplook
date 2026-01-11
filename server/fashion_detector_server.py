@@ -9,6 +9,7 @@ import torch
 import requests
 import re
 import uuid
+import numpy as np
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Set, Union
@@ -898,6 +899,224 @@ def clamp_bbox(bbox, bounds):
     x2 = min(x2, X2)
     y2 = min(y2, Y2)
     return [int(x1), int(y1), int(x2), int(y2)]
+
+
+# === COLOR MATCHING FUNCTIONS ===
+
+def extract_dominant_colors(image: Image.Image, k: int = 3) -> np.ndarray:
+    """
+    Extract k dominant colors from image using K-Means clustering.
+
+    Args:
+        image: PIL Image
+        k: Number of dominant colors to extract (default: 3)
+
+    Returns:
+        Array of shape (k, 3) with RGB values [0-255]
+    """
+    from sklearn.cluster import KMeans
+
+    # Resize to speed up processing (color doesn't need full resolution)
+    image_small = image.resize((150, 150))
+
+    # Convert to RGB array and flatten
+    pixels = np.array(image_small).reshape(-1, 3)
+
+    # Remove pixels that are too dark or too light (shadows/highlights)
+    # This helps focus on actual garment colors, not lighting artifacts
+    brightness = pixels.mean(axis=1)
+    valid_pixels = pixels[(brightness > 30) & (brightness < 225)]
+
+    if len(valid_pixels) < 100:
+        valid_pixels = pixels  # Fallback if too aggressive
+
+    # K-Means clustering to find dominant colors
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    kmeans.fit(valid_pixels)
+
+    # Return cluster centers (dominant colors)
+    dominant_colors = kmeans.cluster_centers_
+
+    return dominant_colors
+
+
+def color_distance_lab(color1: np.ndarray, color2: np.ndarray) -> float:
+    """
+    Compute perceptual color distance in LAB color space.
+    LAB is better than RGB for human color perception.
+
+    Args:
+        color1, color2: RGB colors as numpy arrays [0-255]
+
+    Returns:
+        Perceptual distance (lower = more similar)
+    """
+    from skimage.color import rgb2lab
+
+    # Convert RGB [0-255] to [0-1] range
+    rgb1 = color1.reshape(1, 1, 3) / 255.0
+    rgb2 = color2.reshape(1, 1, 3) / 255.0
+
+    # Convert to LAB color space
+    lab1 = rgb2lab(rgb1).reshape(3)
+    lab2 = rgb2lab(rgb2).reshape(3)
+
+    # Euclidean distance in LAB space
+    distance = np.linalg.norm(lab1 - lab2)
+
+    return distance
+
+
+def color_similarity(crop_colors: np.ndarray, result_colors: np.ndarray) -> float:
+    """
+    Compute color similarity between two sets of dominant colors.
+
+    Strategy: For each color in crop, find closest color in result.
+    Average these distances to get overall similarity.
+
+    Args:
+        crop_colors: Dominant colors from crop (k, 3) array
+        result_colors: Dominant colors from result (k, 3) array
+
+    Returns:
+        Similarity score 0.0-1.0 where 1.0 = identical colors
+    """
+    distances = []
+
+    for crop_color in crop_colors:
+        # Find closest matching color in result
+        min_dist = min(
+            color_distance_lab(crop_color, result_color)
+            for result_color in result_colors
+        )
+        distances.append(min_dist)
+
+    # Average distance
+    avg_distance = np.mean(distances)
+
+    # Convert distance to similarity score (0-1)
+    # Distance of 0 = similarity 1.0
+    # Distance of 100 = similarity ~0.5
+    # Distance of 200+ = similarity ~0
+    similarity = 1.0 / (1.0 + (avg_distance / 100.0))
+
+    return similarity
+
+
+# Category-specific color matching thresholds
+# Some categories benefit from stricter color matching
+COLOR_MATCH_THRESHOLDS = {
+    "shoe": 0.70,        # Color is very important for shoes
+    "bag, wallet": 0.70, # Bags too
+    "dress": 0.65,       # Standard
+    "coat": 0.60,        # Outerwear often has complex colors
+    "jacket": 0.60,      # Jackets vary
+    "pants": 0.60,       # Pants often dark/neutral
+    "shorts": 0.60,
+    "skirt": 0.65,
+    "shirt, blouse": 0.65,
+    "top, t-shirt, sweatshirt": 0.65,
+    "sweater": 0.65,
+    "cardigan": 0.65,
+}
+
+
+def get_color_match_threshold(label: str) -> float:
+    """Get the minimum color match score for a category."""
+    return COLOR_MATCH_THRESHOLDS.get(label, 0.65)
+
+
+def filter_results_by_color(
+    crop_image: Image.Image,
+    serp_results: List[dict],
+    garment_label: str,
+    k_colors: int = 3
+) -> List[dict]:
+    """
+    Filter and re-rank Google Lens results by color similarity.
+
+    Args:
+        crop_image: Original garment crop
+        serp_results: Results from Google Lens
+        garment_label: Category label (for threshold)
+        k_colors: Number of dominant colors to extract
+
+    Returns:
+        Filtered and re-ranked results with color_match_score
+    """
+    print(f"\n🎨 Color filtering for {garment_label}...")
+
+    try:
+        # Extract dominant colors from crop
+        print(f"   Extracting {k_colors} dominant colors from crop...")
+        crop_colors = extract_dominant_colors(crop_image, k=k_colors)
+        print(f"   Crop colors (RGB): {crop_colors.astype(int).tolist()}")
+    except Exception as e:
+        print(f"   ⚠️  Error extracting crop colors: {e}")
+        print(f"   Skipping color filtering, returning original results")
+        return serp_results
+
+    # Get category-specific threshold
+    min_color_score = get_color_match_threshold(garment_label)
+    print(f"   Using color threshold: {min_color_score:.2f} for {garment_label}")
+
+    # Process each result
+    results_with_color_score = []
+    skipped_count = 0
+
+    for i, result in enumerate(serp_results[:20]):  # Only process top 20
+        try:
+            # Get result image URL
+            thumbnail_url = result.get('thumbnail') or result.get('image')
+            if not thumbnail_url:
+                continue
+
+            # Download result thumbnail
+            result_image = download_image_from_url(thumbnail_url)
+
+            # Extract dominant colors
+            result_colors = extract_dominant_colors(result_image, k=k_colors)
+
+            # Compute color similarity
+            color_score = color_similarity(crop_colors, result_colors)
+
+            # Add to result
+            result['color_match_score'] = color_score
+            result['dominant_colors'] = result_colors.astype(int).tolist()
+
+            # Log result
+            title = result.get('title', 'Unknown')[:50]
+            print(f"   [{i+1}] {title} - color_score={color_score:.2f}")
+
+            # Filter by minimum score
+            if color_score >= min_color_score:
+                results_with_color_score.append(result)
+            else:
+                print(f"       ❌ Filtered (color mismatch)")
+                skipped_count += 1
+
+        except Exception as e:
+            print(f"   ⚠️  Error processing result {i+1}: {e}")
+            # Keep result without color score on error
+            result['color_match_score'] = 0.65  # Neutral score
+            results_with_color_score.append(result)
+            continue
+
+    # Sort by color score (descending)
+    results_with_color_score.sort(
+        key=lambda x: x.get('color_match_score', 0.0),
+        reverse=True
+    )
+
+    kept_count = len(results_with_color_score)
+    print(f"   ✨ Kept {kept_count}/{len(serp_results)} results after color filtering (skipped {skipped_count})")
+
+    if kept_count > 0:
+        best = results_with_color_score[0]
+        print(f"   🏆 Best color match: {best.get('title', 'Unknown')[:50]} (score={best.get('color_match_score', 0):.2f})")
+
+    return results_with_color_score
+
 
 def compute_person_context_bbox(detections: List[dict], image: Image.Image) -> Optional[List[int]]:
     candidates = [d for d in detections if d["label"] in PERSON_CONTEXT_LABELS]
@@ -2392,6 +2611,24 @@ def run_full_detection_pipeline(
         )
         print(f"{label} search took {time.time() - t_search:.2f}s ({len(search_results)} results)")
 
+        # === Color filtering ===
+        # Download crop image and filter results by color similarity
+        if search_results and label != "full-image":
+            try:
+                t_color = time.time()
+                crop_image = download_image_from_url(crop_url)
+                search_results = filter_results_by_color(
+                    crop_image=crop_image,
+                    serp_results=search_results,
+                    garment_label=label,
+                    k_colors=3
+                )
+                crop_image.close()
+                print(f"{label} color filtering took {time.time() - t_color:.2f}s")
+            except Exception as e:
+                print(f"⚠️  Color filtering failed for {label}: {e}")
+                # Continue with unfiltered results on error
+
         return [
             format_detection_result(r, label, i)
             for i, r in enumerate(search_results)
@@ -2675,6 +2912,24 @@ def detect_and_search(req: DetectAndSearchRequest, http_request: Request):
                 language=req.language,
             )
             print(f"[SerpAPI] {label} search took {time.time() - t_search:.2f}s ({len(search_results)} results)")
+
+            # === Color filtering ===
+            # Download crop image and filter results by color similarity
+            if search_results and label != "full-image":
+                try:
+                    t_color = time.time()
+                    crop_image = download_image_from_url(crop_url)
+                    search_results = filter_results_by_color(
+                        crop_image=crop_image,
+                        serp_results=search_results,
+                        garment_label=label,
+                        k_colors=3
+                    )
+                    crop_image.close()
+                    print(f"[SerpAPI] {label} color filtering took {time.time() - t_color:.2f}s")
+                except Exception as e:
+                    print(f"[SerpAPI] ⚠️  Color filtering failed for {label}: {e}")
+                    # Continue with unfiltered results on error
 
             return [
                 format_detection_result(r, label, i)
