@@ -111,6 +111,50 @@ MIN_CROP_W = 80
 MIN_CROP_H = 80
 MIN_CROP_AREA = 120 * 120  # extra safety
 
+# Category-specific confidence thresholds (reduces false positives)
+# Lower = more permissive, Higher = stricter
+CATEGORY_THRESHOLDS = {
+    "shirt, blouse": 0.25,
+    "top, t-shirt, sweatshirt": 0.25,
+    "sweater": 0.25,
+    "cardigan": 0.25,
+    "dress": 0.25,
+    "jumpsuit": 0.28,
+    "pants": 0.28,
+    "shorts": 0.30,
+    "skirt": 0.27,
+    "coat": 0.25,
+    "jacket": 0.25,
+    "vest": 0.30,
+    "cape": 0.35,
+    "shoe": 0.80,  # Very strict - shoes have many false positives
+    "bag, wallet": 0.40,  # Moderate - bags sometimes confused with other items
+    "glasses": 0.35,
+    "hat": 0.52,  # Raised to reduce hair false positives
+    "headband, head covering, hair accessory": 0.58,  # Very noisy category
+    "scarf": 0.38,
+    "belt": 0.40,
+}
+
+# Expected aspect ratio ranges per category (width / height)
+# Used to validate that detected garments have reasonable proportions
+EXPECTED_ASPECT_RATIOS = {
+    "shoe": (0.8, 2.5),      # Shoes are usually wider than tall
+    "dress": (0.3, 0.8),     # Dresses are tall
+    "coat": (0.4, 0.9),      # Coats are tall
+    "jacket": (0.6, 1.4),    # Jackets vary
+    "bag, wallet": (0.5, 2.0),  # Bags vary widely
+    "hat": (1.0, 3.0),       # Hats are usually wider
+    "pants": (0.3, 0.7),     # Pants are tall
+    "shorts": (0.7, 1.2),    # Shorts are squarer
+    "shirt, blouse": (0.5, 1.3),
+    "top, t-shirt, sweatshirt": (0.5, 1.3),
+    "sweater": (0.5, 1.3),
+    "cardigan": (0.5, 1.2),
+    "skirt": (0.6, 1.4),
+    "jumpsuit": (0.4, 0.9),
+}
+
 # === CATEGORIES ===
 MAJOR_GARMENTS = {
     "shirt, blouse", "top, t-shirt, sweatshirt", "sweater", "cardigan",
@@ -585,22 +629,266 @@ def resolve_expand_ratio(label: str, base_ratio: float) -> float:
     return base_ratio
 
 def compute_expand_ratio(det: dict, base_ratio: float, image: Image.Image) -> float:
-    ratio = resolve_expand_ratio(det["label"], base_ratio)
-    w = det["bbox"][2] - det["bbox"][0]
-    h = det["bbox"][3] - det["bbox"][1]
+    """
+    Intelligently compute crop expansion ratio based on:
+    - Category (shoes, hats need more padding)
+    - Aspect ratio (wide/tall garments need different padding)
+    - Edge proximity (reduce expansion near edges to avoid cropping out of bounds)
+    - Confidence (low confidence = more context needed)
+    - Size relative to image (small objects need more padding)
+    """
+    label = det["label"]
+    bbox = det["bbox"]
+    score = det.get("score", 1.0)
+
+    x1, y1, x2, y2 = bbox
+    w = x2 - x1
+    h = y2 - y1
+
+    # Start with category-specific base ratio
+    ratio = resolve_expand_ratio(label, base_ratio)
+
+    # === 1. Aspect Ratio Adjustments ===
+    aspect = w / max(h, 1e-5)
+
+    if aspect > 1.8:  # Very wide garments (belts, scarves, wide-brim hats)
+        # Need more vertical padding to capture full item
+        ratio *= 1.3
+        print(f"[CropExpand] Wide garment ({label}, aspect={aspect:.2f}) - increasing vertical padding")
+    elif aspect < 0.45:  # Very tall garments (long dresses, coats, pants)
+        # Can reduce vertical padding, focus on horizontal
+        ratio *= 0.85
+        print(f"[CropExpand] Tall garment ({label}, aspect={aspect:.2f}) - reducing vertical padding")
+
+    # === 2. Edge Proximity Detection ===
+    # Reduce expansion near image edges to avoid black borders
+    margin_left = x1 / image.width
+    margin_right = (image.width - x2) / image.width
+    margin_top = y1 / image.height
+    margin_bottom = (image.height - y2) / image.height
+
+    edge_proximity_threshold = 0.05  # 5% from edge
+    horizontal_reduction = 1.0
+    vertical_reduction = 1.0
+
+    if margin_left < edge_proximity_threshold or margin_right < edge_proximity_threshold:
+        horizontal_reduction = 0.6  # Reduce horizontal expansion by 40%
+        print(f"[CropExpand] Near horizontal edge ({label}) - reducing horizontal expansion")
+
+    if margin_top < edge_proximity_threshold or margin_bottom < edge_proximity_threshold:
+        vertical_reduction = 0.6  # Reduce vertical expansion by 40%
+        print(f"[CropExpand] Near vertical edge ({label}) - reducing vertical expansion")
+
+    # Apply asymmetric reduction (can reduce differently in x/y)
+    # For now, use minimum of both (conservative approach)
+    edge_reduction = min(horizontal_reduction, vertical_reduction)
+    ratio *= edge_reduction
+
+    # === 3. Size-Based Adjustments ===
     img_area = max(1, image.width * image.height)
-    area_ratio = (w * h) / img_area
+    bbox_area = w * h
+    area_ratio = bbox_area / img_area
     min_ratio = max(0.02, base_ratio * 0.6)
 
     if area_ratio < 0.04:
+        # Very small objects (accessories, distant items) - need more context
         ratio = max(ratio, base_ratio + 0.08)
-    elif area_ratio > 0.30:
+        print(f"[CropExpand] Small object ({label}, {area_ratio*100:.1f}% of image) - adding context")
+    elif area_ratio > 0.35:
+        # Large objects (close-up garments) - already have context
         ratio = max(min_ratio, ratio - 0.04)
+        print(f"[CropExpand] Large object ({label}, {area_ratio*100:.1f}% of image) - reducing padding")
 
-    if det.get("score", 1.0) < 0.5:
-        ratio = max(ratio, base_ratio + 0.05)
+    # === 4. Confidence-Based Adjustment ===
+    # Low confidence = uncertain boundary = more context needed
+    if score < 0.4:
+        ratio += 0.06
+        print(f"[CropExpand] Low confidence ({label}, score={score:.3f}) - adding context")
+    elif score < 0.5:
+        ratio += 0.03
+        print(f"[CropExpand] Medium confidence ({label}, score={score:.3f}) - slight context boost")
 
-    return min(ratio, 0.35)
+    # === 5. Category-Specific Fine-Tuning ===
+    # Some categories benefit from specific adjustments
+    if label == "shoe":
+        # Shoes need to capture sole/bottom - ensure bottom padding
+        if margin_bottom < 0.10:
+            ratio = max(ratio, SHOE_EXPAND_RATIO + 0.05)
+
+    elif label == "bag, wallet":
+        # Bags often have straps that extend beyond bbox
+        ratio = max(ratio, base_ratio + 0.08)
+
+    elif label in {"hat", "headband, head covering, hair accessory"}:
+        # Headwear needs top padding for full shape
+        if margin_top < 0.10:
+            ratio = max(ratio, HAT_EXPAND_RATIO)
+
+    # === 6. Clamp Final Ratio ===
+    # Never go below minimum or above maximum
+    ratio = max(0.02, min(ratio, 0.35))
+
+    return ratio
+
+
+def check_edge_completeness(det: dict, image: Image.Image) -> float:
+    """
+    Check if garment appears complete based on edge intersection.
+    Returns completeness score (0.0 - 1.0) where 1.0 = fully complete.
+
+    Logic:
+    - If bbox touches critical edges for this category, penalize completeness
+    - Example: shoes touching bottom = missing sole (critical)
+    - Example: dress touching top/bottom = truncated (critical)
+    """
+    bbox = det["bbox"]
+    label = det["label"]
+    x1, y1, x2, y2 = bbox
+
+    img_w, img_h = image.width, image.height
+    edge_threshold = 5  # pixels from edge
+
+    # Check which edges the bbox touches
+    touches_left = x1 < edge_threshold
+    touches_right = x2 > (img_w - edge_threshold)
+    touches_top = y1 < edge_threshold
+    touches_bottom = y2 > (img_h - edge_threshold)
+
+    # Category-specific critical edge checks
+    critical_violation = False
+    reason = ""
+
+    # Shoes MUST have bottom visible (sole is key identifier)
+    if label == "shoe" and touches_bottom:
+        critical_violation = True
+        reason = "shoe_missing_sole"
+
+    # Full garments (dresses, coats, jumpsuits) need both top and bottom
+    elif label in {"dress", "coat", "jumpsuit"} and (touches_top or touches_bottom):
+        critical_violation = True
+        reason = f"{label}_truncated_vertically"
+
+    # Pants need bottom visible (hem/shoes interaction important)
+    elif label == "pants" and touches_bottom:
+        critical_violation = True
+        reason = "pants_missing_hem"
+
+    # Bags often have straps - touching top might cut them off
+    elif label == "bag, wallet" and touches_top:
+        # Only penalize if also touching sides (likely incomplete)
+        if touches_left or touches_right:
+            critical_violation = True
+            reason = "bag_straps_cut"
+
+    # Hats need top visible for full shape
+    elif label in {"hat", "headband, head covering, hair accessory"} and touches_top:
+        critical_violation = True
+        reason = "headwear_top_cut"
+
+    # If critical violation, return low score
+    if critical_violation:
+        return 0.3  # Low score but not zero (might still be usable)
+
+    # Calculate overall completeness based on number of edges touched
+    edges_touched = sum([touches_left, touches_right, touches_top, touches_bottom])
+
+    # Penalize each edge touched
+    # 0 edges = 1.0, 1 edge = 0.75, 2 edges = 0.5, 3+ edges = 0.25
+    completeness_score = max(0.25, 1.0 - (edges_touched * 0.25))
+
+    return completeness_score
+
+
+def validate_aspect_ratio(det: dict) -> float:
+    """
+    Check if bbox aspect ratio matches expected range for category.
+    Returns confidence that garment is complete (0.0 - 1.0).
+
+    Unusual aspect ratios often indicate truncated garments:
+    - Shoe too tall = likely cropped vertically
+    - Dress too wide = likely cropped horizontally
+    """
+    label = det["label"]
+    bbox = det["bbox"]
+    x1, y1, x2, y2 = bbox
+
+    width = x2 - x1
+    height = y2 - y1
+    aspect = width / max(height, 1e-5)
+
+    expected_range = EXPECTED_ASPECT_RATIOS.get(label)
+    if not expected_range:
+        return 0.8  # Unknown category, assume reasonable
+
+    min_aspect, max_aspect = expected_range
+
+    # If within expected range, high confidence
+    if min_aspect <= aspect <= max_aspect:
+        return 1.0
+
+    # Calculate how far outside expected range
+    if aspect < min_aspect:
+        # Too narrow/tall
+        deviation = (min_aspect - aspect) / min_aspect
+    else:
+        # Too wide/short
+        deviation = (aspect - max_aspect) / max_aspect
+
+    # Penalize based on deviation
+    # Small deviation (10%) = 0.9, Large deviation (50%+) = 0.5
+    confidence = max(0.5, 1.0 - deviation)
+
+    return confidence
+
+
+def check_garment_completeness(det: dict, image: Image.Image) -> dict:
+    """
+    Comprehensive garment completeness check.
+    Combines edge intersection analysis and aspect ratio validation.
+
+    Returns:
+        {
+            "complete": bool,           # True if garment appears complete
+            "score": float,             # Completeness score 0.0-1.0
+            "reason": str,              # Why incomplete (if applicable)
+            "edge_score": float,        # Score from edge analysis
+            "aspect_score": float,      # Score from aspect ratio
+        }
+    """
+    # Check 1: Edge intersection analysis
+    edge_score = check_edge_completeness(det, image)
+
+    # Check 2: Aspect ratio validation
+    aspect_score = validate_aspect_ratio(det)
+
+    # Combine scores (weighted: edge check more important than aspect)
+    # Edge check catches obvious truncations, aspect catches unusual proportions
+    completeness_score = (edge_score * 0.7) + (aspect_score * 0.3)
+
+    # Determine if complete
+    # Score > 0.75 = complete
+    # Score 0.5-0.75 = partial (acceptable but flagged)
+    # Score < 0.5 = incomplete (should skip)
+    is_complete = completeness_score > 0.75
+
+    # Determine reason if incomplete
+    reason = "complete"
+    if completeness_score < 0.75:
+        if edge_score < 0.5:
+            reason = "truncated_at_edge"
+        elif aspect_score < 0.7:
+            reason = "unusual_aspect_ratio"
+        else:
+            reason = "partial_garment"
+
+    return {
+        "complete": is_complete,
+        "score": completeness_score,
+        "reason": reason,
+        "edge_score": edge_score,
+        "aspect_score": aspect_score,
+    }
+
 
 def clamp_bbox(bbox, bounds):
     x1, y1, x2, y2 = bbox
@@ -1240,8 +1528,14 @@ def get_raw_detections(image: Image.Image, threshold: float) -> List[dict]:
     for box, score, label_idx in zip(results["boxes"], results["scores"], results["labels"]):
         score = score.item()
         label = model_config.id2label[label_idx.item()]
-        if label not in MAJOR_GARMENTS or score < threshold:
+        if label not in MAJOR_GARMENTS:
             continue
+
+        # Use category-specific threshold if available, otherwise fall back to global threshold
+        category_threshold = CATEGORY_THRESHOLDS.get(label, threshold)
+        if score < category_threshold:
+            continue
+
         x1, y1, x2, y2 = map(int, box.tolist())
         detections.append({"label": label, "score": score, "bbox": [x1, y1, x2, y2]})
     return detections
@@ -1583,6 +1877,37 @@ def run_detection(image: Image.Image, threshold: float, expand_ratio: float, max
         key=lambda d: (CATEGORY_PRIORITY.get(d["label"], 0), d["score"]),
         reverse=True,
     )[:max_crops]
+
+    # === Garment Completeness Check ===
+    # Filter out truncated/incomplete garments that would give poor search results
+    print("\n🔍 Checking garment completeness...")
+    completeness_filtered = []
+    for det in filtered:
+        completeness = check_garment_completeness(det, image)
+        det["completeness"] = completeness  # Store for debugging
+
+        # Log completeness analysis
+        x1, y1, x2, y2 = det["bbox"]
+        print(f"   {det['label']} ({det['score']:.3f}): "
+              f"completeness={completeness['score']:.2f} "
+              f"(edge={completeness['edge_score']:.2f}, aspect={completeness['aspect_score']:.2f}) "
+              f"- {completeness['reason']}")
+
+        # Decision logic:
+        # Score > 0.75: Complete - process normally
+        # Score 0.50-0.75: Partial - process with warning
+        # Score < 0.50: Incomplete - skip (would give poor results)
+        if completeness['score'] >= 0.50:
+            completeness_filtered.append(det)
+            if completeness['score'] < 0.75:
+                print(f"      ⚠️  Partial garment detected - processing anyway")
+        else:
+            print(f"      ❌ Skipping incomplete garment (score {completeness['score']:.2f})")
+
+    filtered = completeness_filtered
+
+    if len(filtered) == 0:
+        print("⚠️  All detections were incomplete - no garments to process")
 
     for i, det in enumerate(filtered):
         det["id"] = f"garment_{i + 1}"
