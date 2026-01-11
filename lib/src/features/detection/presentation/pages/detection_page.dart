@@ -898,61 +898,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                   return;
                 }
 
-                if (isMonthlySubscriber) {
-                  // Monthly subscriber - show snackbar with option to upgrade
-                  print('[Detection] Monthly subscriber out of credits - showing refill reminder with paywall option');
-                  if (mounted) {
-                    final refillDate = creditBalanceData?.nextRefillDate;
-                    final refillDateStr = refillDate != null
-                        ? '${refillDate.month}/${refillDate.day}/${refillDate.year}'
-                        : 'soon';
+                // Monthly subscriber or no subscription - show paywall
+                // Monthly users can upgrade to get more credits, free users can subscribe
+                print('[Detection] Showing paywall for monthly/free user');
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'You\'ve used all your credits for this month. They will refill on $refillDateStr.',
-                          style: context.snackTextStyle(
-                            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-                          ),
-                        ),
-                        duration: const Duration(milliseconds: 4000),
-                        action: SnackBarAction(
-                          label: 'Upgrade',
-                          onPressed: () async {
-                            // Show paywall for upgrade options
-                            await SuperwallService().syncSubscriptionStatus();
-                            final didUpgrade = await PaywallHelper.presentPaywall(
-                              context: context,
-                              userId: userId,
-                              placement: 'out_of_credits',
-                            );
-
-                            if (didUpgrade && context.mounted) {
-                              // Only refill if they actually upgraded (changed subscription)
-                              final oldPlanId = subscriptionPlanId;
-                              await ref.read(creditBalanceProvider.notifier).syncWithSubscription();
-
-                              final newCreditBalance = ref.read(creditBalanceProvider);
-                              final newPlanId = newCreditBalance.value?.subscriptionPlanId;
-
-                              // Only proceed if plan changed (upgraded)
-                              if (newPlanId != oldPlanId) {
-                                print('[Detection] User upgraded from $oldPlanId to $newPlanId');
-                                _startDetection();
-                              } else {
-                                print('[Detection] No plan change detected - user still has same subscription');
-                              }
-                            }
-                          },
-                        ),
-                      ),
-                    );
-                  }
-                  return;
-                }
-
-                // No subscription - show paywall
-                print('[Detection] Showing paywall for free user');
+                // Track if user was monthly subscriber before paywall
+                final wasMonthlySubscriber = isMonthlySubscriber;
 
                 // Sync subscription status to Superwall before presenting paywall
                 await SuperwallService().syncSubscriptionStatus();
@@ -966,38 +917,61 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
                 if (!mounted) return;
 
-                // If user purchased, sync credits with subscription and proceed
+                // If user purchased/upgraded, verify plan change and sync credits
                 if (didPurchase) {
-                  print('[Detection] User purchased - syncing credits with subscription');
-
                   // Sync credits with subscription (clears cache and refills)
                   await ref.read(creditBalanceProvider.notifier).syncWithSubscription();
 
                   if (!mounted) return;
 
-                  // Check if credits are now available
+                  // Get new subscription status
                   final newCreditBalance = ref.read(creditBalanceProvider);
-                  final nowHasCredits = newCreditBalance.when(
-                    data: (balance) => balance.availableCredits > 0,
-                    loading: () => false,
-                    error: (_, __) => false,
-                  );
+                  final newPlanId = newCreditBalance.value?.subscriptionPlanId;
 
-                  if (nowHasCredits) {
-                    print('[Detection] Credits available after purchase - starting detection');
-                    _startDetection();
-                  } else {
-                    print('[Detection] No credits available after purchase - showing error');
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Credits not available yet. Please try again.',
-                            style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                  // For monthly subscribers: only proceed if plan changed (upgraded)
+                  // For free users: proceed if they now have a subscription
+                  if (wasMonthlySubscriber) {
+                    if (newPlanId != subscriptionPlanId) {
+                      print('[Detection] User upgraded from $subscriptionPlanId to $newPlanId');
+                      _startDetection();
+                    } else {
+                      print('[Detection] No plan change - monthly subscriber still has same plan');
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'You need to upgrade your plan to get more credits.',
+                              style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                            ),
+                            duration: Duration(milliseconds: 2500),
                           ),
-                          duration: Duration(milliseconds: 2500),
-                        ),
-                      );
+                        );
+                      }
+                    }
+                  } else {
+                    // Free user - check if they now have credits
+                    final nowHasCredits = newCreditBalance.when(
+                      data: (balance) => balance.availableCredits > 0,
+                      loading: () => false,
+                      error: (_, __) => false,
+                    );
+
+                    if (nowHasCredits) {
+                      print('[Detection] Free user purchased subscription - starting detection');
+                      _startDetection();
+                    } else {
+                      print('[Detection] No credits available after purchase');
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Credits not available yet. Please try again.',
+                              style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                            ),
+                            duration: Duration(milliseconds: 2500),
+                          ),
+                        );
+                      }
                     }
                   }
                 } else {
