@@ -841,6 +841,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(40),
           onTap: () async {
+            await ref.read(creditBalanceProvider.notifier).refresh();
+
             // Check if user has credits
             // ALL users (including subscribers) have 100 credit limit per month
             final creditBalance = ref.read(creditBalanceProvider);
@@ -1892,15 +1894,17 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
               print('[Credits] Deduction response: $response');
 
-              if (response != null && response is List && response.isNotEmpty) {
-                final result = response.first;
-                if (result['success'] == true) {
-                  print('[Credits] Successfully deducted $garmentCount credits');
-                  print('[Credits] Remaining: ${result['paid_credits_remaining']}');
+                  if (response != null && response is List && response.isNotEmpty) {
+                    final result = response.first;
+                    if (result['success'] == true) {
+                      print('[Credits] Successfully deducted $garmentCount credits');
+                      print('[Credits] Remaining: ${result['paid_credits_remaining']}');
 
-                  // Re-sync auth state to update credits in iOS share extension
-                  await ref.read(authServiceProvider).syncAuthState();
-                } else {
+                      await ref.read(creditBalanceProvider.notifier).refresh();
+
+                      // Re-sync auth state to update credits in iOS share extension
+                      await ref.read(authServiceProvider).syncAuthState();
+                    } else {
                   print('[Credits] Deduction failed: ${result['message']}');
                 }
               }
