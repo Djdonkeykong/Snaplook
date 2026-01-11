@@ -99,12 +99,31 @@ class OnboardingStateService {
   /// Mark payment as complete during onboarding
   Future<void> markPaymentComplete(String userId) async {
     try {
-      await _supabase.from('users').update({
-        'onboarding_state': OnboardingState.paymentComplete.value,
-        'payment_completed_at': DateTime.now().toIso8601String(),
-        'onboarding_checkpoint': OnboardingCheckpoint.account.value,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', userId);
+      final existing = await _supabase
+          .from('users')
+          .select('onboarding_state')
+          .eq('id', userId)
+          .maybeSingle();
+
+      final existingState = existing?['onboarding_state'] as String?;
+      final alreadyCompleted =
+          existingState == OnboardingState.completed.value;
+
+      if (alreadyCompleted) {
+        await _supabase.from('users').update({
+          'payment_completed_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', userId);
+        debugPrint(
+            '[OnboardingState] Payment complete for $userId - preserving completed onboarding state');
+      } else {
+        await _supabase.from('users').update({
+          'onboarding_state': OnboardingState.paymentComplete.value,
+          'payment_completed_at': DateTime.now().toIso8601String(),
+          'onboarding_checkpoint': OnboardingCheckpoint.account.value,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', userId);
+      }
 
       // Record trial start if applicable (check RevenueCat)
       bool isInTrial = false;
