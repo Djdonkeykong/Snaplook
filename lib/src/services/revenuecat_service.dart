@@ -26,14 +26,13 @@ class RevenueCatService {
 
       _configured = true;
 
-      // Get initial customer info
-      _customerInfo = await Purchases.getCustomerInfo();
-
       if (kDebugMode) {
         debugPrint('[RevenueCat] Configured successfully');
         debugPrint('[RevenueCat] User: ${userId ?? 'anonymous'}');
-        debugPrint('[RevenueCat] Has active entitlement: ${_customerInfo?.entitlements.active.isNotEmpty}');
       }
+
+      // Don't fetch customer info immediately to avoid "Sign in to Apple Account" popup
+      // Customer info will be fetched lazily when needed (during paywall display, restore, etc.)
 
       // Preload offerings for faster paywall display
       preloadOfferings();
