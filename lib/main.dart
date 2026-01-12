@@ -2055,37 +2055,50 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: navigatorKey,
-      builder: (context, child) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        const maxPhoneWidth = 430.0;
-        final isTablet = screenWidth > maxPhoneWidth;
+    return Container(
+      color: Colors.black,
+      child: MaterialApp(
+        navigatorKey: navigatorKey,
+        builder: (context, child) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          const maxPhoneWidth = 430.0;
+          final isTablet = screenWidth > maxPhoneWidth;
 
-        return Container(
-          color: isTablet ? Colors.black : null,
-          child: Stack(
-            children: [
-              if (child != null) _ResponsiveWrapper(child: child),
-              if (_isFetchingOverlayVisible)
-                Positioned.fill(
-                  child: _FetchingOverlay(
-                    key: _fetchingOverlayKey,
-                    message: _fetchingOverlayMessage,
-                    isInstagram: _isInstagramDownload,
-                    isX: _isXDownload,
+          return MediaQuery.removePadding(
+            context: context,
+            removeLeft: isTablet,
+            removeRight: isTablet,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Full-screen black background for tablets
+                if (isTablet)
+                  const Positioned.fill(
+                    child: ColoredBox(color: Colors.black),
                   ),
-                ),
-            ],
-          ),
-        );
-      },
-      title: 'Snaplook',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      navigatorObservers: [routeObserver],
-      home: const SplashPage(),
-      onGenerateRoute: (settings) => null,
+                // Main content
+                if (child != null) _ResponsiveWrapper(child: child),
+                // Loading overlay
+                if (_isFetchingOverlayVisible)
+                  Positioned.fill(
+                    child: _FetchingOverlay(
+                      key: _fetchingOverlayKey,
+                      message: _fetchingOverlayMessage,
+                      isInstagram: _isInstagramDownload,
+                      isX: _isXDownload,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+        title: 'Snaplook',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        navigatorObservers: [routeObserver],
+        home: const SplashPage(),
+        onGenerateRoute: (settings) => null,
+      ),
     );
   }
 }
