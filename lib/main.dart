@@ -2055,82 +2055,31 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black,
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
-        builder: (context, child) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          const maxPhoneWidth = 430.0;
-          final isTablet = screenWidth > maxPhoneWidth;
-
-          return MediaQuery.removePadding(
-            context: context,
-            removeLeft: isTablet,
-            removeRight: isTablet,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Full-screen black background for tablets
-                if (isTablet)
-                  const Positioned.fill(
-                    child: ColoredBox(color: Colors.black),
-                  ),
-                // Main content
-                if (child != null) _ResponsiveWrapper(child: child),
-                // Loading overlay
-                if (_isFetchingOverlayVisible)
-                  Positioned.fill(
-                    child: _FetchingOverlay(
-                      key: _fetchingOverlayKey,
-                      message: _fetchingOverlayMessage,
-                      isInstagram: _isInstagramDownload,
-                      isX: _isXDownload,
-                    ),
-                  ),
-              ],
-            ),
-          );
-        },
-        title: 'Snaplook',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        navigatorObservers: [routeObserver],
-        home: const SplashPage(),
-        onGenerateRoute: (settings) => null,
-      ),
+    return MaterialApp(
+      navigatorKey: navigatorKey,
+      builder: (context, child) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            if (child != null) child,
+            if (_isFetchingOverlayVisible)
+              Positioned.fill(
+                child: _FetchingOverlay(
+                  key: _fetchingOverlayKey,
+                  message: _fetchingOverlayMessage,
+                  isInstagram: _isInstagramDownload,
+                  isX: _isXDownload,
+                ),
+              ),
+          ],
+        );
+      },
+      title: 'Snaplook',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      navigatorObservers: [routeObserver],
+      home: const SplashPage(),
+      onGenerateRoute: (settings) => null,
     );
-  }
-}
-
-/// Responsive wrapper that centers content on iPad while maintaining iPhone dimensions
-class _ResponsiveWrapper extends StatelessWidget {
-  const _ResponsiveWrapper({required this.child});
-
-  final Widget? child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (child == null) return const SizedBox.shrink();
-
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    // iPhone 14 Pro Max width - max width for content
-    const maxPhoneWidth = 430.0;
-
-    // If screen is wider than phone width (iPad), center the content
-    if (screenWidth > maxPhoneWidth) {
-      return Center(
-        child: Container(
-          width: maxPhoneWidth,
-          clipBehavior: Clip.hardEdge,
-          decoration: const BoxDecoration(),
-          child: child,
-        ),
-      );
-    }
-
-    // On phone-sized screens, show normally
-    return child!;
   }
 }
