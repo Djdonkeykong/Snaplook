@@ -73,6 +73,11 @@ class AnalyticsService {
     await _client!.track(event);
   }
 
+  Future<void> trackScreenView(String screenName) async {
+    if (!_initialized || _client == null) return;
+    await track('screen_view', properties: {'screen_name': screenName});
+  }
+
   Future<void> identifyUser({
     required String userId,
     Map<String, dynamic>? userProperties,

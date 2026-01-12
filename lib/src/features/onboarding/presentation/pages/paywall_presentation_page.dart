@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../services/analytics_service.dart';
 import 'welcome_free_analysis_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/superwall_service.dart';
@@ -31,6 +32,7 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreenView('onboarding_paywall');
     // Present paywall after build is complete
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _presentPaywall();

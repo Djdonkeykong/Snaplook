@@ -8,6 +8,7 @@ import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
+import '../mixins/screen_tracking_mixin.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
 import 'budget_page.dart';
 
@@ -19,7 +20,9 @@ class WhatYouWantPage extends ConsumerStatefulWidget {
 }
 
 class _WhatYouWantPageState extends ConsumerState<WhatYouWantPage>
-    with TickerProviderStateMixin, RouteAware {
+    with TickerProviderStateMixin, RouteAware, ScreenTrackingMixin {
+  @override
+  String get screenName => 'onboarding_what_you_want';
   static const _options = [
     'Complete outfits',
     'A specific item I saw',

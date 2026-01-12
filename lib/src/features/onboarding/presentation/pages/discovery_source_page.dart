@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../../../services/analytics_service.dart';
+import '../mixins/screen_tracking_mixin.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../core/constants/snaplook-more-and-family_icons.dart';
@@ -38,7 +40,9 @@ class DiscoverySourcePage extends ConsumerStatefulWidget {
 }
 
 class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
-    with TickerProviderStateMixin, RouteAware {
+    with TickerProviderStateMixin, RouteAware, ScreenTrackingMixin {
+  @override
+  String get screenName => 'onboarding_discovery_source';
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _fadeAnimations;
   late List<Animation<double>> _scaleAnimations;

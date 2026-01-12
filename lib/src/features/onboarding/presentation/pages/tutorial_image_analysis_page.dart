@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/constants/app_constants.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/snaplook_ai_icon.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../detection/presentation/widgets/detection_progress_overlay.dart';
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../results/presentation/widgets/results_bottom_sheet.dart';
@@ -54,6 +55,12 @@ class _TutorialImageAnalysisPageState
   List<DetectionResult> _results = [];
   bool _showCongratulations = false;
   final TutorialService _tutorialService = TutorialService();
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService().trackScreenView('onboarding_tutorial_analysis');
+  }
 
   @override
   void dispose() {

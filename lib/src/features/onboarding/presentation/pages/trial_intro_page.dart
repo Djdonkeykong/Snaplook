@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../../src/shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
@@ -34,6 +35,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreenView('onboarding_trial_intro');
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Update checkpoint for authenticated users

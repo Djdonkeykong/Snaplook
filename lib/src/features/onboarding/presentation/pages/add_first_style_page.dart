@@ -8,6 +8,7 @@ import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
+import '../mixins/screen_tracking_mixin.dart';
 import 'instagram_tutorial_page.dart';
 import 'pinterest_tutorial_page.dart';
 import 'tiktok_tutorial_page.dart';
@@ -26,7 +27,9 @@ class AddFirstStylePage extends ConsumerStatefulWidget {
 }
 
 class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
-    with TickerProviderStateMixin, RouteAware {
+    with TickerProviderStateMixin, RouteAware, ScreenTrackingMixin {
+  @override
+  String get screenName => 'onboarding_add_first_style';
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _fadeAnimations;
   late List<Animation<double>> _scaleAnimations;

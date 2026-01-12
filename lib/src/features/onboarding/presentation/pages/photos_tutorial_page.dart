@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../services/analytics_service.dart';
 import 'tutorial_image_analysis_page.dart';
 
 const bool _kShowTouchTargets = false;
@@ -85,6 +86,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreenView('onboarding_photos_tutorial');
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(photosTutorialStepProvider.notifier).state =

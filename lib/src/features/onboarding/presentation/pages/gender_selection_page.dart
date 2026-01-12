@@ -12,6 +12,7 @@ import '../../domain/providers/gender_provider.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
+import '../mixins/screen_tracking_mixin.dart';
 import 'style_direction_page.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -25,7 +26,9 @@ class GenderSelectionPage extends ConsumerStatefulWidget {
 }
 
 class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
-    with TickerProviderStateMixin, RouteAware {
+    with TickerProviderStateMixin, RouteAware, ScreenTrackingMixin {
+  @override
+  String get screenName => 'onboarding_gender_selection';
   late List<AnimationController> _animationControllers;
   late List<Animation<double>> _fadeAnimations;
   late List<Animation<double>> _scaleAnimations;

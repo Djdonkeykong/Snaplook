@@ -4,18 +4,30 @@ import 'package:lottie/lottie.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
 import 'rating_social_proof_page.dart';
 
-class ProfileReadyPage extends StatelessWidget {
+class ProfileReadyPage extends StatefulWidget {
   const ProfileReadyPage({
     super.key,
     this.continueToTrialFlow = true,
   });
 
   final bool continueToTrialFlow;
+
+  @override
+  State<ProfileReadyPage> createState() => _ProfileReadyPageState();
+}
+
+class _ProfileReadyPageState extends State<ProfileReadyPage> {
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService().trackScreenView('onboarding_profile_ready');
+  }
 
   @override
   Widget build(BuildContext context) {

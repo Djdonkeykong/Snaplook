@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -33,6 +34,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreenView('onboarding_trial_reminder');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Check trial eligibility
       _checkTrialEligibility();

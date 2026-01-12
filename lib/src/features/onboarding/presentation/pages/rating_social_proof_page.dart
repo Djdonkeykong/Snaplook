@@ -4,6 +4,7 @@ import 'package:in_app_review/in_app_review.dart';
 import 'package:lottie/lottie.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
@@ -28,6 +29,7 @@ class _RatingSocialProofPageState extends State<RatingSocialProofPage> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreenView('onboarding_rating_social_proof');
     _requestReview();
     _startTimer();
   }

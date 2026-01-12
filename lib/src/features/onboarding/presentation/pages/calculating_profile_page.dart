@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../services/analytics_service.dart';
 import '../widgets/progress_indicator.dart';
 import 'profile_ready_page.dart';
 
@@ -31,6 +32,7 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreenView('onboarding_calculating_profile');
 
     _controller = AnimationController(
       duration: const Duration(seconds: 5),

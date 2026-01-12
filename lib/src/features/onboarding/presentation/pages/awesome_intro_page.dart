@@ -9,6 +9,7 @@ import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 
@@ -20,6 +21,12 @@ class AwesomeIntroPage extends ConsumerStatefulWidget {
 }
 
 class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService().trackScreenView('onboarding_share_your_style');
+  }
+
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;

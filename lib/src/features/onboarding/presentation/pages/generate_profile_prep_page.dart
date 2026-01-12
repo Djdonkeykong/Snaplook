@@ -6,6 +6,7 @@ import 'package:lottie/lottie.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../services/analytics_service.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
 import 'calculating_profile_page.dart';
@@ -25,6 +26,7 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreenView('onboarding_generate_profile_prep');
     _lottieController = AnimationController(vsync: this);
 
     // Keep the final frame visible after the animation completes.

@@ -15,6 +15,13 @@
         "type": "bearer",
         "token": "${REVENUECAT_MCP_KEY}"
       }
+    },
+    "amplitude": {
+      "type": "http",
+      "url": "https://mcp.amplitude.com/mcp",
+      "authorization": {
+        "type": "oauth2"
+      }
     }
   }
 }

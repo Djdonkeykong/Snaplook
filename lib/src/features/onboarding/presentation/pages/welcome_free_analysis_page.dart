@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
@@ -40,6 +41,7 @@ class _WelcomeFreeAnalysisPageState
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreenView('onboarding_welcome');
 
     // Precache Lottie animation to prevent jitter
     _precacheLottieAnimation();

@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart' show ScrollDirection;
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../services/analytics_service.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'awesome_intro_page.dart';
 import '../widgets/progress_indicator.dart';
@@ -27,6 +28,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackScreenView('onboarding_how_it_works');
     // Capture anchor after first layout
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

@@ -8,6 +8,7 @@ import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
+import '../mixins/screen_tracking_mixin.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
 import 'generate_profile_prep_page.dart';
 
@@ -19,7 +20,9 @@ class BudgetPage extends ConsumerStatefulWidget {
 }
 
 class _BudgetPageState extends ConsumerState<BudgetPage>
-    with TickerProviderStateMixin, RouteAware {
+    with TickerProviderStateMixin, RouteAware, ScreenTrackingMixin {
+  @override
+  String get screenName => 'onboarding_budget';
   static const _options = [
     'Affordable',
     'Mid-range',

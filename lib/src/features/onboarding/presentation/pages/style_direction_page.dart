@@ -8,6 +8,7 @@ import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
+import '../mixins/screen_tracking_mixin.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
 import 'what_you_want_page.dart';
 
@@ -19,7 +20,9 @@ class StyleDirectionPage extends ConsumerStatefulWidget {
 }
 
 class _StyleDirectionPageState extends ConsumerState<StyleDirectionPage>
-    with TickerProviderStateMixin, RouteAware {
+    with TickerProviderStateMixin, RouteAware, ScreenTrackingMixin {
+  @override
+  String get screenName => 'onboarding_style_direction';
   static const _styleOptions = [
     'Streetwear',
     'Minimal',

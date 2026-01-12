@@ -11,6 +11,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'dart:io' show Platform;
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import 'save_progress_page.dart';
@@ -46,6 +47,12 @@ class NotificationPermissionPage extends ConsumerStatefulWidget {
 class _NotificationPermissionPageState
     extends ConsumerState<NotificationPermissionPage> {
   bool _isRequesting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService().trackScreenView('onboarding_notification_permission');
+  }
 
   /// Save notification preference to database if user is authenticated
   Future<void> _saveNotificationPreference(bool granted) async {
