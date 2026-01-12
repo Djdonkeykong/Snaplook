@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -20,16 +19,10 @@ class RevenueCatService {
 
     try {
       // Configure RevenueCat SDK
-      final configuration = PurchasesConfiguration(apiKey)
-        ..appUserID = userId;
-
-      // Enable observer mode to prevent "Sign in to Apple Account" popup
-      // when running without an Apple Account signed in.
-      // In observer mode, RevenueCat won't automatically sync transactions,
-      // but purchases will still work through Superwall.
-      configuration.observerMode = true;
-
-      await Purchases.configure(configuration);
+      await Purchases.configure(
+        PurchasesConfiguration(apiKey)
+          ..appUserID = userId,
+      );
 
       _configured = true;
 
