@@ -2058,22 +2058,26 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     return MaterialApp(
       navigatorKey: navigatorKey,
       builder: (context, child) {
-        // Wrap in responsive container for iPad support
-        final responsiveChild = _ResponsiveWrapper(child: child);
+        final screenWidth = MediaQuery.of(context).size.width;
+        const maxPhoneWidth = 430.0;
+        final isTablet = screenWidth > maxPhoneWidth;
 
-        return Stack(
-          children: [
-            responsiveChild,
-            if (_isFetchingOverlayVisible)
-              Positioned.fill(
-                child: _FetchingOverlay(
-                  key: _fetchingOverlayKey,
-                  message: _fetchingOverlayMessage,
-                  isInstagram: _isInstagramDownload,
-                  isX: _isXDownload,
+        return Container(
+          color: isTablet ? Colors.black : null,
+          child: Stack(
+            children: [
+              if (child != null) _ResponsiveWrapper(child: child),
+              if (_isFetchingOverlayVisible)
+                Positioned.fill(
+                  child: _FetchingOverlay(
+                    key: _fetchingOverlayKey,
+                    message: _fetchingOverlayMessage,
+                    isInstagram: _isInstagramDownload,
+                    isX: _isXDownload,
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         );
       },
       title: 'Snaplook',
@@ -2103,23 +2107,12 @@ class _ResponsiveWrapper extends StatelessWidget {
 
     // If screen is wider than phone width (iPad), center the content
     if (screenWidth > maxPhoneWidth) {
-      return Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: Colors.black,
-        child: SafeArea(
-          left: false,
-          right: false,
-          top: false,
-          bottom: false,
-          child: Center(
-            child: Container(
-              width: maxPhoneWidth,
-              clipBehavior: Clip.hardEdge,
-              decoration: const BoxDecoration(),
-              child: child,
-            ),
-          ),
+      return Center(
+        child: Container(
+          width: maxPhoneWidth,
+          clipBehavior: Clip.hardEdge,
+          decoration: const BoxDecoration(),
+          child: child,
         ),
       );
     }
