@@ -2103,14 +2103,16 @@ class _ResponsiveWrapper extends StatelessWidget {
 
     // If screen is wider than phone width (iPad), center the content
     if (screenWidth > maxPhoneWidth) {
-      return Container(
-        color: Colors.black,
-        child: Center(
-          child: Container(
-            width: maxPhoneWidth,
-            clipBehavior: Clip.hardEdge,
-            decoration: const BoxDecoration(),
-            child: child,
+      return SizedBox.expand(
+        child: Container(
+          color: Colors.black,
+          child: Center(
+            child: Container(
+              width: maxPhoneWidth,
+              clipBehavior: Clip.hardEdge,
+              decoration: const BoxDecoration(),
+              child: child,
+            ),
           ),
         ),
       );
