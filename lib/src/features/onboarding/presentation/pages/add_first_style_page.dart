@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -36,6 +37,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
 
   bool _isRouteAware = false;
   bool _hasAnimated = false;
+  bool _hasRedirectedForIpad = false;
 
   @override
   void initState() {
@@ -96,6 +98,8 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
         _startStaggeredAnimationOnce();
       }
     }
+
+    _maybeSkipForIpad();
   }
 
   @override
@@ -124,6 +128,29 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
     if (_hasAnimated) return;
     _hasAnimated = true;
     _startStaggeredAnimation();
+  }
+
+  bool _isIpad(BuildContext context) {
+    if (defaultTargetPlatform != TargetPlatform.iOS) {
+      return false;
+    }
+    final size = MediaQuery.of(context).size;
+    return size.shortestSide >= 600;
+  }
+
+  void _maybeSkipForIpad() {
+    if (_hasRedirectedForIpad || !_isIpad(context)) {
+      return;
+    }
+    _hasRedirectedForIpad = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const DiscoverySourcePage(),
+        ),
+      );
+    });
   }
 
   @override
