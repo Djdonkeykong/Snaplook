@@ -867,12 +867,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                 final subscriptionPlanId = creditBalanceData?.subscriptionPlanId;
                 final isYearlySubscriber = subscriptionPlanId == 'com.snaplook.snaplook.yearly';
                 final isMonthlySubscriber = subscriptionPlanId == 'com.snaplook.snaplook.monthly';
+                final hasActiveSubscription = creditBalanceData?.hasActiveSubscription ?? false;
+                final treatAsYearly = isYearlySubscriber ||
+                    (hasActiveSubscription && subscriptionPlanId == null);
 
                 print('[Detection] Subscription plan ID: $subscriptionPlanId');
                 print('[Detection] Is yearly subscriber: $isYearlySubscriber');
                 print('[Detection] Is monthly subscriber: $isMonthlySubscriber');
 
-                if (isYearlySubscriber) {
+                if (treatAsYearly) {
                   // Yearly subscriber - show snackbar with refill date instead of paywall
                   print('[Detection] Yearly subscriber out of credits - showing refill reminder');
                   if (mounted) {
