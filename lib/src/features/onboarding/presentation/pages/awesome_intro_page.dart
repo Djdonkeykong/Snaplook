@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +31,7 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    const double shareImageAspectRatio = 939 / 1110;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -70,15 +72,10 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
             // Phone illustration
             Expanded(
               flex: 3,
-              child: Center(
-                child: FractionallySizedBox(
-                  widthFactor: 1.3,
-                  child: Image.asset(
-                    'assets/images/social_media_share_mobile_screen.png',
-                    fit: BoxFit.contain,
-                    gaplessPlayback: true,
-                  ),
-                ),
+              child: _ShareImageFrame(
+                assetPath: 'assets/images/social_media_share_mobile_screen.png',
+                maxWidth: 420,
+                aspectRatio: shareImageAspectRatio,
               ),
             ),
 
@@ -146,6 +143,43 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ShareImageFrame extends StatelessWidget {
+  const _ShareImageFrame({
+    required this.assetPath,
+    required this.maxWidth,
+    required this.aspectRatio,
+  });
+
+  final String assetPath;
+  final double maxWidth;
+  final double aspectRatio;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double availableWidth = constraints.maxWidth * 0.97;
+        final double width = math.min(maxWidth, availableWidth);
+        final double height = width / aspectRatio;
+        final double cappedHeight = math.min(height, constraints.maxHeight);
+        final double cappedWidth = cappedHeight * aspectRatio;
+
+        return Center(
+          child: SizedBox(
+            width: cappedWidth,
+            height: cappedHeight,
+            child: Image.asset(
+              assetPath,
+              fit: BoxFit.contain,
+              gaplessPlayback: true,
+            ),
+          ),
+        );
+      },
     );
   }
 }
