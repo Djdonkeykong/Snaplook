@@ -8,6 +8,7 @@ import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
+import '../widgets/onboarding_phone_frame.dart';
 import '../mixins/screen_tracking_mixin.dart';
 import 'instagram_tutorial_page.dart';
 import 'pinterest_tutorial_page.dart';
@@ -128,97 +129,104 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
 
   @override
   Widget build(BuildContext context) {
-    final spacing = context.spacing;
-
-    return Scaffold(
+    return OnboardingPhoneFrame(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
-        centerTitle: true,
-        title: const OnboardingProgressIndicator(
-          currentStep: 3,
-          totalSteps: 14,
-        ),
-      ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: spacing.l),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: spacing.l),
+      child: Builder(
+        builder: (context) {
+          final spacing = context.spacing;
 
-            // Title
-            const Text(
-              'Analyze and discover',
-              style: TextStyle(
-                fontSize: 34,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -1.0,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                height: 1.3,
+          return Scaffold(
+            backgroundColor: Colors.white,
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              leading: const SnaplookBackButton(enableHaptics: true),
+              centerTitle: true,
+              title: const OnboardingProgressIndicator(
+                currentStep: 3,
+                totalSteps: 14,
               ),
             ),
+            body: Padding(
+              padding: EdgeInsets.symmetric(horizontal: spacing.l),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: spacing.l),
 
-            SizedBox(height: spacing.xs),
+                  // Title
+                  const Text(
+                    'Analyze and discover',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -1.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      height: 1.3,
+                    ),
+                  ),
 
-            // Subtitle
-            const Text(
-              'Learn to share from your favorite apps',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'PlusJakartaSans',
+                  SizedBox(height: spacing.xs),
+
+                  // Subtitle
+                  const Text(
+                    'Learn to share from your favorite apps',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+
+                  SizedBox(height: spacing.l),
+
+                  // App List
+                  Expanded(
+                    child: _AppList(
+                      animationControllers: _animationControllers,
+                      fadeAnimations: _fadeAnimations,
+                      scaleAnimations: _scaleAnimations,
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            SizedBox(height: spacing.l),
-
-            // App List
-            Expanded(
-              child: _AppList(
-                animationControllers: _animationControllers,
-                fadeAnimations: _fadeAnimations,
-                scaleAnimations: _scaleAnimations,
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: OnboardingBottomBar(
-        primaryButton: GestureDetector(
-          onTap: () {
-            HapticFeedback.mediumImpact();
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const DiscoverySourcePage(),
-              ),
-            );
-          },
-          child: const SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: Center(
-              child: Text(
-                'Skip',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.2,
-                  decoration: TextDecoration.underline,
-                  decorationColor: Colors.black,
-                  decorationThickness: 1.5,
+            bottomNavigationBar: OnboardingBottomBar(
+              primaryButton: GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const DiscoverySourcePage(),
+                    ),
+                  );
+                },
+                child: const SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: Center(
+                    child: Text(
+                      'Skip',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                        fontFamily: 'PlusJakartaSans',
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.black,
+                        decorationThickness: 1.5,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

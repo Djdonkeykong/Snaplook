@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../services/analytics_service.dart';
+import '../widgets/onboarding_phone_frame.dart';
 import 'tutorial_image_analysis_page.dart';
 
 const bool _kShowTouchTargets = false;
@@ -154,422 +155,434 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
     final currentStep = ref.watch(imdbTutorialStepProvider);
     final currentPhase = ref.watch(imdbTutorialPhaseProvider);
     final hasUserTapped = ref.watch(imdbHasUserTappedProvider);
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
-    final useSecondBase =
-        currentStep == ImdbTutorialStep.tapEdit ||
-            currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
-            currentStep == ImdbTutorialStep.tapDone ||
-            currentStep == ImdbTutorialStep.tapDoneLast;
-    final baseImageAsset =
-        useSecondBase ? 'assets/images/imdb-step-2.png' : 'assets/images/imdb-1.png';
+    final useSecondBase = currentStep == ImdbTutorialStep.tapEdit ||
+        currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
+        currentStep == ImdbTutorialStep.tapDone ||
+        currentStep == ImdbTutorialStep.tapDoneLast;
+    final baseImageAsset = useSecondBase
+        ? 'assets/images/imdb-step-2.png'
+        : 'assets/images/imdb-1.png';
 
-    return Scaffold(
+    return OnboardingPhoneFrame(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Base screenshot (ALWAYS visible)
-          Positioned.fill(
-            child: Image.asset(
-              baseImageAsset,
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-            ),
-          ),
+      aspectRatio: kOnboardingPhoneAspectRatio,
+      child: Builder(
+        builder: (context) {
+          final screenSize = MediaQuery.of(context).size;
+          final screenWidth = screenSize.width;
+          final screenHeight = screenSize.height;
 
-          // Dark overlay when popup appears
-          if (hasUserTapped &&
-              (currentStep == ImdbTutorialStep.tapShare ||
-                  currentStep == ImdbTutorialStep.tapMore ||
-                  currentStep == ImdbTutorialStep.tapEdit ||
-                  currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
-                  currentStep == ImdbTutorialStep.tapDone ||
-                  currentStep == ImdbTutorialStep.tapDoneLast ||
-                  currentStep == ImdbTutorialStep.step2))
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.5),
-              ),
-            ),
-
-          // Step 2 overlay - after tapping share button (shows Share sheet)
-          if (hasUserTapped && currentStep == ImdbTutorialStep.tapShare)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/imdb-step-2.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 3 overlay - after tapping Share (shows More button)
-          if (hasUserTapped && currentStep == ImdbTutorialStep.tapMore)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/imdb-step-3.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 4 overlay - after tapping More
-          if (hasUserTapped && currentStep == ImdbTutorialStep.tapEdit)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-edit.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 5 overlay - after tapping Edit
-          if (hasUserTapped &&
-              currentStep == ImdbTutorialStep.tapSnaplookShortcut)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-snaplook.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 6 overlay - after tapping Snaplook shortcut
-          if (hasUserTapped && currentStep == ImdbTutorialStep.tapDone)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-done.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 7 overlay - after tapping first Done (shows second Done button)
-          if (hasUserTapped && currentStep == ImdbTutorialStep.tapDoneLast)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-done-last.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 8 overlay - after tapping second Done (final step)
-          if (hasUserTapped && currentStep == ImdbTutorialStep.step2)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/imdb-step-last.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Tap area for step1 - share button
-          if (currentPhase == ImdbTutorialPhase.waitingForAction &&
-              currentStep == ImdbTutorialStep.step1)
-            Positioned(
-              bottom: screenHeight * _step1BottomFraction,
-              left: screenWidth * _step1LeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(ImdbTutorialStep.tapShare);
-                },
-                child: Container(
-                  width: screenWidth * _step1WidthFraction,
-                  height: screenHeight * _step1HeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
+          return Scaffold(
+            backgroundColor: Colors.black,
+            body: Stack(
+              children: [
+                // Base screenshot (ALWAYS visible)
+                Positioned.fill(
+                  child: Image.asset(
+                    baseImageAsset,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
                   ),
                 ),
-              ),
-            ),
 
-          // Tap area for tapShare - Share button
-          if (hasUserTapped &&
-              currentPhase == ImdbTutorialPhase.waitingForAction &&
-              currentStep == ImdbTutorialStep.tapShare)
-            Positioned(
-              bottom: screenHeight * _tapShareBottomFraction,
-              left: screenWidth * _tapShareLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(ImdbTutorialStep.tapMore);
-                },
-                child: Container(
-                  width: screenWidth * _tapShareWidthFraction,
-                  height: screenHeight * _tapShareHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
+                // Dark overlay when popup appears
+                if (hasUserTapped &&
+                    (currentStep == ImdbTutorialStep.tapShare ||
+                        currentStep == ImdbTutorialStep.tapMore ||
+                        currentStep == ImdbTutorialStep.tapEdit ||
+                        currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
+                        currentStep == ImdbTutorialStep.tapDone ||
+                        currentStep == ImdbTutorialStep.tapDoneLast ||
+                        currentStep == ImdbTutorialStep.step2))
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.5),
+                    ),
                   ),
-                ),
-              ),
-            ),
 
-          // Tap area for tapMore - More button (scroll right)
-          if (hasUserTapped &&
-              currentPhase == ImdbTutorialPhase.waitingForAction &&
-              currentStep == ImdbTutorialStep.tapMore)
-            Positioned(
-              bottom: screenHeight * _tapMoreBottomFraction,
-              left: screenWidth * _tapMoreLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(ImdbTutorialStep.tapEdit);
-                },
-                child: Container(
-                  width: screenWidth * _tapMoreWidthFraction,
-                  height: screenHeight * _tapMoreHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
+                // Step 2 overlay - after tapping share button (shows Share sheet)
+                if (hasUserTapped && currentStep == ImdbTutorialStep.tapShare)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/imdb-step-2.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
                   ),
-                ),
-              ),
-            ),
 
-          // Tap area for tapEdit - Edit button
-          if (hasUserTapped &&
-              currentPhase == ImdbTutorialPhase.waitingForAction &&
-              currentStep == ImdbTutorialStep.tapEdit)
-            Positioned(
-              bottom: screenHeight * _tapEditBottomFraction,
-              right: screenWidth * _tapEditRightFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(ImdbTutorialStep.tapSnaplookShortcut);
-                },
-                child: Container(
-                  width: screenWidth * _tapEditWidthFraction,
-                  height: screenHeight * _tapEditHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
+                // Step 3 overlay - after tapping Share (shows More button)
+                if (hasUserTapped && currentStep == ImdbTutorialStep.tapMore)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/imdb-step-3.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
                   ),
-                ),
-              ),
-            ),
 
-          // Tap area for tapSnaplookShortcut - Snaplook icon
-          if (hasUserTapped &&
-              currentPhase == ImdbTutorialPhase.waitingForAction &&
-              currentStep == ImdbTutorialStep.tapSnaplookShortcut)
-            Positioned(
-              bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
-              left: screenWidth * _tapSnaplookShortcutLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(ImdbTutorialStep.tapDone);
-                },
-                child: Container(
-                  width: screenWidth * _tapSnaplookShortcutWidthFraction,
-                  height: screenHeight * _tapSnaplookShortcutHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
+                // Step 4 overlay - after tapping More
+                if (hasUserTapped && currentStep == ImdbTutorialStep.tapEdit)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-edit.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
                   ),
-                ),
-              ),
-            ),
 
-          // Tap area for tapDone - Done button
-          if (hasUserTapped &&
-              currentPhase == ImdbTutorialPhase.waitingForAction &&
-              currentStep == ImdbTutorialStep.tapDone)
-            Positioned(
-              top: MediaQuery.of(context).padding.top +
-                  screenHeight * _tapDoneTopFraction,
-              right: screenWidth * _tapDoneRightFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(ImdbTutorialStep.tapDoneLast);
-                },
-                child: Container(
-                  width: screenWidth * _tapDoneWidthFraction,
-                  height: screenHeight * _tapDoneHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
+                // Step 5 overlay - after tapping Edit
+                if (hasUserTapped &&
+                    currentStep == ImdbTutorialStep.tapSnaplookShortcut)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-snaplook.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
                   ),
-                ),
-              ),
-            ),
 
-          // Tap area for tapDoneLast - second Done button
-          if (hasUserTapped &&
-              currentPhase == ImdbTutorialPhase.waitingForAction &&
-              currentStep == ImdbTutorialStep.tapDoneLast)
-            Positioned(
-              top: MediaQuery.of(context).padding.top +
-                  screenHeight * _tapDoneLastTopFraction,
-              right: screenWidth * _tapDoneLastRightFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(ImdbTutorialStep.step2);
-                },
-                child: Container(
-                  width: screenWidth * _tapDoneLastWidthFraction,
-                  height: screenHeight * _tapDoneLastHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
+                // Step 6 overlay - after tapping Snaplook shortcut
+                if (hasUserTapped && currentStep == ImdbTutorialStep.tapDone)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-done.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
                   ),
-                ),
-              ),
-            ),
 
-          // Tap area for step2 - final Snaplook selection
-          if (hasUserTapped &&
-              currentPhase == ImdbTutorialPhase.waitingForAction &&
-              currentStep == ImdbTutorialStep.step2)
-            Positioned(
-              bottom: screenHeight * _finalSelectBottomFraction,
-              left: screenWidth * _finalSelectLeftFraction,
-              child: GestureDetector(
-                onTap: () async {
-                  HapticFeedback.mediumImpact();
-                  await precacheImage(
-                    const AssetImage('assets/images/imdb-analysis.jpg'),
-                    context,
-                  );
-                  if (!mounted) return;
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => TutorialImageAnalysisPage(
-                        returnToOnboarding: widget.returnToOnboarding,
-                        imagePath: 'assets/images/imdb-analysis.jpg',
-                        scenario: 'IMDb',
+                // Step 7 overlay - after tapping first Done (shows second Done button)
+                if (hasUserTapped &&
+                    currentStep == ImdbTutorialStep.tapDoneLast)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-done-last.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Step 8 overlay - after tapping second Done (final step)
+                if (hasUserTapped && currentStep == ImdbTutorialStep.step2)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/imdb-step-last.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Tap area for step1 - share button
+                if (currentPhase == ImdbTutorialPhase.waitingForAction &&
+                    currentStep == ImdbTutorialStep.step1)
+                  Positioned(
+                    bottom: screenHeight * _step1BottomFraction,
+                    left: screenWidth * _step1LeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(ImdbTutorialStep.tapShare);
+                      },
+                      child: Container(
+                        width: screenWidth * _step1WidthFraction,
+                        height: screenHeight * _step1HeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
                       ),
                     ),
-                  );
-                },
-                child: Container(
-                  width: screenWidth * _finalSelectWidthFraction,
-                  height: screenHeight * _finalSelectHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
                   ),
-                ),
-              ),
-            ),
 
-          // Instruction overlay
-          if (currentPhase == ImdbTutorialPhase.showingInstruction)
-            _InstructionOverlay(
-              text: _getInstructionText(currentStep),
-              onComplete: _onInstructionComplete,
-            ),
-
-          // One-time setup indicator
-          if (_isOneTimeSetupStep(currentStep))
-            Positioned(
-              bottom: 60.0,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20.0, vertical: 14.0),
-                  decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: const Color(0xFFf2003c),
-                        size: 22,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'One-time setup',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          color: const Color(0xFFf2003c),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
+                // Tap area for tapShare - Share button
+                if (hasUserTapped &&
+                    currentPhase == ImdbTutorialPhase.waitingForAction &&
+                    currentStep == ImdbTutorialStep.tapShare)
+                  Positioned(
+                    bottom: screenHeight * _tapShareBottomFraction,
+                    left: screenWidth * _tapShareLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(ImdbTutorialStep.tapMore);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapShareWidthFraction,
+                        height: screenHeight * _tapShareHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+
+                // Tap area for tapMore - More button (scroll right)
+                if (hasUserTapped &&
+                    currentPhase == ImdbTutorialPhase.waitingForAction &&
+                    currentStep == ImdbTutorialStep.tapMore)
+                  Positioned(
+                    bottom: screenHeight * _tapMoreBottomFraction,
+                    left: screenWidth * _tapMoreLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(ImdbTutorialStep.tapEdit);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapMoreWidthFraction,
+                        height: screenHeight * _tapMoreHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap area for tapEdit - Edit button
+                if (hasUserTapped &&
+                    currentPhase == ImdbTutorialPhase.waitingForAction &&
+                    currentStep == ImdbTutorialStep.tapEdit)
+                  Positioned(
+                    bottom: screenHeight * _tapEditBottomFraction,
+                    right: screenWidth * _tapEditRightFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(ImdbTutorialStep.tapSnaplookShortcut);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapEditWidthFraction,
+                        height: screenHeight * _tapEditHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap area for tapSnaplookShortcut - Snaplook icon
+                if (hasUserTapped &&
+                    currentPhase == ImdbTutorialPhase.waitingForAction &&
+                    currentStep == ImdbTutorialStep.tapSnaplookShortcut)
+                  Positioned(
+                    bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
+                    left: screenWidth * _tapSnaplookShortcutLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(ImdbTutorialStep.tapDone);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapSnaplookShortcutWidthFraction,
+                        height:
+                            screenHeight * _tapSnaplookShortcutHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap area for tapDone - Done button
+                if (hasUserTapped &&
+                    currentPhase == ImdbTutorialPhase.waitingForAction &&
+                    currentStep == ImdbTutorialStep.tapDone)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top +
+                        screenHeight * _tapDoneTopFraction,
+                    right: screenWidth * _tapDoneRightFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(ImdbTutorialStep.tapDoneLast);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapDoneWidthFraction,
+                        height: screenHeight * _tapDoneHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap area for tapDoneLast - second Done button
+                if (hasUserTapped &&
+                    currentPhase == ImdbTutorialPhase.waitingForAction &&
+                    currentStep == ImdbTutorialStep.tapDoneLast)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top +
+                        screenHeight * _tapDoneLastTopFraction,
+                    right: screenWidth * _tapDoneLastRightFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(ImdbTutorialStep.step2);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapDoneLastWidthFraction,
+                        height: screenHeight * _tapDoneLastHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap area for step2 - final Snaplook selection
+                if (hasUserTapped &&
+                    currentPhase == ImdbTutorialPhase.waitingForAction &&
+                    currentStep == ImdbTutorialStep.step2)
+                  Positioned(
+                    bottom: screenHeight * _finalSelectBottomFraction,
+                    left: screenWidth * _finalSelectLeftFraction,
+                    child: GestureDetector(
+                      onTap: () async {
+                        HapticFeedback.mediumImpact();
+                        await precacheImage(
+                          const AssetImage('assets/images/imdb-analysis.jpg'),
+                          context,
+                        );
+                        if (!mounted) return;
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => TutorialImageAnalysisPage(
+                              returnToOnboarding: widget.returnToOnboarding,
+                              imagePath: 'assets/images/imdb-analysis.jpg',
+                              scenario: 'IMDb',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: screenWidth * _finalSelectWidthFraction,
+                        height: screenHeight * _finalSelectHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Instruction overlay
+                if (currentPhase == ImdbTutorialPhase.showingInstruction)
+                  _InstructionOverlay(
+                    text: _getInstructionText(currentStep),
+                    onComplete: _onInstructionComplete,
+                  ),
+
+                // One-time setup indicator
+                if (_isOneTimeSetupStep(currentStep))
+                  Positioned(
+                    bottom: 60.0,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0, vertical: 14.0),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: const Color(0xFFf2003c),
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'One-time setup',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                color: const Color(0xFFf2003c),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-        ],
+          );
+        },
       ),
     );
   }

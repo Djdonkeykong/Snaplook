@@ -14,6 +14,7 @@ import '../../../detection/presentation/widgets/detection_progress_overlay.dart'
 import '../../../detection/domain/models/detection_result.dart';
 import '../../../results/presentation/widgets/results_bottom_sheet.dart';
 import '../../domain/services/tutorial_service.dart';
+import '../widgets/onboarding_phone_frame.dart';
 import 'discovery_source_page.dart';
 
 class TutorialImageAnalysisPage extends ConsumerStatefulWidget {
@@ -72,136 +73,140 @@ class _TutorialImageAnalysisPageState
   Widget build(BuildContext context) {
     final bool showShareAction = _isResultsSheetVisible && _results.isNotEmpty;
 
-    return Scaffold(
+    return OnboardingPhoneFrame(
       backgroundColor: Colors.black,
-      extendBodyBehindAppBar: true,
-      extendBody: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
-        automaticallyImplyLeading: false,
-        actions: _isResultsSheetVisible
-            ? [
-                Container(
-                  margin: const EdgeInsets.all(8),
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+      aspectRatio: kOnboardingPhoneAspectRatio,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          scrolledUnderElevation: 0,
+          automaticallyImplyLeading: false,
+          actions: _isResultsSheetVisible
+              ? [
+                  Container(
+                    margin: const EdgeInsets.all(8),
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        if (widget.returnToOnboarding) {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) => const DiscoverySourcePage(),
+                            ),
+                          );
+                        } else {
+                          Navigator.of(context)
+                              .popUntil((route) => route.isFirst);
+                        }
+                      },
+                      icon: const Icon(Icons.check,
+                          color: Colors.black, size: 18),
+                    ),
                   ),
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () {
-                      if (widget.returnToOnboarding) {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (context) => const DiscoverySourcePage(),
-                          ),
-                        );
-                      } else {
-                        Navigator.of(context)
-                            .popUntil((route) => route.isFirst);
-                      }
-                    },
-                    icon:
-                        const Icon(Icons.check, color: Colors.black, size: 18),
+                ]
+              : null,
+        ),
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: _buildTutorialImage(),
+            ),
+            if (_isAnalyzing)
+              DetectionProgressOverlay(
+                statusText: 'Analyzing...',
+                progress: _currentProgress,
+                overlayOpacity: 0.65,
+              ),
+            if (!_isAnalyzing && !_isResultsSheetVisible)
+              Positioned(
+                bottom: 80,
+                left: 0,
+                right: 0,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    Center(child: _buildScanButton()),
+                  ],
+                ),
+              ),
+            if (_isResultsSheetVisible && _results.isNotEmpty) ...[
+              if (!_showCongratulations)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      color: Colors.black.withOpacity(_resultsOverlayOpacity),
+                    ),
                   ),
                 ),
-              ]
-            : null,
-      ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: _buildTutorialImage(),
-          ),
-          if (_isAnalyzing)
-            DetectionProgressOverlay(
-              statusText: 'Analyzing...',
-              progress: _currentProgress,
-              overlayOpacity: 0.65,
-            ),
-          if (!_isAnalyzing && !_isResultsSheetVisible)
-            Positioned(
-              bottom: 80,
-              left: 0,
-              right: 0,
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  Center(child: _buildScanButton()),
-                ],
-              ),
-            ),
-          if (_isResultsSheetVisible && _results.isNotEmpty) ...[
-            if (!_showCongratulations)
               Positioned(
-                top: 0,
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: IgnorePointer(
-                  ignoring: true,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    color: Colors.black.withOpacity(_resultsOverlayOpacity),
+                top: 0,
+                child: NotificationListener<DraggableScrollableNotification>(
+                  onNotification: (notification) {
+                    final extent = notification.extent;
+                    setState(() => _currentResultsExtent = extent);
+                    return false;
+                  },
+                  child: DraggableScrollableSheet(
+                    key: const ValueKey('tutorial_results_sheet'),
+                    initialChildSize: _resultsInitialExtent,
+                    minChildSize: _resultsMinExtent,
+                    maxChildSize: _resultsMaxExtent,
+                    snap: false,
+                    expand: false,
+                    builder: (context, scrollController) {
+                      return ResultsBottomSheetContent(
+                        results: _results,
+                        scrollController: scrollController,
+                        onProductTap: _openProduct,
+                        showFavoriteButton: false,
+                        analyzedImage: widget.imagePath,
+                      );
+                    },
                   ),
                 ),
               ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              top: 0,
-              child: NotificationListener<DraggableScrollableNotification>(
-                onNotification: (notification) {
-                  final extent = notification.extent;
-                  setState(() => _currentResultsExtent = extent);
-                  return false;
-                },
-                child: DraggableScrollableSheet(
-                  key: const ValueKey('tutorial_results_sheet'),
-                  initialChildSize: _resultsInitialExtent,
-                  minChildSize: _resultsMinExtent,
-                  maxChildSize: _resultsMaxExtent,
-                  snap: false,
-                  expand: false,
-                  builder: (context, scrollController) {
-                    return ResultsBottomSheetContent(
-                      results: _results,
-                      scrollController: scrollController,
-                      onProductTap: _openProduct,
-                      showFavoriteButton: false,
-                      analyzedImage: widget.imagePath,
-                    );
-                  },
-                ),
-              ),
-            ),
-          ],
-          if (_showCongratulations) _buildCongratulationsOverlay(),
+            ],
+            if (_showCongratulations) _buildCongratulationsOverlay(),
 
-          // Instruction overlay (shows on page load)
-          if (_showInstruction)
-            _InstructionOverlay(
-              text: 'Ready to find matches? Tap the search icon below',
-              onComplete: () {
-                if (mounted) {
-                  setState(() => _showInstruction = false);
-                }
-              },
-            ),
-        ],
+            // Instruction overlay (shows on page load)
+            if (_showInstruction)
+              _InstructionOverlay(
+                text: 'Ready to find matches? Tap the search icon below',
+                onComplete: () {
+                  if (mounted) {
+                    setState(() => _showInstruction = false);
+                  }
+                },
+              ),
+          ],
+        ),
       ),
     );
   }

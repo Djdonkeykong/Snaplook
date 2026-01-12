@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../services/analytics_service.dart';
+import '../widgets/onboarding_phone_frame.dart';
 import 'tutorial_image_analysis_page.dart';
 
 const bool _kShowTouchTargets = false;
@@ -159,415 +160,433 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
     final currentStep = ref.watch(pinterestTutorialStepProvider);
     final currentPhase = ref.watch(pinterestTutorialPhaseProvider);
     final hasUserTapped = ref.watch(pinterestHasUserTappedProvider);
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
 
-    return Scaffold(
+    return OnboardingPhoneFrame(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Full-screen Pinterest screenshot (step 1 - ALWAYS visible)
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/pinterest_step1.png',
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-            ),
-          ),
+      aspectRatio: kOnboardingPhoneAspectRatio,
+      child: Builder(
+        builder: (context) {
+          final screenSize = MediaQuery.of(context).size;
+          final screenWidth = screenSize.width;
+          final screenHeight = screenSize.height;
 
-          // Dark overlay when popup appears
-          if (hasUserTapped &&
-              (currentStep == PinterestTutorialStep.step2 ||
-                  currentStep == PinterestTutorialStep.tapMore ||
-                  currentStep == PinterestTutorialStep.tapEdit ||
-                  currentStep == PinterestTutorialStep.tapSnaplookShortcut ||
-                  currentStep == PinterestTutorialStep.tapDone ||
-                  currentStep == PinterestTutorialStep.tapDoneLast ||
-                  currentStep == PinterestTutorialStep.step3))
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.3),
-              ),
-            ),
-
-          // Popup overlay for step 2 (after tapping share button)
-          if (hasUserTapped && currentStep == PinterestTutorialStep.step2)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/pinterest_step2.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Tap More overlay
-          if (hasUserTapped && currentStep == PinterestTutorialStep.tapMore)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-more.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Tap Edit overlay
-          if (hasUserTapped && currentStep == PinterestTutorialStep.tapEdit)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap_edit.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Tap Snaplook Shortcut overlay
-          if (hasUserTapped &&
-              currentStep == PinterestTutorialStep.tapSnaplookShortcut)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap_snaplook.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Tap Done overlay
-          if (hasUserTapped && currentStep == PinterestTutorialStep.tapDone)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap_done.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 7 popup overlay (after tapping first Done - shows second Done button)
-          if (hasUserTapped && currentStep == PinterestTutorialStep.tapDoneLast)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-done-last.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Popup overlay for step 8 (final confirmation)
-          if (hasUserTapped && currentStep == PinterestTutorialStep.step3)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-snaplook-last.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 1 tap area (tap share button)
-          if (currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == PinterestTutorialStep.step1)
-            Positioned(
-              top: screenHeight * _step1TapAreaTopFraction,
-              left: screenWidth * _step1TapAreaLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(PinterestTutorialStep.step2);
-                },
-                child: Container(
-                  width: screenWidth * _step1TapAreaWidthFraction,
-                  height: screenHeight * _step1TapAreaHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
+          return Scaffold(
+            backgroundColor: Colors.black,
+            body: Stack(
+              children: [
+                // Full-screen Pinterest screenshot (step 1 - ALWAYS visible)
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/pinterest_step1.png',
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
                   ),
                 ),
-              ),
-            ),
 
-          // Step 2 tap area (tap Share option) - only active when popup is visible
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == PinterestTutorialStep.step2)
-            Positioned(
-              top: screenHeight * _step2TapAreaTopFraction,
-              left: screenWidth * _step2TapAreaLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(PinterestTutorialStep.tapMore);
-                },
-                child: Container(
-                  width: screenWidth * _step2TapAreaWidthFraction,
-                  height: screenHeight * _step2TapAreaHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap More area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == PinterestTutorialStep.tapMore)
-            Positioned(
-              bottom: screenHeight * _tapMoreBottomFraction,
-              left: screenWidth * _tapMoreLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(PinterestTutorialStep.tapEdit);
-                },
-                child: Container(
-                  width: screenWidth * _tapMoreWidthFraction,
-                  height: screenHeight * _tapMoreHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Edit area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == PinterestTutorialStep.tapEdit)
-            Positioned(
-              bottom: screenHeight * _tapEditBottomFraction,
-              left: screenWidth * _tapEditLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(PinterestTutorialStep.tapSnaplookShortcut);
-                },
-                child: Container(
-                  width: screenWidth * _tapEditWidthFraction,
-                  height: screenHeight * _tapEditHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Snaplook Shortcut area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == PinterestTutorialStep.tapSnaplookShortcut)
-            Positioned(
-              bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
-              left: screenWidth * _tapSnaplookShortcutLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(PinterestTutorialStep.tapDone);
-                },
-                child: Container(
-                  width: screenWidth * _tapSnaplookShortcutWidthFraction,
-                  height: screenHeight * _tapSnaplookShortcutHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Done area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == PinterestTutorialStep.tapDone)
-            Positioned(
-              top: screenHeight * _tapDoneTopFraction,
-              right: screenWidth * _tapDoneRightFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(PinterestTutorialStep.tapDoneLast);
-                },
-                child: Container(
-                  width: screenWidth * _tapDoneWidthFraction,
-                  height: screenHeight * _tapDoneHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == PinterestTutorialStep.tapDoneLast)
-            Positioned(
-              top: screenHeight * _tapDoneLastTopFraction,
-              right: screenWidth * _tapDoneLastRightFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(PinterestTutorialStep.step3);
-                },
-                child: Container(
-                  width: screenWidth * _tapDoneLastWidthFraction,
-                  height: screenHeight * _tapDoneLastHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Step 8 tap area (tap Snaplook) - only active when popup is visible
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == PinterestTutorialStep.step3)
-            Positioned(
-              top: screenHeight * _step3TapAreaTopFraction,
-              left: screenWidth * _step3TapAreaLeftFraction,
-              child: GestureDetector(
-                onTap: () async {
-                  HapticFeedback.mediumImpact();
-                  // Precache the image before navigating
-                  await precacheImage(
-                    const AssetImage('assets/images/pinterest_tutorial.jpg'),
-                    context,
-                  );
-                  if (!mounted) return;
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => TutorialImageAnalysisPage(
-                        imagePath: 'assets/images/pinterest_tutorial.jpg',
-                        scenario: 'Pinterest',
-                        returnToOnboarding: widget.returnToOnboarding,
-                      ),
-                      allowSnapshotting: false,
+                // Dark overlay when popup appears
+                if (hasUserTapped &&
+                    (currentStep == PinterestTutorialStep.step2 ||
+                        currentStep == PinterestTutorialStep.tapMore ||
+                        currentStep == PinterestTutorialStep.tapEdit ||
+                        currentStep ==
+                            PinterestTutorialStep.tapSnaplookShortcut ||
+                        currentStep == PinterestTutorialStep.tapDone ||
+                        currentStep == PinterestTutorialStep.tapDoneLast ||
+                        currentStep == PinterestTutorialStep.step3))
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.3),
                     ),
-                  );
-                },
-                child: Container(
-                  width: screenWidth * _step3TapAreaWidthFraction,
-                  height: screenHeight * _step3TapAreaHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
                   ),
-                ),
-              ),
-            ),
 
-          // Instruction overlay (shows during instruction phase)
-          if (currentPhase == TutorialPhase.showingInstruction)
-            _InstructionOverlay(
-              text: _getInstructionText(currentStep),
-              onComplete: _onInstructionComplete,
-            ),
-
-          // One-time setup indicator (shows during all 4 setup steps, stays above overlay)
-          if (_isOneTimeSetupStep(currentStep))
-            Positioned(
-              bottom: 60.0,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20.0, vertical: 14.0),
-                  decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+                // Popup overlay for step 2 (after tapping share button)
+                if (hasUserTapped && currentStep == PinterestTutorialStep.step2)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/pinterest_step2.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: const Color(0xFFf2003c),
-                        size: 22,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'One-time setup',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          color: const Color(0xFFf2003c),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
+
+                // Tap More overlay
+                if (hasUserTapped &&
+                    currentStep == PinterestTutorialStep.tapMore)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-more.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Tap Edit overlay
+                if (hasUserTapped &&
+                    currentStep == PinterestTutorialStep.tapEdit)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap_edit.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Tap Snaplook Shortcut overlay
+                if (hasUserTapped &&
+                    currentStep == PinterestTutorialStep.tapSnaplookShortcut)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap_snaplook.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Tap Done overlay
+                if (hasUserTapped &&
+                    currentStep == PinterestTutorialStep.tapDone)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap_done.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Step 7 popup overlay (after tapping first Done - shows second Done button)
+                if (hasUserTapped &&
+                    currentStep == PinterestTutorialStep.tapDoneLast)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-done-last.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Popup overlay for step 8 (final confirmation)
+                if (hasUserTapped && currentStep == PinterestTutorialStep.step3)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-snaplook-last.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Step 1 tap area (tap share button)
+                if (currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == PinterestTutorialStep.step1)
+                  Positioned(
+                    top: screenHeight * _step1TapAreaTopFraction,
+                    left: screenWidth * _step1TapAreaLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(PinterestTutorialStep.step2);
+                      },
+                      child: Container(
+                        width: screenWidth * _step1TapAreaWidthFraction,
+                        height: screenHeight * _step1TapAreaHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+
+                // Step 2 tap area (tap Share option) - only active when popup is visible
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == PinterestTutorialStep.step2)
+                  Positioned(
+                    top: screenHeight * _step2TapAreaTopFraction,
+                    left: screenWidth * _step2TapAreaLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(PinterestTutorialStep.tapMore);
+                      },
+                      child: Container(
+                        width: screenWidth * _step2TapAreaWidthFraction,
+                        height: screenHeight * _step2TapAreaHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap More area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == PinterestTutorialStep.tapMore)
+                  Positioned(
+                    bottom: screenHeight * _tapMoreBottomFraction,
+                    left: screenWidth * _tapMoreLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(PinterestTutorialStep.tapEdit);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapMoreWidthFraction,
+                        height: screenHeight * _tapMoreHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Edit area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == PinterestTutorialStep.tapEdit)
+                  Positioned(
+                    bottom: screenHeight * _tapEditBottomFraction,
+                    left: screenWidth * _tapEditLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(
+                            PinterestTutorialStep.tapSnaplookShortcut);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapEditWidthFraction,
+                        height: screenHeight * _tapEditHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Snaplook Shortcut area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == PinterestTutorialStep.tapSnaplookShortcut)
+                  Positioned(
+                    bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
+                    left: screenWidth * _tapSnaplookShortcutLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(PinterestTutorialStep.tapDone);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapSnaplookShortcutWidthFraction,
+                        height:
+                            screenHeight * _tapSnaplookShortcutHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Done area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == PinterestTutorialStep.tapDone)
+                  Positioned(
+                    top: screenHeight * _tapDoneTopFraction,
+                    right: screenWidth * _tapDoneRightFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(PinterestTutorialStep.tapDoneLast);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapDoneWidthFraction,
+                        height: screenHeight * _tapDoneHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Done Last area (tapDoneLast step) - top right, second Done button
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == PinterestTutorialStep.tapDoneLast)
+                  Positioned(
+                    top: screenHeight * _tapDoneLastTopFraction,
+                    right: screenWidth * _tapDoneLastRightFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(PinterestTutorialStep.step3);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapDoneLastWidthFraction,
+                        height: screenHeight * _tapDoneLastHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Step 8 tap area (tap Snaplook) - only active when popup is visible
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == PinterestTutorialStep.step3)
+                  Positioned(
+                    top: screenHeight * _step3TapAreaTopFraction,
+                    left: screenWidth * _step3TapAreaLeftFraction,
+                    child: GestureDetector(
+                      onTap: () async {
+                        HapticFeedback.mediumImpact();
+                        // Precache the image before navigating
+                        await precacheImage(
+                          const AssetImage(
+                              'assets/images/pinterest_tutorial.jpg'),
+                          context,
+                        );
+                        if (!mounted) return;
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => TutorialImageAnalysisPage(
+                              imagePath: 'assets/images/pinterest_tutorial.jpg',
+                              scenario: 'Pinterest',
+                              returnToOnboarding: widget.returnToOnboarding,
+                            ),
+                            allowSnapshotting: false,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: screenWidth * _step3TapAreaWidthFraction,
+                        height: screenHeight * _step3TapAreaHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Instruction overlay (shows during instruction phase)
+                if (currentPhase == TutorialPhase.showingInstruction)
+                  _InstructionOverlay(
+                    text: _getInstructionText(currentStep),
+                    onComplete: _onInstructionComplete,
+                  ),
+
+                // One-time setup indicator (shows during all 4 setup steps, stays above overlay)
+                if (_isOneTimeSetupStep(currentStep))
+                  Positioned(
+                    bottom: 60.0,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0, vertical: 14.0),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: const Color(0xFFf2003c),
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'One-time setup',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                color: const Color(0xFFf2003c),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-        ],
+          );
+        },
       ),
     );
   }

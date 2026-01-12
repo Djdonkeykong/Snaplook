@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../services/analytics_service.dart';
+import '../widgets/onboarding_phone_frame.dart';
 import 'tutorial_image_analysis_page.dart';
 
 const bool _kShowTouchTargets = false;
@@ -158,415 +159,428 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
     final currentStep = ref.watch(tutorialStepProvider);
     final currentPhase = ref.watch(tutorialPhaseProvider);
     final hasUserTapped = ref.watch(hasUserTappedProvider);
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
 
-    return Scaffold(
+    return OnboardingPhoneFrame(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Full-screen Instagram screenshot (ALWAYS visible)
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/instagram_step1_updated.png',
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-            ),
-          ),
+      aspectRatio: kOnboardingPhoneAspectRatio,
+      child: Builder(
+        builder: (context) {
+          final screenSize = MediaQuery.of(context).size;
+          final screenWidth = screenSize.width;
+          final screenHeight = screenSize.height;
 
-          // Dark overlay when popup appears
-          if (hasUserTapped &&
-              (currentStep == TutorialStep.selectSnaplook ||
-                  currentStep == TutorialStep.tapMore ||
-                  currentStep == TutorialStep.tapEdit ||
-                  currentStep == TutorialStep.tapSnaplookShortcut ||
-                  currentStep == TutorialStep.tapDone ||
-                  currentStep == TutorialStep.tapDoneLast ||
-                  currentStep == TutorialStep.confirmShare))
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.5),
-              ),
-            ),
-
-          // Share popup overlay for step 2 (after tapping share button)
-          if (hasUserTapped && currentStep == TutorialStep.selectSnaplook)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/instagram_popup.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 3 popup overlay (after tapping Snaplook first time - shows More button)
-          if (hasUserTapped && currentStep == TutorialStep.tapMore)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-more.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 4 popup overlay (after tapping More - shows Edit button)
-          if (hasUserTapped && currentStep == TutorialStep.tapEdit)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap_edit.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 5 popup overlay (after tapping Edit - shows Snaplook shortcut)
-          if (hasUserTapped && currentStep == TutorialStep.tapSnaplookShortcut)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap_snaplook.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 6 popup overlay (after tapping Snaplook shortcut - shows Done button)
-          if (hasUserTapped && currentStep == TutorialStep.tapDone)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap_done.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 7 popup overlay (after tapping first Done - shows second Done button)
-          if (hasUserTapped && currentStep == TutorialStep.tapDoneLast)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-done-last.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 8 popup overlay (after tapping second Done - final confirmation)
-          if (hasUserTapped && currentStep == TutorialStep.confirmShare)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-snaplook-last.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Share button tap area (tapShare step)
-          if (currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == TutorialStep.tapShare)
-            Positioned(
-              bottom: screenHeight * _shareTapAreaBottomFraction,
-              left: screenWidth * _shareTapAreaLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(TutorialStep.selectSnaplook);
-                },
-                child: Container(
-                  width: screenWidth * _shareTapAreaWidthFraction,
-                  height: screenHeight * _shareTapAreaHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
+          return Scaffold(
+            backgroundColor: Colors.black,
+            body: Stack(
+              children: [
+                // Full-screen Instagram screenshot (ALWAYS visible)
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/instagram_step1_updated.png',
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
                   ),
                 ),
-              ),
-            ),
 
-          // Snaplook selection tap area (selectSnaplook step) - only active when popup is visible
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == TutorialStep.selectSnaplook)
-            Positioned(
-              bottom: screenHeight * _selectTapAreaBottomFraction,
-              left: screenWidth * _selectTapAreaLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(TutorialStep.tapMore);
-                },
-                child: Container(
-                  width: screenWidth * _selectTapAreaWidthFraction,
-                  height: screenHeight * _selectTapAreaHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap More area (tapMore step) - centered bottom tap area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == TutorialStep.tapMore)
-            Positioned(
-              bottom: screenHeight * _tapMoreBottomFraction,
-              left: screenWidth * _tapMoreLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(TutorialStep.tapEdit);
-                },
-                child: Container(
-                  width: screenWidth * _tapMoreWidthFraction,
-                  height: screenHeight * _tapMoreHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Edit area (tapEdit step) - centered bottom tap area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == TutorialStep.tapEdit)
-            Positioned(
-              bottom: screenHeight * _tapEditBottomFraction,
-              left: screenWidth * _tapEditLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(TutorialStep.tapSnaplookShortcut);
-                },
-                child: Container(
-                  width: screenWidth * _tapEditWidthFraction,
-                  height: screenHeight * _tapEditHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Snaplook Shortcut area (tapSnaplookShortcut step) - centered tap area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == TutorialStep.tapSnaplookShortcut)
-            Positioned(
-              bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
-              left: screenWidth * _tapSnaplookShortcutLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(TutorialStep.tapDone);
-                },
-                child: Container(
-                  width: screenWidth * _tapSnaplookShortcutWidthFraction,
-                  height: screenHeight * _tapSnaplookShortcutHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Done area (tapDone step) - top right
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == TutorialStep.tapDone)
-            Positioned(
-              top: screenHeight * _tapDoneTopFraction,
-              right: screenWidth * _tapDoneRightFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(TutorialStep.tapDoneLast);
-                },
-                child: Container(
-                  width: screenWidth * _tapDoneWidthFraction,
-                  height: screenHeight * _tapDoneHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == TutorialStep.tapDoneLast)
-            Positioned(
-              top: screenHeight * _tapDoneLastTopFraction,
-              right: screenWidth * _tapDoneLastRightFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(TutorialStep.confirmShare);
-                },
-                child: Container(
-                  width: screenWidth * _tapDoneLastWidthFraction,
-                  height: screenHeight * _tapDoneLastHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Confirm share tap area (confirmShare step) - only active when popup is visible
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == TutorialStep.confirmShare)
-            Positioned(
-              bottom: screenHeight * _confirmTapAreaBottomFraction,
-              right: screenWidth * _confirmTapAreaRightFraction,
-              child: GestureDetector(
-                onTap: () async {
-                  HapticFeedback.mediumImpact();
-                  // Precache the image before navigating
-                  await precacheImage(
-                    const AssetImage(
-                        'assets/images/tutorial_analysis_image_2.jpg'),
-                    context,
-                  );
-                  if (!mounted) return;
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => TutorialImageAnalysisPage(
-                        imagePath: 'assets/images/tutorial_analysis_image_2.jpg',
-                        scenario: 'Instagram',
-                        returnToOnboarding: widget.returnToOnboarding,
-                      ),
-                      allowSnapshotting: false,
+                // Dark overlay when popup appears
+                if (hasUserTapped &&
+                    (currentStep == TutorialStep.selectSnaplook ||
+                        currentStep == TutorialStep.tapMore ||
+                        currentStep == TutorialStep.tapEdit ||
+                        currentStep == TutorialStep.tapSnaplookShortcut ||
+                        currentStep == TutorialStep.tapDone ||
+                        currentStep == TutorialStep.tapDoneLast ||
+                        currentStep == TutorialStep.confirmShare))
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.5),
                     ),
-                  );
-                },
-                child: Container(
-                  width: screenWidth * _confirmTapAreaWidthFraction,
-                  height: screenHeight * _confirmTapAreaHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
                   ),
-                ),
-              ),
-            ),
 
-          // Instruction overlay (shows during instruction phase)
-          if (currentPhase == TutorialPhase.showingInstruction)
-            _InstructionOverlay(
-              text: _getInstructionText(currentStep),
-              onComplete: _onInstructionComplete,
-            ),
-
-          // One-time setup indicator (shows during all 4 setup steps, stays above overlay)
-          if (_isOneTimeSetupStep(currentStep))
-            Positioned(
-              bottom: 60.0,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20.0, vertical: 14.0),
-                  decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+                // Share popup overlay for step 2 (after tapping share button)
+                if (hasUserTapped && currentStep == TutorialStep.selectSnaplook)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/instagram_popup.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: const Color(0xFFf2003c),
-                        size: 22,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'One-time setup',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          color: const Color(0xFFf2003c),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
+
+                // Step 3 popup overlay (after tapping Snaplook first time - shows More button)
+                if (hasUserTapped && currentStep == TutorialStep.tapMore)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-more.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Step 4 popup overlay (after tapping More - shows Edit button)
+                if (hasUserTapped && currentStep == TutorialStep.tapEdit)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap_edit.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Step 5 popup overlay (after tapping Edit - shows Snaplook shortcut)
+                if (hasUserTapped &&
+                    currentStep == TutorialStep.tapSnaplookShortcut)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap_snaplook.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Step 6 popup overlay (after tapping Snaplook shortcut - shows Done button)
+                if (hasUserTapped && currentStep == TutorialStep.tapDone)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap_done.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Step 7 popup overlay (after tapping first Done - shows second Done button)
+                if (hasUserTapped && currentStep == TutorialStep.tapDoneLast)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-done-last.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Step 8 popup overlay (after tapping second Done - final confirmation)
+                if (hasUserTapped && currentStep == TutorialStep.confirmShare)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-snaplook-last.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Share button tap area (tapShare step)
+                if (currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == TutorialStep.tapShare)
+                  Positioned(
+                    bottom: screenHeight * _shareTapAreaBottomFraction,
+                    left: screenWidth * _shareTapAreaLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(TutorialStep.selectSnaplook);
+                      },
+                      child: Container(
+                        width: screenWidth * _shareTapAreaWidthFraction,
+                        height: screenHeight * _shareTapAreaHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+
+                // Snaplook selection tap area (selectSnaplook step) - only active when popup is visible
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == TutorialStep.selectSnaplook)
+                  Positioned(
+                    bottom: screenHeight * _selectTapAreaBottomFraction,
+                    left: screenWidth * _selectTapAreaLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(TutorialStep.tapMore);
+                      },
+                      child: Container(
+                        width: screenWidth * _selectTapAreaWidthFraction,
+                        height: screenHeight * _selectTapAreaHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap More area (tapMore step) - centered bottom tap area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == TutorialStep.tapMore)
+                  Positioned(
+                    bottom: screenHeight * _tapMoreBottomFraction,
+                    left: screenWidth * _tapMoreLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(TutorialStep.tapEdit);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapMoreWidthFraction,
+                        height: screenHeight * _tapMoreHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Edit area (tapEdit step) - centered bottom tap area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == TutorialStep.tapEdit)
+                  Positioned(
+                    bottom: screenHeight * _tapEditBottomFraction,
+                    left: screenWidth * _tapEditLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(TutorialStep.tapSnaplookShortcut);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapEditWidthFraction,
+                        height: screenHeight * _tapEditHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Snaplook Shortcut area (tapSnaplookShortcut step) - centered tap area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == TutorialStep.tapSnaplookShortcut)
+                  Positioned(
+                    bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
+                    left: screenWidth * _tapSnaplookShortcutLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(TutorialStep.tapDone);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapSnaplookShortcutWidthFraction,
+                        height:
+                            screenHeight * _tapSnaplookShortcutHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Done area (tapDone step) - top right
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == TutorialStep.tapDone)
+                  Positioned(
+                    top: screenHeight * _tapDoneTopFraction,
+                    right: screenWidth * _tapDoneRightFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(TutorialStep.tapDoneLast);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapDoneWidthFraction,
+                        height: screenHeight * _tapDoneHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Done Last area (tapDoneLast step) - top right, second Done button
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == TutorialStep.tapDoneLast)
+                  Positioned(
+                    top: screenHeight * _tapDoneLastTopFraction,
+                    right: screenWidth * _tapDoneLastRightFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(TutorialStep.confirmShare);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapDoneLastWidthFraction,
+                        height: screenHeight * _tapDoneLastHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Confirm share tap area (confirmShare step) - only active when popup is visible
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == TutorialStep.confirmShare)
+                  Positioned(
+                    bottom: screenHeight * _confirmTapAreaBottomFraction,
+                    right: screenWidth * _confirmTapAreaRightFraction,
+                    child: GestureDetector(
+                      onTap: () async {
+                        HapticFeedback.mediumImpact();
+                        // Precache the image before navigating
+                        await precacheImage(
+                          const AssetImage(
+                              'assets/images/tutorial_analysis_image_2.jpg'),
+                          context,
+                        );
+                        if (!mounted) return;
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => TutorialImageAnalysisPage(
+                              imagePath:
+                                  'assets/images/tutorial_analysis_image_2.jpg',
+                              scenario: 'Instagram',
+                              returnToOnboarding: widget.returnToOnboarding,
+                            ),
+                            allowSnapshotting: false,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: screenWidth * _confirmTapAreaWidthFraction,
+                        height: screenHeight * _confirmTapAreaHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Instruction overlay (shows during instruction phase)
+                if (currentPhase == TutorialPhase.showingInstruction)
+                  _InstructionOverlay(
+                    text: _getInstructionText(currentStep),
+                    onComplete: _onInstructionComplete,
+                  ),
+
+                // One-time setup indicator (shows during all 4 setup steps, stays above overlay)
+                if (_isOneTimeSetupStep(currentStep))
+                  Positioned(
+                    bottom: 60.0,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0, vertical: 14.0),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: const Color(0xFFf2003c),
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'One-time setup',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                color: const Color(0xFFf2003c),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-        ],
+          );
+        },
       ),
     );
   }

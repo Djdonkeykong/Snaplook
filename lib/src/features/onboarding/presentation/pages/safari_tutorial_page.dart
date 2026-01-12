@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../services/analytics_service.dart';
+import '../widgets/onboarding_phone_frame.dart';
 import 'tutorial_image_analysis_page.dart';
 
 const bool _kShowTouchTargets = false;
@@ -158,407 +159,421 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
     final currentStep = ref.watch(safariTutorialStepProvider);
     final currentPhase = ref.watch(safariTutorialPhaseProvider);
     final hasUserTapped = ref.watch(safariHasUserTappedProvider);
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
 
-    return Scaffold(
+    return OnboardingPhoneFrame(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Base image - ALWAYS visible (like Instagram tutorial)
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/safari_step2.png',
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-            ),
-          ),
+      aspectRatio: kOnboardingPhoneAspectRatio,
+      child: Builder(
+        builder: (context) {
+          final screenSize = MediaQuery.of(context).size;
+          final screenWidth = screenSize.width;
+          final screenHeight = screenSize.height;
 
-          // Step 1 overlay - only shows during step1, on top of base image
-          if (currentStep == SafariTutorialStep.step1)
-            Positioned.fill(
-              child: Image.asset(
-                'assets/images/safari_step1.png',
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Dark overlay for new popup steps
-          if (hasUserTapped &&
-              (currentStep == SafariTutorialStep.tapMore ||
-                  currentStep == SafariTutorialStep.tapEdit ||
-                  currentStep == SafariTutorialStep.tapSnaplookShortcut ||
-                  currentStep == SafariTutorialStep.tapDone ||
-                  currentStep == SafariTutorialStep.tapDoneLast))
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.5),
-              ),
-            ),
-
-          // Tap More overlay
-          if (hasUserTapped && currentStep == SafariTutorialStep.tapMore)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-more.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Tap Edit overlay
-          if (hasUserTapped && currentStep == SafariTutorialStep.tapEdit)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap_edit.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Tap Snaplook Shortcut overlay
-          if (hasUserTapped &&
-              currentStep == SafariTutorialStep.tapSnaplookShortcut)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap_snaplook.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Tap Done overlay
-          if (hasUserTapped && currentStep == SafariTutorialStep.tapDone)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap_done.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 7 popup overlay (after tapping first Done - shows second Done button)
-          if (hasUserTapped && currentStep == SafariTutorialStep.tapDoneLast)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Image.asset(
-                'assets/images/tap-done-last.png',
-                fit: BoxFit.fitWidth,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Popup overlay for step 8 (final confirmation)
-          if (hasUserTapped && currentStep == SafariTutorialStep.step3)
-            Positioned.fill(
-              child: Image.asset(
-                'assets/images/safari-3.png',
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-              ),
-            ),
-
-          // Step 1 tap area (long press on image)
-          if (currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == SafariTutorialStep.step1)
-            Positioned(
-              top: screenHeight * _step1TapAreaTopFraction,
-              left: screenWidth * _step1TapAreaLeftFraction,
-              child: GestureDetector(
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.step2);
-                },
-                child: Container(
-                  width: screenWidth * _step1TapAreaWidthFraction,
-                  height: screenHeight * _step1TapAreaHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
+          return Scaffold(
+            backgroundColor: Colors.black,
+            body: Stack(
+              children: [
+                // Base image - ALWAYS visible (like Instagram tutorial)
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/images/safari_step2.png',
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
                   ),
                 ),
-              ),
-            ),
 
-          // Step 2 tap area (tap Share option) - only active when popup is visible
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == SafariTutorialStep.step2)
-            Positioned(
-              top: screenHeight * _step2TapAreaTopFraction,
-              left: screenWidth * _step2TapAreaLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.tapMore);
-                },
-                child: Container(
-                  width: screenWidth * _step2TapAreaWidthFraction,
-                  height: screenHeight * _step2TapAreaHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap More area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == SafariTutorialStep.tapMore)
-            Positioned(
-              bottom: screenHeight * _tapMoreBottomFraction,
-              left: screenWidth * _tapMoreLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.tapEdit);
-                },
-                child: Container(
-                  width: screenWidth * _tapMoreWidthFraction,
-                  height: screenHeight * _tapMoreHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Edit area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == SafariTutorialStep.tapEdit)
-            Positioned(
-              bottom: screenHeight * _tapEditBottomFraction,
-              left: screenWidth * _tapEditLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.tapSnaplookShortcut);
-                },
-                child: Container(
-                  width: screenWidth * _tapEditWidthFraction,
-                  height: screenHeight * _tapEditHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Snaplook Shortcut area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == SafariTutorialStep.tapSnaplookShortcut)
-            Positioned(
-              bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
-              left: screenWidth * _tapSnaplookShortcutLeftFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.tapDone);
-                },
-                child: Container(
-                  width: screenWidth * _tapSnaplookShortcutWidthFraction,
-                  height: screenHeight * _tapSnaplookShortcutHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Done area
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == SafariTutorialStep.tapDone)
-            Positioned(
-              top: screenHeight * _tapDoneTopFraction,
-              right: screenWidth * _tapDoneRightFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.tapDoneLast);
-                },
-                child: Container(
-                  width: screenWidth * _tapDoneWidthFraction,
-                  height: screenHeight * _tapDoneHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == SafariTutorialStep.tapDoneLast)
-            Positioned(
-              top: screenHeight * _tapDoneLastTopFraction,
-              right: screenWidth * _tapDoneLastRightFraction,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _onActionComplete(SafariTutorialStep.step3);
-                },
-                child: Container(
-                  width: screenWidth * _tapDoneLastWidthFraction,
-                  height: screenHeight * _tapDoneLastHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-
-          // Step 8 tap area (tap Snaplook) - only active when popup is visible
-          if (hasUserTapped &&
-              currentPhase == TutorialPhase.waitingForAction &&
-              currentStep == SafariTutorialStep.step3)
-            Positioned(
-              top: screenHeight * _step3TapAreaTopFraction,
-              left: screenWidth * _step3TapAreaLeftFraction,
-              child: GestureDetector(
-                onTap: () async {
-                  HapticFeedback.mediumImpact();
-                  // Precache the image before navigating
-                  await precacheImage(
-                    const AssetImage('assets/images/safari_tutorial.webp'),
-                    context,
-                  );
-                  if (!mounted) return;
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => TutorialImageAnalysisPage(
-                        imagePath: 'assets/images/safari_tutorial.webp',
-                        scenario: 'Web Browser',
-                        returnToOnboarding: widget.returnToOnboarding,
-                      ),
-                      allowSnapshotting: false,
+                // Step 1 overlay - only shows during step1, on top of base image
+                if (currentStep == SafariTutorialStep.step1)
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/images/safari_step1.png',
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
                     ),
-                  );
-                },
-                child: Container(
-                  width: screenWidth * _step3TapAreaWidthFraction,
-                  height: screenHeight * _step3TapAreaHeightFraction,
-                  decoration: BoxDecoration(
-                    color: _kShowTouchTargets
-                        ? Colors.red.withValues(alpha: 0.25)
-                        : Colors.transparent,
-                    border: _kShowTouchTargets
-                        ? Border.all(color: Colors.redAccent)
-                        : null,
                   ),
-                ),
-              ),
-            ),
 
-          // Instruction overlay (shows during instruction phase)
-          if (currentPhase == TutorialPhase.showingInstruction)
-            _InstructionOverlay(
-              text: _getInstructionText(currentStep),
-              onComplete: _onInstructionComplete,
-            ),
-
-          // One-time setup indicator (shows during all 4 setup steps, stays above overlay)
-          if (_isOneTimeSetupStep(currentStep))
-            Positioned(
-              bottom: 60.0,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20.0, vertical: 14.0),
-                  decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+                // Dark overlay for new popup steps
+                if (hasUserTapped &&
+                    (currentStep == SafariTutorialStep.tapMore ||
+                        currentStep == SafariTutorialStep.tapEdit ||
+                        currentStep == SafariTutorialStep.tapSnaplookShortcut ||
+                        currentStep == SafariTutorialStep.tapDone ||
+                        currentStep == SafariTutorialStep.tapDoneLast))
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.5),
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: const Color(0xFFf2003c),
-                        size: 22,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'One-time setup',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          color: const Color(0xFFf2003c),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
+
+                // Tap More overlay
+                if (hasUserTapped && currentStep == SafariTutorialStep.tapMore)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-more.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Tap Edit overlay
+                if (hasUserTapped && currentStep == SafariTutorialStep.tapEdit)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap_edit.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Tap Snaplook Shortcut overlay
+                if (hasUserTapped &&
+                    currentStep == SafariTutorialStep.tapSnaplookShortcut)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap_snaplook.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Tap Done overlay
+                if (hasUserTapped && currentStep == SafariTutorialStep.tapDone)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap_done.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Step 7 popup overlay (after tapping first Done - shows second Done button)
+                if (hasUserTapped &&
+                    currentStep == SafariTutorialStep.tapDoneLast)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Image.asset(
+                      'assets/images/tap-done-last.png',
+                      fit: BoxFit.fitWidth,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Popup overlay for step 8 (final confirmation)
+                if (hasUserTapped && currentStep == SafariTutorialStep.step3)
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/images/safari-3.png',
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                    ),
+                  ),
+
+                // Step 1 tap area (long press on image)
+                if (currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == SafariTutorialStep.step1)
+                  Positioned(
+                    top: screenHeight * _step1TapAreaTopFraction,
+                    left: screenWidth * _step1TapAreaLeftFraction,
+                    child: GestureDetector(
+                      onLongPress: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(SafariTutorialStep.step2);
+                      },
+                      child: Container(
+                        width: screenWidth * _step1TapAreaWidthFraction,
+                        height: screenHeight * _step1TapAreaHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+
+                // Step 2 tap area (tap Share option) - only active when popup is visible
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == SafariTutorialStep.step2)
+                  Positioned(
+                    top: screenHeight * _step2TapAreaTopFraction,
+                    left: screenWidth * _step2TapAreaLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(SafariTutorialStep.tapMore);
+                      },
+                      child: Container(
+                        width: screenWidth * _step2TapAreaWidthFraction,
+                        height: screenHeight * _step2TapAreaHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap More area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == SafariTutorialStep.tapMore)
+                  Positioned(
+                    bottom: screenHeight * _tapMoreBottomFraction,
+                    left: screenWidth * _tapMoreLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(SafariTutorialStep.tapEdit);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapMoreWidthFraction,
+                        height: screenHeight * _tapMoreHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Edit area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == SafariTutorialStep.tapEdit)
+                  Positioned(
+                    bottom: screenHeight * _tapEditBottomFraction,
+                    left: screenWidth * _tapEditLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(
+                            SafariTutorialStep.tapSnaplookShortcut);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapEditWidthFraction,
+                        height: screenHeight * _tapEditHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Snaplook Shortcut area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == SafariTutorialStep.tapSnaplookShortcut)
+                  Positioned(
+                    bottom: screenHeight * _tapSnaplookShortcutBottomFraction,
+                    left: screenWidth * _tapSnaplookShortcutLeftFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(SafariTutorialStep.tapDone);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapSnaplookShortcutWidthFraction,
+                        height:
+                            screenHeight * _tapSnaplookShortcutHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Done area
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == SafariTutorialStep.tapDone)
+                  Positioned(
+                    top: screenHeight * _tapDoneTopFraction,
+                    right: screenWidth * _tapDoneRightFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(SafariTutorialStep.tapDoneLast);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapDoneWidthFraction,
+                        height: screenHeight * _tapDoneHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tap Done Last area (tapDoneLast step) - top right, second Done button
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == SafariTutorialStep.tapDoneLast)
+                  Positioned(
+                    top: screenHeight * _tapDoneLastTopFraction,
+                    right: screenWidth * _tapDoneLastRightFraction,
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _onActionComplete(SafariTutorialStep.step3);
+                      },
+                      child: Container(
+                        width: screenWidth * _tapDoneLastWidthFraction,
+                        height: screenHeight * _tapDoneLastHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Step 8 tap area (tap Snaplook) - only active when popup is visible
+                if (hasUserTapped &&
+                    currentPhase == TutorialPhase.waitingForAction &&
+                    currentStep == SafariTutorialStep.step3)
+                  Positioned(
+                    top: screenHeight * _step3TapAreaTopFraction,
+                    left: screenWidth * _step3TapAreaLeftFraction,
+                    child: GestureDetector(
+                      onTap: () async {
+                        HapticFeedback.mediumImpact();
+                        // Precache the image before navigating
+                        await precacheImage(
+                          const AssetImage(
+                              'assets/images/safari_tutorial.webp'),
+                          context,
+                        );
+                        if (!mounted) return;
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => TutorialImageAnalysisPage(
+                              imagePath: 'assets/images/safari_tutorial.webp',
+                              scenario: 'Web Browser',
+                              returnToOnboarding: widget.returnToOnboarding,
+                            ),
+                            allowSnapshotting: false,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: screenWidth * _step3TapAreaWidthFraction,
+                        height: screenHeight * _step3TapAreaHeightFraction,
+                        decoration: BoxDecoration(
+                          color: _kShowTouchTargets
+                              ? Colors.red.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          border: _kShowTouchTargets
+                              ? Border.all(color: Colors.redAccent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Instruction overlay (shows during instruction phase)
+                if (currentPhase == TutorialPhase.showingInstruction)
+                  _InstructionOverlay(
+                    text: _getInstructionText(currentStep),
+                    onComplete: _onInstructionComplete,
+                  ),
+
+                // One-time setup indicator (shows during all 4 setup steps, stays above overlay)
+                if (_isOneTimeSetupStep(currentStep))
+                  Positioned(
+                    bottom: 60.0,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0, vertical: 14.0),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: const Color(0xFFf2003c),
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'One-time setup',
+                              style: TextStyle(
+                                fontFamily: 'PlusJakartaSans',
+                                color: const Color(0xFFf2003c),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-        ],
+          );
+        },
       ),
     );
   }
