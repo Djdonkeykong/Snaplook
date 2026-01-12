@@ -22,32 +22,43 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   static const _assetPath = 'assets/images/snaplook-logo-splash.png';
   // Keep launch and splash logos in sync: fixed width so it doesn't vary by device size.
   static const double _logoWidth = 93.027; // about +8% from original (~+1% from prior)
+  bool _started = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
     _precacheAndNavigate();
   }
 
   Future<void> _precacheAndNavigate() async {
-    await precacheImage(const AssetImage(_assetPath), context);
+    try {
+      await precacheImage(const AssetImage(_assetPath), context);
+    } catch (e) {
+      debugPrint('[Splash] Failed to precache splash logo: $e');
+    }
 
     // Preload onboarding images to prevent white flash
-    await ImagePreloader.instance.preloadSocialMediaShareImage(context);
+    try {
+      await ImagePreloader.instance.preloadSocialMediaShareImage(context);
+    } catch (e) {
+      debugPrint('[Splash] Failed to preload onboarding images: $e');
+    }
 
     // Wait for auth state to be ready (with minimum 0.5s splash time)
     // CRITICAL: Wait for actual auth state data, not just the provider to be available
     // This ensures Supabase session restoration from SharedPreferences completes
-    await Future.wait([
-      Future.delayed(const Duration(milliseconds: 500)),
-      ref.read(authStateProvider.future).timeout(
-        const Duration(seconds: 3),
-        onTimeout: () {
-          debugPrint('[Splash] Auth state timeout - assuming not authenticated');
-          return ref.read(authServiceProvider).authStateChanges.first;
-        },
-      ),
-    ]);
+    try {
+      await ref
+          .read(authStateProvider.future)
+          .timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('[Splash] Auth state wait failed: $e');
+    }
+
+    // Keep a minimum splash duration for smoother transition.
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) return;
 
