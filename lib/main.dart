@@ -2058,9 +2058,12 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     return MaterialApp(
       navigatorKey: navigatorKey,
       builder: (context, child) {
+        // Wrap in responsive container for iPad support
+        final responsiveChild = _ResponsiveWrapper(child: child);
+
         return Stack(
           children: [
-            if (child != null) child,
+            responsiveChild,
             if (_isFetchingOverlayVisible)
               Positioned.fill(
                 child: _FetchingOverlay(
@@ -2080,5 +2083,40 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       home: const SplashPage(),
       onGenerateRoute: (settings) => null,
     );
+  }
+}
+
+/// Responsive wrapper that centers content on iPad while maintaining iPhone dimensions
+class _ResponsiveWrapper extends StatelessWidget {
+  const _ResponsiveWrapper({required this.child});
+
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (child == null) return const SizedBox.shrink();
+
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // iPhone 14 Pro Max width - max width for content
+    const maxPhoneWidth = 430.0;
+
+    // If screen is wider than phone width (iPad), center the content
+    if (screenWidth > maxPhoneWidth) {
+      return Container(
+        color: Colors.black,
+        child: Center(
+          child: Container(
+            width: maxPhoneWidth,
+            clipBehavior: Clip.hardEdge,
+            decoration: const BoxDecoration(),
+            child: child,
+          ),
+        ),
+      );
+    }
+
+    // On phone-sized screens, show normally
+    return child!;
   }
 }
