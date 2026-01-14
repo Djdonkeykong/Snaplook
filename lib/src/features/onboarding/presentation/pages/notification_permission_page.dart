@@ -483,8 +483,8 @@ class _NotificationPermissionPageState
                           stops: const [0.0, 0.45, 0.75, 1.0],
                         ).createShader(rect),
                         child: const SizedBox(
-                          width: 28,
-                          height: 28,
+                          width: 32,
+                          height: 32,
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
                             strokeCap: StrokeCap.round,
