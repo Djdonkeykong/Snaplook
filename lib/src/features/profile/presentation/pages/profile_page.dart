@@ -9,6 +9,7 @@ import '../../../auth/presentation/pages/login_page.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'edit_profile_page.dart';
+import 'appearance_preferences_page.dart';
 import 'feed_preferences_page.dart';
 import 'manage_subscription_page.dart';
 import 'notification_settings_page.dart';
@@ -456,6 +457,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   },
                 ),
                 _SimpleSettingItem(
+                  title: 'Appearance',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AppearancePreferencesPage(),
+                      ),
+                    );
+                  },
+                ),
+                _SimpleSettingItem(
                   title: 'Notifications',
                   onTap: () {
                     Navigator.of(context).push(
@@ -640,4 +651,3 @@ class _SimpleSettingItem extends StatelessWidget {
     );
   }
 }
-

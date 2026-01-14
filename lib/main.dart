@@ -19,6 +19,7 @@ import 'dart:async';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
+import 'core/theme/theme_mode_provider.dart';
 import 'shared/navigation/main_navigation.dart';
 import 'shared/navigation/route_observer.dart';
 import 'src/features/home/domain/providers/image_provider.dart';
@@ -2055,6 +2056,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       navigatorKey: navigatorKey,
       builder: (context, child) {
@@ -2077,6 +2080,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       title: 'Snaplook',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       navigatorObservers: [routeObserver],
       home: const SplashPage(),
       onGenerateRoute: (settings) => null,

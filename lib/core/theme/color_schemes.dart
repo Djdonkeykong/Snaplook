@@ -31,3 +31,35 @@ const lightColorScheme = ColorScheme(
   inversePrimary: Color(0xFF080808), // Black as inverse primary
   surfaceVariant: Color(0xFFF3F4F6),
 );
+
+const darkColorScheme = ColorScheme(
+  brightness: Brightness.dark,
+  primary: Color(0xFF0B0B0D), // Near-black background
+  onPrimary: Color(0xFFF5F7FA), // Light text on dark
+  primaryContainer: Color(0xFF16181D), // Dark surface
+  onPrimaryContainer: Color(0xFFF5F7FA),
+  secondary: Color(0xFFF2003C), // Munsell red accent
+  onSecondary: Color(0xFFFFFFFF),
+  secondaryContainer: Color(0xFF1D2026),
+  onSecondaryContainer: Color(0xFFF5F7FA),
+  tertiary: Color(0xFF1D2026),
+  onTertiary: Color(0xFFF5F7FA),
+  tertiaryContainer: Color(0xFF16181D),
+  onTertiaryContainer: Color(0xFFF5F7FA),
+  error: Color(0xFFEF4444),
+  onError: Color(0xFFFFFFFF),
+  errorContainer: Color(0xFF3A0B12),
+  onErrorContainer: Color(0xFFF5D7DB),
+  surface: Color(0xFF16181D),
+  onSurface: Color(0xFFF5F7FA),
+  surfaceContainerHighest: Color(0xFF1D2026),
+  onSurfaceVariant: Color(0xFFC1C6CF),
+  outline: Color(0xFF2A2E36),
+  outlineVariant: Color(0xFF2A2E36),
+  shadow: Color(0xFF000000),
+  scrim: Color(0xFF000000),
+  inverseSurface: Color(0xFFF5F7FA),
+  onInverseSurface: Color(0xFF0B0B0D),
+  inversePrimary: Color(0xFFF2003C),
+  surfaceVariant: Color(0xFF1D2026),
+);

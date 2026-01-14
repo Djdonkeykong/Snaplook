@@ -54,4 +54,53 @@ class AppTheme {
       ],
     );
   }
+
+  static ThemeData get darkTheme {
+    const colorScheme = darkColorScheme;
+    final baseSnackTextStyle = (AppTextThemes.textTheme.bodyMedium ??
+            const TextStyle())
+        .copyWith(fontFamily: 'PlusJakartaSans');
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.primary,
+      canvasColor: colorScheme.surface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
+        titleTextStyle: AppTextThemes.textTheme.titleMedium?.copyWith(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: colorScheme.surface,
+        selectedItemColor: colorScheme.secondary,
+        unselectedItemColor: colorScheme.onSurfaceVariant,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        elevation: 0,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: colorScheme.surface,
+        contentTextStyle: baseSnackTextStyle.copyWith(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w500,
+        ),
+        actionTextColor: AppColors.secondary,
+        behavior: SnackBarBehavior.fixed,
+        elevation: 0,
+      ),
+      textTheme: AppTextThemes.textTheme,
+      extensions: const [
+        AppSpacingExtension.standard,
+        AppRadiusExtension.standard,
+        AppNavigationExtension.dark,
+      ],
+    );
+  }
 }
