@@ -32,16 +32,17 @@ class ResultsBottomSheetContent extends StatelessWidget {
     final spacing = context.spacing;
     final mediaQuery = MediaQuery.of(context);
     final safeAreaBottom = mediaQuery.padding.bottom;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: colorScheme.surface,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(16),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: colorScheme.shadow.withOpacity(0.12),
             blurRadius: 12,
             offset: const Offset(0, -4),
           ),
@@ -87,7 +88,7 @@ class ResultsBottomSheetContent extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFFf2003c),
+                          color: AppColors.secondary,
                           fontFamily: 'PlusJakartaSans',
                         ),
                       ),
@@ -112,7 +113,7 @@ class ResultsBottomSheetContent extends StatelessWidget {
                                 Padding(
                                   padding: EdgeInsets.only(left: spacing.m),
                                   child: Divider(
-                                    color: Colors.grey[300],
+                                    color: colorScheme.outlineVariant,
                                     height: 1,
                                     thickness: 1,
                                   ),
@@ -191,6 +192,7 @@ class _ProductCard extends StatelessWidget {
     final spacing = context.spacing;
     final radius = context.radius;
     final mediaQuery = MediaQuery.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
       onTap: onTap,
@@ -199,7 +201,7 @@ class _ProductCard extends StatelessWidget {
           top: spacing.m,
           bottom: spacing.m,
         ),
-        color: Theme.of(context).colorScheme.surface,
+        color: colorScheme.surface,
         child: Row(
           children: [
             Stack(
@@ -209,7 +211,7 @@ class _ProductCard extends StatelessWidget {
                   height: 80,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(radius.small),
-                    color: Colors.grey[100],
+                    color: colorScheme.surfaceContainerHighest,
                     image: DecorationImage(
                       image: CachedNetworkImageProvider(result.imageUrl),
                       fit: BoxFit.cover,
@@ -233,10 +235,10 @@ class _ProductCard extends StatelessWidget {
                   children: [
                     Text(
                       result.brand.toUpperCase(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: colorScheme.onSurface,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: 0.2,
                       ),
@@ -244,10 +246,11 @@ class _ProductCard extends StatelessWidget {
                     SizedBox(height: spacing.xs),
                     Text(
                       result.productName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         fontFamily: 'PlusJakartaSans',
+                        color: colorScheme.onSurfaceVariant,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -264,7 +267,7 @@ class _ProductCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFFf2003c),
+                        color: AppColors.secondary,
                         fontFamily: 'PlusJakartaSans',
                       ),
                     ),
@@ -277,7 +280,7 @@ class _ProductCard extends StatelessWidget {
               child: Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: AppColors.textTertiary,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -332,6 +335,8 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
   }
 
   Widget _buildThumbnail() {
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (widget.analyzedImage == null) {
       // Placeholder when no image
       return Container(
@@ -339,11 +344,11 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
         height: 48,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: Colors.grey[200],
+          color: colorScheme.surfaceContainerHighest,
         ),
-        child: const Icon(
+        child: Icon(
           Icons.image_outlined,
-          color: Colors.grey,
+          color: colorScheme.onSurfaceVariant,
           size: 24,
         ),
       );
@@ -360,16 +365,16 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
           height: 48,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            color: Colors.grey[200],
+            color: colorScheme.surfaceContainerHighest,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.asset(
               imageString,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => const Icon(
+              errorBuilder: (context, error, stackTrace) => Icon(
                 Icons.image_outlined,
-                color: Colors.grey,
+                color: colorScheme.onSurfaceVariant,
                 size: 24,
               ),
             ),
@@ -383,7 +388,7 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
         height: 48,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: Colors.grey[200],
+          color: colorScheme.surfaceContainerHighest,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -391,11 +396,11 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
             imageUrl: imageString,
             fit: BoxFit.cover,
             placeholder: (context, url) => Container(
-              color: Colors.grey[200],
+              color: colorScheme.surfaceContainerHighest,
             ),
-            errorWidget: (context, url, error) => const Icon(
+            errorWidget: (context, url, error) => Icon(
               Icons.image_outlined,
-              color: Colors.grey,
+              color: colorScheme.onSurfaceVariant,
               size: 24,
             ),
           ),
@@ -410,16 +415,16 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
         height: 48,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: Colors.grey[200],
+          color: colorScheme.surfaceContainerHighest,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Image.file(
             File(widget.analyzedImage.path),
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => const Icon(
+            errorBuilder: (context, error, stackTrace) => Icon(
               Icons.image_outlined,
-              color: Colors.grey,
+              color: colorScheme.onSurfaceVariant,
               size: 24,
             ),
           ),
@@ -433,27 +438,29 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
       height: 48,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: Colors.grey[200],
+        color: colorScheme.surfaceContainerHighest,
       ),
-      child: const Icon(
+      child: Icon(
         Icons.image_outlined,
-        color: Colors.grey,
+        color: colorScheme.onSurfaceVariant,
         size: 24,
       ),
     );
   }
 
   Widget _buildFullImage() {
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (widget.analyzedImage == null) {
       return Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: Colors.grey[200],
+          color: colorScheme.surfaceContainerHighest,
         ),
-        child: const Center(
+        child: Center(
           child: Icon(
             Icons.image_outlined,
-            color: Colors.grey,
+            color: colorScheme.onSurfaceVariant,
             size: 48,
           ),
         ),
@@ -474,10 +481,14 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
             errorBuilder: (context, error, stackTrace) => Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                color: Colors.grey[200],
+                color: colorScheme.surfaceContainerHighest,
               ),
-              child: const Center(
-                child: Icon(Icons.image_outlined, color: Colors.grey, size: 48),
+              child: Center(
+                child: Icon(
+                  Icons.image_outlined,
+                  color: colorScheme.onSurfaceVariant,
+                  size: 48,
+                ),
               ),
             ),
           ),
@@ -491,15 +502,19 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
           imageUrl: imageString,
           fit: BoxFit.cover,
           placeholder: (context, url) => Container(
-            color: Colors.grey[200],
+            color: colorScheme.surfaceContainerHighest,
           ),
           errorWidget: (context, url, error) => Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              color: Colors.grey[200],
+              color: colorScheme.surfaceContainerHighest,
             ),
-            child: const Center(
-              child: Icon(Icons.image_outlined, color: Colors.grey, size: 48),
+            child: Center(
+              child: Icon(
+                Icons.image_outlined,
+                color: colorScheme.onSurfaceVariant,
+                size: 48,
+              ),
             ),
           ),
         ),
@@ -516,10 +531,14 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
           errorBuilder: (context, error, stackTrace) => Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              color: Colors.grey[200],
+              color: colorScheme.surfaceContainerHighest,
             ),
-            child: const Center(
-              child: Icon(Icons.image_outlined, color: Colors.grey, size: 48),
+            child: Center(
+              child: Icon(
+                Icons.image_outlined,
+                color: colorScheme.onSurfaceVariant,
+                size: 48,
+              ),
             ),
           ),
         ),
@@ -530,10 +549,14 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: Colors.grey[200],
+        color: colorScheme.surfaceContainerHighest,
       ),
-      child: const Center(
-        child: Icon(Icons.image_outlined, color: Colors.grey, size: 48),
+      child: Center(
+        child: Icon(
+          Icons.image_outlined,
+          color: colorScheme.onSurfaceVariant,
+          size: 48,
+        ),
       ),
     );
   }
@@ -542,6 +565,7 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final screenWidth = MediaQuery.of(context).size.width;
+    final colorScheme = Theme.of(context).colorScheme;
 
     // Calculate expanded height similar to iOS (max 400px)
     // Assume a typical aspect ratio for the image
@@ -559,7 +583,7 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
           vertical: _isExpanded ? 12 : 10,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFF9F9F9),
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
         child: _isExpanded
@@ -570,23 +594,24 @@ class _ImageComparisonCardState extends State<_ImageComparisonCard>
                   _buildThumbnail(),
                   SizedBox(width: spacing.m),
                   // "Compare with original" text
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Compare with original',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         fontFamily: 'PlusJakartaSans',
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ),
                   // Chevron icon with rotation
                   RotationTransition(
                     turns: _rotationAnimation,
-                    child: const Icon(
+                    child: Icon(
                       Icons.keyboard_arrow_down,
                       size: 16,
-                      color: Colors.grey,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -674,6 +699,7 @@ class _SheetFavoriteButtonState extends ConsumerState<_SheetFavoriteButton>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isFavorite = ref.watch(isFavoriteProvider(widget.product.id));
 
     // Tailored defaults for bottom-sheet cards
@@ -696,11 +722,11 @@ class _SheetFavoriteButtonState extends ConsumerState<_SheetFavoriteButton>
               width: containerSize,
               height: containerSize,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(containerOpacity),
+                color: colorScheme.surface.withOpacity(containerOpacity),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: colorScheme.shadow.withOpacity(0.12),
                     blurRadius: shadowBlur,
                     offset: shadowOffset,
                   ),
@@ -714,7 +740,9 @@ class _SheetFavoriteButtonState extends ConsumerState<_SheetFavoriteButton>
                         ? SnaplookIcons.heartFilled
                         : SnaplookIcons.heartOutline,
                     size: isFavorite ? filledIconSize : outlineIconSize,
-                    color: isFavorite ? const Color(0xFFf2003c) : Colors.black,
+                    color: isFavorite
+                        ? AppColors.secondary
+                        : colorScheme.onSurface,
                   ),
                 ),
               ),

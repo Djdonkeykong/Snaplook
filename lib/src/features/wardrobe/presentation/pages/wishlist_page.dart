@@ -221,9 +221,9 @@ class _WishlistPageState extends ConsumerState<WishlistPage>
     final hasHistoryError = historyAsync.hasError && !historyAsync.hasValue;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: colorScheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
@@ -927,6 +927,7 @@ class _FavoriteCard extends ConsumerWidget {
     final radius = context.radius;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final cardRadius = BorderRadius.circular(radius.medium);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -952,7 +953,11 @@ class _FavoriteCard extends ConsumerWidget {
       },
       child: Container(
         width: double.infinity,
-        color: Colors.transparent,
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: cardRadius,
+          border: Border.all(color: colorScheme.outlineVariant),
+        ),
         padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: spacing.s * 0.75),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -1027,8 +1032,8 @@ class _FavoriteCard extends ConsumerWidget {
                         children: [
                           _ActionIcon(
                             icon: Icons.share_outlined,
-                            backgroundColor: Colors.black,
-                            iconColor: Colors.white,
+                            backgroundColor: colorScheme.onSurface,
+                            iconColor: colorScheme.surface,
                             borderColor: null,
                             iconOffset: const Offset(-1, 0),
                             onTap: () => _shareProductUrl(context),
@@ -1519,6 +1524,7 @@ class _HistoryCard extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
     // Match favorite card height: 88px image + symmetric padding (spacing.s * 0.75 * 2)
     final double cardHeight = 88.0 + (spacing.s * 1.5);
+    final cardRadius = BorderRadius.circular(radius.medium);
     final cloudinaryUrl = search['cloudinary_url'] as String?;
     final totalResults = (search['total_results'] as num?)?.toInt() ?? 0;
     final createdAt = search['created_at'] as String?;
@@ -1622,7 +1628,11 @@ class _HistoryCard extends ConsumerWidget {
         },
         child: Container(
           height: cardHeight,
-          color: Colors.transparent,
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: cardRadius,
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
           padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: spacing.s * 0.75),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
