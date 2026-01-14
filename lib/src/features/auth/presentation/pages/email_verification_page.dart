@@ -638,26 +638,12 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Center(
-                      child: ShaderMask(
-                        blendMode: BlendMode.srcIn,
-                        shaderCallback: (rect) => SweepGradient(
-                          colors: [
-                            AppColors.secondaryDark,
-                            AppColors.secondary,
-                            AppColors.secondaryLight,
-                            AppColors.secondaryDark,
-                          ],
-                          stops: const [0.0, 0.45, 0.75, 1.0],
-                        ).createShader(rect),
-                        child: const SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.5,
-                            strokeCap: StrokeCap.round,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
+                      child: const SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CircularProgressIndicator(
+                          color: AppColors.secondary,
+                          strokeWidth: 2,
                         ),
                       ),
                     ),
