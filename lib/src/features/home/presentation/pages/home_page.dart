@@ -240,7 +240,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     });
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           // Main content - full screen
@@ -519,6 +519,9 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   }
 
   Widget _buildLargeImageRow(Map<String, dynamic> image, int imageIndex) {
+    final dividerColor =
+        Theme.of(context).colorScheme.outlineVariant.withOpacity(0.6);
+
     return Column(
       children: [
         AspectRatio(
@@ -532,7 +535,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         ),
         Container(
           height: 3,
-          color: Colors.white.withOpacity(0.3),
+          color: dividerColor,
         ),
       ],
     );
@@ -546,6 +549,9 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     if (images.length < 2) {
       return _buildLargeImageRow(images.first, startIndex);
     }
+
+    final dividerColor =
+        Theme.of(context).colorScheme.outlineVariant.withOpacity(0.6);
 
     return Column(
       children: [
@@ -564,7 +570,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
             ),
             Container(
               width: 3,
-              color: Colors.white.withOpacity(0.3),
+              color: dividerColor,
             ),
             Expanded(
               child: AspectRatio(
@@ -581,7 +587,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         ),
         Container(
           height: 3,
-          color: Colors.white.withOpacity(0.3),
+          color: dividerColor,
         ),
       ],
     );
@@ -1064,10 +1070,11 @@ class _InfoBottomSheetContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final creditBalance = ref.watch(creditBalanceProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: colorScheme.surface,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(20),
         ),
@@ -1104,9 +1111,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                                color: colorScheme.onSurfaceVariant,
                                 fontFamily: 'PlusJakartaSans',
                               ),
                             ),
@@ -1119,7 +1124,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
+                                color: colorScheme.onSurface,
                                 fontFamily: 'PlusJakartaSans',
                                 letterSpacing: -0.3,
                               ),
@@ -1140,8 +1145,8 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                                     fontWeight: FontWeight.bold,
                                     color: Theme.of(context).brightness ==
                                             Brightness.dark
-                                        ? Colors.white
-                                        : const Color(0xFFf2003c),
+                                        ? colorScheme.onSurface
+                                        : AppColors.secondary,
                                     fontFamily: 'PlusJakartaSans',
                                     letterSpacing: -2,
                                   ),
@@ -1151,9 +1156,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w500,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
+                                    color: colorScheme.onSurfaceVariant,
                                     fontFamily: 'PlusJakartaSans',
                                   ),
                                 ),
@@ -1167,9 +1170,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               'Credits Remaining',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                                color: colorScheme.onSurfaceVariant,
                                 fontFamily: 'PlusJakartaSans',
                               ),
                             ),
@@ -1182,13 +1183,12 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               child: LinearProgressIndicator(
                                 value: creditsPercentage,
                                 minHeight: 6,
-                                backgroundColor: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
+                                backgroundColor:
+                                    colorScheme.surfaceContainerHighest,
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.white
-                                      : const Color(0xFFf2003c),
+                                      ? colorScheme.onSurface
+                                      : AppColors.secondary,
                                 ),
                               ),
                             ),
@@ -1200,9 +1200,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               'Resets monthly on the 1st',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                                color: colorScheme.onSurfaceVariant,
                                 fontFamily: 'PlusJakartaSans',
                               ),
                             ),
@@ -1214,15 +1212,13 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               width: double.infinity,
                               padding: EdgeInsets.all(spacing.m),
                               decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest
+                                color: colorScheme.surfaceContainerHighest
                                     .withOpacity(
-                                      Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? 0.4
-                                          : 0.6,
-                                    ),
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? 0.4
+                                      : 0.6,
+                                ),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Row(
@@ -1231,9 +1227,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                                   Icon(
                                     Icons.info_outline,
                                     size: 20,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                                   SizedBox(width: spacing.m),
                                   Expanded(
@@ -1242,9 +1236,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                                       style: TextStyle(
                                         fontSize: 13,
                                         height: 1.4,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
+                                        color: colorScheme.onSurfaceVariant,
                                         fontFamily: 'PlusJakartaSans',
                                       ),
                                     ),
@@ -1267,8 +1259,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                           Icon(
                             Icons.error_outline,
                             size: 28,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                           SizedBox(height: spacing.s),
                           Text(
@@ -1276,7 +1267,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
+                              color: colorScheme.onSurface,
                               fontFamily: 'PlusJakartaSans',
                             ),
                           ),
@@ -1285,9 +1276,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                             'Please try again.',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                              color: colorScheme.onSurfaceVariant,
                               fontFamily: 'PlusJakartaSans',
                             ),
                             textAlign: TextAlign.center,
@@ -1304,6 +1293,8 @@ class _InfoBottomSheetContent extends ConsumerWidget {
               child: SnaplookCircularIconButton(
                 icon: Icons.close,
                 iconSize: 18,
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                iconColor: colorScheme.onSurface,
                 onPressed: () => Navigator.pop(context),
                 tooltip: 'Close',
                 semanticLabel: 'Close',
@@ -1428,14 +1419,15 @@ class _InspirationImageCard extends StatelessWidget {
     final isShoeCategory = category.contains('shoe') ||
         category.contains('sneaker') ||
         category.contains('boot');
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
             // No border radius for clean corners as requested
           ),
           child: Column(
@@ -1450,11 +1442,11 @@ class _InspirationImageCard extends StatelessWidget {
                           isShoeCategory: isShoeCategory,
                         )
                       : Container(
-                          color: AppColors.surface,
+                          color: colorScheme.surface,
                           child: Icon(
                             Icons.image_outlined,
                             size: 32,
-                            color: AppColors.tertiary.withOpacity(0.5),
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                 ),
@@ -1508,6 +1500,7 @@ class _StaggeredInspirationImageCardState
     final isShoeCategory = category.contains('shoe') ||
         category.contains('sneaker') ||
         category.contains('boot');
+    final colorScheme = Theme.of(context).colorScheme;
 
     // Create varied heights for staggered effect - alternating between different sizes
     final screenWidth = MediaQuery.of(context).size.width;
@@ -1537,8 +1530,8 @@ class _StaggeredInspirationImageCardState
       color: Colors.transparent,
       child: Container(
         height: cardHeight,
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
           // No border radius for clean corners as requested
         ),
         child: Stack(
@@ -1556,11 +1549,11 @@ class _StaggeredInspirationImageCardState
                         ),
                       )
                     : Container(
-                        color: AppColors.surface,
+                        color: colorScheme.surface,
                         child: Icon(
                           Icons.image_outlined,
                           size: 32,
-                          color: AppColors.tertiary.withOpacity(0.5),
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
               ),
@@ -1662,12 +1655,13 @@ class _MagazineStyleImageCard extends ConsumerWidget {
         category.contains('boot');
 
     final heroTag = 'product_${image['id']}_$index';
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Material(
       color: Colors.transparent,
       child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
           // Clean corners like Burberry - no border radius
         ),
         child: Stack(
@@ -1685,11 +1679,11 @@ class _MagazineStyleImageCard extends ConsumerWidget {
                         ),
                       )
                     : Container(
-                        color: AppColors.surface,
+                        color: colorScheme.surface,
                         child: Icon(
                           Icons.image_outlined,
                           size: isLarge ? 48 : 32,
-                          color: AppColors.tertiary.withOpacity(0.5),
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
               ),
@@ -1838,6 +1832,8 @@ class _AdaptiveProductImage extends StatefulWidget {
 class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     // All images use cover to fill the container
     return SizedBox.expand(
       child: CachedNetworkImage(
@@ -1851,7 +1847,7 @@ class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
           'User-Agent': 'Mozilla/5.0 (compatible; Flutter app)',
         },
         placeholder: (context, url) => Container(
-          color: AppColors.surface,
+          color: colorScheme.surface,
           child: Center(
             child: CircularProgressIndicator(
               color: AppColors.secondary,
@@ -1860,21 +1856,21 @@ class _AdaptiveProductImageState extends State<_AdaptiveProductImage> {
           ),
         ),
         errorWidget: (context, url, error) => Container(
-          color: AppColors.surface,
+          color: colorScheme.surface,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.broken_image_outlined,
                 size: 32,
-                color: AppColors.tertiary.withOpacity(0.5),
+                color: colorScheme.onSurfaceVariant,
               ),
               const SizedBox(height: 8),
               Text(
                 'Image unavailable',
                 style: TextStyle(
                   fontSize: 11,
-                  color: AppColors.tertiary.withOpacity(0.7),
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ],

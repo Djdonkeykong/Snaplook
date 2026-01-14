@@ -24,6 +24,9 @@ class BottomSheetHandle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final effectiveColor = color ?? colorScheme.outlineVariant;
+
     return Padding(
       padding: margin ?? EdgeInsets.zero,
       child: Center(
@@ -31,7 +34,7 @@ class BottomSheetHandle extends StatelessWidget {
           width: width,
           height: height,
           decoration: BoxDecoration(
-            color: color ?? Colors.grey.shade300,
+            color: effectiveColor,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
