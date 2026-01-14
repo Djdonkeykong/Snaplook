@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../domain/providers/gender_provider.dart';
@@ -188,17 +188,20 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
   Widget build(BuildContext context) {
     final selectedGender = ref.watch(selectedGenderProvider);
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         // Always show back button to mirror other onboarding pages.
         // Pop this page (non-root so it works when pushed from the auth sheet flow).
         leading: SnaplookBackButton(
           enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
@@ -216,12 +219,12 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
               SizedBox(height: spacing.l),
 
               // Title
-              const Text(
+              Text(
                 'Choose your catalog',
                 style: TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                   fontFamily: 'PlusJakartaSans',
                   letterSpacing: -1.0,
                   height: 1.3,
@@ -231,11 +234,11 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
               SizedBox(height: spacing.xs),
 
               // Subtitle
-              const Text(
+              Text(
                 "Pick what you want to see and we'll tailor the feed",
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.black54,
+                  color: colorScheme.onSurfaceVariant,
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.w500,
                 ),
@@ -361,8 +364,8 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: selectedGender != null
-                  ? const Color(0xFFf2003c)
-                  : Colors.grey.shade300,
+                  ? AppColors.secondary
+                  : colorScheme.outlineVariant,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -378,7 +381,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                 letterSpacing: -0.2,
                 color: selectedGender != null
                     ? Colors.white
-                    : Colors.grey.shade600,
+                    : colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -403,6 +406,8 @@ class _GenderOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.mediumImpact();
@@ -413,7 +418,9 @@ class _GenderOption extends StatelessWidget {
         width: double.infinity,
         height: 56,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFf2003c) : Colors.grey.shade50,
+          color: isSelected
+              ? AppColors.secondary
+              : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Center(
@@ -422,7 +429,7 @@ class _GenderOption extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: isSelected ? Colors.white : Colors.black,
+              color: isSelected ? Colors.white : colorScheme.onSurface,
             ),
           ),
         ),

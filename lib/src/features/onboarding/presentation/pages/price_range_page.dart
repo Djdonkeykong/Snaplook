@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -118,14 +118,19 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final selectedPrice = ref.watch(priceRangeProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
+        leading: SnaplookBackButton(
+          enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
+        ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 6,
@@ -141,12 +146,12 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
               SizedBox(height: spacing.l),
 
               // Title
-              const Text(
+              Text(
                 'What\'s your typical budget?',
                 style: TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                   fontFamily: 'PlusJakartaSans',
                   letterSpacing: -1.0,
                   height: 1.3,
@@ -156,11 +161,11 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
               SizedBox(height: spacing.m),
 
               // Subtitle
-              const Text(
+              Text(
                 'For clothing purchases',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.black,
+                  color: colorScheme.onSurfaceVariant,
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.w500,
                   letterSpacing: -0.3,
@@ -231,22 +236,25 @@ class _PriceRangePageState extends ConsumerState<PriceRangePage>
                     );
                   },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
+              backgroundColor: AppColors.secondary,
               foregroundColor: Colors.white,
               elevation: 0,
-              disabledBackgroundColor: const Color(0xFFE5E7EB),
-              disabledForegroundColor: const Color(0xFF9CA3AF),
+              disabledBackgroundColor: colorScheme.outlineVariant,
+              disabledForegroundColor: colorScheme.onSurfaceVariant,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
             ),
-            child: const Text(
+            child: Text(
               'Continue',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
+                color: selectedPrice != null
+                    ? Colors.white
+                    : colorScheme.onSurfaceVariant,
               ),
             ),
           ),

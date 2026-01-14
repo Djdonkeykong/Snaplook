@@ -357,16 +357,21 @@ class _NotificationPermissionPageState
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
-            backgroundColor: AppColors.background,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             elevation: 0,
             scrolledUnderElevation: 0,
-            leading: const SnaplookBackButton(enableHaptics: true),
+            leading: SnaplookBackButton(
+              enableHaptics: true,
+              backgroundColor: colorScheme.surface,
+              iconColor: colorScheme.onSurface,
+            ),
             centerTitle: true,
             title: const OnboardingProgressIndicator(
               currentStep: 13,
@@ -379,7 +384,7 @@ class _NotificationPermissionPageState
               child: Column(
                 children: [
                   SizedBox(height: spacing.l),
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Get reminders to find\nyour next look',
@@ -387,7 +392,7 @@ class _NotificationPermissionPageState
                       style: TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: colorScheme.onSurface,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: -1.0,
                         height: 1.3,
@@ -401,13 +406,13 @@ class _NotificationPermissionPageState
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFD1D1D6),
+                        color: colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: Column(
                         children: [
-                          const Padding(
+                          Padding(
                             padding: EdgeInsets.symmetric(
                                 vertical: 32, horizontal: 24),
                             child: Text(
@@ -416,7 +421,7 @@ class _NotificationPermissionPageState
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.black,
+                                color: colorScheme.onSurface,
                                 fontFamily: 'SF Pro Display',
                                 height: 1.3,
                               ),
@@ -425,7 +430,7 @@ class _NotificationPermissionPageState
                           Container(
                             width: double.infinity,
                             height: 1,
-                            color: const Color(0xFFB5B5B5),
+                            color: colorScheme.outline,
                           ),
                           Row(
                             children: [
@@ -457,7 +462,7 @@ class _NotificationPermissionPageState
         ),
         if (_isRequesting)
           Container(
-            color: Colors.black.withOpacity(0.3),
+            color: colorScheme.scrim.withOpacity(0.3),
             child: Center(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
@@ -467,7 +472,7 @@ class _NotificationPermissionPageState
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: colorScheme.surface.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Center(
@@ -503,20 +508,23 @@ class _DialogButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 60,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isPrimary ? const Color(0xFFf2003c) : const Color(0xFFD1D1D6),
+          color:
+              isPrimary ? AppColors.secondary : colorScheme.surfaceContainerHighest,
         ),
         child: Text(
           text,
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w500,
-            color: isPrimary ? Colors.white : Colors.black,
+            color: isPrimary ? Colors.white : colorScheme.onSurface,
             fontFamily: 'SF Pro Text',
           ),
         ),

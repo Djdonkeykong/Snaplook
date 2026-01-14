@@ -124,6 +124,7 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final selectedRetailers = ref.watch(preferredRetailersProvider);
+    final colorScheme = Theme.of(context).colorScheme;
     const sublabels = {
       'Fast fashion': 'Zara, H&M, Uniqlo',
       'Streetwear': 'Nike, Adidas, Foot Locker',
@@ -136,12 +137,16 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
     };
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
+        leading: SnaplookBackButton(
+          enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
+        ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 5,
@@ -157,12 +162,12 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
               SizedBox(height: spacing.l),
 
               // Title
-              const Text(
+              Text(
                 'Where do you usually shop?',
                 style: TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                   fontFamily: 'PlusJakartaSans',
                   letterSpacing: -1.0,
                   height: 1.3,
@@ -172,11 +177,11 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
               SizedBox(height: spacing.m),
 
               // Subtitle
-              const Text(
+              Text(
                 'Select all that apply',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.black,
+                  color: colorScheme.onSurfaceVariant,
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.w500,
                   letterSpacing: -0.3,
@@ -262,22 +267,25 @@ class _PreferredRetailersPageState extends ConsumerState<PreferredRetailersPage>
                     );
                   },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
+              backgroundColor: selectedRetailers.isNotEmpty
+                  ? AppColors.secondary
+                  : colorScheme.outlineVariant,
               foregroundColor: Colors.white,
               elevation: 0,
-              disabledBackgroundColor: const Color(0xFFE5E7EB),
-              disabledForegroundColor: const Color(0xFF9CA3AF),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
             ),
-            child: const Text(
+            child: Text(
               'Continue',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
+                color: selectedRetailers.isNotEmpty
+                    ? Colors.white
+                    : colorScheme.onSurfaceVariant,
               ),
             ),
           ),

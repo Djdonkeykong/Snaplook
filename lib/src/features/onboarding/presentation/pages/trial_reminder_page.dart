@@ -62,16 +62,21 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
-            backgroundColor: AppColors.background,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             elevation: 0,
             scrolledUnderElevation: 0,
-            leading: const SnaplookBackButton(enableHaptics: true),
+            leading: SnaplookBackButton(
+              enableHaptics: true,
+              backgroundColor: colorScheme.surface,
+              iconColor: colorScheme.onSurface,
+            ),
             centerTitle: true,
             title: const OnboardingProgressIndicator(
               currentStep: 17,
@@ -101,10 +106,10 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                     }
                   }
                 },
-                child: const Text(
+                child: Text(
                   'Restore',
                   style: TextStyle(
-                    color: Color(0xFF6B7280),
+                    color: colorScheme.onSurfaceVariant,
                     fontSize: 14,
                     fontFamily: 'PlusJakartaSans',
                     fontWeight: FontWeight.w500,
@@ -126,12 +131,12 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                       ? 'We\'ll send you a reminder before your free trial ends'
                       : 'Get notified about new styles and deals',
                   textAlign: TextAlign.start,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 34,
                     fontFamily: 'PlusJakartaSans',
                     letterSpacing: -1.0,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: colorScheme.onSurface,
                     height: 1.3,
                   ),
                 ),
@@ -158,140 +163,150 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
               ],
             ),
           ),
-      bottomNavigationBar: OnboardingBottomBar(
-        primaryButton: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // No Payment Due Now - only show for new users eligible for trial
-            if (_isEligibleForTrial) ...[
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.check,
-                    color: Colors.green,
-                    size: 16,
+          bottomNavigationBar: OnboardingBottomBar(
+            primaryButton: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // No Payment Due Now - only show for new users eligible for trial
+                if (_isEligibleForTrial) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.check,
+                        color: Colors.green,
+                        size: 16,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'No Payment Due Now',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'PlusJakartaSans',
+                          color: colorScheme.onSurface,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 8),
-                  Text(
-                    'No Payment Due Now',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'PlusJakartaSans',
-                      color: Colors.black,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
+                  const SizedBox(height: 16),
                 ],
-              ),
-              const SizedBox(height: 16),
-            ],
-            // Button with conditional text
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: () async {
-                  HapticFeedback.mediumImpact();
+                // Button with conditional text
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      HapticFeedback.mediumImpact();
 
-                  setState(() {
-                    _isPresenting = true;
-                  });
-
-                  try {
-                    final userId = Supabase.instance.client.auth.currentUser?.id;
-                    final didPurchase = await SuperwallService().presentPaywall(
-                      placement: 'onboarding_paywall',
-                    );
-
-                    if (!mounted) return;
-
-                    setState(() {
-                      _isPresenting = false;
-                    });
-
-                    if (didPurchase && userId != null) {
-                      // User purchased - sync subscription and navigate to welcome or home
-                      debugPrint('[TrialReminder] Purchase completed - syncing subscription');
+                      setState(() {
+                        _isPresenting = true;
+                      });
 
                       try {
-                        await Future.delayed(const Duration(milliseconds: 500));
-                        await SubscriptionSyncService().syncSubscriptionToSupabase();
-                        await OnboardingStateService().markPaymentComplete(userId);
+                        final userId =
+                            Supabase.instance.client.auth.currentUser?.id;
+                        final didPurchase =
+                            await SuperwallService().presentPaywall(
+                          placement: 'onboarding_paywall',
+                        );
+
+                        if (!mounted) return;
+
+                        setState(() {
+                          _isPresenting = false;
+                        });
+
+                        if (didPurchase && userId != null) {
+                          // User purchased - sync subscription and navigate to welcome or home
+                          debugPrint(
+                              '[TrialReminder] Purchase completed - syncing subscription');
+
+                          try {
+                            await Future.delayed(
+                                const Duration(milliseconds: 500));
+                            await SubscriptionSyncService()
+                                .syncSubscriptionToSupabase();
+                            await OnboardingStateService()
+                                .markPaymentComplete(userId);
+                          } catch (e) {
+                            debugPrint(
+                                '[TrialReminder] Error syncing subscription: $e');
+                          }
+
+                          if (mounted) {
+                            // Check if user has completed onboarding before
+                            final userResponse = await Supabase.instance.client
+                                .from('users')
+                                .select('onboarding_state')
+                                .eq('id', userId)
+                                .maybeSingle();
+
+                            final hasCompletedOnboarding =
+                                userResponse?['onboarding_state'] == 'completed';
+
+                            debugPrint(
+                                '[TrialReminder] Has completed onboarding: $hasCompletedOnboarding');
+
+                            if (hasCompletedOnboarding) {
+                              // Returning user - go directly to home
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (context) => const MainNavigation(
+                                    key: ValueKey('fresh-main-nav'),
+                                  ),
+                                ),
+                                (route) => false,
+                              );
+                            } else {
+                              // New user - show welcome page first
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const WelcomeFreeAnalysisPage(),
+                                ),
+                              );
+                            }
+                          }
+                        }
+                        // If user dismissed without purchasing, stay on this page
                       } catch (e) {
-                        debugPrint('[TrialReminder] Error syncing subscription: $e');
-                      }
-
-                      if (mounted) {
-                        // Check if user has completed onboarding before
-                        final userResponse = await Supabase.instance.client
-                            .from('users')
-                            .select('onboarding_state')
-                            .eq('id', userId)
-                            .maybeSingle();
-
-                        final hasCompletedOnboarding =
-                            userResponse?['onboarding_state'] == 'completed';
-
-                        debugPrint('[TrialReminder] Has completed onboarding: $hasCompletedOnboarding');
-
-                        if (hasCompletedOnboarding) {
-                          // Returning user - go directly to home
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (context) => const MainNavigation(
-                                key: ValueKey('fresh-main-nav'),
-                              ),
-                            ),
-                            (route) => false,
-                          );
-                        } else {
-                          // New user - show welcome page first
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (context) => const WelcomeFreeAnalysisPage(),
-                            ),
-                          );
+                        debugPrint(
+                            '[TrialReminder] Error presenting paywall: $e');
+                        if (mounted) {
+                          setState(() {
+                            _isPresenting = false;
+                          });
                         }
                       }
-                    }
-                    // If user dismissed without purchasing, stay on this page
-                  } catch (e) {
-                    debugPrint('[TrialReminder] Error presenting paywall: $e');
-                    if (mounted) {
-                      setState(() {
-                        _isPresenting = false;
-                      });
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFf2003c),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                    child: Text(
+                      _isEligibleForTrial ? 'Continue for FREE' : 'See plans',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -0.2,
+                      ),
+                    ),
                   ),
                 ),
-                child: Text(
-                  _isEligibleForTrial ? 'Continue for FREE' : 'See plans',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
         ),
         if (_isPresenting)
           Container(
-            color: Colors.black.withOpacity(0.3),
+            color: colorScheme.scrim.withOpacity(0.3),
             child: Center(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
@@ -301,7 +316,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: colorScheme.surface.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Center(

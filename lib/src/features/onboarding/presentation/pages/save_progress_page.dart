@@ -335,14 +335,15 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     final targetPlatform = Theme.of(context).platform;
     final isAppleSignInAvailable = targetPlatform == TargetPlatform.iOS ||
         targetPlatform == TargetPlatform.macOS;
+    final colorScheme = Theme.of(context).colorScheme;
     final bottomPadding = kBottomNavigationBarHeight +
         spacing.xl +
         MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
@@ -383,24 +384,24 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(height: spacing.l),
-                    const Text(
+                    Text(
                       'Save your progress',
                       style: TextStyle(
                         fontSize: 34,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: -1.0,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: colorScheme.onSurface,
                         height: 1.3,
                       ),
                     ),
                     SizedBox(height: spacing.xs),
-                    const Text(
+                    Text(
                       'Sign in to save your picks and progress',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black54,
+                        color: colorScheme.onSurfaceVariant,
                         fontFamily: 'PlusJakartaSans',
                         height: 1.4,
                       ),
@@ -472,7 +473,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                               label: 'Continue with Google',
                               backgroundColor: Colors.white,
                               textColor: Colors.black,
-                              borderColor: const Color(0xFFE5E7EB),
+                              borderColor: colorScheme.outline,
                               onPressed: () async {
                                 final authService =
                                     ref.read(authServiceProvider);
@@ -522,7 +523,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                               label: 'Continue with Email',
                               backgroundColor: Colors.white,
                               textColor: Colors.black,
-                              borderColor: const Color(0xFFE5E7EB),
+                              borderColor: colorScheme.outline,
                               onPressed: () async {
                                 final result = await Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -548,18 +549,18 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                 text: TextSpan(
                                   text:
                                       "By continuing you agree to Snaplook's ",
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: Color(0xFF6B7280),
+                                    color: colorScheme.onSurfaceVariant,
                                     fontFamily: 'PlusJakartaSans',
                                     height: 1.5,
                                   ),
                                   children: [
                                     TextSpan(
                                       text: 'Terms of Conditions',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.black,
+                                        color: colorScheme.onSurface,
                                         fontFamily: 'PlusJakartaSans',
                                         fontWeight: FontWeight.bold,
                                         decoration: TextDecoration.underline,
@@ -577,18 +578,13 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                     ),
                                     const TextSpan(
                                       text: ' and ',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF6B7280),
-                                        fontFamily: 'PlusJakartaSans',
-                                        height: 1.5,
-                                      ),
+                                      style: TextStyle(fontSize: 12),
                                     ),
                                     TextSpan(
                                       text: 'Privacy Policy',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.black,
+                                        color: colorScheme.onSurface,
                                         fontFamily: 'PlusJakartaSans',
                                         fontWeight: FontWeight.bold,
                                         decoration: TextDecoration.underline,

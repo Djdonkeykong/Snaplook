@@ -102,11 +102,12 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: const SizedBox(),
@@ -126,10 +127,10 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
               // Large percentage display
               Text(
                 '${_progressAnimation.value.round()}%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 64,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                   fontFamily: 'PlusJakartaSans',
                   letterSpacing: -1.5,
                   height: 1,
@@ -139,13 +140,13 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
               SizedBox(height: spacing.l),
 
               // Title
-              const Text(
+              Text(
                 'We\'re setting everything\nup for you',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                   fontFamily: 'PlusJakartaSans',
                   letterSpacing: -0.5,
                   height: 1.2,
@@ -163,9 +164,9 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
                     child: LinearProgressIndicator(
                       value: _progressAnimation.value / 100,
                       minHeight: 8,
-                      backgroundColor: const Color(0xFFE5E7EB),
+                      backgroundColor: colorScheme.outlineVariant,
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFFf2003c),
+                        AppColors.secondary,
                       ),
                     ),
                   );
@@ -178,10 +179,10 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
               Text(
                 _statusText,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF6B7280),
+                  color: colorScheme.onSurfaceVariant,
                   fontFamily: 'PlusJakartaSans',
                   height: 1.5,
                 ),
@@ -194,18 +195,18 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
                 width: double.infinity,
                 padding: EdgeInsets.all(spacing.l),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Here\'s what we tuned for you',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: colorScheme.onSurface,
                         fontFamily: 'PlusJakartaSans',
                       ),
                     ),
@@ -224,21 +225,21 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
                               height: 24,
                               decoration: BoxDecoration(
                                 color: isCompleted
-                                    ? Colors.black
+                                    ? colorScheme.onSurface
                                     : Colors.transparent,
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: isCompleted
-                                      ? Colors.black
-                                      : const Color(0xFFE5E7EB),
+                                      ? colorScheme.onSurface
+                                      : colorScheme.outline,
                                   width: 2,
                                 ),
                               ),
                               child: isCompleted
-                                  ? const Icon(
+                                  ? Icon(
                                       Icons.check,
                                       size: 16,
-                                      color: Colors.white,
+                                      color: colorScheme.surface,
                                     )
                                   : null,
                             ),
@@ -248,8 +249,8 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
                               style: TextStyle(
                                 fontSize: 14,
                                 color: isCompleted
-                                    ? Colors.black
-                                    : const Color(0xFF6B7280),
+                                    ? colorScheme.onSurface
+                                    : colorScheme.onSurfaceVariant,
                                 fontFamily: 'PlusJakartaSans',
                                 fontWeight: isCompleted
                                     ? FontWeight.w600

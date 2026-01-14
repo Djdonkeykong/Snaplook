@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../services/analytics_service.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -62,6 +62,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     // NOTE: We no longer add appBarHeight + topInset here.
     // Scaffold/AppBar already handle that layout.
@@ -70,13 +71,15 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
     const double topFadeHeight = 36;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: SnaplookBackButton(
           enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
@@ -129,22 +132,22 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
                   children: [
                     Text(
                       'Let\'s tailor Snaplook to you',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: colorScheme.onSurface,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: -1.0,
                         height: 1.1,
                       ),
                     ),
                     SizedBox(height: spacing.s),
-                    const Text(
+                    Text(
                       'A few quick choices help us fine-tune recommendations just for you',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black54,
+                        color: colorScheme.onSurfaceVariant,
                         fontFamily: 'PlusJakartaSans',
                         height: 1.4,
                       ),
@@ -189,7 +192,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
+              backgroundColor: AppColors.secondary,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(

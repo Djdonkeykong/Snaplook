@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -121,15 +121,18 @@ class _WhatYouWantPageState extends ConsumerState<WhatYouWantPage>
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final selected = ref.watch(whatYouWantProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: SnaplookBackButton(
           enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         centerTitle: true,
@@ -145,23 +148,23 @@ class _WhatYouWantPageState extends ConsumerState<WhatYouWantPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'What are you mostly looking for?',
                 style: TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                   fontFamily: 'PlusJakartaSans',
                   letterSpacing: -0.8,
                 ),
               ),
               SizedBox(height: spacing.xs),
-              const Text(
+              Text(
                 'Pick as many as you want',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black54,
+                  color: colorScheme.onSurfaceVariant,
                   fontFamily: 'PlusJakartaSans',
                 ),
               ),
@@ -208,8 +211,8 @@ class _WhatYouWantPageState extends ConsumerState<WhatYouWantPage>
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: selected.isNotEmpty
-                  ? const Color(0xFFf2003c)
-                  : Colors.grey.shade300,
+                  ? AppColors.secondary
+                  : colorScheme.outlineVariant,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -224,7 +227,7 @@ class _WhatYouWantPageState extends ConsumerState<WhatYouWantPage>
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -0.2,
                 color:
-                    selected.isNotEmpty ? Colors.white : Colors.grey.shade600,
+                    selected.isNotEmpty ? Colors.white : colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -247,6 +250,8 @@ class _SelectableTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.mediumImpact();
@@ -257,7 +262,9 @@ class _SelectableTile extends StatelessWidget {
         width: double.infinity,
         height: 56,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFf2003c) : Colors.grey.shade50,
+          color: isSelected
+              ? AppColors.secondary
+              : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Center(
@@ -266,7 +273,7 @@ class _SelectableTile extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: isSelected ? Colors.white : Colors.black,
+              color: isSelected ? Colors.white : colorScheme.onSurface,
               fontFamily: 'PlusJakartaSans',
             ),
           ),

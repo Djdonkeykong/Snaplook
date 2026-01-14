@@ -277,11 +277,12 @@ class _WelcomeFreeAnalysisPageState
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -309,13 +310,13 @@ class _WelcomeFreeAnalysisPageState
                         opacity: _textFadeAnimation,
                         child: Transform.translate(
                           offset: const Offset(0, -154),
-                          child: const Text(
+                          child: Text(
                             'Your fashion search\nstarts now!',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                              color: colorScheme.onSurface,
                               fontFamily: 'PlusJakartaSans',
                               letterSpacing: -0.5,
                               height: 1.2,

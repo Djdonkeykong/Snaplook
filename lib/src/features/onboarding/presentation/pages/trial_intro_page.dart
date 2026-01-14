@@ -177,14 +177,19 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
+        leading: SnaplookBackButton(
+          enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
+        ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 7,
@@ -199,7 +204,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
             SizedBox(height: spacing.l),
 
             // Main heading
-            const Text(
+            Text(
               'We want you to\ntry Snaplook for free',
               textAlign: TextAlign.start,
               style: TextStyle(
@@ -207,7 +212,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -1.0,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: colorScheme.onSurface,
                 height: 1.3,
               ),
             ),
@@ -224,7 +229,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
                           VideoPreloader.instance.isTrialVideoInitialized
                       ? Container(
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: colorScheme.surface,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: ClipRRect(
@@ -239,7 +244,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
                         )
                       : Container(
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: colorScheme.surface,
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
@@ -254,7 +259,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
           mainAxisSize: MainAxisSize.min,
           children: [
             // No Payment Due Now
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
@@ -269,7 +274,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'PlusJakartaSans',
-                    color: Colors.black,
+                    color: colorScheme.onSurface,
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -290,7 +295,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFf2003c),
+                  backgroundColor: AppColors.secondary,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -310,14 +315,14 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
             ),
           ],
         ),
-        secondaryButton: const Align(
+        secondaryButton: Align(
           alignment: Alignment.center,
           child: Text(
             'Just \$41.99 per year (\$3.49/mo)',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
-              color: Color(0xFF6B7280),
+              color: colorScheme.onSurfaceVariant,
               fontFamily: 'PlusJakartaSans',
               fontWeight: FontWeight.w500,
               height: 1.5,

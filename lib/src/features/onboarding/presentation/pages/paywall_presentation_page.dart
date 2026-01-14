@@ -149,14 +149,17 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _isLoading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
+                valueColor: const AlwaysStoppedAnimation<Color>(
                   AppColors.secondary,
                 ),
+                backgroundColor: colorScheme.outlineVariant,
                 strokeWidth: 3,
               ),
             )

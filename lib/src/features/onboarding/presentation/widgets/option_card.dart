@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../../core/theme/app_colors.dart';
 
 class OptionCard extends StatelessWidget {
   const OptionCard({
@@ -17,6 +18,8 @@ class OptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.mediumImpact();
@@ -27,7 +30,9 @@ class OptionCard extends StatelessWidget {
         width: double.infinity,
         constraints: const BoxConstraints(minHeight: 68),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFf2003c) : Colors.grey.shade50,
+          color: isSelected
+              ? AppColors.secondary
+              : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -42,7 +47,7 @@ class OptionCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : Colors.black,
+                color: isSelected ? Colors.white : colorScheme.onSurface,
                 fontFamily: 'PlusJakartaSans',
               ),
             ),
@@ -54,8 +59,9 @@ class OptionCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color:
-                      isSelected ? Colors.white.withOpacity(0.9) : const Color(0xFF6B7280),
+                  color: isSelected
+                      ? colorScheme.onSecondary.withOpacity(0.9)
+                      : colorScheme.onSurfaceVariant,
                   fontFamily: 'PlusJakartaSans',
                   height: 1.3,
                 ),

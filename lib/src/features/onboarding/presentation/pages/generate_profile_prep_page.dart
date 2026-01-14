@@ -49,14 +49,19 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
     final mediaQuery = MediaQuery.of(context);
     final availableWidth = mediaQuery.size.width - spacing.l * 2;
     final lottieSize = math.max(0.0, math.min(availableWidth, 360.0));
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
+        leading: SnaplookBackButton(
+          enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
+        ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 9,
@@ -103,16 +108,16 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
                       children: [
                         Icon(
                           Icons.check_circle,
-                          color: Colors.black,
+                          color: colorScheme.onSurface,
                           size: 18,
                         ),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'All done!',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: colorScheme.onSurface,
                             fontFamily: 'PlusJakartaSans',
                           ),
                         ),
@@ -126,13 +131,13 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
                 // Title
                 Transform.translate(
                   offset: const Offset(0, -12),
-                  child: const Text(
+                  child: Text(
                     'Time to dial in your\nstyle journey',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: colorScheme.onSurface,
                       fontFamily: 'PlusJakartaSans',
                       letterSpacing: -0.5,
                       height: 1.2,
@@ -160,7 +165,7 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
+              backgroundColor: AppColors.secondary,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(

@@ -32,14 +32,19 @@ class _ProfileReadyPageState extends State<ProfileReadyPage> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
+        leading: SnaplookBackButton(
+          enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
+        ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 11,
@@ -53,24 +58,24 @@ class _ProfileReadyPageState extends State<ProfileReadyPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: spacing.l),
-              const Text(
+              Text(
                 'Your style, tuned to you',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                   fontFamily: 'PlusJakartaSans',
                   letterSpacing: -0.5,
                   height: 1.2,
                 ),
               ),
               SizedBox(height: spacing.m),
-              const Text(
+              Text(
                 'Snaplook has aligned your preferences into a clear style direction',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
+                  color: colorScheme.onSurfaceVariant,
                   fontFamily: 'PlusJakartaSans',
                   height: 1.5,
                 ),
@@ -103,7 +108,7 @@ class _ProfileReadyPageState extends State<ProfileReadyPage> {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFf2003c),
+              backgroundColor: AppColors.secondary,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(

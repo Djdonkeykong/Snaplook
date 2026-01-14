@@ -76,14 +76,19 @@ class _RatingSocialProofPageState extends State<RatingSocialProofPage> {
     final radius = context.radius;
     final currentStep = 12;
     final totalSteps = 14;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
+        leading: SnaplookBackButton(
+          enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
+        ),
         centerTitle: true,
         title: OnboardingProgressIndicator(
           currentStep: currentStep,
@@ -96,7 +101,7 @@ class _RatingSocialProofPageState extends State<RatingSocialProofPage> {
           child: Column(
             children: [
               SizedBox(height: spacing.l),
-              const Align(
+              Align(
                 alignment: Alignment.centerLeft,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,7 +111,7 @@ class _RatingSocialProofPageState extends State<RatingSocialProofPage> {
                       style: TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: colorScheme.onSurface,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: -1.0,
                         height: 1.3,
@@ -144,12 +149,11 @@ class _RatingSocialProofPageState extends State<RatingSocialProofPage> {
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: _canContinue
-                  ? const Color(0xFFf2003c)
-                  : Colors.grey.shade300,
-              foregroundColor: _canContinue ? Colors.white : Colors.grey.shade500,
+                  ? AppColors.secondary
+                  : colorScheme.outlineVariant,
+              foregroundColor:
+                  _canContinue ? Colors.white : colorScheme.onSurfaceVariant,
               elevation: 0,
-              disabledBackgroundColor: Colors.grey.shade300,
-              disabledForegroundColor: Colors.grey.shade500,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
@@ -178,6 +182,7 @@ class _EncouragementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 420),
@@ -198,24 +203,24 @@ class _EncouragementCard extends StatelessWidget {
               ),
             ),
           ),
-          const Text(
+          Text(
             "Thanks for giving Snaplook a try!",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: colorScheme.onSurface,
               fontFamily: 'PlusJakartaSans',
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             "If you're enjoying the process, we'd love a quick rating - it really helps us",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
+              color: colorScheme.onSurfaceVariant,
               height: 1.25,
               fontFamily: 'PlusJakartaSans',
             ),
