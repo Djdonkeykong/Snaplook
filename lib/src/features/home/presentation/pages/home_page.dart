@@ -815,13 +815,14 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       useRootNavigator: true,
       builder: (sheetContext) {
         final spacing = sheetContext.spacing;
+        final colorScheme = Theme.of(sheetContext).colorScheme;
         return StatefulBuilder(
           builder: (context, sheetSetState) {
             return FractionallySizedBox(
               heightFactor: 0.9,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(sheetContext).colorScheme.surface,
+                  color: colorScheme.surface,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
@@ -841,23 +842,23 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                             BottomSheetHandle(
                               margin: EdgeInsets.only(bottom: spacing.m),
                             ),
-                            const Text(
+                            Text(
                               'Share your look',
                               style: TextStyle(
                                 fontSize: 34,
                                 fontFamily: 'PlusJakartaSans',
                                 letterSpacing: -1.0,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                color: colorScheme.onSurface,
                                 height: 1.3,
                               ),
                             ),
                             SizedBox(height: spacing.xs),
-                            const Text(
+                            Text(
                               'Learn to share from your favorite apps',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.black54,
+                                color: colorScheme.onSurfaceVariant,
                                 fontWeight: FontWeight.w500,
                                 fontFamily: 'PlusJakartaSans',
                               ),
@@ -897,6 +898,9 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                         child: SnaplookCircularIconButton(
                           icon: Icons.close,
                           iconSize: 18,
+                          backgroundColor:
+                              colorScheme.surfaceContainerHighest,
+                          iconColor: colorScheme.onSurface,
                           onPressed: () => Navigator.of(sheetContext).pop(),
                           tooltip: 'Close',
                           semanticLabel: 'Close',
@@ -1994,6 +1998,8 @@ class _TutorialAppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: () {
         if (isLoading) return;
@@ -2008,7 +2014,7 @@ class _TutorialAppCard extends StatelessWidget {
         width: double.infinity,
         constraints: const BoxConstraints(minHeight: 56),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Padding(
@@ -2018,8 +2024,8 @@ class _TutorialAppCard extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -2045,7 +2051,9 @@ class _TutorialAppCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: isEnabled ? Colors.black : Colors.grey.shade500,
+                    color: isEnabled
+                        ? colorScheme.onSurface
+                        : colorScheme.onSurfaceVariant,
                     fontFamily: 'PlusJakartaSans',
                     letterSpacing: -0.2,
                   ),
@@ -2060,15 +2068,16 @@ class _TutorialAppCard extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: colorScheme.surface,
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: colorScheme.outlineVariant),
                   ),
                   child: Text(
                     statusLabel ?? 'Coming soon',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: colorScheme.onSurfaceVariant,
                       fontFamily: 'PlusJakartaSans',
                       letterSpacing: -0.2,
                     ),
@@ -2078,7 +2087,7 @@ class _TutorialAppCard extends StatelessWidget {
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: Colors.grey.shade400,
+                  color: colorScheme.onSurfaceVariant,
                 ),
             ],
           ),
