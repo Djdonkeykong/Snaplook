@@ -262,8 +262,8 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                     child: Container(
-                      width: 75,
-                      height: 75,
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(20),
@@ -280,8 +280,8 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
                             stops: const [0.0, 0.45, 0.75, 1.0],
                           ).createShader(rect),
                           child: const SizedBox(
-                            width: 34,
-                            height: 34,
+                            width: 30,
+                            height: 30,
                             child: CircularProgressIndicator(
                               strokeWidth: 1.5,
                               valueColor:
