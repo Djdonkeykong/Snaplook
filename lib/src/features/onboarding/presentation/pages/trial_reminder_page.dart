@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -299,16 +298,34 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                   child: Container(
-                    width: 75,
-                    height: 75,
+                    width: 80,
+                    height: 80,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6d6d6d).withOpacity(0.85),
+                      color: Colors.white.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Center(
-                      child: CupertinoActivityIndicator(
-                        radius: 18,
-                        color: Colors.white,
+                    child: Center(
+                      child: ShaderMask(
+                        blendMode: BlendMode.srcIn,
+                        shaderCallback: (rect) => SweepGradient(
+                          colors: [
+                            AppColors.secondaryDark,
+                            AppColors.secondary,
+                            AppColors.secondaryLight,
+                            AppColors.secondaryDark,
+                          ],
+                          stops: const [0.0, 0.45, 0.75, 1.0],
+                        ).createShader(rect),
+                        child: const SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            strokeCap: StrokeCap.round,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
                       ),
                     ),
                   ),

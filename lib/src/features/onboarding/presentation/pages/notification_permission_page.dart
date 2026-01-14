@@ -472,20 +472,22 @@ class _NotificationPermissionPageState
                     ),
                     child: Center(
                       child: ShaderMask(
+                        blendMode: BlendMode.srcIn,
                         shaderCallback: (rect) => SweepGradient(
                           colors: [
-                            AppColors.secondary.withOpacity(0.15),
+                            AppColors.secondaryDark,
                             AppColors.secondary,
                             AppColors.secondaryLight,
-                            AppColors.secondary.withOpacity(0.15),
+                            AppColors.secondaryDark,
                           ],
                           stops: const [0.0, 0.45, 0.75, 1.0],
                         ).createShader(rect),
                         child: const SizedBox(
-                          width: 30,
-                          height: 30,
+                          width: 28,
+                          height: 28,
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
+                            strokeCap: StrokeCap.round,
                             valueColor:
                                 AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
