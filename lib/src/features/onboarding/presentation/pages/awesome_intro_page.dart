@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
@@ -31,15 +30,20 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
     const double shareImageAspectRatio = 939 / 1110;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
+        leading: SnaplookBackButton(
+          enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
+        ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 2,
@@ -54,7 +58,7 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
             SizedBox(height: spacing.l),
 
             // Title
-            const Text(
+            Text(
               'Share your style,\nfind the look',
               textAlign: TextAlign.start,
               style: TextStyle(
@@ -62,7 +66,7 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -1.0,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: colorScheme.onSurface,
                 height: 1.3,
               ),
             ),
@@ -82,13 +86,13 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
             SizedBox(height: spacing.xl),
 
             // Description text
-            const Center(
+            Center(
               child: Text(
                 'Share fashion images from Instagram, Pinterest,\nor any app to find similar styles and products!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.black,
+                  color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                   fontFamily: 'PlusJakartaSans',
                   letterSpacing: -0.3,

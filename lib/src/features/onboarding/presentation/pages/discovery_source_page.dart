@@ -128,14 +128,19 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
   Widget build(BuildContext context) {
     final selectedSource = ref.watch(selectedDiscoverySourceProvider);
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
+        leading: SnaplookBackButton(
+          enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
+        ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 4,
@@ -150,14 +155,14 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
             SizedBox(height: spacing.l),
 
             // Title
-            const Text(
+            Text(
               'Where did you hear\nabout us?',
               style: TextStyle(
                 fontSize: 34,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -1.0,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: colorScheme.onSurface,
                 height: 1.3,
               ),
             ),
@@ -313,7 +318,8 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                                 source: DiscoverySource.friendOrFamily,
                                 label: 'Friend or family',
                                 icon: Icon(Snaplook_people.biPeopleFill,
-                                    size: 24, color: Colors.black),
+                                    size: 24,
+                                    color: colorScheme.onSurface),
                                 isSelected: selectedSource ==
                                     DiscoverySource.friendOrFamily,
                                 onTap: () => ref
@@ -342,7 +348,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                                   child: Icon(
                                       Snaplook_more_and_family.icRoundLayers,
                                       size: 28,
-                                      color: Colors.black),
+                                      color: colorScheme.onSurface),
                                 ),
                                 isSelected:
                                     selectedSource == DiscoverySource.other,
@@ -389,8 +395,8 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: selectedSource != null
-                  ? const Color(0xFFf2003c)
-                  : Colors.grey.shade300,
+                  ? AppColors.secondary
+                  : colorScheme.outlineVariant,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -406,7 +412,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
                 letterSpacing: -0.2,
                 color: selectedSource != null
                     ? Colors.white
-                    : Colors.grey.shade600,
+                    : colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -433,6 +439,8 @@ class _DiscoverySourceOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.mediumImpact();
@@ -443,7 +451,9 @@ class _DiscoverySourceOption extends StatelessWidget {
         width: double.infinity,
         height: 56,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFf2003c) : Colors.grey.shade50,
+          color: isSelected
+              ? AppColors.secondary
+              : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Padding(
@@ -453,8 +463,8 @@ class _DiscoverySourceOption extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -471,7 +481,9 @@ class _DiscoverySourceOption extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : Colors.black,
+                  color: isSelected
+                      ? Colors.white
+                      : colorScheme.onSurface,
                 ),
               ),
             ],

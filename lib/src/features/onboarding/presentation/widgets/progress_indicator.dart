@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/theme/app_colors.dart';
 
 class OnboardingProgressIndicator extends StatelessWidget {
   final int currentStep;
@@ -13,11 +12,13 @@ class OnboardingProgressIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: 120,
       height: 4,
       decoration: BoxDecoration(
-        color: Colors.grey.shade300,
+        color: colorScheme.outlineVariant,
         borderRadius: BorderRadius.circular(2),
       ),
       child: FractionallySizedBox(
@@ -25,7 +26,7 @@ class OnboardingProgressIndicator extends StatelessWidget {
         widthFactor: currentStep / totalSteps,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black,
+            color: colorScheme.onSurface,
             borderRadius: BorderRadius.circular(2),
           ),
         ),

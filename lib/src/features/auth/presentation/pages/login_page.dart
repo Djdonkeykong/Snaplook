@@ -88,6 +88,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -101,15 +104,17 @@ class _LoginPageState extends ConsumerState<LoginPage>
     final videoHeight = availableVideoSpace.clamp(280.0, availableVideoSpace);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark, // Android
-        statusBarBrightness: Brightness.light, // iOS
-        systemNavigationBarColor: Colors.white,
-        systemNavigationBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark, // Android
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light, // iOS
+        systemNavigationBarColor: theme.scaffoldBackgroundColor,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: SafeArea(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: spacing.l),
@@ -123,7 +128,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     height: videoHeight,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: colorScheme.surface,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: ClipRRect(
@@ -141,18 +146,18 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     height: videoHeight,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      color: colorScheme.surfaceVariant,
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                 SizedBox(height: spacing.xl),
-                const Text(
+                Text(
                   'Snap the look\nin seconds.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 34,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: colorScheme.onSurface,
                     fontFamily: 'PlusJakartaSans',
                     letterSpacing: -1.0,
                     height: 1.3,
@@ -164,7 +169,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   width: double.infinity,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: Colors.black,
+                    color: AppColors.secondary,
                     borderRadius: BorderRadius.circular(28),
                   ),
                   child: ElevatedButton(
@@ -203,10 +208,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   },
                   child: RichText(
                     textAlign: TextAlign.center,
-                    text: const TextSpan(
+                    text: TextSpan(
                       text: 'Already have an account? ',
                       style: TextStyle(
-                        color: Color(0xFF6B7280),
+                        color: colorScheme.onSurfaceVariant,
                         fontSize: 14,
                         fontFamily: 'PlusJakartaSans',
                         fontWeight: FontWeight.w400,
@@ -216,7 +221,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         TextSpan(
                           text: 'Sign In',
                           style: TextStyle(
-                            color: Colors.black,
+                            color: colorScheme.onSurface,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'PlusJakartaSans',
                             letterSpacing: -0.2,
@@ -239,6 +244,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     final spacing = context.spacing;
     final navigator = Navigator.of(context);
     final platform = Theme.of(context).platform;
+    final colorScheme = Theme.of(context).colorScheme;
     final isAppleSignInAvailable =
         platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
 
@@ -247,8 +253,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(20),
           ),
@@ -265,13 +271,13 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     BottomSheetHandle(
                       margin: EdgeInsets.only(bottom: spacing.m),
                     ),
-                    const Center(
+                    Center(
                       child: Text(
                         'Sign In',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: colorScheme.onSurface,
                           fontFamily: 'PlusJakartaSans',
                           letterSpacing: -0.5,
                         ),
@@ -541,14 +547,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       ),
                       SizedBox(height: spacing.m),
                     ],
-                    _AuthButtonWithSvg(
-                      svgAsset: 'assets/icons/google_logo.svg',
-                      iconSize: 22,
-                      label: 'Continue with Google',
-                      backgroundColor: Colors.white,
-                      textColor: Colors.black,
-                      borderColor: const Color(0xFFE5E7EB),
-                      onPressed: () async {
+                      _AuthButtonWithSvg(
+                        svgAsset: 'assets/icons/google_logo.svg',
+                        iconSize: 22,
+                        label: 'Continue with Google',
+                        backgroundColor: Colors.white,
+                        textColor: Colors.black,
+                        borderColor: colorScheme.outline,
+                        onPressed: () async {
                         try {
                           print('[LoginPage] Google sign-in button clicked');
                           final authService = ref.read(authServiceProvider);
@@ -805,7 +811,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       label: 'Continue with Email',
                       backgroundColor: Colors.white,
                       textColor: Colors.black,
-                      borderColor: const Color(0xFFE5E7EB),
+                      borderColor: colorScheme.outline,
                       onPressed: () async {
                         Navigator.pop(context);
                         // Give the sheet a moment to finish closing for smoother transition
@@ -826,18 +832,18 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         textAlign: TextAlign.center,
                         text: TextSpan(
                           text: "By continuing you agree to Snaplook's ",
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF6B7280),
+                            color: colorScheme.onSurfaceVariant,
                             fontFamily: 'PlusJakartaSans',
                             height: 1.5,
                           ),
                           children: [
                             TextSpan(
                               text: 'Terms of Conditions',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.black,
+                                color: colorScheme.onSurface,
                                 fontFamily: 'PlusJakartaSans',
                                 fontWeight: FontWeight.bold,
                                 decoration: TextDecoration.underline,
@@ -853,20 +859,20 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   );
                                 },
                             ),
-                            const TextSpan(
+                            TextSpan(
                               text: ' and ',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF6B7280),
+                                color: colorScheme.onSurfaceVariant,
                                 fontFamily: 'PlusJakartaSans',
                                 height: 1.5,
                               ),
                             ),
                             TextSpan(
                               text: 'Privacy Policy',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.black,
+                                color: colorScheme.onSurface,
                                 fontFamily: 'PlusJakartaSans',
                                 fontWeight: FontWeight.bold,
                                 decoration: TextDecoration.underline,
@@ -896,6 +902,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 child: SnaplookCircularIconButton(
                   icon: Icons.close,
                   iconSize: 18,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                  iconColor: colorScheme.onSurface,
                   onPressed: () => Navigator.pop(context),
                   tooltip: 'Close',
                   semanticLabel: 'Close',

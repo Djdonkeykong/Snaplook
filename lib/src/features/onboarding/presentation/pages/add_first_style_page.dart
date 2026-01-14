@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../../shared/navigation/route_observer.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
@@ -156,14 +155,19 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(enableHaptics: true),
+        leading: SnaplookBackButton(
+          enableHaptics: true,
+          backgroundColor: colorScheme.surface,
+          iconColor: colorScheme.onSurface,
+        ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 3,
@@ -178,14 +182,14 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
             SizedBox(height: spacing.l),
 
             // Title
-            const Text(
+            Text(
               'Analyze and discover',
               style: TextStyle(
                 fontSize: 34,
                 fontFamily: 'PlusJakartaSans',
                 letterSpacing: -1.0,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: colorScheme.onSurface,
                 height: 1.3,
               ),
             ),
@@ -193,11 +197,11 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
             SizedBox(height: spacing.xs),
 
             // Subtitle
-            const Text(
+            Text(
               'Learn to share from your favorite apps',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.black54,
+                color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
                 fontFamily: 'PlusJakartaSans',
               ),
@@ -226,7 +230,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
               ),
             );
           },
-          child: const SizedBox(
+          child: SizedBox(
             width: double.infinity,
             height: 56,
             child: Center(
@@ -234,12 +238,12 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
                 'Skip',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.black,
+                  color: colorScheme.onSurface,
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.2,
                   decoration: TextDecoration.underline,
-                  decorationColor: Colors.black,
+                  decorationColor: colorScheme.onSurface,
                   decorationThickness: 1.5,
                 ),
               ),
@@ -448,6 +452,8 @@ class _AppCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.mediumImpact();
@@ -515,7 +521,7 @@ class _AppCard extends ConsumerWidget {
         width: double.infinity,
         height: 56,
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Padding(
@@ -525,8 +531,8 @@ class _AppCard extends ConsumerWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -537,10 +543,10 @@ class _AppCard extends ConsumerWidget {
               Expanded(
                 child: Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                    color: colorScheme.onSurface,
                     fontFamily: 'PlusJakartaSans',
                     letterSpacing: -0.2,
                   ),
@@ -549,7 +555,7 @@ class _AppCard extends ConsumerWidget {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Colors.grey.shade400,
+                color: colorScheme.onSurfaceVariant,
               ),
             ],
           ),

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/analytics_service.dart';
@@ -76,6 +75,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
+    final colorScheme = Theme.of(context).colorScheme;
 
     const double appBarHeight = kToolbarHeight;
 
@@ -85,7 +85,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     const double topFadeHeight = 36;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           // 🔹 SCROLL CONTENT (anchored) + TOP FADE
@@ -135,12 +135,12 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'How Snaplook works',
                       style: TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: colorScheme.onSurface,
                         fontFamily: 'PlusJakartaSans',
                         letterSpacing: -1.0,
                         height: 1.2,
@@ -178,7 +178,11 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                   backgroundColor: Colors.transparent,
                   elevation: 0,
                   scrolledUnderElevation: 0,
-                  leading: SnaplookBackButton(enableHaptics: true),
+                  leading: SnaplookBackButton(
+                    enableHaptics: true,
+                    backgroundColor: colorScheme.surface,
+                    iconColor: colorScheme.onSurface,
+                  ),
                   centerTitle: true,
                   title: const OnboardingProgressIndicator(
                     currentStep: 1,
