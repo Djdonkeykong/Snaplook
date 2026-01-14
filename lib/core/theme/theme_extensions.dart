@@ -159,7 +159,7 @@ class AppNavigationExtension extends ThemeExtension<AppNavigationExtension> {
 
   static const AppNavigationExtension dark = AppNavigationExtension(
     navBarBackground: Color(0xFF0B0B0D),
-    navBarActiveIcon: AppColors.secondary,
+    navBarActiveIcon: Color(0xFFF5F7FA),
     navBarInactiveIcon: Color(0xFFC1C6CF),
     navBarBadgeBackground: AppColors.secondary,
     navBarBadgeBorder: Colors.white,
