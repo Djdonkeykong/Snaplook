@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +43,8 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
   final List<TextEditingController> _controllers =
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  bool _isVerifying = false;
+  bool _isResending = false;
 
   @override
   void initState() {
@@ -108,6 +112,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
   }
 
   Future<void> _verifyCode(String code) async {
+    if (_isVerifying) return;
+    setState(() => _isVerifying = true);
+
     try {
       final authService = ref.read(authServiceProvider);
       await authService.verifyOtp(
@@ -357,6 +364,10 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isVerifying = false);
+      }
     }
   }
 
@@ -398,6 +409,10 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
   }
 
   Future<void> _handleResend() async {
+    if (_isResending || _isVerifying) return;
+    HapticFeedback.mediumImpact();
+    setState(() => _isResending = true);
+
     try {
       final authService = ref.read(authServiceProvider);
       await authService.signInWithOtp(widget.email);
@@ -431,6 +446,10 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isResending = false);
+      }
     }
   }
 
@@ -438,168 +457,214 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: const SnaplookBackButton(),
-      ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: spacing.l),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: spacing.l),
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.background,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leading: const SnaplookBackButton(),
+          ),
+          body: Padding(
+            padding: EdgeInsets.symmetric(horizontal: spacing.l),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: spacing.l),
 
-            // Title
-            const Text(
-              'Confirm your email',
-              style: TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -1.0,
-                height: 1.3,
-              ),
-            ),
-
-            SizedBox(height: spacing.xs),
-
-            // Subtitle
-            RichText(
-              text: TextSpan(
-                text: 'Please enter the 6-digit code we\'ve just sent to ',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  fontWeight: FontWeight.w500,
-                  fontFamily: 'PlusJakartaSans',
+                // Title
+                const Text(
+                  'Confirm your email',
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    fontFamily: 'PlusJakartaSans',
+                    letterSpacing: -1.0,
+                    height: 1.3,
+                  ),
                 ),
-                children: [
-                  TextSpan(
-                    text: _maskEmail(widget.email),
+
+                SizedBox(height: spacing.xs),
+
+                // Subtitle
+                RichText(
+                  text: TextSpan(
+                    text: 'Please enter the 6-digit code we\'ve just sent to ',
                     style: const TextStyle(
                       fontSize: 16,
-                      color: Colors.black,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w500,
                       fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.bold,
-                      height: 1.5,
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            SizedBox(height: spacing.l),
-
-            // Code input boxes
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(6, (index) {
-                return SizedBox(
-                  width: 56,
-                  height: 76,
-                  child: TextField(
-                    controller: _controllers[index],
-                    focusNode: _focusNodes[index],
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    maxLength: 1,
-                    showCursor: true,
-                    cursorColor: Colors.black,
-                    cursorWidth: 2,
-                    cursorHeight: 32,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'PlusJakartaSans',
-                      color: Colors.black,
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
+                    children: [
+                      TextSpan(
+                        text: _maskEmail(widget.email),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black,
+                          fontFamily: 'PlusJakartaSans',
+                          fontWeight: FontWeight.bold,
+                          height: 1.5,
+                        ),
+                      ),
                     ],
-                    decoration: InputDecoration(
-                      counterText: '',
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 0,
-                        vertical: 12,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
+                  ),
+                ),
+
+                SizedBox(height: spacing.l),
+
+                // Code input boxes
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(6, (index) {
+                    return SizedBox(
+                      width: 56,
+                      height: 76,
+                      child: TextField(
+                        controller: _controllers[index],
+                        focusNode: _focusNodes[index],
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        maxLength: 1,
+                        showCursor: true,
+                        cursorColor: Colors.black,
+                        cursorWidth: 2,
+                        cursorHeight: 32,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'PlusJakartaSans',
                           color: Colors.black,
-                          width: 2,
                         ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.black,
-                          width: 2,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: InputDecoration(
+                          counterText: '',
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 0,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 2,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 2,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.black,
+                              width: 2,
+                            ),
+                          ),
                         ),
+                        onChanged: (value) {
+                          _handleCodeInput(index, value);
+                        },
+                        onTap: () {
+                          _controllers[index].selection = TextSelection(
+                            baseOffset: 0,
+                            extentOffset: _controllers[index].text.length,
+                          );
+                        },
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
+                    );
+                  }),
+                ),
+
+                SizedBox(height: spacing.xl),
+
+                // Resend code
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Didn\'t receive the code? ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: _handleResend,
+                      child: const Text(
+                        'Resend',
+                        style: TextStyle(
+                          fontSize: 14,
                           color: Colors.black,
-                          width: 2,
+                          fontFamily: 'PlusJakartaSans',
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    onChanged: (value) {
-                      _handleCodeInput(index, value);
-                    },
-                    onTap: () {
-                      _controllers[index].selection = TextSelection(
-                        baseOffset: 0,
-                        extentOffset: _controllers[index].text.length,
-                      );
-                    },
-                  ),
-                );
-              }),
-            ),
-
-            SizedBox(height: spacing.xl),
-
-            // Resend code
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  'Didn\'t receive the code? ',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6B7280),
-                    fontFamily: 'PlusJakartaSans',
-                  ),
+                  ],
                 ),
-                GestureDetector(
-                  onTap: _handleResend,
-                  child: const Text(
-                    'Resend',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black,
-                      fontFamily: 'PlusJakartaSans',
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+
+                const Spacer(),
+
+                SizedBox(height: spacing.xxl),
               ],
             ),
-
-            const Spacer(),
-
-            SizedBox(height: spacing.xxl),
-          ],
+          ),
         ),
-      ),
+        if (_isVerifying || _isResending)
+          Container(
+            color: Colors.black.withOpacity(0.3),
+            child: Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  child: Container(
+                    width: 75,
+                    height: 75,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Center(
+                      child: ShaderMask(
+                        shaderCallback: (rect) => SweepGradient(
+                          colors: [
+                            AppColors.secondary.withOpacity(0.15),
+                            AppColors.secondary,
+                            AppColors.secondaryLight,
+                            AppColors.secondary.withOpacity(0.15),
+                          ],
+                          stops: const [0.0, 0.45, 0.75, 1.0],
+                        ).createShader(rect),
+                        child: const SizedBox(
+                          width: 34,
+                          height: 34,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

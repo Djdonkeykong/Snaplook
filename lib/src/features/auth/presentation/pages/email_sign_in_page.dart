@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +20,7 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
   final TextEditingController _emailController = TextEditingController();
   final FocusNode _emailFocusNode = FocusNode();
   bool _isButtonEnabled = false;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -50,11 +53,12 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
   }
 
   Future<void> _handleContinue() async {
-    if (!_isButtonEnabled) return;
+    if (!_isButtonEnabled || _isSending) return;
 
     HapticFeedback.mediumImpact();
 
     try {
+      setState(() => _isSending = true);
       // Give the keyboard a moment to close before navigating forward
       FocusScope.of(context).unfocus();
       await Future.delayed(const Duration(milliseconds: 150));
@@ -87,6 +91,10 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
     }
   }
 
@@ -107,141 +115,187 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
         if (didPop) return;
         await _handleBackNavigation();
       },
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          leading: SnaplookBackButton(
-            onPressed: _handleBackNavigation,
-          ),
-        ),
-        body: Padding(
-          padding: EdgeInsets.symmetric(horizontal: spacing.l),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: spacing.l),
-
-              // Title
-              const Text(
-                'Sign In',
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontFamily: 'PlusJakartaSans',
-                  letterSpacing: -1.0,
-                  height: 1.3,
-                ),
+      child: Stack(
+        children: [
+          Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              backgroundColor: AppColors.background,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              leading: SnaplookBackButton(
+                onPressed: _handleBackNavigation,
               ),
+            ),
+            body: Padding(
+              padding: EdgeInsets.symmetric(horizontal: spacing.l),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: spacing.l),
 
-              SizedBox(height: spacing.xs),
-
-              // Subtitle
-              const Text(
-                'Enter your email to continue',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  fontWeight: FontWeight.w500,
-                  fontFamily: 'PlusJakartaSans',
-                ),
-              ),
-
-              SizedBox(height: spacing.l),
-
-              // Email input
-              TextField(
-                controller: _emailController,
-                focusNode: _emailFocusNode,
-                keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontFamily: 'PlusJakartaSans',
-                  color: Colors.black,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Email',
-                  hintStyle: const TextStyle(
-                    color: Color(0xFFD1D5DB),
-                    fontSize: 16,
-                    fontFamily: 'PlusJakartaSans',
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 20,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
+                  // Title
+                  const Text(
+                    'Sign In',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.bold,
                       color: Colors.black,
-                      width: 2,
+                      fontFamily: 'PlusJakartaSans',
+                      letterSpacing: -1.0,
+                      height: 1.3,
                     ),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Colors.black,
-                      width: 2,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Colors.black,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
 
-              const Spacer(),
+                  SizedBox(height: spacing.xs),
 
-              // Continue button
-              Container(
-                width: double.infinity,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: _isButtonEnabled
-                      ? const Color(0xFFf2003c)
-                      : const Color(0xFFD1D5DB),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: ElevatedButton(
-                  onPressed: _isButtonEnabled ? _handleContinue : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _isButtonEnabled
-                        ? const Color(0xFFf2003c)
-                        : const Color(0xFFD1D5DB),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shadowColor: Colors.transparent,
-                    disabledBackgroundColor: const Color(0xFFD1D5DB),
-                    disabledForegroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                  ),
-                  child: const Text(
-                    'Continue',
+                  // Subtitle
+                  const Text(
+                    'Enter your email to continue',
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w500,
                       fontFamily: 'PlusJakartaSans',
-                      letterSpacing: -0.2,
+                    ),
+                  ),
+
+                  SizedBox(height: spacing.l),
+
+                  // Email input
+                  TextField(
+                    controller: _emailController,
+                    focusNode: _emailFocusNode,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontFamily: 'PlusJakartaSans',
+                      color: Colors.black,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Email',
+                      hintStyle: const TextStyle(
+                        color: Color(0xFFD1D5DB),
+                        fontSize: 16,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 20,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(
+                          color: Colors.black,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  // Continue button
+                  Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: _isButtonEnabled
+                          ? const Color(0xFFf2003c)
+                          : const Color(0xFFD1D5DB),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: _isButtonEnabled ? _handleContinue : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isButtonEnabled
+                            ? const Color(0xFFf2003c)
+                            : const Color(0xFFD1D5DB),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        disabledBackgroundColor: const Color(0xFFD1D5DB),
+                        disabledForegroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                      ),
+                      child: const Text(
+                        'Continue',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: spacing.xxl),
+                ],
+              ),
+            ),
+          ),
+          if (_isSending)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                    child: Container(
+                      width: 75,
+                      height: 75,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Center(
+                        child: ShaderMask(
+                          shaderCallback: (rect) => SweepGradient(
+                            colors: [
+                              AppColors.secondary.withOpacity(0.15),
+                              AppColors.secondary,
+                              AppColors.secondaryLight,
+                              AppColors.secondary.withOpacity(0.15),
+                            ],
+                            stops: const [0.0, 0.45, 0.75, 1.0],
+                          ).createShader(rect),
+                          child: const SizedBox(
+                            width: 34,
+                            height: 34,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-
-              SizedBox(height: spacing.xxl),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -468,13 +467,29 @@ class _NotificationPermissionPageState
                     width: 75,
                     height: 75,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6d6d6d).withOpacity(0.85),
+                      color: Colors.white.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Center(
-                      child: CupertinoActivityIndicator(
-                        radius: 18,
-                        color: Colors.white,
+                    child: Center(
+                      child: ShaderMask(
+                        shaderCallback: (rect) => SweepGradient(
+                          colors: [
+                            AppColors.secondary.withOpacity(0.15),
+                            AppColors.secondary,
+                            AppColors.secondaryLight,
+                            AppColors.secondary.withOpacity(0.15),
+                          ],
+                          stops: const [0.0, 0.45, 0.75, 1.0],
+                        ).createShader(rect),
+                        child: const SizedBox(
+                          width: 34,
+                          height: 34,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
                       ),
                     ),
                   ),
