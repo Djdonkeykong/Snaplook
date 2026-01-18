@@ -86,3 +86,6 @@ android/app/upload-keystore.jks
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Temporary Claude files (should be auto-cleaned but sometimes aren't)
+tmpclaude-*
