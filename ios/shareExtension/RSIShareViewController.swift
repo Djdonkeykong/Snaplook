@@ -2273,6 +2273,28 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
         }
 
+        // HIGHEST PRIORITY: Photo mode / slideshow images
+        // These have "photomode" or "i-photomode" in the path
+        let photomodePattern = "(https://[^\"\\s,]*tiktokcdn[^\"\\s,]*photomode[^\"\\s,]*)"
+        if let regex = try? NSRegularExpression(pattern: photomodePattern, options: [.caseInsensitive]) {
+            let nsrange = NSRange(html.startIndex..<html.endIndex, in: html)
+            regex.enumerateMatches(in: html, options: [], range: nsrange) { match, _, _ in
+                guard let match = match,
+                      match.numberOfRanges > 0,
+                      let range = Range(match.range(at: 0), in: html) else { return }
+                let candidate = cleaned(String(html[range]))
+                if !isLowValue(candidate) {
+                    appendUnique(candidate, to: &priorityResults)
+                }
+            }
+        }
+
+        // If we found photomode images, return only those (highest quality)
+        if !priorityResults.isEmpty {
+            shareLog("Extracted \(priorityResults.count) TikTok photomode image URL(s)")
+            return priorityResults
+        }
+
         // JSON cover fields (present in TikTok initial data)
         let coverPattern = "\"cover\"\\s*:\\s*\"(https://[^\"]*tiktokcdn[^\"]*)\""
         if let regex = try? NSRegularExpression(pattern: coverPattern, options: [.caseInsensitive]) {
