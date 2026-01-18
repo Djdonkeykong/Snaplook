@@ -2227,7 +2227,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
                           url.contains("static") ||
                           url.contains("web_login") ||
                           url.contains(".js") ||
-                          url.contains(".css")
+                          url.contains(".css") ||
+                          url.contains("-api.") ||  // API endpoints like im-api.tiktok.com
+                          url.contains("/api/") ||
+                          url.contains("im-ws.") ||  // WebSocket endpoints
+                          url.contains("wss://") ||
+                          url.contains("\"") ||      // URLs with quotes (from JSON)
+                          url.contains(",") ||       // URLs with commas (from JSON)
+                          !url.contains("tiktokcdn") // Only allow tiktokcdn URLs for TikTok
             if lowValue {
                 shareLog("Filtered out low-value URL: \(url.prefix(80))...")
             }
