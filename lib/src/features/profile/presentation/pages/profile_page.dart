@@ -456,16 +456,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     );
                   },
                 ),
-                _SimpleSettingItem(
-                  title: 'Appearance',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const AppearancePreferencesPage(),
-                      ),
-                    );
-                  },
-                ),
+                // Disabled until dark mode is fully implemented
+                // _SimpleSettingItem(
+                //   title: 'Appearance',
+                //   onTap: () {
+                //     Navigator.of(context).push(
+                //       MaterialPageRoute(
+                //         builder: (_) => const AppearancePreferencesPage(),
+                //       ),
+                //     );
+                //   },
+                // ),
                 _SimpleSettingItem(
                   title: 'Notifications',
                   onTap: () {

@@ -2056,7 +2056,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeModeProvider);
+    // Disabled dark mode - not fully implemented yet
+    // final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp(
       navigatorKey: navigatorKey,
@@ -2080,8 +2081,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       title: 'Snaplook',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
+      // darkTheme: AppTheme.darkTheme,  // Disabled until dark mode is complete
+      themeMode: ThemeMode.light,  // Force light mode only
       navigatorObservers: [routeObserver],
       home: const SplashPage(),
       onGenerateRoute: (settings) => null,
