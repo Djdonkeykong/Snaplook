@@ -670,9 +670,10 @@ class PipTutorialManager: NSObject {
     }
     controller.delegate = self
     if #available(iOS 14.2, *) {
-      // Disabled automatic PiP to comply with App Store guidelines
-      // PiP is manually triggered via startPictureInPicture() instead
-      controller.canStartPictureInPictureAutomaticallyFromInline = false
+      // Enable automatic PiP for tutorial videos
+      // This allows PiP to continue when user switches to target app (Instagram, etc.)
+      // Requires "audio" background mode for PiP to work when app is backgrounded
+      controller.canStartPictureInPictureAutomaticallyFromInline = true
     }
     pipController = controller
 
