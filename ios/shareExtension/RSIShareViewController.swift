@@ -2210,6 +2210,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         func appendUnique(_ url: String, to array: inout [String]) {
             if !array.contains(url) {
                 array.append(url)
+                shareLog("Added TikTok image URL: \(url.prefix(80))...")
             }
         }
 
@@ -2218,7 +2219,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         func isLowValue(_ url: String) -> Bool {
-            return url.contains("avt-") || url.contains("100x100") || url.contains("cropcenter") || url.contains("music")
+            let lowValue = url.contains("avt-") ||
+                          url.contains("100x100") ||
+                          url.contains("cropcenter") ||
+                          url.contains("music") ||
+                          url.contains("login") ||
+                          url.contains("static") ||
+                          url.contains("web_login") ||
+                          url.contains(".js") ||
+                          url.contains(".css")
+            if lowValue {
+                shareLog("Filtered out low-value URL: \(url.prefix(80))...")
+            }
+            return lowValue
         }
 
         // Meta tags: og:image / twitter:image often hold the best thumbnail
