@@ -2215,16 +2215,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         func cleaned(_ candidate: String) -> String {
-            return candidate.replacingOccurrences(of: "&amp;", with: "&")
+            var cleaned = candidate.replacingOccurrences(of: "&amp;", with: "&")
+
+            // Strip JSON delimiters and extract just the URL part
+            // Example: https://url.com","other":"stuff -> https://url.com
+            if let firstQuote = cleaned.firstIndex(of: "\"") {
+                cleaned = String(cleaned[..<firstQuote])
+            }
+            if let firstComma = cleaned.firstIndex(of: ",") {
+                cleaned = String(cleaned[..<firstComma])
+            }
+
+            return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
         func isLowValue(_ url: String) -> Bool {
-            // Definitely bad: JSON fragments, API endpoints, script files
-            if url.contains("\"") || url.contains(",") {
-                shareLog("Filtered out low-value URL (JSON fragment): \(url.prefix(80))...")
-                return true
-            }
-
+            // API endpoints and WebSocket URLs
             if url.contains("-api.") || url.contains("/api/") || url.contains("im-ws.") || url.contains("wss://") {
                 shareLog("Filtered out low-value URL (API endpoint): \(url.prefix(80))...")
                 return true
