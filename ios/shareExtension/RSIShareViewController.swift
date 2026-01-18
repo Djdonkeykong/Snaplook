@@ -237,28 +237,11 @@ struct DetectionResultItem: Codable {
     var priceValue: Double? { priceNumeric }
 
     var priceDisplay: String? {
+        // Only return priceText if available, no formatting
         if let text = priceText, !text.isEmpty {
             return text
         }
-        if let numeric = priceNumeric, numeric > 0 {
-            return DetectionResultItem.formatPrice(numeric)
-        }
         return nil
-    }
-
-    private static let sharedCurrencyFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.minimumFractionDigits = 0
-        formatter.maximumFractionDigits = 2
-        formatter.locale = .autoupdatingCurrent
-        return formatter
-    }()
-
-    private static func formatPrice(_ value: Double) -> String? {
-        // Refresh locale in case the user changes region/language
-        sharedCurrencyFormatter.locale = .autoupdatingCurrent
-        return sharedCurrencyFormatter.string(from: NSNumber(value: value))
     }
 
     var normalizedCategoryAssignment: NormalizedCategoryAssignment {
@@ -8551,10 +8534,9 @@ class ResultCell: UITableViewCell {
         brandLabel.text = brandText.uppercased()
         productNameLabel.text = result.product_name
 
+        // Only show priceDisplay if available, otherwise "See store"
         if let displayPrice = result.priceDisplay {
             priceLabel.text = displayPrice
-        } else if let priceValue = result.priceValue, priceValue > 0 {
-            priceLabel.text = String(format: "$%.2f", priceValue)
         } else {
             priceLabel.text = "See store"
         }
