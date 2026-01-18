@@ -670,7 +670,9 @@ class PipTutorialManager: NSObject {
     }
     controller.delegate = self
     if #available(iOS 14.2, *) {
-      controller.canStartPictureInPictureAutomaticallyFromInline = true
+      // Disabled automatic PiP to comply with App Store guidelines
+      // PiP is manually triggered via startPictureInPicture() instead
+      controller.canStartPictureInPictureAutomaticallyFromInline = false
     }
     pipController = controller
 
