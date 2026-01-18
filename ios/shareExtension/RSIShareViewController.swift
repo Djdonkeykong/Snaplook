@@ -2219,26 +2219,37 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         func isLowValue(_ url: String) -> Bool {
-            let lowValue = url.contains("avt-") ||
-                          url.contains("100x100") ||
-                          url.contains("cropcenter") ||
-                          url.contains("music") ||
-                          url.contains("login") ||
-                          url.contains("static") ||
-                          url.contains("web_login") ||
-                          url.contains(".js") ||
-                          url.contains(".css") ||
-                          url.contains("-api.") ||  // API endpoints like im-api.tiktok.com
-                          url.contains("/api/") ||
-                          url.contains("im-ws.") ||  // WebSocket endpoints
-                          url.contains("wss://") ||
-                          url.contains("\"") ||      // URLs with quotes (from JSON)
-                          url.contains(",") ||       // URLs with commas (from JSON)
-                          !url.contains("tiktokcdn") // Only allow tiktokcdn URLs for TikTok
-            if lowValue {
-                shareLog("Filtered out low-value URL: \(url.prefix(80))...")
+            // Definitely bad: JSON fragments, API endpoints, script files
+            if url.contains("\"") || url.contains(",") {
+                shareLog("Filtered out low-value URL (JSON fragment): \(url.prefix(80))...")
+                return true
             }
-            return lowValue
+
+            if url.contains("-api.") || url.contains("/api/") || url.contains("im-ws.") || url.contains("wss://") {
+                shareLog("Filtered out low-value URL (API endpoint): \(url.prefix(80))...")
+                return true
+            }
+
+            if url.hasSuffix(".js") || url.hasSuffix(".css") {
+                shareLog("Filtered out low-value URL (script/style): \(url.prefix(80))...")
+                return true
+            }
+
+            // Must contain tiktokcdn for TikTok images
+            if !url.contains("tiktokcdn") {
+                shareLog("Filtered out low-value URL (not tiktokcdn): \(url.prefix(80))...")
+                return true
+            }
+
+            // Filter out small thumbnails and avatars
+            if url.contains("avt-") || url.contains("100x100") || url.contains("cropcenter") || url.contains("music") {
+                shareLog("Filtered out low-value URL (thumbnail/avatar): \(url.prefix(80))...")
+                return true
+            }
+
+            // Allow through - even if it has "login" or "static" in the path,
+            // let the download attempt decide if it's valid
+            return false
         }
 
         // Meta tags: og:image / twitter:image often hold the best thumbnail
