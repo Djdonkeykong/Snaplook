@@ -953,11 +953,6 @@ class _FavoriteCard extends ConsumerWidget {
       },
       child: Container(
         width: double.infinity,
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: cardRadius,
-          border: Border.all(color: colorScheme.outlineVariant),
-        ),
         padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: spacing.s * 0.75),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -1628,11 +1623,6 @@ class _HistoryCard extends ConsumerWidget {
         },
         child: Container(
           height: cardHeight,
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: cardRadius,
-            border: Border.all(color: colorScheme.outlineVariant),
-          ),
           padding: EdgeInsets.symmetric(horizontal: spacing.m, vertical: spacing.s * 0.75),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
