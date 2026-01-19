@@ -406,7 +406,7 @@ class _NotificationPermissionPageState
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest,
+                        color: const Color(0xFFD1D1D6),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       clipBehavior: Clip.antiAlias,
@@ -430,7 +430,7 @@ class _NotificationPermissionPageState
                           Container(
                             width: double.infinity,
                             height: 1,
-                            color: colorScheme.outline,
+                            color: const Color(0xFFB5B5B5),
                           ),
                           Row(
                             children: [
@@ -517,7 +517,7 @@ class _DialogButton extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color:
-              isPrimary ? AppColors.secondary : colorScheme.surfaceContainerHighest,
+              isPrimary ? AppColors.secondary : const Color(0xFFD1D1D6),
         ),
         child: Text(
           text,
