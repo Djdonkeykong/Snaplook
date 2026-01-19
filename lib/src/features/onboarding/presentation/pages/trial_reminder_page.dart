@@ -33,7 +33,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_trial_reminder');
+    AnalyticsService().trackOnboardingScreen('onboarding_trial_reminder');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Check trial eligibility
       _checkTrialEligibility();

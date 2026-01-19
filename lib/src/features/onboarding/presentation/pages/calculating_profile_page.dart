@@ -32,7 +32,7 @@ class _CalculatingProfilePageState extends State<CalculatingProfilePage>
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_calculating_profile');
+    AnalyticsService().trackOnboardingScreen('onboarding_calculating_profile');
 
     _controller = AnimationController(
       duration: const Duration(seconds: 5),

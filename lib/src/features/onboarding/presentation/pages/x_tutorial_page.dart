@@ -93,7 +93,7 @@ class _XTutorialPageState extends ConsumerState<XTutorialPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_x_tutorial');
+    AnalyticsService().trackOnboardingScreen('onboarding_x_tutorial');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(xTutorialStepProvider.notifier).state = XTutorialStep.step1;
       ref.read(xTutorialPhaseProvider.notifier).state =

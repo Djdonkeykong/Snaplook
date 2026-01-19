@@ -94,7 +94,7 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_instagram_tutorial');
+    AnalyticsService().trackOnboardingScreen('onboarding_instagram_tutorial');
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tutorialStepProvider.notifier).state = TutorialStep.tapShare;

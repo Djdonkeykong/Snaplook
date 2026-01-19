@@ -94,7 +94,7 @@ class _PinterestTutorialPageState extends ConsumerState<PinterestTutorialPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_pinterest_tutorial');
+    AnalyticsService().trackOnboardingScreen('onboarding_pinterest_tutorial');
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(pinterestTutorialStepProvider.notifier).state =

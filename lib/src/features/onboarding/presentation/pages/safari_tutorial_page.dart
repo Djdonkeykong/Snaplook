@@ -93,7 +93,7 @@ class _SafariTutorialPageState extends ConsumerState<SafariTutorialPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_safari_tutorial');
+    AnalyticsService().trackOnboardingScreen('onboarding_safari_tutorial');
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(safariTutorialStepProvider.notifier).state =

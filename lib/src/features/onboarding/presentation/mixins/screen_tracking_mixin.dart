@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../../../services/analytics_service.dart';
-import '../../../../../shared/navigation/route_observer.dart';
+import '../../../../../core/constants/onboarding_analytics.dart';
 
 mixin ScreenTrackingMixin<T extends StatefulWidget> on State<T>, RouteAware {
   String get screenName;
 
   void _trackScreenView() {
-    AnalyticsService().trackScreenView(screenName);
-    debugPrint('[ScreenTracking] Screen viewed: $screenName');
+    // Use enhanced tracking for onboarding screens
+    if (OnboardingAnalytics.isOnboardingScreen(screenName)) {
+      AnalyticsService().trackOnboardingScreen(screenName);
+      final step = OnboardingAnalytics.getStep(screenName);
+      debugPrint('[ScreenTracking] Onboarding step ${step?.stepNumber ?? '?'}: $screenName');
+    } else {
+      AnalyticsService().trackScreenView(screenName);
+      debugPrint('[ScreenTracking] Screen viewed: $screenName');
+    }
   }
 
   @override

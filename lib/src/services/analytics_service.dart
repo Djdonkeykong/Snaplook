@@ -6,6 +6,7 @@ import 'package:amplitude_flutter/events/base_event.dart';
 import 'package:amplitude_flutter/events/identify.dart';
 import 'package:flutter/foundation.dart';
 import 'debug_log_service.dart';
+import '../../core/constants/onboarding_analytics.dart';
 
 class AnalyticsService {
   AnalyticsService._internal();
@@ -76,6 +77,46 @@ class AnalyticsService {
   Future<void> trackScreenView(String screenName) async {
     if (!_initialized || _client == null) return;
     await track('screen_view', properties: {'screen_name': screenName});
+  }
+
+  /// Track onboarding screen views with step numbers for funnel analysis.
+  ///
+  /// This sends an 'onboarding_screen_viewed' event with:
+  /// - screen_name: The screen identifier
+  /// - step_number: The step in the onboarding flow (1-16)
+  /// - step_name: Human-readable step name
+  /// - is_tutorial: Whether this is a tutorial sub-screen
+  /// - is_milestone: Whether this is a key conversion milestone
+  Future<void> trackOnboardingScreen(String screenName) async {
+    if (!_initialized || _client == null) return;
+    if (!OnboardingAnalytics.isOnboardingScreen(screenName)) {
+      // Fall back to regular screen tracking for non-onboarding screens
+      await trackScreenView(screenName);
+      return;
+    }
+
+    final step = OnboardingAnalytics.getStep(screenName);
+    final isMilestone = OnboardingAnalytics.conversionMilestones.contains(screenName);
+
+    final properties = <String, dynamic>{
+      'screen_name': screenName,
+      'step_number': step?.stepNumber ?? 0,
+      'step_name': step?.displayName ?? screenName,
+      'is_tutorial': step?.isTutorial ?? false,
+      'is_milestone': isMilestone,
+      'total_steps': OnboardingAnalytics.totalSteps,
+    };
+
+    await track('onboarding_screen_viewed', properties: properties);
+
+    // Also track milestone events separately for easier funnel creation
+    if (isMilestone && step != null) {
+      await track('onboarding_milestone_reached', properties: {
+        'milestone': screenName,
+        'step_number': step.stepNumber,
+        'step_name': step.displayName,
+      });
+    }
   }
 
   Future<void> identifyUser({

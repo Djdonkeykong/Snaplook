@@ -93,7 +93,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_tiktok_tutorial');
+    AnalyticsService().trackOnboardingScreen('onboarding_tiktok_tutorial');
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tiktokTutorialStepProvider.notifier).state =

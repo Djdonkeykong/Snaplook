@@ -41,7 +41,7 @@ class _WelcomeFreeAnalysisPageState
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_welcome');
+    AnalyticsService().trackOnboardingScreen('onboarding_welcome');
 
     // Precache Lottie animation to prevent jitter
     _precacheLottieAnimation();

@@ -50,7 +50,7 @@ class _NotificationPermissionPageState
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_notification_permission');
+    AnalyticsService().trackOnboardingScreen('onboarding_notification_permission');
   }
 
   /// Save notification preference to database if user is authenticated

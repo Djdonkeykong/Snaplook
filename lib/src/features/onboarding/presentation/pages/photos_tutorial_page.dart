@@ -86,7 +86,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_photos_tutorial');
+    AnalyticsService().trackOnboardingScreen('onboarding_photos_tutorial');
     // Reset to initial state
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(photosTutorialStepProvider.notifier).state =

@@ -59,7 +59,7 @@ class _TutorialImageAnalysisPageState
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_tutorial_analysis');
+    AnalyticsService().trackOnboardingScreen('onboarding_tutorial_analysis');
   }
 
   @override

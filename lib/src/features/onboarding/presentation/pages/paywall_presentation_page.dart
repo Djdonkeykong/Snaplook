@@ -32,7 +32,7 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_paywall');
+    AnalyticsService().trackOnboardingScreen('onboarding_paywall');
     // Present paywall after build is complete
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _presentPaywall();

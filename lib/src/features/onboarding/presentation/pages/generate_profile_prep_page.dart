@@ -26,7 +26,7 @@ class _GenerateProfilePrepPageState extends State<GenerateProfilePrepPage>
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_generate_profile_prep');
+    AnalyticsService().trackOnboardingScreen('onboarding_generate_profile_prep');
     _lottieController = AnimationController(vsync: this);
 
     // Keep the final frame visible after the animation completes.

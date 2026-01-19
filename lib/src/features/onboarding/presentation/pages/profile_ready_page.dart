@@ -26,7 +26,7 @@ class _ProfileReadyPageState extends State<ProfileReadyPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_profile_ready');
+    AnalyticsService().trackOnboardingScreen('onboarding_profile_ready');
   }
 
   @override

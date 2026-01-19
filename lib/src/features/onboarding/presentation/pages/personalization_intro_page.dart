@@ -26,7 +26,7 @@ class _PersonalizationIntroPageState extends State<PersonalizationIntroPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_personalization_intro');
+    AnalyticsService().trackOnboardingScreen('onboarding_personalization_intro');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_scrollController.hasClients) {

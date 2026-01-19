@@ -29,7 +29,7 @@ class _RatingSocialProofPageState extends State<RatingSocialProofPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_rating_social_proof');
+    AnalyticsService().trackOnboardingScreen('onboarding_rating_social_proof');
     _requestReview();
     _startTimer();
   }

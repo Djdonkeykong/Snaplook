@@ -93,7 +93,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_imdb_tutorial');
+    AnalyticsService().trackOnboardingScreen('onboarding_imdb_tutorial');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(imdbTutorialStepProvider.notifier).state =
           ImdbTutorialStep.step1;

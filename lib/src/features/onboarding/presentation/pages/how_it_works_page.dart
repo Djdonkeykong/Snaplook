@@ -27,7 +27,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_how_it_works');
+    AnalyticsService().trackOnboardingScreen('onboarding_how_it_works');
     // Capture anchor after first layout
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

@@ -35,7 +35,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_trial_intro');
+    AnalyticsService().trackOnboardingScreen('onboarding_trial_intro');
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Update checkpoint for authenticated users

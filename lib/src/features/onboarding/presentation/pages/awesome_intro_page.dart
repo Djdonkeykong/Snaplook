@@ -24,7 +24,7 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
   @override
   void initState() {
     super.initState();
-    AnalyticsService().trackScreenView('onboarding_share_your_style');
+    AnalyticsService().trackOnboardingScreen('onboarding_share_your_style');
   }
 
   @override
