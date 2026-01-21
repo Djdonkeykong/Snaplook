@@ -1908,45 +1908,107 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         HapticFeedback.mediumImpact();
 
         // Deduct credits based on garment count (skip for cache hits)
+        print('[Credits] ========== CREDIT DEDUCTION START ==========');
+        print('[Credits] wasCacheHit: $wasCacheHit');
+        print('[Credits] results.length: ${results.length}');
+        print('[Credits] mounted: $mounted');
+
         if (!wasCacheHit) {
           try {
             // Get the actual number of garments searched from the server response
             final garmentCount = ref.read(detectionServiceProvider).lastGarmentsSearched;
+            final lastResponseFromCache = ref.read(detectionServiceProvider).lastResponseFromCache;
 
-            print('[Credits] Server reported $garmentCount garments searched');
+            print('[Credits] Server reported garmentCount: $garmentCount');
+            print('[Credits] DetectionService.lastResponseFromCache: $lastResponseFromCache');
 
-            // Call Supabase function to deduct credits
-            final userId = Supabase.instance.client.auth.currentUser?.id;
-            if (userId != null) {
-              final response = await Supabase.instance.client
-                  .rpc('deduct_credits', params: {
-                'p_user_id': userId,
-                'p_garment_count': garmentCount,
-              });
+            if (garmentCount <= 0) {
+              print('[Credits] WARNING: garmentCount is $garmentCount, skipping deduction');
+              print('[Credits] ========== CREDIT DEDUCTION END (skipped - no garments) ==========');
+            } else {
+              // Get userId, with retry if auth state isn't ready yet
+              String? userId = Supabase.instance.client.auth.currentUser?.id;
+              final session = Supabase.instance.client.auth.currentSession;
 
-              print('[Credits] Deduction response: $response');
+              print('[Credits] Initial auth check:');
+              print('[Credits]   userId: $userId');
+              print('[Credits]   session: ${session != null ? "exists" : "null"}');
+              print('[Credits]   session.user.id: ${session?.user.id}');
 
-                  if (response != null && response is List && response.isNotEmpty) {
-                    final result = response.first;
-                    if (result['success'] == true) {
-                      print('[Credits] Successfully deducted $garmentCount credits');
-                      print('[Credits] Remaining: ${result['paid_credits_remaining']}');
-
-                      await ref.read(creditBalanceProvider.notifier).refresh();
-
-                      // Re-sync auth state to update credits in iOS share extension
-                      await ref.read(authServiceProvider).syncAuthState();
-                    } else {
-                  print('[Credits] Deduction failed: ${result['message']}');
+              // If userId is null, wait briefly for auth state to be restored
+              // This can happen when user opens app and immediately triggers detection
+              if (userId == null) {
+                print('[Credits] WARNING: userId is null, waiting for auth state...');
+                // Wait up to 2 seconds for auth to be ready
+                for (int i = 0; i < 4 && userId == null; i++) {
+                  print('[Credits]   Retry ${i + 1}/4 - waiting 500ms...');
+                  await Future.delayed(const Duration(milliseconds: 500));
+                  userId = Supabase.instance.client.auth.currentUser?.id;
+                  print('[Credits]   Retry ${i + 1}/4 - userId: $userId');
                 }
               }
+
+              if (userId != null) {
+                print('[Credits] Calling deduct_credits RPC:');
+                print('[Credits]   p_user_id: $userId');
+                print('[Credits]   p_garment_count: $garmentCount');
+
+                final response = await Supabase.instance.client
+                    .rpc('deduct_credits', params: {
+                  'p_user_id': userId,
+                  'p_garment_count': garmentCount,
+                });
+
+                print('[Credits] RPC response type: ${response.runtimeType}');
+                print('[Credits] RPC response: $response');
+
+                if (response != null && response is List && response.isNotEmpty) {
+                  final result = response.first;
+                  print('[Credits] Result map: $result');
+                  print('[Credits]   success: ${result['success']}');
+                  print('[Credits]   message: ${result['message']}');
+                  print('[Credits]   paid_credits_remaining: ${result['paid_credits_remaining']}');
+
+                  if (result['success'] == true) {
+                    print('[Credits] SUCCESS: Deducted $garmentCount credits');
+                    print('[Credits] Remaining credits: ${result['paid_credits_remaining']}');
+
+                    print('[Credits] Refreshing credit balance provider...');
+                    await ref.read(creditBalanceProvider.notifier).refresh();
+                    print('[Credits] Credit balance refreshed');
+
+                    // Re-sync auth state to update credits in iOS share extension
+                    print('[Credits] Syncing auth state for iOS share extension...');
+                    await ref.read(authServiceProvider).syncAuthState();
+                    print('[Credits] Auth state synced');
+                  } else {
+                    print('[Credits] FAILED: Deduction failed - ${result['message']}');
+                  }
+                } else {
+                  print('[Credits] WARNING: Unexpected response format');
+                  print('[Credits]   response is null: ${response == null}');
+                  print('[Credits]   response is List: ${response is List}');
+                  if (response is List) {
+                    print('[Credits]   response.isEmpty: ${response.isEmpty}');
+                  }
+                }
+                print('[Credits] ========== CREDIT DEDUCTION END (attempted) ==========');
+              } else {
+                print('[Credits] ERROR: userId still null after 4 retries (2 seconds)');
+                print('[Credits] ERROR: Credits NOT deducted!');
+                print('[Credits] ========== CREDIT DEDUCTION END (failed - no user) ==========');
+              }
             }
-          } catch (e) {
-            print('[Credits] Error deducting credits: $e');
+          } catch (e, stackTrace) {
+            print('[Credits] EXCEPTION during credit deduction:');
+            print('[Credits]   Error: $e');
+            print('[Credits]   Stack: $stackTrace');
+            print('[Credits] ========== CREDIT DEDUCTION END (exception) ==========');
             // Don't block the user from seeing results if credit deduction fails
           }
         } else {
           print('[Credits] Cache hit - no credits deducted');
+          print('[Credits] ========== CREDIT DEDUCTION END (cache hit) ==========');
         }
 
         setState(() {
