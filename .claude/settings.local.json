@@ -72,7 +72,12 @@
       "mcp__supabase__get_project_url",
       "mcp__supabase__get_logs",
       "mcp__plugin_supabase_supabase__get_logs",
-      "mcp__plugin_supabase_supabase__get_publishable_keys"
+      "mcp__plugin_supabase_supabase__get_publishable_keys",
+      "mcp__amplitude__query_dataset",
+      "mcp__amplitude__search",
+      "mcp__amplitude__save_chart_edits",
+      "mcp__amplitude__get_dashboard",
+      "mcp__amplitude__create_dashboard"
     ]
   },
   "enableAllProjectMcpServers": true,

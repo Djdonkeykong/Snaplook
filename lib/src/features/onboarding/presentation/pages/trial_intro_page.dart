@@ -205,7 +205,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
 
             // Main heading
             Text(
-              'Try Snaplook with\na 3-day trial',
+              'We want you to\ntry Snaplook for free',
               textAlign: TextAlign.start,
               style: TextStyle(
                 fontSize: 34,
