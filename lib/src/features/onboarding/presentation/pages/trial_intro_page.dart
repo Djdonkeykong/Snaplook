@@ -205,7 +205,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
 
             // Main heading
             Text(
-              'We want you to\ntry Snaplook for free',
+              'Try Snaplook with\na 3-day trial',
               textAlign: TextAlign.start,
               style: TextStyle(
                 fontSize: 34,
@@ -258,30 +258,19 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         primaryButton: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // No Payment Due Now
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.check,
-                  color: Colors.green,
-                  size: 16,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  'No Payment Due Now',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'PlusJakartaSans',
-                    color: colorScheme.onSurface,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ],
+            // Price prominently displayed
+            Text(
+              '\$41.99/year after 3-day free trial',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'PlusJakartaSans',
+                color: colorScheme.onSurface,
+                letterSpacing: -0.2,
+              ),
             ),
             const SizedBox(height: 16),
-            // Try For $0.00 button
+            // Start free trial button
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -303,7 +292,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
                   ),
                 ),
                 child: const Text(
-                  'Try for \$0.00',
+                  'Start free trial',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -318,7 +307,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         secondaryButton: Align(
           alignment: Alignment.center,
           child: Text(
-            'Just \$41.99 per year (\$3.49/mo)',
+            'Cancel anytime during trial. \$3.49/mo.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
