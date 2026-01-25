@@ -494,17 +494,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     url: 'https://snaplook.userjot.com/',
                   ),
                 ),
-                // Temporarily hidden - uncomment for debugging
-                // _SimpleSettingItem(
-                //   title: 'Share Ext. Logs',
-                //   onTap: () {
-                //     Navigator.of(context).push(
-                //       MaterialPageRoute(
-                //         builder: (_) => const ShareLogsPage(),
-                //       ),
-                //     );
-                //   },
-                // ),
+                _SimpleSettingItem(
+                  title: 'Share Ext. Logs',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ShareLogsPage(),
+                      ),
+                    );
+                  },
+                ),
                 _SimpleSettingItem(
                   title: 'Invite Friends',
                   onTap: () => _shareApp(context),

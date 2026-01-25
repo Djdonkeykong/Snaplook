@@ -114,11 +114,13 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
 
   @override
   void didPush() {
+    super.didPush();
     _startStaggeredAnimationOnce();
   }
 
   @override
   void didPopNext() {
+    super.didPopNext();
     _hasAnimated = false; // allow re-run when returning
     _startStaggeredAnimation();
   }

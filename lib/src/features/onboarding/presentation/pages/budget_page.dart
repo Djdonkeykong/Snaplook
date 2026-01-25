@@ -82,11 +82,13 @@ class _BudgetPageState extends ConsumerState<BudgetPage>
 
   @override
   void didPush() {
+    super.didPush();
     _startStaggeredAnimation();
   }
 
   @override
   void didPopNext() {
+    super.didPopNext();
     _startStaggeredAnimation();
   }
 

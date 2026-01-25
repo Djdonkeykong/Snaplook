@@ -1246,6 +1246,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 ) { [weak self] in
                     self?.completeAttachmentProcessing()
                 }
+            } else if let imageData = data as? Data, let image = UIImage(data: imageData) {
+                // Handle raw Data (e.g., from screenshot preview share sheet)
+                shareLog("Attachment index \(index) is raw Data converted to UIImage")
+                handleMedia(
+                    forUIImage: image,
+                    type: type,
+                    index: index,
+                    content: content
+                ) { [weak self] in
+                    self?.completeAttachmentProcessing()
+                }
             } else {
                 shareLog("Attachment index \(index) could not be handled for type \(type)")
                 completeAttachmentProcessing()

@@ -85,11 +85,13 @@ class _WhatYouWantPageState extends ConsumerState<WhatYouWantPage>
 
   @override
   void didPush() {
+    super.didPush();
     _startStaggeredAnimation();
   }
 
   @override
   void didPopNext() {
+    super.didPopNext();
     _startStaggeredAnimation();
   }
 

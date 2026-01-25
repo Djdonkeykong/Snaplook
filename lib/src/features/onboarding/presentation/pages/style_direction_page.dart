@@ -85,11 +85,13 @@ class _StyleDirectionPageState extends ConsumerState<StyleDirectionPage>
 
   @override
   void didPush() {
+    super.didPush();
     _startStaggeredAnimation();
   }
 
   @override
   void didPopNext() {
+    super.didPopNext();
     _startStaggeredAnimation();
   }
 
