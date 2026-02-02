@@ -173,7 +173,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 3,
-          totalSteps: 14,
+          totalSteps: 7,
         ),
       ),
       body: Padding(

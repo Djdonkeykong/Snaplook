@@ -374,8 +374,8 @@ class _NotificationPermissionPageState
             ),
             centerTitle: true,
             title: const OnboardingProgressIndicator(
-              currentStep: 13,
-              totalSteps: 14,
+              currentStep: 7,
+              totalSteps: 7,
             ),
           ),
           body: SafeArea(

@@ -186,7 +186,7 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                   centerTitle: true,
                   title: const OnboardingProgressIndicator(
                     currentStep: 1,
-                    totalSteps: 14,
+                    totalSteps: 7,
                   ),
                 ),
               ),

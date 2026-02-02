@@ -13,7 +13,7 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
 import '../mixins/screen_tracking_mixin.dart';
-import 'style_direction_page.dart';
+import 'rating_social_proof_page.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 
@@ -208,8 +208,8 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
         ),
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 6,
-          totalSteps: 14,
+          currentStep: 5,
+          totalSteps: 7,
         ),
       ),
       body: SafeArea(
@@ -359,7 +359,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                     // Navigate to next page immediately
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const StyleDirectionPage(),
+                        builder: (context) => const RatingSocialProofPage(),
                       ),
                     );
                   }

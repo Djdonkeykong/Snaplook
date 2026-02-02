@@ -47,7 +47,7 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
         centerTitle: true,
         title: const OnboardingProgressIndicator(
           currentStep: 2,
-          totalSteps: 14,
+          totalSteps: 7,
         ),
       ),
       body: Padding(

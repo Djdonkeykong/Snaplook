@@ -349,8 +349,8 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         automaticallyImplyLeading: false,
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 14,
-          totalSteps: 20,
+          currentStep: 7,
+          totalSteps: 7,
         ),
       ),
       body: SafeArea(
@@ -385,7 +385,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                   children: [
                     SizedBox(height: spacing.l),
                     Text(
-                      'Save your progress',
+                      'Create your account',
                       style: TextStyle(
                         fontSize: 34,
                         fontFamily: 'PlusJakartaSans',
@@ -397,7 +397,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                     ),
                     SizedBox(height: spacing.xs),
                     Text(
-                      'Sign in to save your picks and progress',
+                      'Sign in to continue',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
