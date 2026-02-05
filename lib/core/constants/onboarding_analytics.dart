@@ -7,36 +7,37 @@ class OnboardingAnalytics {
 
   /// Ordered list of onboarding screens with their step numbers.
   /// The order reflects the actual user flow through onboarding.
+  ///
+  /// Flow: How It Works -> Share Your Style -> Add First Style -> Discovery Source
+  ///       -> Gender Selection -> Rating Social Proof -> Notification Permission
+  ///       -> Create Account -> Trial Intro -> Paywall -> Welcome
   static const Map<String, OnboardingStep> screens = {
+    // Main onboarding flow (7 steps with progress indicator)
     'onboarding_how_it_works': OnboardingStep(1, 'How It Works'),
-    'onboarding_personalization_intro': OnboardingStep(2, 'Personalization Intro'),
-    'onboarding_rating_social_proof': OnboardingStep(3, 'Rating Social Proof'),
-    'onboarding_gender_selection': OnboardingStep(4, 'Gender Selection'),
-    'onboarding_style_direction': OnboardingStep(5, 'Style Direction'),
-    'onboarding_what_you_want': OnboardingStep(6, 'What You Want'),
-    'onboarding_budget': OnboardingStep(7, 'Budget'),
-    'onboarding_share_your_style': OnboardingStep(8, 'Share Your Style'),
-    'onboarding_add_first_style': OnboardingStep(9, 'Add First Style'),
-    'onboarding_tutorial_analysis': OnboardingStep(10, 'Tutorial Analysis'),
-    'onboarding_notification_permission': OnboardingStep(11, 'Notification Permission'),
-    'onboarding_trial_intro': OnboardingStep(12, 'Trial Intro'),
-    'onboarding_trial_reminder': OnboardingStep(13, 'Trial Reminder'),
-    'onboarding_paywall': OnboardingStep(14, 'Paywall'),
-    'onboarding_generate_profile_prep': OnboardingStep(15, 'Generate Profile Prep'),
-    'onboarding_calculating_profile': OnboardingStep(16, 'Calculating Profile'),
-    'onboarding_profile_ready': OnboardingStep(17, 'Profile Ready'),
-    'onboarding_welcome': OnboardingStep(18, 'Welcome'),
+    'onboarding_share_your_style': OnboardingStep(2, 'Share Your Style'),
+    'onboarding_add_first_style': OnboardingStep(3, 'Add First Style'),
+    'onboarding_tutorial_analysis': OnboardingStep(3, 'Tutorial Analysis'),
+    'onboarding_discovery_source': OnboardingStep(4, 'Discovery Source'),
+    'onboarding_gender_selection': OnboardingStep(5, 'Gender Selection'),
+    'onboarding_rating_social_proof': OnboardingStep(6, 'Rating Social Proof'),
+    'onboarding_notification_permission': OnboardingStep(7, 'Notification Permission'),
+    // Post-progress-bar screens (account creation and monetization)
+    'onboarding_save_progress': OnboardingStep(8, 'Create Account'),
+    'onboarding_trial_intro': OnboardingStep(9, 'Trial Intro'),
+    'onboarding_trial_reminder': OnboardingStep(10, 'Trial Reminder'),
+    'onboarding_paywall': OnboardingStep(11, 'Paywall'),
+    'onboarding_welcome': OnboardingStep(12, 'Welcome'),
   };
 
-  /// Tutorial screens (optional branch from step 9)
+  /// Tutorial screens (optional branch from step 3)
   static const Map<String, OnboardingStep> tutorialScreens = {
-    'onboarding_instagram_tutorial': OnboardingStep(9, 'Instagram Tutorial', isTutorial: true),
-    'onboarding_pinterest_tutorial': OnboardingStep(9, 'Pinterest Tutorial', isTutorial: true),
-    'onboarding_tiktok_tutorial': OnboardingStep(9, 'TikTok Tutorial', isTutorial: true),
-    'onboarding_x_tutorial': OnboardingStep(9, 'X Tutorial', isTutorial: true),
-    'onboarding_imdb_tutorial': OnboardingStep(9, 'IMDB Tutorial', isTutorial: true),
-    'onboarding_safari_tutorial': OnboardingStep(9, 'Safari Tutorial', isTutorial: true),
-    'onboarding_photos_tutorial': OnboardingStep(9, 'Photos Tutorial', isTutorial: true),
+    'onboarding_instagram_tutorial': OnboardingStep(3, 'Instagram Tutorial', isTutorial: true),
+    'onboarding_pinterest_tutorial': OnboardingStep(3, 'Pinterest Tutorial', isTutorial: true),
+    'onboarding_tiktok_tutorial': OnboardingStep(3, 'TikTok Tutorial', isTutorial: true),
+    'onboarding_x_tutorial': OnboardingStep(3, 'X Tutorial', isTutorial: true),
+    'onboarding_imdb_tutorial': OnboardingStep(3, 'IMDB Tutorial', isTutorial: true),
+    'onboarding_safari_tutorial': OnboardingStep(3, 'Safari Tutorial', isTutorial: true),
+    'onboarding_photos_tutorial': OnboardingStep(3, 'Photos Tutorial', isTutorial: true),
   };
 
   /// Get step info for a screen name, checking both main and tutorial screens.
@@ -50,17 +51,17 @@ class OnboardingAnalytics {
   }
 
   /// Total number of main steps in the onboarding flow.
-  static const int totalSteps = 18;
+  static const int totalSteps = 12;
 
   /// Key conversion milestones for funnel analysis.
   static const List<String> conversionMilestones = [
-    'onboarding_how_it_works',       // Step 1: Entry
-    'onboarding_gender_selection',   // Step 4: Started personalization
-    'onboarding_budget',             // Step 7: Completed preferences
-    'onboarding_add_first_style',    // Step 9: Engaged with style upload
-    'onboarding_trial_intro',        // Step 12: Reached trial
-    'onboarding_paywall',            // Step 14: Reached paywall
-    'onboarding_welcome',            // Step 18: Completed
+    'onboarding_how_it_works',           // Step 1: Entry
+    'onboarding_add_first_style',        // Step 3: Engaged with style upload
+    'onboarding_gender_selection',       // Step 5: Selected catalog
+    'onboarding_notification_permission', // Step 7: Completed main onboarding
+    'onboarding_save_progress',          // Step 8: Created account
+    'onboarding_paywall',                // Step 11: Reached paywall
+    'onboarding_welcome',                // Step 12: Completed
   ];
 }
 

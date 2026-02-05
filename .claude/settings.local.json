@@ -77,7 +77,16 @@
       "mcp__amplitude__search",
       "mcp__amplitude__save_chart_edits",
       "mcp__amplitude__get_dashboard",
-      "mcp__amplitude__create_dashboard"
+      "mcp__amplitude__create_dashboard",
+      "mcp__Amplitude__get_context",
+      "mcp__Amplitude__search",
+      "mcp__Amplitude__query_dataset",
+      "mcp__Amplitude__get_event_properties",
+      "mcp__amplitude__get_context",
+      "mcp__amplitude__get_event_properties",
+      "mcp__amplitude__get_charts",
+      "mcp__amplitude__query_chart",
+      "mcp__amplitude__get_from_url"
     ]
   },
   "enableAllProjectMcpServers": true,
