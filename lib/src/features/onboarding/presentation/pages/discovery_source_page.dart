@@ -52,6 +52,7 @@ class _DiscoverySourcePageState extends ConsumerState<DiscoverySourcePage>
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackOnboardingScreen('onboarding_discovery_source');
 
     _animationControllers = List.generate(7, (index) {
       return AnimationController(

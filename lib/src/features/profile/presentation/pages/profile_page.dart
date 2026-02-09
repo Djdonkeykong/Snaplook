@@ -548,7 +548,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 // Version info
                 Center(
                   child: Text(
-                    'Version 1.0.0',
+                    'Version 1.0.5',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,

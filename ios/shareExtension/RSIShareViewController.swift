@@ -7282,25 +7282,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // The main app will set this when user logs in
         let isAuthenticated = defaults.bool(forKey: "user_authenticated")
 
-        if !isAuthenticated {
-            shareLog("[INFO] User not authenticated")
-            return false
-        }
-
-        // User is authenticated - now check if they have subscription OR credits
-        let hasActiveSubscription = defaults.bool(forKey: "user_has_active_subscription")
-        let availableCredits = defaults.integer(forKey: "user_available_credits")
-
-        if hasActiveSubscription {
-            shareLog("[SUCCESS] User authenticated with active subscription")
-            return true
-        } else if availableCredits > 0 {
-            shareLog("[SUCCESS] User authenticated with \(availableCredits) credits available")
-            return true
+        if isAuthenticated {
+            shareLog("[SUCCESS] User authenticated")
         } else {
-            shareLog("[INFO] User authenticated but no subscription or credits")
-            return false
+            shareLog("[INFO] User not authenticated")
         }
+
+        return isAuthenticated
     }
 
     private func hasAvailableCredits() -> Bool {

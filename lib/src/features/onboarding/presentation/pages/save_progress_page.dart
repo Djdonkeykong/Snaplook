@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/domain/services/auth_service.dart';
@@ -60,6 +61,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService().trackOnboardingScreen('onboarding_save_progress');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_scrollController.hasClients) {
