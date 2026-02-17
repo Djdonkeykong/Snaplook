@@ -27,6 +27,7 @@ import '../providers/detection_provider.dart';
 import '../widgets/detection_progress_overlay.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import '../../../paywall/presentation/pages/paywall_page.dart';
+import '../../../wardrobe/domain/providers/history_provider.dart';
 import '../../../../shared/services/supabase_service.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';

@@ -2,7 +2,7 @@ name: snaplook
 description: "A Flutter app for fashion detection and styling recommendations"
 publish_to: 'none'
 
-version: 1.0.5+260
+version: 1.0.6+261
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -98,6 +98,7 @@ dependencies:
   json_annotation: ^4.9.0
   permission_handler: ^11.3.1
   in_app_review: ^2.0.9
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:

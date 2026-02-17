@@ -92,6 +92,7 @@
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase",
-    "revenuecat"
+    "revenuecat",
+    "amplitude"
   ]
 }

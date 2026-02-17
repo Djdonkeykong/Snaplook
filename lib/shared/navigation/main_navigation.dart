@@ -1,18 +1,12 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../src/features/home/presentation/pages/home_page.dart';
 import '../../src/features/wardrobe/presentation/pages/wishlist_page.dart';
 import '../../src/features/profile/presentation/pages/profile_page.dart';
-import '../../src/features/home/domain/providers/image_provider.dart';
-import '../../src/features/detection/presentation/pages/detection_page.dart';
 import '../../src/features/favorites/domain/providers/favorites_provider.dart';
-import '../../core/theme/app_colors.dart';
+
 import '../../core/theme/theme_extensions.dart';
 import '../../core/theme/snaplook_icons.dart';
 import '../../src/features/paywall/providers/credit_provider.dart';
@@ -36,13 +30,9 @@ class MainNavigation extends ConsumerStatefulWidget {
 }
 
 class _MainNavigationState extends ConsumerState<MainNavigation> {
-  final ImagePicker _picker = ImagePicker();
-
   @override
   void initState() {
     super.initState();
-    // Initialize credit balance provider eagerly to avoid loading state race condition
-    // This triggers the provider to fetch credits from Supabase on app startup
     Future.microtask(() => ref.read(creditBalanceProvider));
   }
 
@@ -157,10 +147,11 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
         child: SafeArea(
           minimum: const EdgeInsets.only(bottom: 4),
           child: Container(
-            height: 56, // slimmer bar for a lighter footprint
+            height: 56,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Row(
               children: [
+                // Home icon
                 Expanded(
                   child: Center(
                     child: Transform.translate(
@@ -178,6 +169,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                     ),
                   ),
                 ),
+                // Heart icon with badge
                 Expanded(
                   child: Center(
                     child: Stack(
@@ -186,7 +178,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                         _NavigationItem(
                           icon: SnaplookIcons.heartOutline,
                           selectedIcon: SnaplookIcons.heartFilled,
-                          label: 'Wishlist',
+                          label: 'Favorites',
                           index: 1,
                           isSelected: selectedIndex == 1,
                           onTap: () => _handleTabTap(1),
@@ -233,6 +225,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
                     ),
                   ),
                 ),
+                // Profile icon
                 Expanded(
                   child: Center(
                     child: Transform.translate(
@@ -255,63 +248,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
           ),
         ),
       ),
-    );
-  }
-
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        ref.read(selectedImagesProvider.notifier).setImage(image);
-
-        if (mounted) {
-          final fileImage = FileImage(File(image.path));
-          await precacheImage(fileImage, context).catchError((_) {});
-
-          if (mounted) {
-            Navigator.of(context, rootNavigator: true).push(
-              MaterialPageRoute(builder: (context) => const DetectionPage()),
-            );
-          }
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error picking image: $e',
-              style: context.snackTextStyle(),
-            ),
-          ),
-        );
-      }
-    }
-  }
-
-  void _shareApp() {
-    final renderBox = context.findRenderObject() as RenderBox?;
-    final mediaSize = MediaQuery.of(context).size;
-
-    Rect shareOrigin = Offset.zero & mediaSize;
-    if (renderBox != null && renderBox.hasSize) {
-      final size = renderBox.size;
-      if (!size.isEmpty) {
-        final position = renderBox.localToGlobal(Offset.zero);
-        shareOrigin = position & size;
-      }
-    }
-
-    Share.share(
-      'Check out Snaplook - The AI-powered fashion discovery app! Find similar clothing items by taking photos. Download now!',
-      subject: 'Discover Fashion with Snaplook',
-      sharePositionOrigin: shareOrigin,
     );
   }
 }
@@ -508,115 +444,5 @@ class _NavigationItemState extends State<_NavigationItem>
     }
 
     return iconWidget;
-  }
-}
-
-class _FloatingActionBar extends StatelessWidget {
-  final VoidCallback onSnapTap;
-  final VoidCallback onUploadTap;
-  final VoidCallback onShareTap;
-
-  const _FloatingActionBar({
-    required this.onSnapTap,
-    required this.onUploadTap,
-    required this.onShareTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 70,
-      decoration: BoxDecoration(
-        color: const Color(0xFFf2003c),
-        borderRadius: BorderRadius.circular(35),
-        border: Border.all(color: const Color(0xFFf2003c), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.20),
-            blurRadius: 35,
-            offset: const Offset(0, 6),
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _FloatingActionButtonSvg(
-              svgIcon: 'assets/icons/solar--camera-square-bold-new.svg',
-              label: 'Snap',
-              onTap: onSnapTap,
-            ),
-            _FloatingActionButtonSvg(
-              svgIcon: 'assets/icons/upload_filled.svg',
-              label: 'Upload',
-              onTap: onUploadTap,
-            ),
-            _FloatingActionButtonSvg(
-              svgIcon: 'assets/icons/tutorials_filled.svg',
-              label: 'Tutorials',
-              onTap: () {},
-            ),
-            _FloatingActionButtonSvg(
-              svgIcon: 'assets/icons/share_filled.svg',
-              label: 'Share',
-              onTap: onShareTap,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FloatingActionButtonSvg extends StatelessWidget {
-  final String svgIcon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _FloatingActionButtonSvg({
-    required this.svgIcon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          onTap();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                svgIcon,
-                width: 24,
-                height: 24,
-                colorFilter: const ColorFilter.mode(
-                  Colors.white,
-                  BlendMode.srcIn,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

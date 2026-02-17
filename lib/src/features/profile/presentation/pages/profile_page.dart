@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
@@ -26,6 +27,22 @@ class ProfilePage extends ConsumerStatefulWidget {
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   final ScrollController _scrollController = ScrollController();
+  String _versionString = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _versionString = 'Version ${info.version} (${info.buildNumber})';
+      });
+    }
+  }
 
   void _resetMainNavigationState() {
     ref.read(selectedIndexProvider.notifier).state = 0;
@@ -548,7 +565,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 // Version info
                 Center(
                   child: Text(
-                    'Version 1.0.5',
+                    _versionString,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
