@@ -484,7 +484,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                                 builder: (context, scrollController) {
                                   // Determine which image to show in comparison card
                                   dynamic analyzedImage;
-                                  if (_loadedImageUrl != null && _loadedImageUrl!.isNotEmpty) {
+                                  if (_loadedImageUrl != null &&
+                                      _loadedImageUrl!.isNotEmpty) {
                                     analyzedImage = _loadedImageUrl;
                                   } else if (widget.imageUrl != null) {
                                     analyzedImage = widget.imageUrl;
@@ -650,9 +651,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         height: (decoded.height * scale).round(),
       );
 
-      final cropX = ((resized.width - targetSize) / 2).round().clamp(0, resized.width - targetSize);
-      final cropY =
-          ((resized.height - targetSize) / 2).round().clamp(0, resized.height - targetSize);
+      final cropX = ((resized.width - targetSize) / 2)
+          .round()
+          .clamp(0, resized.width - targetSize);
+      final cropY = ((resized.height - targetSize) / 2)
+          .round()
+          .clamp(0, resized.height - targetSize);
 
       final square = img.copyCrop(
         resized,
@@ -663,7 +667,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       );
 
       final jpg = img.encodeJpg(square, quality: 90);
-      final tempPath = '${Directory.systemTemp.path}/snaplook_fashion_search.jpg';
+      final tempPath =
+          '${Directory.systemTemp.path}/snaplook_fashion_search.jpg';
       final file = await File(tempPath).create();
       await file.writeAsBytes(jpg, flush: true);
       return XFile(
@@ -755,8 +760,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     if (rawType != null && rawType.isNotEmpty) {
       return rawType
           .split(RegExp(r'[_-]+'))
-          .map((word) =>
-              word.isEmpty ? '' : '${word[0].toUpperCase()}${word.substring(1)}')
+          .map((word) => word.isEmpty
+              ? ''
+              : '${word[0].toUpperCase()}${word.substring(1)}')
           .join(' ');
     }
 
@@ -861,7 +867,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
             if (!hasCredits) {
               // User has no credits - check subscription type
-              print('[Detection] User has no credits - checking subscription type');
+              print(
+                  '[Detection] User has no credits - checking subscription type');
               HapticFeedback.mediumImpact();
 
               if (mounted) {
@@ -871,20 +878,26 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                 final creditBalanceAsync = ref.read(creditBalanceProvider);
                 final creditBalanceData = creditBalanceAsync.value;
 
-                final subscriptionPlanId = creditBalanceData?.subscriptionPlanId;
-                final isYearlySubscriber = subscriptionPlanId == 'com.snaplook.snaplook.yearly';
-                final isMonthlySubscriber = subscriptionPlanId == 'com.snaplook.snaplook.monthly';
-                final hasActiveSubscription = creditBalanceData?.hasActiveSubscription ?? false;
+                final subscriptionPlanId =
+                    creditBalanceData?.subscriptionPlanId;
+                final isYearlySubscriber =
+                    subscriptionPlanId == 'com.snaplook.snaplook.yearly';
+                final isMonthlySubscriber =
+                    subscriptionPlanId == 'com.snaplook.snaplook.monthly';
+                final hasActiveSubscription =
+                    creditBalanceData?.hasActiveSubscription ?? false;
                 final treatAsYearly = isYearlySubscriber ||
                     (hasActiveSubscription && subscriptionPlanId == null);
 
                 print('[Detection] Subscription plan ID: $subscriptionPlanId');
                 print('[Detection] Is yearly subscriber: $isYearlySubscriber');
-                print('[Detection] Is monthly subscriber: $isMonthlySubscriber');
+                print(
+                    '[Detection] Is monthly subscriber: $isMonthlySubscriber');
 
                 if (treatAsYearly) {
                   // Yearly subscriber - show snackbar with refill date instead of paywall
-                  print('[Detection] Yearly subscriber out of credits - showing refill reminder');
+                  print(
+                      '[Detection] Yearly subscriber out of credits - showing refill reminder');
                   if (mounted) {
                     final refillDate = creditBalanceData?.nextRefillDate;
                     final refillDateStr = refillDate != null
@@ -896,7 +909,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                         content: Text(
                           'You\'ve used all your credits for this month. They will refill on $refillDateStr.',
                           style: context.snackTextStyle(
-                            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                            merge:
+                                const TextStyle(fontFamily: 'PlusJakartaSans'),
                           ),
                         ),
                         duration: const Duration(milliseconds: 3500),
@@ -932,7 +946,9 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                 // If user purchased/upgraded, verify plan change and sync credits
                 if (didPurchase) {
                   // Sync credits with subscription (clears cache and refills)
-                  await ref.read(creditBalanceProvider.notifier).syncWithSubscription();
+                  await ref
+                      .read(creditBalanceProvider.notifier)
+                      .syncWithSubscription();
 
                   if (!mounted) return;
 
@@ -944,10 +960,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                   // For free users: proceed if they now have a subscription
                   if (wasMonthlySubscriber) {
                     if (newPlanId != subscriptionPlanId) {
-                      print('[Detection] User upgraded from $subscriptionPlanId to $newPlanId');
+                      print(
+                          '[Detection] User upgraded from $subscriptionPlanId to $newPlanId');
                       _startDetection();
                     } else {
-                      print('[Detection] No plan change - monthly subscriber still has same plan');
+                      print(
+                          '[Detection] No plan change - monthly subscriber still has same plan');
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -969,7 +987,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                     );
 
                     if (nowHasCredits) {
-                      print('[Detection] Free user purchased subscription - starting detection');
+                      print(
+                          '[Detection] Free user purchased subscription - starting detection');
                       _startDetection();
                     } else {
                       print('[Detection] No credits available after purchase');
@@ -987,7 +1006,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                     }
                   }
                 } else {
-                  print('[Detection] User dismissed paywall without purchasing');
+                  print(
+                      '[Detection] User dismissed paywall without purchasing');
                 }
               }
               return;
@@ -1457,12 +1477,14 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         return Dialog(
           clipBehavior: Clip.antiAlias,
           backgroundColor: colorScheme.surface,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
           ),
           child: Padding(
-            padding: EdgeInsets.fromLTRB(spacing.l, spacing.l, spacing.l, spacing.l),
+            padding:
+                EdgeInsets.fromLTRB(spacing.l, spacing.l, spacing.l, spacing.l),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1876,35 +1898,44 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       XFile? imageToAnalyze;
       String? imageUrl;
 
-      // Handle cropped images differently based on source
-      if (_isCropMode && _cropRect != null && widget.imageUrl != null) {
-        // For Cloudinary URLs, use transformation API instead of downloading/re-uploading
-        if (widget.imageUrl!.contains('cloudinary.com')) {
-          print('Using Cloudinary transformation for crop');
-          imageUrl =
-              await _generateCloudinaryCropUrl(widget.imageUrl!, _cropRect!);
-          print('Cloudinary crop URL: $imageUrl');
-          // Don't create XFile - we'll pass URL directly
-        } else {
-          // For non-Cloudinary URLs, crop locally
-          await _applyCrop();
-          if (_croppedImageBytes != null) {
-            final tempDir = Directory.systemTemp;
-            final fileName =
-                'cropped_${DateTime.now().millisecondsSinceEpoch}.jpg';
-            final file = File('${tempDir.path}/$fileName');
-            await file.writeAsBytes(_croppedImageBytes!);
-            imageToAnalyze = XFile(file.path);
-          }
+      Future<void> setCroppedTempFileFromBytes() async {
+        if (_croppedImageBytes == null) {
+          throw Exception('Failed to crop image');
         }
-      } else if (_croppedImageBytes != null) {
-        // Local image was cropped
-        print('Using locally cropped image for analysis');
         final tempDir = Directory.systemTemp;
         final fileName = 'cropped_${DateTime.now().millisecondsSinceEpoch}.jpg';
         final file = File('${tempDir.path}/$fileName');
         await file.writeAsBytes(_croppedImageBytes!);
         imageToAnalyze = XFile(file.path);
+      }
+
+      // Handle cropped images differently based on source
+      if (_isCropMode && _cropRect != null) {
+        if (widget.imageUrl != null &&
+            widget.imageUrl!.contains('cloudinary.com')) {
+          // Prefer Cloudinary transform for remote assets, but never silently
+          // fall back to full-image analysis if transform generation fails.
+          print('Using Cloudinary transformation for crop');
+          final transformedUrl =
+              await _generateCloudinaryCropUrl(widget.imageUrl!, _cropRect!);
+          if (transformedUrl != widget.imageUrl) {
+            imageUrl = transformedUrl;
+            print('Cloudinary crop URL: $imageUrl');
+          } else {
+            print(
+                'Cloudinary crop transform unavailable - falling back to local crop');
+            await _applyCrop();
+            await setCroppedTempFileFromBytes();
+          }
+        } else {
+          // Local crop path (works for non-cloud remote images and camera/gallery images).
+          await _applyCrop();
+          await setCroppedTempFileFromBytes();
+        }
+      } else if (_croppedImageBytes != null) {
+        // Local image was cropped
+        print('Using locally cropped image for analysis');
+        await setCroppedTempFileFromBytes();
       } else if (widget.imageUrl != null) {
         final remoteUri = Uri.tryParse(widget.imageUrl!);
         final isCloudAsset =
@@ -1983,15 +2014,20 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         if (!wasCacheHit) {
           try {
             // Get the actual number of garments searched from the server response
-            final garmentCount = ref.read(detectionServiceProvider).lastGarmentsSearched;
-            final lastResponseFromCache = ref.read(detectionServiceProvider).lastResponseFromCache;
+            final garmentCount =
+                ref.read(detectionServiceProvider).lastGarmentsSearched;
+            final lastResponseFromCache =
+                ref.read(detectionServiceProvider).lastResponseFromCache;
 
             print('[Credits] Server reported garmentCount: $garmentCount');
-            print('[Credits] DetectionService.lastResponseFromCache: $lastResponseFromCache');
+            print(
+                '[Credits] DetectionService.lastResponseFromCache: $lastResponseFromCache');
 
             if (garmentCount <= 0) {
-              print('[Credits] WARNING: garmentCount is $garmentCount, skipping deduction');
-              print('[Credits] ========== CREDIT DEDUCTION END (skipped - no garments) ==========');
+              print(
+                  '[Credits] WARNING: garmentCount is $garmentCount, skipping deduction');
+              print(
+                  '[Credits] ========== CREDIT DEDUCTION END (skipped - no garments) ==========');
             } else {
               // Get userId, with retry if auth state isn't ready yet
               String? userId = Supabase.instance.client.auth.currentUser?.id;
@@ -1999,13 +2035,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
               print('[Credits] Initial auth check:');
               print('[Credits]   userId: $userId');
-              print('[Credits]   session: ${session != null ? "exists" : "null"}');
+              print(
+                  '[Credits]   session: ${session != null ? "exists" : "null"}');
               print('[Credits]   session.user.id: ${session?.user.id}');
 
               // If userId is null, wait briefly for auth state to be restored
               // This can happen when user opens app and immediately triggers detection
               if (userId == null) {
-                print('[Credits] WARNING: userId is null, waiting for auth state...');
+                print(
+                    '[Credits] WARNING: userId is null, waiting for auth state...');
                 // Wait up to 2 seconds for auth to be ready
                 for (int i = 0; i < 4 && userId == null; i++) {
                   print('[Credits]   Retry ${i + 1}/4 - waiting 500ms...');
@@ -2029,27 +2067,33 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                 print('[Credits] RPC response type: ${response.runtimeType}');
                 print('[Credits] RPC response: $response');
 
-                if (response != null && response is List && response.isNotEmpty) {
+                if (response != null &&
+                    response is List &&
+                    response.isNotEmpty) {
                   final result = response.first;
                   print('[Credits] Result map: $result');
                   print('[Credits]   success: ${result['success']}');
                   print('[Credits]   message: ${result['message']}');
-                  print('[Credits]   paid_credits_remaining: ${result['paid_credits_remaining']}');
+                  print(
+                      '[Credits]   paid_credits_remaining: ${result['paid_credits_remaining']}');
 
                   if (result['success'] == true) {
                     print('[Credits] SUCCESS: Deducted $garmentCount credits');
-                    print('[Credits] Remaining credits: ${result['paid_credits_remaining']}');
+                    print(
+                        '[Credits] Remaining credits: ${result['paid_credits_remaining']}');
 
                     print('[Credits] Refreshing credit balance provider...');
                     await ref.read(creditBalanceProvider.notifier).refresh();
                     print('[Credits] Credit balance refreshed');
 
                     // Re-sync auth state to update credits in iOS share extension
-                    print('[Credits] Syncing auth state for iOS share extension...');
+                    print(
+                        '[Credits] Syncing auth state for iOS share extension...');
                     await ref.read(authServiceProvider).syncAuthState();
                     print('[Credits] Auth state synced');
                   } else {
-                    print('[Credits] FAILED: Deduction failed - ${result['message']}');
+                    print(
+                        '[Credits] FAILED: Deduction failed - ${result['message']}');
                   }
                 } else {
                   print('[Credits] WARNING: Unexpected response format');
@@ -2059,23 +2103,28 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                     print('[Credits]   response.isEmpty: ${response.isEmpty}');
                   }
                 }
-                print('[Credits] ========== CREDIT DEDUCTION END (attempted) ==========');
+                print(
+                    '[Credits] ========== CREDIT DEDUCTION END (attempted) ==========');
               } else {
-                print('[Credits] ERROR: userId still null after 4 retries (2 seconds)');
+                print(
+                    '[Credits] ERROR: userId still null after 4 retries (2 seconds)');
                 print('[Credits] ERROR: Credits NOT deducted!');
-                print('[Credits] ========== CREDIT DEDUCTION END (failed - no user) ==========');
+                print(
+                    '[Credits] ========== CREDIT DEDUCTION END (failed - no user) ==========');
               }
             }
           } catch (e, stackTrace) {
             print('[Credits] EXCEPTION during credit deduction:');
             print('[Credits]   Error: $e');
             print('[Credits]   Stack: $stackTrace');
-            print('[Credits] ========== CREDIT DEDUCTION END (exception) ==========');
+            print(
+                '[Credits] ========== CREDIT DEDUCTION END (exception) ==========');
             // Don't block the user from seeing results if credit deduction fails
           }
         } else {
           print('[Credits] Cache hit - no credits deducted');
-          print('[Credits] ========== CREDIT DEDUCTION END (cache hit) ==========');
+          print(
+              '[Credits] ========== CREDIT DEDUCTION END (cache hit) ==========');
         }
 
         setState(() {
@@ -2213,8 +2262,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
     try {
       await Future.delayed(const Duration(milliseconds: 30));
-      final boundary =
-          boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary = boundaryKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
       if (boundary == null) return null;
       final image = await boundary.toImage(pixelRatio: _shareCardPixelRatio);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -2358,121 +2407,109 @@ class _DetectionShareCard extends StatelessWidget {
             ],
           ),
           child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(height: s(60)),
-
-                  Text(
-                    'I snapped this 📸',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: s(48),
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF2B2B2B),
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-
-                  SizedBox(height: s(32)),
-
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: heroPadding),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(heroRadius),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.20),
-                            blurRadius: s(40),
-                            offset: Offset(0, s(16)),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(heroRadius),
-                        child: Container(
-                          height: heroHeight,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(heroRadius),
-                          ),
-                          child: heroImage != null
-                              ? Image(
-                                  image: heroImage!,
-                                  fit: BoxFit.fitWidth,
-                                )
-                              : const Icon(
-                                  Icons.image_rounded,
-                                  color: Color(0xFFBDBDBD),
-                                  size: 64,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: s(32)),
-
-                  Image.asset(
-                    'assets/images/arrow-share-card.png',
-                    height: s(120),
-                    fit: BoxFit.contain,
-                  ),
-
-                  SizedBox(height: s(24)),
-
-                  Text(
-                    'Top Visual Matches 🔥',
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: s(48),
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF2B2B2B),
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-
-                  SizedBox(height: s(40)),
-
-                  if (shareItems.isNotEmpty)
-                    Center(
-                      child: SizedBox(
-                        height: s(480),
-                        width: width,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          clipBehavior: Clip.none,
-                          children: [
-                            for (int i = 0; i < shareItems.take(3).length; i++)
-                              Positioned(
-                                left: (width - s(680)) / 2 + (i * s(170)),
-                                top: i * s(30),
-                                child: _StackedProductImage(
-                                  item: shareItems[i],
-                                  size: s(390),
-                                  radius: s(68),
-                                  elevation: 8 + (i * 3).toDouble(),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  SizedBox(height: s(100)),
-
-                  Image.asset(
-                    'assets/images/logo.png',
-                    height: s(64),
-                    fit: BoxFit.contain,
-                  ),
-
-                  SizedBox(height: s(80)),
-                ],
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(height: s(60)),
+              Text(
+                'I snapped this 📸',
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: s(48),
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2B2B2B),
+                  letterSpacing: 0.3,
+                ),
               ),
+              SizedBox(height: s(32)),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: heroPadding),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(heroRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.20),
+                        blurRadius: s(40),
+                        offset: Offset(0, s(16)),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(heroRadius),
+                    child: Container(
+                      height: heroHeight,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(heroRadius),
+                      ),
+                      child: heroImage != null
+                          ? Image(
+                              image: heroImage!,
+                              fit: BoxFit.fitWidth,
+                            )
+                          : const Icon(
+                              Icons.image_rounded,
+                              color: Color(0xFFBDBDBD),
+                              size: 64,
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: s(32)),
+              Image.asset(
+                'assets/images/arrow-share-card.png',
+                height: s(120),
+                fit: BoxFit.contain,
+              ),
+              SizedBox(height: s(24)),
+              Text(
+                'Top Visual Matches 🔥',
+                style: TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: s(48),
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2B2B2B),
+                  letterSpacing: 0.3,
+                ),
+              ),
+              SizedBox(height: s(40)),
+              if (shareItems.isNotEmpty)
+                Center(
+                  child: SizedBox(
+                    height: s(480),
+                    width: width,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        for (int i = 0; i < shareItems.take(3).length; i++)
+                          Positioned(
+                            left: (width - s(680)) / 2 + (i * s(170)),
+                            top: i * s(30),
+                            child: _StackedProductImage(
+                              item: shareItems[i],
+                              size: s(390),
+                              radius: s(68),
+                              elevation: 8 + (i * 3).toDouble(),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              SizedBox(height: s(100)),
+              Image.asset(
+                'assets/images/logo.png',
+                height: s(64),
+                fit: BoxFit.contain,
+              ),
+              SizedBox(height: s(80)),
+            ],
+          ),
         );
       },
     );

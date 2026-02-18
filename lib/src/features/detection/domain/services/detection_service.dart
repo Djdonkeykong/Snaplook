@@ -122,10 +122,21 @@ class DetectionService {
     payload['search_type'] = searchType;
     debugPrint('[SAVE] Search type: $searchType');
 
-    // Add source_url for cache lookup (original URL before downloading)
-    if (sourceUrl != null) {
-      payload['source_url'] = sourceUrl;
-      debugPrint('[SAVE] Source URL for cache: $sourceUrl');
+    // Add source_url for cache lookup (original URL before downloading).
+    // For manual crops, skip source_url to avoid cache collisions where a
+    // previously analyzed full image is returned for a newly cropped selection.
+    final normalizedSourceUrl = sourceUrl?.trim();
+    if (!skipDetection &&
+        normalizedSourceUrl != null &&
+        normalizedSourceUrl.isNotEmpty) {
+      payload['source_url'] = normalizedSourceUrl;
+      debugPrint('[SAVE] Source URL for cache: $normalizedSourceUrl');
+    } else if (skipDetection &&
+        normalizedSourceUrl != null &&
+        normalizedSourceUrl.isNotEmpty) {
+      debugPrint(
+        '[SAVE] Skip-detection crop active - omitting source_url to avoid stale cache hits',
+      );
     }
 
     // Add skip_detection flag for user-cropped images
@@ -177,7 +188,8 @@ class DetectionService {
         payload['language'] = userProfile.preferredLanguage; // e.g., 'en', 'nb'
         debugPrint('🜕 Using language: ${userProfile.preferredLanguage}');
       }
-      _lastKnownCurrencyCode = SearchLocations.getCurrency(userProfile.countryCode);
+      _lastKnownCurrencyCode =
+          SearchLocations.getCurrency(userProfile.countryCode);
     } else if (_countryOverride.isEmpty) {
       // No profile - use device locale as fallback
       final deviceLocale = ui.PlatformDispatcher.instance.locale;
@@ -186,17 +198,20 @@ class DetectionService {
 
       payload['country'] = countryCode;
       payload['language'] = languageCode;
-      debugPrint('🌎 No user profile - using device locale ($countryCode, $languageCode)');
+      debugPrint(
+          '🌎 No user profile - using device locale ($countryCode, $languageCode)');
       _lastKnownCurrencyCode = SearchLocations.getCurrency(countryCode);
     }
 
     debugPrint('🜕 Using language: ${payload['language'] ?? 'unknown'}');
     debugPrint('🛰️ Sending image to detector+search endpoint: $endpoint');
-    final response = await _client.post(
-      Uri.parse(endpoint),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
-    ).timeout(const Duration(seconds: 120)); // Match server timeout
+    final response = await _client
+        .post(
+          Uri.parse(endpoint),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(payload),
+        )
+        .timeout(const Duration(seconds: 120)); // Match server timeout
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -208,7 +223,8 @@ class DetectionService {
     _lastResponseFromCache = data['cached'] == true;
     _lastGarmentsSearched = (data['garments_searched'] as int?) ?? 0;
 
-    debugPrint('[DetectionService] Server response: garments_searched=$_lastGarmentsSearched');
+    debugPrint(
+        '[DetectionService] Server response: garments_searched=$_lastGarmentsSearched');
 
     if (data['success'] != true) {
       final message = (data['message'] as String?) ?? 'Unknown detector error';
@@ -228,9 +244,7 @@ class DetectionService {
       result.putIfAbsent('currency', () => _lastKnownCurrencyCode);
     }
 
-    return normalized
-        .map(DetectionResult.fromJson)
-        .toList(growable: false);
+    return normalized.map(DetectionResult.fromJson).toList(growable: false);
   }
 
   Future<List<DetectionResult>> _analyzeImageLegacy(XFile image) async {
