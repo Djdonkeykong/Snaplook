@@ -2181,20 +2181,59 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     return
                 }
 
+                if self.isTikTokBlockedPage(html) {
+                    shareLog("TikTok HTML appears login/verification gated - trying best-effort extraction")
+                }
+
                 let imageUrls = self.extractTikTokImageUrls(from: html)
-                if imageUrls.isEmpty {
-                    completion(.failure(self.makeDownloadError("tiktok", "No images found in slideshow")))
+                let viableImageUrls = imageUrls.filter { !self.isTikTokLoginOrStaticUrl($0) }
+
+                let proceedWithImageUrls: ([String]) -> Void = { urls in
+                    guard !urls.isEmpty else {
+                        completion(.failure(self.makeDownloadError("tiktok", "No image URLs to try")))
+                        return
+                    }
+
+                    shareLog("Found \(urls.count) slideshow image(s), downloading first one...")
+                    self.downloadFirstValidImage(
+                        from: urls,
+                        platform: "tiktok",
+                        session: URLSession.shared,
+                        cropToAspect: 9.0 / 16.0,
+                        completion: completion
+                    )
+                }
+
+                if !viableImageUrls.isEmpty {
+                    proceedWithImageUrls(viableImageUrls)
                     return
                 }
 
-                shareLog("Found \(imageUrls.count) slideshow image(s), downloading first one...")
-                self.downloadFirstValidImage(
-                    from: imageUrls,
-                    platform: "tiktok",
-                    session: URLSession.shared,
-                    cropToAspect: 9.0 / 16.0,
-                    completion: completion
-                )
+                shareLog("No viable TikTok slideshow URLs from primary HTML parse; trying generic scrape fallback...")
+                self.quickGenericImageScrape(urlString: targetUrl) { [weak self] quickImages in
+                    guard let self = self else { return }
+                    let quickViable = quickImages.filter { !self.isTikTokLoginOrStaticUrl($0) }
+                    if !quickViable.isEmpty {
+                        shareLog("Generic scrape fallback found \(quickViable.count) candidate image URL(s)")
+                        proceedWithImageUrls(quickViable)
+                        return
+                    }
+
+                    if targetUrl != urlString {
+                        self.quickGenericImageScrape(urlString: urlString) { [weak self] shortLinkImages in
+                            guard let self = self else { return }
+                            let shortLinkViable = shortLinkImages.filter { !self.isTikTokLoginOrStaticUrl($0) }
+                            if !shortLinkViable.isEmpty {
+                                shareLog("Short-link generic fallback found \(shortLinkViable.count) candidate image URL(s)")
+                                proceedWithImageUrls(shortLinkViable)
+                            } else {
+                                completion(.failure(self.makeDownloadError("tiktok", "No images found in slideshow")))
+                            }
+                        }
+                    } else {
+                        completion(.failure(self.makeDownloadError("tiktok", "No images found in slideshow")))
+                    }
+                }
             }
             task.resume()
         }
@@ -2291,6 +2330,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         return false
     }
 
+    private func isTikTokLoginOrStaticUrl(_ url: String) -> Bool {
+        let lowered = url.lowercased()
+
+        if lowered.contains("sf16-website-login") ||
+            lowered.contains("website-login.neutral.tiktokcdn") ||
+            lowered.contains("tiktok_web_login_static") ||
+            lowered.contains("/obj/tiktok_web_login_static") {
+            return true
+        }
+
+        return false
+    }
+
     private func extractTikTokImageUrls(from html: String) -> [String] {
         var priorityResults: [String] = []
         var fallbackResults: [String] = []
@@ -2318,13 +2370,19 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         func isLowValue(_ url: String) -> Bool {
+            if self.isTikTokLoginOrStaticUrl(url) {
+                shareLog("Filtered out low-value URL (login/static page): \(url.prefix(80))...")
+                return true
+            }
+
             // API endpoints and WebSocket URLs
             if url.contains("-api.") || url.contains("/api/") || url.contains("im-ws.") || url.contains("wss://") {
                 shareLog("Filtered out low-value URL (API endpoint): \(url.prefix(80))...")
                 return true
             }
 
-            if url.hasSuffix(".js") || url.hasSuffix(".css") {
+            let lowered = url.lowercased()
+            if lowered.contains(".js") || lowered.contains(".css") || lowered.contains(".map") {
                 shareLog("Filtered out low-value URL (script/style): \(url.prefix(80))...")
                 return true
             }
@@ -2480,6 +2538,34 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     appendUnique(candidate, to: &fallbackResults)
                 }
             }
+        }
+
+        // Some TikTok pages keep slideshow URLs in escaped JSON (https:\/\/...).
+        // Decode escaped slashes and run a targeted pass for likely image URLs.
+        let normalizedHtml = html.replacingOccurrences(of: "\\/", with: "/")
+        if normalizedHtml != html {
+            let normalizedPattern =
+                "(https://[^\"\\s,]*tiktokcdn[^\"\\s,]*(?:photomode|tplv|\\.(?:jpe?g|png|webp))[^\"\\s,]*)"
+            if let regex = try? NSRegularExpression(
+                pattern: normalizedPattern,
+                options: [.caseInsensitive]
+            ) {
+                let nsrange = NSRange(normalizedHtml.startIndex..<normalizedHtml.endIndex, in: normalizedHtml)
+                regex.enumerateMatches(in: normalizedHtml, options: [], range: nsrange) { match, _, _ in
+                    guard let match = match,
+                          match.numberOfRanges > 0,
+                          let range = Range(match.range(at: 0), in: normalizedHtml) else { return }
+                    let candidate = cleaned(String(normalizedHtml[range]))
+                    if !isLowValue(candidate) {
+                        appendUnique(candidate, to: &priorityResults)
+                    }
+                }
+            }
+        }
+
+        if !priorityResults.isEmpty {
+            shareLog("Extracted \(priorityResults.count) TikTok image URL(s) from normalized JSON")
+            return priorityResults
         }
 
         shareLog("Extracted \(fallbackResults.count) TikTok image URL(s)")
