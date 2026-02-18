@@ -61,6 +61,13 @@ class _HomePageState extends ConsumerState<HomePage>
   static const _homePolaroidsAsset =
       AssetImage('assets/images/home-polaroids.png');
   static const _homeLogoAsset = AssetImage('assets/images/logo.png');
+  static const _instagramDeepLink =
+      'https://www.instagram.com/p/DQSaR_FEsU8/?igsh=MTEyNzJuaXF6cDlmNA==';
+  static const _pinterestDeepLink = 'https://pin.it/223au9vpX';
+  static const _tiktokDeepLink = 'https://vm.tiktok.com/ZNRr4FE31/';
+  static const _imdbDeepLink = 'https://www.imdb.com/';
+  static const _xDeepLink =
+      'https://x.com/iamjhud/status/1962314855802651108?s=46';
   static const _safariDeepLink =
       'https://media.glamour.com/photos/5ae09534ed441129f636ed0b/master/w_1600%2Cc_limit/Aimee_song_of_style_caroline_constas_polka_dot_puffer_sleeves_top_amo_distressed_jeans_dior_kitten_heels_pumps_le_specs_adam_selman_sunglasses_straw_bag_earrings.jpg';
 
@@ -79,20 +86,20 @@ class _HomePageState extends ConsumerState<HomePage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _addButtonTapController = AnimationController(
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 250),
       vsync: this,
     );
     _addButtonScaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(
           begin: 1.0,
-          end: 1.12,
+          end: 1.08,
         ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 40,
       ),
       TweenSequenceItem(
         tween: Tween<double>(
-          begin: 1.12,
+          begin: 1.08,
           end: 1.0,
         ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 60,
@@ -672,86 +679,95 @@ class _HomePageState extends ConsumerState<HomePage>
                 ),
                 child: SafeArea(
                   top: false,
+                  bottom: false,
                   child: Stack(
                     children: [
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: spacing.l,
-                          vertical: spacing.l,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            BottomSheetHandle(
-                              margin: EdgeInsets.only(bottom: spacing.m),
-                            ),
-                            Text(
-                              'Share your look',
-                              style: TextStyle(
-                                fontSize: 34,
-                                fontFamily: 'PlusJakartaSans',
-                                letterSpacing: -1.0,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                                height: 1.3,
+                      Column(
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: spacing.l,
+                                vertical: spacing.l,
                               ),
-                            ),
-                            SizedBox(height: spacing.xs),
-                            Text(
-                              'Send it through your favorite apps',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                                fontFamily: 'PlusJakartaSans',
-                              ),
-                            ),
-                            SizedBox(height: spacing.l),
-                            Expanded(
-                              child: ListView.separated(
-                                physics: const BouncingScrollPhysics(),
-                                padding: EdgeInsets.only(bottom: spacing.s),
-                                itemCount: options.length,
-                                separatorBuilder: (_, __) =>
-                                    SizedBox(height: spacing.l),
-                                itemBuilder: (_, index) {
-                                  final option = options[index];
-                                  return _TutorialAppCard(
-                                    label: option.label,
-                                    iconWidget: option.iconBuilder(),
-                                    isEnabled: option.isEnabled,
-                                    statusLabel: option.statusLabel,
-                                    isLoading:
-                                        _loadingTutorialSource == option.source,
-                                    loadingLabel: isTutorialEnabled
-                                        ? 'Preparing your tutorial...'
-                                        : 'Opening app...',
-                                    onTap: () => _onTutorialOptionSelected(
-                                      option.source,
-                                      sheetContext,
-                                      sheetSetState,
-                                      isTutorialEnabled,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  BottomSheetHandle(
+                                    margin: EdgeInsets.only(bottom: spacing.m),
+                                  ),
+                                  Text(
+                                    'Share your look',
+                                    style: TextStyle(
+                                      fontSize: 34,
+                                      fontFamily: 'PlusJakartaSans',
+                                      letterSpacing: -1.0,
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface,
+                                      height: 1.3,
                                     ),
-                                  );
-                                },
+                                  ),
+                                  SizedBox(height: spacing.xs),
+                                  Text(
+                                    'Send it through your favorite apps',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'PlusJakartaSans',
+                                    ),
+                                  ),
+                                  SizedBox(height: spacing.l),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      physics: const BouncingScrollPhysics(),
+                                      padding:
+                                          EdgeInsets.only(bottom: spacing.s),
+                                      itemCount: options.length,
+                                      separatorBuilder: (_, __) =>
+                                          SizedBox(height: spacing.l),
+                                      itemBuilder: (_, index) {
+                                        final option = options[index];
+                                        return _TutorialAppCard(
+                                          label: option.label,
+                                          iconWidget: option.iconBuilder(),
+                                          isEnabled: option.isEnabled,
+                                          statusLabel: option.statusLabel,
+                                          isLoading: _loadingTutorialSource ==
+                                              option.source,
+                                          loadingLabel: isTutorialEnabled
+                                              ? 'Preparing your tutorial...'
+                                              : 'Opening app...',
+                                          onTap: () =>
+                                              _onTutorialOptionSelected(
+                                            option.source,
+                                            sheetContext,
+                                            sheetSetState,
+                                            isTutorialEnabled,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            _TutorialToggleCard(
-                              value: isTutorialEnabled,
-                              onChanged: (enabled) {
-                                HapticFeedback.selectionClick();
-                                sheetSetState(() {
-                                  isTutorialEnabled = enabled;
+                          ),
+                          _TutorialToggleCard(
+                            value: isTutorialEnabled,
+                            onChanged: (enabled) {
+                              HapticFeedback.selectionClick();
+                              sheetSetState(() {
+                                isTutorialEnabled = enabled;
+                              });
+                              if (mounted) {
+                                setState(() {
+                                  _isTutorialEnabled = enabled;
                                 });
-                                if (mounted) {
-                                  setState(() {
-                                    _isTutorialEnabled = enabled;
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ),
+                              }
+                            },
+                          ),
+                        ],
                       ),
                       Positioned(
                         top: spacing.l,
@@ -936,6 +952,11 @@ class _HomePageState extends ConsumerState<HomePage>
 
   String? _deepLinkForTarget(PipTutorialTarget target) {
     return switch (target) {
+      PipTutorialTarget.instagram => _instagramDeepLink,
+      PipTutorialTarget.pinterest => _pinterestDeepLink,
+      PipTutorialTarget.tiktok => _tiktokDeepLink,
+      PipTutorialTarget.imdb => _imdbDeepLink,
+      PipTutorialTarget.x => _xDeepLink,
       PipTutorialTarget.safari => _safariDeepLink,
       _ => null,
     };
@@ -946,6 +967,11 @@ class _HomePageState extends ConsumerState<HomePage>
     String? deepLink,
   }) {
     return switch (target) {
+      PipTutorialTarget.instagram => deepLink ?? _instagramDeepLink,
+      PipTutorialTarget.pinterest => deepLink ?? _pinterestDeepLink,
+      PipTutorialTarget.tiktok => deepLink ?? _tiktokDeepLink,
+      PipTutorialTarget.imdb => deepLink ?? _imdbDeepLink,
+      PipTutorialTarget.x => deepLink ?? _xDeepLink,
       PipTutorialTarget.safari => deepLink ?? _safariDeepLink,
       _ => null,
     };
@@ -1929,66 +1955,86 @@ class _TutorialToggleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
     final helperText =
         value ? 'Show tutorial while using app' : 'Open app directly';
     return Container(
       width: double.infinity,
+      padding: EdgeInsets.only(bottom: bottomInset),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: colorScheme.outlineVariant,
-          width: 1.5,
+        border: Border(
+          top: BorderSide(
+            color: colorScheme.outlineVariant.withOpacity(0.08),
+            width: 0.5,
+          ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 18,
+            offset: const Offset(0, -6),
+            spreadRadius: 1,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, -1),
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Enable tutorial',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'PlusJakartaSans',
-                      color: colorScheme.onSurface,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      helperText,
+        padding: const EdgeInsets.symmetric(horizontal: 30),
+        child: SizedBox(
+          height: 76,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Enable tutorial',
                       style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                         fontFamily: 'PlusJakartaSans',
-                        letterSpacing: -0.1,
+                        color: colorScheme.onSurface,
+                        letterSpacing: -0.2,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              height: 36,
-              child: Center(
-                child: CupertinoSwitch(
-                  value: value,
-                  activeColor: const Color(0xFFF2003C),
-                  onChanged: onChanged,
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        helperText,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurfaceVariant,
+                          fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              SizedBox(
+                height: 36,
+                child: Center(
+                  child: CupertinoSwitch(
+                    value: value,
+                    activeColor: const Color(0xFFF2003C),
+                    onChanged: onChanged,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

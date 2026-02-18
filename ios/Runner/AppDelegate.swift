@@ -715,12 +715,8 @@ class PipTutorialManager: NSObject {
       }
     }
     pendingTargetApp = targetApp
-    // Only browser target should carry a URL-style deep link.
-    if targetApp == "safari" {
-      pendingDeepLink = deepLink?.isEmpty == true ? nil : deepLink
-    } else {
-      pendingDeepLink = nil
-    }
+    let cleanedDeepLink = deepLink?.trimmingCharacters(in: .whitespacesAndNewlines)
+    pendingDeepLink = cleanedDeepLink?.isEmpty == true ? nil : cleanedDeepLink
 
     logHandler?("[PiP] Starting PiP for target \(targetApp)")
     player.play()
@@ -738,7 +734,7 @@ class PipTutorialManager: NSObject {
     completion: @escaping (Bool, String?) -> Void
   ) {
     let cleanedDeepLink = deepLink?.trimmingCharacters(in: .whitespacesAndNewlines)
-    let allowedDeepLink = targetApp == "safari" ? cleanedDeepLink : nil
+    let allowedDeepLink = cleanedDeepLink?.isEmpty == true ? nil : cleanedDeepLink
     guard let appSchemeURL = urlForTarget(targetApp, deepLink: nil) else {
       completion(false, "Unsupported target")
       return

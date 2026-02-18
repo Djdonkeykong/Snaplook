@@ -602,6 +602,11 @@ struct DetectionResponse: Decodable {
 
 @available(swift, introduced: 5.0)
 open class RSIShareViewController: SLComposeServiceViewController {
+    private enum DeferredShareAction {
+        case analyzeNow
+        case analyzeInApp
+    }
+
     var hostAppBundleIdentifier = ""
     var appGroupId = ""
     var sharedMedia: [SharedMediaFile] = []
@@ -644,6 +649,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var selectedGroup: CategoryGroup?
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
+    private var deferredShareAction: DeferredShareAction?
     private var progressView: UIProgressView?
     private var progressTimer: Timer?
     private var currentProgress: Float = 0.0
@@ -1148,6 +1154,47 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func completeAttachmentProcessing() {
         pendingAttachmentCount = max(pendingAttachmentCount - 1, 0)
         maybeFinalizeShare()
+        maybeRunDeferredShareAction()
+    }
+
+    private func hasSharePayloadReady() -> Bool {
+        return pendingInstagramUrl != nil || pendingImageData != nil || !sharedMedia.isEmpty
+    }
+
+    private func deferActionIfAttachmentsStillLoading(_ action: DeferredShareAction) -> Bool {
+        guard pendingAttachmentCount > 0, !hasSharePayloadReady() else {
+            return false
+        }
+
+        deferredShareAction = action
+        let actionLabel = action == .analyzeNow ? "Analyze now" : "Analyze in app"
+        shareLog("[WAITING] \(actionLabel) tapped before attachment parsing finished - deferring (pending=\(pendingAttachmentCount))")
+        return true
+    }
+
+    private func maybeRunDeferredShareAction() {
+        guard pendingAttachmentCount == 0, let action = deferredShareAction else {
+            return
+        }
+
+        guard hasSharePayloadReady() else {
+            shareLog("[WAITING] Deferred action pending but no share payload is ready yet")
+            return
+        }
+
+        deferredShareAction = nil
+        let actionLabel = action == .analyzeNow ? "Analyze now" : "Analyze in app"
+        shareLog("[SUCCESS] Running deferred action: \(actionLabel)")
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            switch action {
+            case .analyzeNow:
+                self.analyzeNowTapped()
+            case .analyzeInApp:
+                self.analyzeInAppTapped()
+            }
+        }
     }
 
     private func maybeFinalizeShare() {
@@ -2064,64 +2111,86 @@ open class RSIShareViewController: SLComposeServiceViewController {
         fetchTikTokOEmbedThumbnail(urlString: urlString) { [weak self] thumbUrl in
             guard let self = self else { return }
 
-            if let thumbUrl = thumbUrl {
+            let fallbackToHtml: (String) -> Void = { [weak self] reason in
+                guard let self = self else { return }
+                shareLog("TikTok oEmbed path failed (\(reason)); attempting HTML scraping for slideshow/photo content...")
+                self.downloadTikTokMediaViaHtmlScrape(from: urlString, completion: completion)
+            }
+
+            guard let thumbUrl = thumbUrl else {
+                fallbackToHtml("oEmbed thumbnail unavailable")
+                return
+            }
+
+            self.downloadFirstValidImage(
+                from: [thumbUrl],
+                platform: "tiktok",
+                session: URLSession.shared,
+                cropToAspect: 9.0 / 16.0
+            ) { result in
+                switch result {
+                case .success(let downloaded):
+                    if downloaded.isEmpty {
+                        fallbackToHtml("oEmbed download returned no files")
+                    } else {
+                        completion(.success(downloaded))
+                    }
+                case .failure(let error):
+                    shareLog("TikTok oEmbed thumbnail download failed - \(error.localizedDescription)")
+                    fallbackToHtml(error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private func downloadTikTokMediaViaHtmlScrape(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
+        resolveTikTokRedirect(urlString: urlString) { [weak self] resolvedUrl in
+            guard let self = self else { return }
+
+            let targetUrl = resolvedUrl ?? urlString
+            guard let url = URL(string: targetUrl) else {
+                completion(.failure(self.makeDownloadError("tiktok", "Invalid URL")))
+                return
+            }
+
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 15.0
+            request.setValue(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+                forHTTPHeaderField: "User-Agent"
+            )
+
+            let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+                guard let self = self else { return }
+
+                guard error == nil,
+                      let httpResponse = response as? HTTPURLResponse,
+                      httpResponse.statusCode == 200,
+                      let data = data,
+                      let html = String(data: data, encoding: .utf8) else {
+                    completion(.failure(self.makeDownloadError("tiktok", "Failed to fetch HTML")))
+                    return
+                }
+
+                let imageUrls = self.extractTikTokImageUrls(from: html)
+                if imageUrls.isEmpty {
+                    completion(.failure(self.makeDownloadError("tiktok", "No images found in slideshow")))
+                    return
+                }
+
+                shareLog("Found \(imageUrls.count) slideshow image(s), downloading first one...")
                 self.downloadFirstValidImage(
-                    from: [thumbUrl],
+                    from: imageUrls,
                     platform: "tiktok",
                     session: URLSession.shared,
                     cropToAspect: 9.0 / 16.0,
                     completion: completion
                 )
-                return
             }
-
-            // oEmbed failed (likely slideshow/photo mode) - fallback to HTML scraping
-            shareLog("TikTok oEmbed failed, attempting HTML scraping for slideshow/photo content...")
-            self.resolveTikTokRedirect(urlString: urlString) { [weak self] resolvedUrl in
-                guard let self = self else { return }
-
-                let targetUrl = resolvedUrl ?? urlString
-                guard let url = URL(string: targetUrl) else {
-                    completion(.failure(self.makeDownloadError("tiktok", "Invalid URL")))
-                    return
-                }
-
-                var request = URLRequest(url: url)
-                request.timeoutInterval = 15.0
-                request.setValue(
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-                    forHTTPHeaderField: "User-Agent"
-                )
-
-                let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-                    guard let self = self else { return }
-
-                    guard error == nil,
-                          let httpResponse = response as? HTTPURLResponse,
-                          httpResponse.statusCode == 200,
-                          let data = data,
-                          let html = String(data: data, encoding: .utf8) else {
-                        completion(.failure(self.makeDownloadError("tiktok", "Failed to fetch HTML")))
-                        return
-                    }
-
-                    let imageUrls = self.extractTikTokImageUrls(from: html)
-                    if imageUrls.isEmpty {
-                        completion(.failure(self.makeDownloadError("tiktok", "No images found in slideshow")))
-                        return
-                    }
-
-                    shareLog("Found \(imageUrls.count) slideshow image(s), downloading first one...")
-                    self.downloadFirstValidImage(
-                        from: imageUrls,
-                        platform: "tiktok",
-                        session: URLSession.shared,
-                        cropToAspect: 9.0 / 16.0,
-                        completion: completion
-                    )
-                }
-                task.resume()
-            }
+            task.resume()
         }
     }
 
@@ -3634,6 +3703,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
             )
             request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
             request.setValue("https://www.facebook.com/", forHTTPHeaderField: "Referer")
+            request.setValue("image/avif,image/webp,image/apng,image/*,*/*;q=0.8", forHTTPHeaderField: "Accept")
+        } else if platform == "tiktok" {
+            request.setValue(
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                forHTTPHeaderField: "User-Agent"
+            )
+            request.setValue("https://www.tiktok.com/", forHTTPHeaderField: "Referer")
             request.setValue("image/avif,image/webp,image/apng,image/*,*/*;q=0.8", forHTTPHeaderField: "Accept")
         } else if platform == "generic" {
             request.setValue(
@@ -7897,6 +7973,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
+        if deferActionIfAttachmentsStillLoading(.analyzeInApp) {
+            return
+        }
+
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
@@ -8078,6 +8158,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if !hasAvailableCredits() {
             shareLog("User has no credits - showing out of credits modal")
             showOutOfCreditsModal()
+            return
+        }
+
+        if deferActionIfAttachmentsStillLoading(.analyzeNow) {
             return
         }
 
