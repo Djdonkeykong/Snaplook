@@ -686,10 +686,9 @@ class _HomePageState extends ConsumerState<HomePage>
                         children: [
                           Expanded(
                             child: Padding(
-                              padding: EdgeInsets.only(
-                                left: spacing.l,
-                                top: spacing.l,
-                                right: spacing.l,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: spacing.l,
+                                vertical: spacing.l,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -722,7 +721,8 @@ class _HomePageState extends ConsumerState<HomePage>
                                   Expanded(
                                     child: ListView.separated(
                                       physics: const BouncingScrollPhysics(),
-                                      padding: EdgeInsets.zero,
+                                      padding:
+                                          EdgeInsets.only(bottom: spacing.s),
                                       itemCount: options.length,
                                       separatorBuilder: (_, __) =>
                                           SizedBox(height: spacing.l),
@@ -1144,6 +1144,7 @@ class _FloatingActionBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               child: _FloatingActionButtonSvg(
@@ -1247,37 +1248,43 @@ class _FloatingActionButtonSvgState extends State<_FloatingActionButtonSvg>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: _handleTap,
-      child: AnimatedBuilder(
-        animation: _tapController,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: child,
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                widget.svgIcon,
-                width: widget.iconSize,
-                height: widget.iconSize,
-                colorFilter:
-                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+      child: SizedBox.expand(
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _tapController,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _scaleAnimation.value,
+                child: child,
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    widget.svgIcon,
+                    width: widget.iconSize,
+                    height: widget.iconSize,
+                    colorFilter:
+                        const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                widget.label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
