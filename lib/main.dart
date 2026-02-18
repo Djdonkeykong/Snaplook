@@ -190,7 +190,6 @@ void main() async {
     );
   }
 
-
   // Initialize analytics (Amplitude)
   try {
     final amplitudeApiKey = AppConstants.amplitudeApiKey;
@@ -261,11 +260,14 @@ void main() async {
   try {
     // Use platform-specific API key
     final revenueCatApiKey = Platform.isIOS
-        ? (dotenv.env['REVENUECAT_IOS_API_KEY'] ?? 'appl_uohzNateNMeOXeZppfARhFngkQr')
-        : (dotenv.env['REVENUECAT_ANDROID_API_KEY'] ?? 'goog_OiuFmkgbbrZuNQJnVUQRanFRnYp');
+        ? (dotenv.env['REVENUECAT_IOS_API_KEY'] ??
+            'appl_uohzNateNMeOXeZppfARhFngkQr')
+        : (dotenv.env['REVENUECAT_ANDROID_API_KEY'] ??
+            'goog_OiuFmkgbbrZuNQJnVUQRanFRnYp');
 
     await RevenueCatService().initialize(apiKey: revenueCatApiKey);
-    debugPrint('[RevenueCat] Initialized successfully with ${Platform.isIOS ? "iOS" : "Android"} API key');
+    debugPrint(
+        '[RevenueCat] Initialized successfully with ${Platform.isIOS ? "iOS" : "Android"} API key');
   } catch (e) {
     debugPrint('[RevenueCat] Initialization failed: $e');
   }
@@ -279,7 +281,8 @@ void main() async {
   // Precache splash logo so the splash displays without a flicker
   await _precacheSplashLogo();
 
-  final app = ProviderScope(child: SnaplookApp(isFirebaseReady: firebaseInitialized));
+  final app =
+      ProviderScope(child: SnaplookApp(isFirebaseReady: firebaseInitialized));
   final debugLog = DebugLogService();
 
   Future<void> initializeSuperwallAfterStartup() async {
@@ -289,8 +292,10 @@ void main() async {
 
     try {
       final superwallApiKey = Platform.isIOS
-          ? (dotenv.env['SUPERWALL_IOS_API_KEY'] ?? dotenv.env['SUPERWALL_API_KEY'])
-          : (dotenv.env['SUPERWALL_ANDROID_API_KEY'] ?? dotenv.env['SUPERWALL_API_KEY']);
+          ? (dotenv.env['SUPERWALL_IOS_API_KEY'] ??
+              dotenv.env['SUPERWALL_API_KEY'])
+          : (dotenv.env['SUPERWALL_ANDROID_API_KEY'] ??
+              dotenv.env['SUPERWALL_API_KEY']);
 
       debugLog.log(
         'API key from .env: ${superwallApiKey != null ? "present (${superwallApiKey.substring(0, 5)}...)" : "NULL"}',
@@ -361,13 +366,14 @@ class _FetchingOverlay extends StatefulWidget {
 
 class _FetchingOverlayState extends State<_FetchingOverlay>
     with TickerProviderStateMixin {
+  static const double _pendingProgressCap = 0.9;
   late AnimationController _controller;
-  late Animation<double> _progressAnimation;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   late List<String> _messages;
   int _messageIndex = 0;
   Timer? _messageTimer;
+  bool _isFinishing = false;
 
   @override
   void initState() {
@@ -387,15 +393,6 @@ class _FetchingOverlayState extends State<_FetchingOverlay>
       vsync: this,
       duration: duration,
     );
-
-    _progressAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 1.0,
-          curve: Curves.easeOut), // Slower as it approaches target
-    ));
 
     _controller.forward();
 
@@ -454,13 +451,35 @@ class _FetchingOverlayState extends State<_FetchingOverlay>
   String get _currentMessage =>
       _messages.isNotEmpty ? _messages[_messageIndex] : widget.message;
 
-  void completeQuickly() {
+  double get _progressValue {
+    final normalized = _controller.value.clamp(0.0, 1.0);
+    if (!widget.isInstagram) {
+      return normalized;
+    }
+    if (_isFinishing) {
+      return normalized;
+    }
+    return (normalized * _pendingProgressCap).clamp(0.0, _pendingProgressCap);
+  }
+
+  Future<void> completeQuickly() async {
+    if (!mounted) return;
+    if (widget.isInstagram && !_isFinishing) {
+      setState(() {
+        _isFinishing = true;
+      });
+    }
     _controller.stop();
-    _controller.animateTo(
-      1.0,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOut,
-    );
+    if (_controller.value < 0.999) {
+      await _controller.animateTo(
+        1.0,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+    if (widget.isInstagram) {
+      await Future.delayed(const Duration(milliseconds: 120));
+    }
   }
 
   @override
@@ -502,10 +521,10 @@ class _FetchingOverlayState extends State<_FetchingOverlay>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(3),
                   child: AnimatedBuilder(
-                    animation: _progressAnimation,
+                    animation: _controller,
                     builder: (context, child) {
                       return LinearProgressIndicator(
-                        value: _progressAnimation.value,
+                        value: _progressValue,
                         minHeight: 6,
                         valueColor: const AlwaysStoppedAnimation<Color>(
                             Color(0xFFf2003c)),
@@ -536,7 +555,8 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     with WidgetsBindingObserver {
   late StreamSubscription _intentSub;
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  final GlobalKey<_FetchingOverlayState> _fetchingOverlayKey = GlobalKey<_FetchingOverlayState>();
+  final GlobalKey<_FetchingOverlayState> _fetchingOverlayKey =
+      GlobalKey<_FetchingOverlayState>();
 
   bool _isNavigatingToDetection = false;
   bool _hasHandledInitialShare = false;
@@ -711,9 +731,12 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     });
 
     // Check if app was opened from a terminated state via notification
-    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+    FirebaseMessaging.instance
+        .getInitialMessage()
+        .then((RemoteMessage? message) {
       if (message != null) {
-        debugPrint('[FCM] App opened from terminated state: ${message.messageId}');
+        debugPrint(
+            '[FCM] App opened from terminated state: ${message.messageId}');
         debugPrint('[FCM] Data: ${message.data}');
 
         // Handle the notification when app starts
@@ -1133,15 +1156,16 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
                 LinkScraperService.isGoogleImageResultUrl(decodedText));
 
     // Check if URL is from a specific platform but not supported in tutorial
-    final isFromKnownPlatform = InstagramService.isInstagramUrl(effectiveText) ||
-        InstagramService.isTikTokUrl(effectiveText) ||
-        InstagramService.isPinterestUrl(effectiveText) ||
-        InstagramService.isXUrl(effectiveText) ||
-        InstagramService.isRedditUrl(effectiveText) ||
-        InstagramService.isFacebookUrl(effectiveText) ||
-        InstagramService.isImdbUrl(effectiveText) ||
-        InstagramService.isSnapchatUrl(effectiveText) ||
-        InstagramService.isYouTubeUrl(effectiveText);
+    final isFromKnownPlatform =
+        InstagramService.isInstagramUrl(effectiveText) ||
+            InstagramService.isTikTokUrl(effectiveText) ||
+            InstagramService.isPinterestUrl(effectiveText) ||
+            InstagramService.isXUrl(effectiveText) ||
+            InstagramService.isRedditUrl(effectiveText) ||
+            InstagramService.isFacebookUrl(effectiveText) ||
+            InstagramService.isImdbUrl(effectiveText) ||
+            InstagramService.isSnapchatUrl(effectiveText) ||
+            InstagramService.isYouTubeUrl(effectiveText);
 
     if (isFromKnownPlatform && !_isTutorialSupportedUrl(effectiveText)) {
       // Known platform but not in tutorial - show unsupported message
@@ -1244,8 +1268,17 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
     });
   }
 
-  void _hideFetchingOverlay() {
+  Future<void> _hideFetchingOverlay({bool completeBeforeHide = false}) async {
     if (!mounted || !_isFetchingOverlayVisible) {
+      return;
+    }
+    if (completeBeforeHide) {
+      final overlayState = _fetchingOverlayKey.currentState;
+      if (overlayState != null) {
+        await overlayState.completeQuickly();
+      }
+    }
+    if (!mounted) {
       return;
     }
     setState(() {
@@ -1266,8 +1299,11 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       );
 
       if (InstagramService.lastDownloadWasCacheHit) {
-        _fetchingOverlayKey.currentState?.completeQuickly();
-        await Future.delayed(const Duration(milliseconds: 600));
+        final overlayState = _fetchingOverlayKey.currentState;
+        if (overlayState != null) {
+          await overlayState.completeQuickly();
+          await Future.delayed(const Duration(milliseconds: 120));
+        }
       }
 
       if (imageFiles.isNotEmpty) {
@@ -1301,7 +1337,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       _showInstagramErrorMessage();
       ref.read(shareNavigationInProgressProvider.notifier).state = false;
     } finally {
-      _hideFetchingOverlay();
+      await _hideFetchingOverlay(completeBeforeHide: true);
     }
   }
 
@@ -2111,7 +2147,7 @@ class _SnaplookAppState extends ConsumerState<SnaplookApp>
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       // darkTheme: AppTheme.darkTheme,  // Disabled until dark mode is complete
-      themeMode: ThemeMode.light,  // Force light mode only
+      themeMode: ThemeMode.light, // Force light mode only
       navigatorObservers: [routeObserver],
       home: const SplashPage(),
       onGenerateRoute: (settings) => null,

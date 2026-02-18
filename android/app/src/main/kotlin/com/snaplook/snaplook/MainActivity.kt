@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.provider.MediaStore
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -147,6 +148,13 @@ class MainActivity: FlutterActivity() {
         val packageCandidates = getTutorialPackageCandidatesForTarget(target)
         val canonicalPackageName = packageCandidates.firstOrNull()
 
+        if (target == "photos") {
+            for (intent in buildSystemPhotosIntents()) {
+                if (tryStartIntent(intent)) return true
+            }
+            return false
+        }
+
         // Web browsers option can still open a URL in browser.
         if (target == "safari") {
             val webIntent = Intent(
@@ -196,6 +204,29 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    private fun buildSystemPhotosIntents(): List<Intent> {
+        val galleryIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_APP_GALLERY)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        val viewImagesIntent = Intent(
+            Intent.ACTION_VIEW,
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        val pickImageIntent = Intent(
+            Intent.ACTION_PICK,
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        return listOf(galleryIntent, viewImagesIntent, pickImageIntent)
+    }
+
     private fun getTutorialPackageCandidatesForTarget(target: String): List<String> {
         return when (target) {
             "instagram" -> listOf(
@@ -204,7 +235,6 @@ class MainActivity: FlutterActivity() {
             )
             "pinterest" -> listOf("com.pinterest")
             "tiktok" -> listOf("com.zhiliaoapp.musically", "com.ss.android.ugc.trill")
-            "photos" -> listOf("com.google.android.apps.photos")
             "facebook" -> listOf("com.facebook.katana", "com.facebook.lite")
             "imdb" -> listOf("com.imdb.mobile")
             "x" -> listOf("com.twitter.android")

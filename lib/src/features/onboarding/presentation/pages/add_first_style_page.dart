@@ -185,7 +185,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
 
             // Title
             Text(
-              'Analyze and discover',
+              'Share and discover',
               style: TextStyle(
                 fontSize: 34,
                 fontFamily: 'PlusJakartaSans',
@@ -200,7 +200,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
 
             // Subtitle
             Text(
-              'Learn to share from your favorite apps',
+              'Share from your favorite apps',
               style: TextStyle(
                 fontSize: 16,
                 color: colorScheme.onSurfaceVariant,

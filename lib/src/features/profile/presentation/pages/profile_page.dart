@@ -43,13 +43,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
   }
 
-  void _resetMainNavigationState() {
-    ref.read(selectedIndexProvider.notifier).state = 0;
-    ref.invalidate(selectedIndexProvider);
-    ref.invalidate(scrollToTopTriggerProvider);
-    ref.invalidate(isAtHomeRootProvider);
-  }
-
   @override
   void dispose() {
     _scrollController.dispose();
@@ -90,7 +83,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         return Dialog(
           clipBehavior: Clip.antiAlias,
           backgroundColor: colorScheme.surface,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
           ),
@@ -141,7 +135,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       child: SizedBox(
                         height: 56,
                         child: OutlinedButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(false),
+                          onPressed: () =>
+                              Navigator.of(dialogContext).pop(false),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size.fromHeight(56),
                             side: BorderSide(color: outlineColor, width: 1.4),
@@ -164,7 +159,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       child: SizedBox(
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(true),
+                          onPressed: () =>
+                              Navigator.of(dialogContext).pop(true),
                           style: ElevatedButton.styleFrom(
                             elevation: 0,
                             minimumSize: const Size.fromHeight(56),
@@ -179,7 +175,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          child: Text(confirmLabel, textAlign: TextAlign.center),
+                          child:
+                              Text(confirmLabel, textAlign: TextAlign.center),
                         ),
                       ),
                     ),
@@ -203,7 +200,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     if (confirmed == true && mounted) {
       try {
-        _resetMainNavigationState();
         // Navigate immediately to prevent UI flash of default user
         Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -219,18 +215,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error logging out: ${e.toString()}',
-              style: context.snackTextStyle(
-                merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Error logging out: ${e.toString()}',
+                style: context.snackTextStyle(
+                  merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+                ),
               ),
+              duration: const Duration(milliseconds: 2500),
             ),
-            duration: const Duration(milliseconds: 2500),
-          ),
-        );
-      }
+          );
+        }
       }
     }
   }
@@ -275,9 +271,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         if (mounted) {
           ScaffoldMessenger.of(context).clearSnackBars();
         }
-
-        // Reset navigation state
-        _resetMainNavigationState();
 
         // Navigate to login page
         if (mounted) {
@@ -383,29 +376,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-                // Profile Section
-                Material(
-                  color: colorScheme.surface,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const EditProfilePage()),
-                      );
-                    },
-                    child: Padding(
-                      padding: EdgeInsets.all(spacing.l),
-                      child: Row(
-                        children: [
-                          // Circular Avatar
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF2003C),
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
+              // Profile Section
+              Material(
+                color: colorScheme.surface,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const EditProfilePage()),
+                    );
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.all(spacing.l),
+                    child: Row(
+                      children: [
+                        // Circular Avatar
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF2003C),
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
                           child: Text(
                             profileInitial,
                             style: const TextStyle(
@@ -415,155 +408,154 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               color: Colors.white,
                             ),
                           ),
-                          ),
-                          SizedBox(width: spacing.m),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  displayName,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'PlusJakartaSans',
-                                    color: colorScheme.onSurface,
-                                  ),
+                        ),
+                        SizedBox(width: spacing.m),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                displayName,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'PlusJakartaSans',
+                                  color: colorScheme.onSurface,
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'View profile',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'PlusJakartaSans',
-                                    color: AppColors.secondary,
-                                  ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'View profile',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'PlusJakartaSans',
+                                  color: AppColors.secondary,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          Icon(Icons.chevron_right,
-                              color: colorScheme.onSurfaceVariant),
-                        ],
-                      ),
+                        ),
+                        Icon(Icons.chevron_right,
+                            color: colorScheme.onSurfaceVariant),
+                      ],
                     ),
                   ),
                 ),
-                SizedBox(height: spacing.m),
+              ),
+              SizedBox(height: spacing.m),
 
-                // Account
-                _SectionHeader(title: 'Account'),
-                _SimpleSettingItem(
-                  title: 'Manage Subscription',
-                  onTap: _handleManageSubscription,
-                ),
+              // Account
+              _SectionHeader(title: 'Account'),
+              _SimpleSettingItem(
+                title: 'Manage Subscription',
+                onTap: _handleManageSubscription,
+              ),
 
-                SizedBox(height: spacing.l),
+              SizedBox(height: spacing.l),
 
-                // Settings
-                _SectionHeader(title: 'Settings'),
-                // Disabled until dark mode is fully implemented
-                // _SimpleSettingItem(
-                //   title: 'Appearance',
-                //   onTap: () {
-                //     Navigator.of(context).push(
-                //       MaterialPageRoute(
-                //         builder: (_) => const AppearancePreferencesPage(),
-                //       ),
-                //     );
-                //   },
-                // ),
-                _SimpleSettingItem(
-                  title: 'Notifications',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const NotificationSettingsPage(),
-                      ),
-                    );
-                  },
-                ),
+              // Settings
+              _SectionHeader(title: 'Settings'),
+              // Disabled until dark mode is fully implemented
+              // _SimpleSettingItem(
+              //   title: 'Appearance',
+              //   onTap: () {
+              //     Navigator.of(context).push(
+              //       MaterialPageRoute(
+              //         builder: (_) => const AppearancePreferencesPage(),
+              //       ),
+              //     );
+              //   },
+              // ),
+              _SimpleSettingItem(
+                title: 'Notifications',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationSettingsPage(),
+                    ),
+                  );
+                },
+              ),
 
-                SizedBox(height: spacing.l),
+              SizedBox(height: spacing.l),
 
-                // Support & Sharing Section
-                _SectionHeader(title: 'Support & Sharing'),
-                _SimpleSettingItem(
-                  title: 'Help',
-                  onTap: () => _openHelpLink(context),
-                ),
-                _SimpleSettingItem(
+              // Support & Sharing Section
+              _SectionHeader(title: 'Support & Sharing'),
+              _SimpleSettingItem(
+                title: 'Help',
+                onTap: () => _openHelpLink(context),
+              ),
+              _SimpleSettingItem(
+                title: 'Give Feedback',
+                onTap: () => _openDocumentSheet(
                   title: 'Give Feedback',
-                  onTap: () => _openDocumentSheet(
-                    title: 'Give Feedback',
-                    url: 'https://snaplook.userjot.com/',
-                  ),
+                  url: 'https://snaplook.userjot.com/',
                 ),
-                // Temporarily hidden - uncomment for debugging
-                // _SimpleSettingItem(
-                //   title: 'Share Ext. Logs',
-                //   onTap: () {
-                //     Navigator.of(context).push(
-                //       MaterialPageRoute(
-                //         builder: (_) => const ShareLogsPage(),
-                //       ),
-                //     );
-                //   },
-                // ),
-                _SimpleSettingItem(
-                  title: 'Invite Friends',
-                  onTap: () => _shareApp(context),
-                ),
-                SizedBox(height: spacing.l),
-
-                // Legal Section
-                _SectionHeader(title: 'Legal'),
-                _SimpleSettingItem(
-                  title: 'Privacy Policy',
-                  onTap: () => _openDocumentSheet(
-                    title: 'Privacy Policy',
-                    url: 'https://snaplook.app/privacy-policy/',
-                  ),
-                ),
-                _SimpleSettingItem(
-                  title: 'Terms of Service',
-                  onTap: () => _openDocumentSheet(
-                    title: 'Terms of Service',
-                    url: 'https://snaplook.app/terms-of-service/',
-                  ),
-                ),
-
-                SizedBox(height: spacing.l),
-
-                // Safety Section
-                _SectionHeader(title: 'Control Panel'),
-                _SimpleSettingItem(
-                  title: 'Logout',
-                  textColor: AppColors.secondary,
-                  onTap: _handleLogout,
-                ),
-                _SimpleSettingItem(
-                  title: 'Delete Account',
-                  textColor: AppColors.secondary,
-                  onTap: _handleDeleteAccount,
-                ),
-
-                SizedBox(height: spacing.xl),
-
-                // Version info
-                Center(
-                  child: Text(
-                    _versionString,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: colorScheme.onSurfaceVariant,
-                      fontFamily: 'PlusJakartaSans',
+              ),
+              _SimpleSettingItem(
+                title: 'Flutter Share Logs',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ShareLogsPage(),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
+                  );
+                },
+              ),
+              _SimpleSettingItem(
+                title: 'Invite Friends',
+                onTap: () => _shareApp(context),
+              ),
+              SizedBox(height: spacing.l),
+
+              // Legal Section
+              _SectionHeader(title: 'Legal'),
+              _SimpleSettingItem(
+                title: 'Privacy Policy',
+                onTap: () => _openDocumentSheet(
+                  title: 'Privacy Policy',
+                  url: 'https://snaplook.app/privacy-policy/',
                 ),
+              ),
+              _SimpleSettingItem(
+                title: 'Terms of Service',
+                onTap: () => _openDocumentSheet(
+                  title: 'Terms of Service',
+                  url: 'https://snaplook.app/terms-of-service/',
+                ),
+              ),
+
+              SizedBox(height: spacing.l),
+
+              // Safety Section
+              _SectionHeader(title: 'Control Panel'),
+              _SimpleSettingItem(
+                title: 'Logout',
+                textColor: AppColors.secondary,
+                onTap: _handleLogout,
+              ),
+              _SimpleSettingItem(
+                title: 'Delete Account',
+                textColor: AppColors.secondary,
+                onTap: _handleDeleteAccount,
+              ),
+
+              SizedBox(height: spacing.xl),
+
+              // Version info
+              Center(
+                child: Text(
+                  _versionString,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: colorScheme.onSurfaceVariant,
+                    fontFamily: 'PlusJakartaSans',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
 
               SizedBox(height: spacing.xl),
             ],

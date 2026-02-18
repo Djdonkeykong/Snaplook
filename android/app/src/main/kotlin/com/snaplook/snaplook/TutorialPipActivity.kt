@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.util.Rational
+import android.provider.MediaStore
 import android.widget.FrameLayout
 import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
@@ -128,6 +129,13 @@ class TutorialPipActivity : AppCompatActivity() {
     }
 
     private fun openTarget(target: String, deepLink: String?) {
+        if (target == "photos") {
+            for (intent in buildSystemPhotosIntents()) {
+                if (tryStartIntent(intent)) return
+            }
+            return
+        }
+
         val cleanedDeepLink = deepLink?.trim()
         val packageName = getPackageNameForTarget(target)
 
@@ -170,13 +178,10 @@ class TutorialPipActivity : AppCompatActivity() {
 
         if (intent != null) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            try {
-                startActivity(intent)
-            } catch (_: Exception) {
+            val started = tryStartIntent(intent)
+            if (!started && packageName != null) {
                 // If still fails and we have a package name, try opening Play Store
-                if (packageName != null) {
-                    openPlayStore(target)
-                }
+                openPlayStore(target)
             }
         }
     }
@@ -186,7 +191,6 @@ class TutorialPipActivity : AppCompatActivity() {
             "instagram" -> "com.instagram.android"
             "pinterest" -> "com.pinterest"
             "tiktok" -> "com.zhiliaoapp.musically"
-            "photos" -> "com.google.android.apps.photos"
             "facebook" -> "com.facebook.katana"
             "imdb" -> "com.imdb.mobile"
             "x" -> "com.twitter.android"
@@ -226,6 +230,38 @@ class TutorialPipActivity : AppCompatActivity() {
         } else {
             Intent(Intent.ACTION_VIEW, Uri.parse(fallbackUrl))
         }
+    }
+
+    private fun tryStartIntent(intent: Intent): Boolean {
+        return try {
+            startActivity(intent)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun buildSystemPhotosIntents(): List<Intent> {
+        val galleryIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_APP_GALLERY)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        val viewImagesIntent = Intent(
+            Intent.ACTION_VIEW,
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        val pickImageIntent = Intent(
+            Intent.ACTION_PICK,
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        return listOf(galleryIntent, viewImagesIntent, pickImageIntent)
     }
 
   override fun onPictureInPictureModeChanged(

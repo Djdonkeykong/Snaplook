@@ -55,7 +55,7 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   static const _firstAnalysisReviewPromptedKeyPrefix =
       'review_prompted_after_first_analysis_';
   static const _homePolaroidsAsset =
@@ -71,11 +71,33 @@ class _HomePageState extends ConsumerState<HomePage>
   bool _isTutorialEnabled = true;
   final PipTutorialService _pipTutorialService = PipTutorialService();
   _TutorialSource? _loadingTutorialSource;
+  late final AnimationController _addButtonTapController;
+  late final Animation<double> _addButtonScaleAnimation;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _addButtonTapController = AnimationController(
+      duration: const Duration(milliseconds: 350),
+      vsync: this,
+    );
+    _addButtonScaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.12,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.12,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 60,
+      ),
+    ]).animate(_addButtonTapController);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_precacheHomeAssets());
@@ -163,6 +185,7 @@ class _HomePageState extends ConsumerState<HomePage>
     _pendingShareListener?.close();
     WidgetsBinding.instance.removeObserver(this);
     _pipTutorialService.stopTutorial();
+    _addButtonTapController.dispose();
     super.dispose();
   }
 
@@ -440,23 +463,33 @@ class _HomePageState extends ConsumerState<HomePage>
           GestureDetector(
             onTap: () {
               HapticFeedback.mediumImpact();
+              _addButtonTapController.forward(from: 0.0);
               _showImportOptionsSheet();
             },
-            child: Container(
-              width: 88,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.secondary,
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(
+            child: AnimatedBuilder(
+              animation: _addButtonTapController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _addButtonScaleAnimation.value,
+                  child: child,
+                );
+              },
+              child: Container(
+                width: 88,
+                height: 52,
+                decoration: BoxDecoration(
                   color: AppColors.secondary,
-                  width: 1.0,
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(
+                    color: AppColors.secondary,
+                    width: 1.0,
+                  ),
                 ),
-              ),
-              child: Icon(
-                Icons.add,
-                size: 28,
-                color: colorScheme.surface,
+                child: Icon(
+                  Icons.add,
+                  size: 28,
+                  color: colorScheme.surface,
+                ),
               ),
             ),
           ),
@@ -665,7 +698,7 @@ class _HomePageState extends ConsumerState<HomePage>
                             ),
                             SizedBox(height: spacing.xs),
                             Text(
-                              'Learn to share from your favorite apps',
+                              'Send it through your favorite apps',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: colorScheme.onSurfaceVariant,
@@ -703,12 +736,6 @@ class _HomePageState extends ConsumerState<HomePage>
                                 },
                               ),
                             ),
-                            SizedBox(height: spacing.m),
-                            Container(
-                              height: 1,
-                              color: colorScheme.outlineVariant,
-                            ),
-                            SizedBox(height: spacing.m),
                             _TutorialToggleCard(
                               value: isTutorialEnabled,
                               onChanged: (enabled) {
@@ -792,7 +819,9 @@ class _HomePageState extends ConsumerState<HomePage>
     setState(() {
       _loadingTutorialSource = source;
     });
-    sheetSetState(() {});
+    if (sheetContext.mounted) {
+      sheetSetState(() {});
+    }
 
     try {
       HapticFeedback.mediumImpact();
@@ -820,7 +849,9 @@ class _HomePageState extends ConsumerState<HomePage>
           _loadingTutorialSource = null;
         });
       }
-      sheetSetState(() {});
+      if (sheetContext.mounted) {
+        sheetSetState(() {});
+      }
     }
   }
 
@@ -929,20 +960,20 @@ class _HomePageState extends ConsumerState<HomePage>
       builder: (sheetContext) {
         return _ImportOptionsBottomSheet(
           onSnapTap: () async {
-            Navigator.of(sheetContext).pop();
-            await Future.delayed(const Duration(milliseconds: 120));
+            await Navigator.of(sheetContext).maybePop();
+            await Future.delayed(const Duration(milliseconds: 200));
             if (!mounted) return;
-            _pickImage(ImageSource.camera);
+            await _pickImage(ImageSource.camera);
           },
           onUploadTap: () async {
-            Navigator.of(sheetContext).pop();
-            await Future.delayed(const Duration(milliseconds: 120));
+            await Navigator.of(sheetContext).maybePop();
+            await Future.delayed(const Duration(milliseconds: 200));
             if (!mounted) return;
-            _pickImage(ImageSource.gallery);
+            await _pickImage(ImageSource.gallery);
           },
           onShareFromAppTap: () async {
-            Navigator.of(sheetContext).pop();
-            await Future.delayed(const Duration(milliseconds: 120));
+            await Navigator.of(sheetContext).maybePop();
+            await Future.delayed(const Duration(milliseconds: 200));
             if (!mounted) return;
             _showTutorialOptionsSheet();
           },
@@ -1071,10 +1102,16 @@ class _FloatingActionBar extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.20),
-            blurRadius: 35,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 18,
+            offset: const Offset(0, -6),
             spreadRadius: 1,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, -1),
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -1121,7 +1158,7 @@ class _FloatingActionBar extends StatelessWidget {
   }
 }
 
-class _FloatingActionButtonSvg extends StatelessWidget {
+class _FloatingActionButtonSvg extends StatefulWidget {
   final String svgIcon;
   final String label;
   final VoidCallback onTap;
@@ -1135,34 +1172,87 @@ class _FloatingActionButtonSvg extends StatelessWidget {
   });
 
   @override
+  State<_FloatingActionButtonSvg> createState() =>
+      _FloatingActionButtonSvgState();
+}
+
+class _FloatingActionButtonSvgState extends State<_FloatingActionButtonSvg>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _tapController;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _tapController = AnimationController(
+      duration: const Duration(milliseconds: 220),
+      vsync: this,
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.06,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 45,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.06,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 55,
+      ),
+    ]).animate(_tapController);
+  }
+
+  @override
+  void dispose() {
+    _tapController.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    HapticFeedback.mediumImpact();
+    _tapController.forward(from: 0.0);
+    widget.onTap();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.mediumImpact();
-        onTap();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgPicture.asset(
-              svgIcon,
-              width: iconSize,
-              height: iconSize,
-              colorFilter:
-                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+      onTap: _handleTap,
+      child: AnimatedBuilder(
+        animation: _tapController,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: child,
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                widget.svgIcon,
+                width: widget.iconSize,
+                height: widget.iconSize,
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1196,7 +1286,7 @@ class _ImportOptionsBottomSheet extends StatelessWidget {
           children: [
             Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: spacing.m,
+                horizontal: spacing.l,
                 vertical: spacing.l,
               ),
               child: Column(
@@ -1432,6 +1522,38 @@ class _HomeHistoryGridCard extends ConsumerWidget {
     }
   }
 
+  Future<void> _rescanSearch(BuildContext context) async {
+    final cloudinaryUrl = (search['cloudinary_url'] as String?)?.trim();
+    if (cloudinaryUrl == null || cloudinaryUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No image available for re-scan.',
+            style: context.snackTextStyle(
+              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final sourceUrl =
+        (search['source_url'] as String?)?.trim() ?? cloudinaryUrl;
+
+    HapticFeedback.mediumImpact();
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => DetectionPage(
+          imageUrl: cloudinaryUrl,
+          searchType: 'history_rescan',
+          sourceUrl: sourceUrl,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -1463,33 +1585,66 @@ class _HomeHistoryGridCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: cloudinaryUrl != null && cloudinaryUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: cloudinaryUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      placeholder: (_, __) => Container(
-                        color: colorScheme.surfaceContainerHighest,
-                      ),
-                      errorWidget: (_, __, ___) => Container(
-                        color: colorScheme.surfaceContainerHighest,
-                        child: Icon(
-                          Icons.image_outlined,
-                          color: colorScheme.onSurfaceVariant,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  cloudinaryUrl != null && cloudinaryUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: cloudinaryUrl,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          placeholder: (_, __) => Container(
+                            color: colorScheme.surfaceContainerHighest,
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: colorScheme.surfaceContainerHighest,
+                            child: Icon(
+                              Icons.image_outlined,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: colorScheme.surfaceContainerHighest,
+                          width: double.infinity,
+                          child: Icon(
+                            Icons.image_outlined,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                  if (cloudinaryUrl != null && cloudinaryUrl.isNotEmpty)
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: () => _rescanSearch(context),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.search_rounded,
+                            color: colorScheme.onSurface,
+                            size: 18,
+                          ),
                         ),
                       ),
-                    )
-                  : Container(
-                      color: colorScheme.surfaceContainerHighest,
-                      width: double.infinity,
-                      child: Icon(
-                        Icons.image_outlined,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
                     ),
+                ],
+              ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+              padding: const EdgeInsets.fromLTRB(14, 10, 10, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1504,7 +1659,7 @@ class _HomeHistoryGridCard extends ConsumerWidget {
                       fontFamily: 'PlusJakartaSans',
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 8),
                   Text(
                     '${totalResults == 1 ? '1 result' : '$totalResults results'} - ${_timeAgo()}',
                     maxLines: 1,
@@ -1787,14 +1942,16 @@ class _TutorialToggleCard extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     'Enable tutorial',
                     style: TextStyle(
                       fontSize: 16,
@@ -1804,23 +1961,31 @@ class _TutorialToggleCard extends StatelessWidget {
                       letterSpacing: -0.2,
                     ),
                   ),
-                ),
-                CupertinoSwitch(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      helperText,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.onSurfaceVariant,
+                        fontFamily: 'PlusJakartaSans',
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              height: 36,
+              child: Center(
+                child: CupertinoSwitch(
                   value: value,
                   activeColor: const Color(0xFFF2003C),
                   onChanged: onChanged,
                 ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              helperText,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: colorScheme.onSurfaceVariant,
-                fontFamily: 'PlusJakartaSans',
-                letterSpacing: -0.1,
               ),
             ),
           ],
