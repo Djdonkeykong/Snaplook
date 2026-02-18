@@ -686,9 +686,10 @@ class _HomePageState extends ConsumerState<HomePage>
                         children: [
                           Expanded(
                             child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: spacing.l,
-                                vertical: spacing.l,
+                              padding: EdgeInsets.only(
+                                left: spacing.l,
+                                top: spacing.l,
+                                right: spacing.l,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -721,8 +722,7 @@ class _HomePageState extends ConsumerState<HomePage>
                                   Expanded(
                                     child: ListView.separated(
                                       physics: const BouncingScrollPhysics(),
-                                      padding:
-                                          EdgeInsets.only(bottom: spacing.s),
+                                      padding: EdgeInsets.zero,
                                       itemCount: options.length,
                                       separatorBuilder: (_, __) =>
                                           SizedBox(height: spacing.l),

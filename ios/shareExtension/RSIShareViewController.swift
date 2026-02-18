@@ -1142,7 +1142,13 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        shareLog("viewWillDisappear (didCompleteRequest=\(didCompleteRequest), hasQueuedRedirect=\(hasQueuedRedirect), pending=\(pendingAttachmentCount), showingPreview=\(isShowingPreview), showingResults=\(isShowingResults))")
         hideDefaultUI()
+    }
+
+    open override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        shareLog("viewDidDisappear (didCompleteRequest=\(didCompleteRequest), hasQueuedRedirect=\(hasQueuedRedirect), pending=\(pendingAttachmentCount), showingPreview=\(isShowingPreview), showingResults=\(isShowingResults))")
     }
 
     open override func configurationItems() -> [Any]! { [] }
@@ -6638,6 +6644,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         guard !didCompleteRequest else { return }
         didCompleteRequest = true
         DispatchQueue.main.async {
+            self.endExtendedExecution()
             self.currentProcessingSession = nil
             if let defaults = UserDefaults(suiteName: self.appGroupId) {
                 defaults.removeObject(forKey: kProcessingStatusKey)
@@ -6680,6 +6687,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func dismissWithError() {
         shareLog("ERROR: dismissWithError called")
         DispatchQueue.main.async {
+            self.endExtendedExecution()
             self.hideLoadingUI()
             let alert = UIAlertController(title: "Error", message: "Error loading data", preferredStyle: .alert)
             let action = UIAlertAction(title: "OK", style: .cancel) { _ in
@@ -7977,6 +7985,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
+        // Keep extension alive while network/download work is running.
+        requestExtendedExecution()
+
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
@@ -8165,6 +8176,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
+        // Keep extension alive while network/download work is running.
+        requestExtendedExecution()
+
         // Haptic feedback
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
@@ -8340,7 +8354,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func requestExtendedExecution() {
         endExtendedExecution() // Clean up any existing activity first
 
-        let reason = "User browsing detection results"
+        let reason = "Share extension processing"
         shareLog("Requesting extended execution time from iOS")
         backgroundActivity = ProcessInfo.processInfo.beginActivity(
             options: [.userInitiatedAllowingIdleSystemSleep],
@@ -8364,6 +8378,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("Ending extended execution time")
         ProcessInfo.processInfo.endActivity(activity)
         backgroundActivity = nil
+    }
+
+    deinit {
+        shareLog("RSIShareViewController deinit")
     }
 
 }
