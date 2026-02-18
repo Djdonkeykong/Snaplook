@@ -539,7 +539,12 @@ class HistoryCard extends ConsumerWidget {
         return 'Safari';
       case 'web':
       case 'browser':
+        if (sourceUrl.contains('imdb.com') || sourceUrl.contains('m.imdb.com')) {
+          return 'IMDb';
+        }
         return 'Web';
+      case 'imdb':
+        return 'IMDb';
       case 'share':
       case 'share_extension':
       case 'shareextension':

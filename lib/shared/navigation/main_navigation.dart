@@ -30,10 +30,19 @@ class MainNavigation extends ConsumerStatefulWidget {
 }
 
 class _MainNavigationState extends ConsumerState<MainNavigation> {
+  static const SystemUiOverlayStyle _mainOverlayStyle = SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark, // Android
+    statusBarBrightness: Brightness.light, // iOS => dark icons
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  );
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() => ref.read(creditBalanceProvider));
+    SystemChrome.setSystemUIOverlayStyle(_mainOverlayStyle);
   }
 
   void _handleTabTap(int index) {
@@ -117,133 +126,136 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     final colorScheme = Theme.of(context).colorScheme;
     final navColors = context.navigation;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: IndexedStack(index: selectedIndex, children: pages),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: navColors.navBarBackground,
-          border: Border(
-            top: BorderSide(
-              color: colorScheme.outlineVariant.withOpacity(0.08),
-              width: 0.5,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: _mainOverlayStyle,
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        body: IndexedStack(index: selectedIndex, children: pages),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: navColors.navBarBackground,
+            border: Border(
+              top: BorderSide(
+                color: colorScheme.outlineVariant.withOpacity(0.08),
+                width: 0.5,
+              ),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 18,
+                offset: const Offset(0, -6),
+                spreadRadius: 1,
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 6,
+                offset: const Offset(0, -1),
+                spreadRadius: 0,
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 18,
-              offset: const Offset(0, -6),
-              spreadRadius: 1,
-            ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 6,
-              offset: const Offset(0, -1),
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        child: SafeArea(
-          minimum: const EdgeInsets.only(bottom: 4),
-          child: Container(
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Row(
-              children: [
-                // Home icon
-                Expanded(
-                  child: Center(
-                    child: Transform.translate(
-                      offset: const Offset(-8, 0),
-                      child: _NavigationItem(
-                        icon: SnaplookIcons.homeOutline,
-                        selectedIcon: SnaplookIcons.homeFilled,
-                        label: 'Home',
-                        index: 0,
-                        isSelected: selectedIndex == 0,
-                        onTap: () => _handleTabTap(0),
-                        iconSize: 25.0,
-                        selectedIconSize: 25.0,
+          child: SafeArea(
+            minimum: const EdgeInsets.only(bottom: 4),
+            child: Container(
+              height: 56,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: Row(
+                children: [
+                  // Home icon
+                  Expanded(
+                    child: Center(
+                      child: Transform.translate(
+                        offset: const Offset(-8, 0),
+                        child: _NavigationItem(
+                          icon: SnaplookIcons.homeOutline,
+                          selectedIcon: SnaplookIcons.homeFilled,
+                          label: 'Home',
+                          index: 0,
+                          isSelected: selectedIndex == 0,
+                          onTap: () => _handleTabTap(0),
+                          iconSize: 25.0,
+                          selectedIconSize: 25.0,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                // Heart icon with badge
-                Expanded(
-                  child: Center(
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        _NavigationItem(
-                          icon: SnaplookIcons.heartOutline,
-                          selectedIcon: SnaplookIcons.heartFilled,
-                          label: 'Favorites',
-                          index: 1,
-                          isSelected: selectedIndex == 1,
-                          onTap: () => _handleTabTap(1),
-                          iconSize: 25.0,
-                          selectedIconSize: 29.0,
-                          iconOffset: const Offset(-2, 0),
-                          selectedIconOffset: Offset.zero,
-                        ),
-                        if (favoritesCount > 0)
-                          Positioned(
-                            right: 12,
-                            top: 10,
-                            child: IgnorePointer(
-                              child: Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: navColors.navBarBadgeBackground,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: navColors.navBarBadgeBorder,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    favoritesCount > 99
-                                        ? '99+'
-                                        : '$favoritesCount',
-                                    style: TextStyle(
+                  // Heart icon with badge
+                  Expanded(
+                    child: Center(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          _NavigationItem(
+                            icon: SnaplookIcons.heartOutline,
+                            selectedIcon: SnaplookIcons.heartFilled,
+                            label: 'Favorites',
+                            index: 1,
+                            isSelected: selectedIndex == 1,
+                            onTap: () => _handleTabTap(1),
+                            iconSize: 25.0,
+                            selectedIconSize: 29.0,
+                            iconOffset: const Offset(-2, 0),
+                            selectedIconOffset: Offset.zero,
+                          ),
+                          if (favoritesCount > 0)
+                            Positioned(
+                              right: 12,
+                              top: 10,
+                              child: IgnorePointer(
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: navColors.navBarBadgeBackground,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
                                       color: navColors.navBarBadgeBorder,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'PlusJakartaSans',
-                                      height: 1.0,
+                                      width: 1.5,
                                     ),
-                                    textAlign: TextAlign.center,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      favoritesCount > 99
+                                          ? '99+'
+                                          : '$favoritesCount',
+                                      style: TextStyle(
+                                        color: navColors.navBarBadgeBorder,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'PlusJakartaSans',
+                                        height: 1.0,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Profile icon
-                Expanded(
-                  child: Center(
-                    child: Transform.translate(
-                      offset: const Offset(8, 0),
-                      child: _NavigationItem(
-                        icon: SnaplookIcons.profileOutline,
-                        selectedIcon: SnaplookIcons.profileFilled,
-                        label: 'Profile',
-                        index: 2,
-                        isSelected: selectedIndex == 2,
-                        onTap: () => _handleTabTap(2),
-                        iconSize: 25.0,
-                        selectedIconSize: 25.0,
+                        ],
                       ),
                     ),
                   ),
-                ),
-              ],
+                  // Profile icon
+                  Expanded(
+                    child: Center(
+                      child: Transform.translate(
+                        offset: const Offset(8, 0),
+                        child: _NavigationItem(
+                          icon: SnaplookIcons.profileOutline,
+                          selectedIcon: SnaplookIcons.profileFilled,
+                          label: 'Profile',
+                          index: 2,
+                          isSelected: selectedIndex == 2,
+                          onTap: () => _handleTabTap(2),
+                          iconSize: 25.0,
+                          selectedIconSize: 25.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

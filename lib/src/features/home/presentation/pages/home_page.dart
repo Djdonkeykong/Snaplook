@@ -1495,6 +1495,7 @@ class _HomeHistoryGridCard extends ConsumerWidget {
     final rawType =
         (search['search_type'] ?? search['source_type'])?.toString();
     final type = rawType?.trim().toLowerCase();
+    final sourceUrl = (search['source_url'] as String?)?.toLowerCase() ?? '';
 
     switch (type) {
       case 'ig':
@@ -1517,6 +1518,10 @@ class _HomeHistoryGridCard extends ConsumerWidget {
         return 'X';
       case 'web':
       case 'browser':
+        if (sourceUrl.contains('imdb.com') ||
+            sourceUrl.contains('m.imdb.com')) {
+          return 'IMDb';
+        }
         return 'Web';
       case 'share':
       case 'share_extension':

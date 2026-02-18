@@ -4062,8 +4062,15 @@ open class RSIShareViewController: SLComposeServiceViewController {
             searchType = "camera"
         }
 
+        let resolvedUserId = getUserId()
+        if resolvedUserId == "anonymous" {
+            shareLog("ERROR: Cannot run detection without a valid authenticated user ID")
+            handleDetectionFailure(reason: "We couldn't sync your account for this share. Open Snaplook once, then try sharing again.")
+            return
+        }
+
         var requestBody: [String: Any] = [
-            "user_id": getUserId(),
+            "user_id": resolvedUserId,
             "image_base64": imageBase64,
             "search_type": searchType
         ]
@@ -4174,6 +4181,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     self.currentImageCacheId = detectionResponse.image_cache_id
                     if let searchId = detectionResponse.search_id {
                         shareLog("Stored search_id: \(searchId)")
+                    } else {
+                        shareLog("WARNING: Detection succeeded but search_id is nil (history entry may not have been created)")
                     }
                     let wasCacheHit = detectionResponse.cached ?? false
                     if wasCacheHit {
@@ -5658,38 +5667,44 @@ open class RSIShareViewController: SLComposeServiceViewController {
         // Get Supabase auth user ID from shared UserDefaults
         guard let defaults = UserDefaults(suiteName: appGroupId) else {
             shareLog("ERROR: Could not access shared UserDefaults with appGroupId: \(appGroupId)")
-            if let deviceId = UIDevice.current.identifierForVendor?.uuidString {
-                return deviceId
-            }
             return "anonymous"
         }
 
-        // Check if user is authenticated
-        let isAuthenticated = defaults.bool(forKey: "is_authenticated")
+        // Check auth flag (primary + legacy alias)
+        let isAuthenticated = defaults.bool(forKey: "user_authenticated") || defaults.bool(forKey: "is_authenticated")
         shareLog("getUserId - isAuthenticated flag: \(isAuthenticated)")
 
-        // Try to get Supabase user ID
-        if let userId = defaults.string(forKey: "supabase_user_id") {
-            if userId.isEmpty {
-                shareLog("WARNING: supabase_user_id exists but is EMPTY")
-            } else {
-                shareLog("getUserId - Using Supabase user ID: \(userId)")
-                return userId
+        // Try primary and legacy user ID keys.
+        let candidateKeys = ["supabase_user_id", "user_id"]
+        for key in candidateKeys {
+            if let raw = defaults.string(forKey: key) {
+                let userId = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                if userId.isEmpty {
+                    shareLog("WARNING: \(key) exists but is EMPTY")
+                    continue
+                }
+
+                if UUID(uuidString: userId) != nil {
+                    shareLog("getUserId - Using Supabase user ID from \(key): \(userId)")
+                    return userId
+                } else {
+                    shareLog("WARNING: \(key) is not a valid UUID: \(userId)")
+                }
             }
-        } else {
-            shareLog("WARNING: supabase_user_id key NOT FOUND in UserDefaults")
         }
 
         // Debug: List all keys in UserDefaults
         let allKeys = Array(defaults.dictionaryRepresentation().keys)
         shareLog("DEBUG: All UserDefaults keys: \(allKeys.joined(separator: ", "))")
 
-        // Fallback to device ID (should not happen if user is authenticated)
-        shareLog("WARNING: No Supabase user ID found, using device ID fallback")
-        if let deviceId = UIDevice.current.identifierForVendor?.uuidString {
-            shareLog("Using device ID: \(deviceId)")
-            return deviceId
+        // Never use device ID fallback for analysis writes.
+        // If authenticated but no valid user ID is synced, backend history links break.
+        if isAuthenticated {
+            shareLog("ERROR: Authenticated user missing valid Supabase user ID in shared defaults")
+        } else {
+            shareLog("WARNING: User not authenticated while resolving user ID")
         }
+
         return "anonymous"
     }
 
@@ -7476,14 +7491,22 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         let availableCredits = defaults.integer(forKey: "user_available_credits")
+        let hasActiveSubscription = defaults.bool(forKey: "user_has_active_subscription")
 
         if availableCredits > 0 {
             shareLog("[SUCCESS] User has \(availableCredits) credits available")
             return true
-        } else {
-            shareLog("[INFO] User has 0 credits available")
-            return false
         }
+
+        // Prevent false negatives for newly purchased users when cached credits
+        // have not propagated yet from the main app.
+        if hasActiveSubscription {
+            shareLog("[SUCCESS] User has active subscription - allowing access with 0 cached credits")
+            return true
+        }
+
+        shareLog("[INFO] User has 0 credits available and no active subscription")
+        return false
     }
 
     private func maybeShowPostAnalysisOutOfCreditsModal() {

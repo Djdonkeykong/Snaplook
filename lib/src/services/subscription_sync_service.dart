@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'superwall_service.dart';
@@ -6,13 +7,15 @@ import 'revenuecat_service.dart';
 
 /// Service for syncing subscription data between RevenueCat and Supabase.
 class SubscriptionSyncService {
-  static final SubscriptionSyncService _instance = SubscriptionSyncService._internal();
+  static final SubscriptionSyncService _instance =
+      SubscriptionSyncService._internal();
   factory SubscriptionSyncService() => _instance;
   SubscriptionSyncService._internal();
 
   final _supabase = Supabase.instance.client;
   final _superwall = SuperwallService();
   final _revenueCat = RevenueCatService();
+  static const MethodChannel _authChannel = MethodChannel('snaplook/auth');
 
   /// Sync subscription data from RevenueCat to Supabase.
   /// Call this after:
@@ -27,24 +30,29 @@ class SubscriptionSyncService {
         return;
       }
 
-      debugPrint('[SubscriptionSync] Starting RevenueCat sync for user ${user.id}');
+      debugPrint(
+          '[SubscriptionSync] Starting RevenueCat sync for user ${user.id}');
 
       // Get FRESH RevenueCat customer info (don't use cache after purchase)
       CustomerInfo? customerInfo;
       try {
         customerInfo = await Purchases.getCustomerInfo();
-        debugPrint('[SubscriptionSync] Fetched fresh customer info from RevenueCat');
+        debugPrint(
+            '[SubscriptionSync] Fetched fresh customer info from RevenueCat');
       } catch (e) {
-        debugPrint('[SubscriptionSync] Error fetching RevenueCat customer info: $e');
+        debugPrint(
+            '[SubscriptionSync] Error fetching RevenueCat customer info: $e');
+        await _syncShareExtensionAuthSnapshot(userId: user.id);
         return;
       }
 
       // Parse RevenueCat subscription data
       final activeEntitlements = customerInfo.entitlements.active.values;
-      final entitlement = (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
+      final entitlement =
+          (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
       final hasActiveRevenueCat = entitlement != null;
       final isTrial = entitlement?.periodType == PeriodType.trial ||
-                      entitlement?.periodType == PeriodType.intro;
+          entitlement?.periodType == PeriodType.intro;
       final expirationDateIso = entitlement?.expirationDate != null
           ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
           : null;
@@ -61,7 +69,8 @@ class SubscriptionSyncService {
       // Check if user has credits (users with credits should not have their status overwritten to 'free')
       final userResponse = await _supabase
           .from('users')
-          .select('paid_credits_remaining, subscription_status, subscription_expires_at, subscription_product_id, is_trial')
+          .select(
+              'paid_credits_remaining, subscription_status, subscription_expires_at, subscription_product_id, is_trial')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -71,7 +80,7 @@ class SubscriptionSyncService {
       // Determine what to sync
       if (hasActiveRevenueCat) {
         // RevenueCat says active - sync all data from RevenueCat
-        final subscriptionStatus = 'active';
+        const subscriptionStatus = 'active';
 
         await _supabase.from('users').upsert({
           'id': user.id,
@@ -84,11 +93,13 @@ class SubscriptionSyncService {
           'updated_at': DateTime.now().toIso8601String(),
         }, onConflict: 'id');
 
-        debugPrint('[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: $isTrial, Expires: $expirationDateIso');
+        debugPrint(
+            '[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: $isTrial, Expires: $expirationDateIso');
 
         // Also sync status to Superwall so it knows about the subscription
         await _superwall.syncSubscriptionStatus();
-      } else if (hasCredits && (currentStatus == 'active' || currentStatus == 'expired')) {
+      } else if (hasCredits &&
+          (currentStatus == 'active' || currentStatus == 'expired')) {
         // User has credits but no active RevenueCat subscription
         // Preserve their existing subscription data entirely (don't overwrite with nulls)
         // Only update the sync timestamp
@@ -97,7 +108,8 @@ class SubscriptionSyncService {
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('id', user.id);
 
-        debugPrint('[SubscriptionSync] User has credits - preserving existing subscription data. Status: $currentStatus');
+        debugPrint(
+            '[SubscriptionSync] User has credits - preserving existing subscription data. Status: $currentStatus');
 
         // Sync status to Superwall
         await _superwall.syncSubscriptionStatus();
@@ -125,9 +137,43 @@ class SubscriptionSyncService {
         // Sync status to Superwall
         await _superwall.syncSubscriptionStatus();
       }
+
+      await _syncShareExtensionAuthSnapshot(userId: user.id);
     } catch (e, stackTrace) {
       debugPrint('[SubscriptionSync] Error syncing subscription: $e');
       debugPrint('[SubscriptionSync] Stack trace: $stackTrace');
+    }
+  }
+
+  Future<void> _syncShareExtensionAuthSnapshot({required String userId}) async {
+    try {
+      final userResponse = await _supabase
+          .from('users')
+          .select('subscription_status, is_trial, paid_credits_remaining')
+          .eq('id', userId)
+          .maybeSingle();
+
+      final subscriptionStatus = userResponse?['subscription_status'] ?? 'free';
+      final isTrial = userResponse?['is_trial'] == true;
+      final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
+      final creditsRaw = userResponse?['paid_credits_remaining'];
+      final availableCredits =
+          creditsRaw is int ? creditsRaw : (creditsRaw as num?)?.toInt() ?? 0;
+
+      await _authChannel.invokeMethod('setAuthFlag', {
+        'isAuthenticated': true,
+        'userId': userId,
+        'hasActiveSubscription': hasActiveSubscription,
+        'availableCredits': availableCredits,
+      });
+
+      debugPrint(
+        '[SubscriptionSync] Synced share extension auth snapshot: '
+        'subscription=$hasActiveSubscription, credits=$availableCredits',
+      );
+    } catch (e) {
+      debugPrint(
+          '[SubscriptionSync] Failed to sync share extension auth snapshot: $e');
     }
   }
 
@@ -140,7 +186,8 @@ class SubscriptionSyncService {
 
       final response = await _supabase
           .from('users')
-          .select('subscription_status, subscription_expires_at, is_trial, subscription_last_synced_at')
+          .select(
+              'subscription_status, subscription_expires_at, is_trial, subscription_last_synced_at')
           .eq('id', user.id)
           .single();
 

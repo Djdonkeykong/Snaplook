@@ -163,12 +163,21 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
           NSLog("[Auth] Using app group: \(groupId ?? "nil")")
 
           defaults.set(isAuthenticated, forKey: self.authFlagKey)
+          // Legacy alias used by older extension paths.
+          defaults.set(isAuthenticated, forKey: "is_authenticated")
 
           // Store user ID if authenticated
-          if let userId = args["userId"] as? String {
+          if let userId = args["userId"] as? String, !userId.isEmpty {
             defaults.set(userId, forKey: self.authUserIdKey)
-          } else {
+            // Legacy alias used by older extension paths.
+            defaults.set(userId, forKey: "user_id")
+          } else if !isAuthenticated {
+            // Only clear IDs when explicitly unauthenticated.
             defaults.removeObject(forKey: self.authUserIdKey)
+            defaults.removeObject(forKey: "user_id")
+          } else {
+            // Preserve the last known user ID if auth is true but userId was omitted.
+            NSLog("[Auth] WARNING: setAuthFlag called with isAuthenticated=true but missing userId; preserving existing ID")
           }
 
           // Store subscription status
