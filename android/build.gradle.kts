@@ -6,6 +6,17 @@ allprojects {
 }
 
 subprojects {
+    configurations.all {
+        resolutionStrategy {
+            // Keep a single modern Google Play Billing version across all SDKs
+            // (RevenueCat/Superwall/etc) to avoid runtime NoSuchMethodError crashes.
+            force(
+                "com.android.billingclient:billing:8.0.0",
+                "com.android.billingclient:billing-ktx:8.0.0",
+            )
+        }
+    }
+
     afterEvaluate {
         if (hasProperty("android")) {
             extensions.configure<com.android.build.gradle.BaseExtension> {

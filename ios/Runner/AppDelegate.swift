@@ -498,6 +498,37 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
               )
             }
           }
+        case "openTarget":
+          self.appendShareLog("[PiP] Flutter requested open target without tutorial")
+          guard let args = call.arguments as? [String: Any],
+                let target = args["target"] as? String else {
+            result(
+              FlutterError(
+                code: "INVALID_ARGS",
+                message: "Missing target",
+                details: nil
+              )
+            )
+            return
+          }
+          let deepLink = (args["deepLink"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+          if self.pipTutorialManager == nil {
+            self.pipTutorialManager = PipTutorialManager()
+            self.pipTutorialManager?.logHandler = { [weak self] msg in
+              self?.appendShareLog(msg)
+            }
+          }
+          self.pipTutorialManager?.openTargetOnly(
+            targetApp: target,
+            deepLink: deepLink
+          ) { success, errorMsg in
+            if success {
+              self.appendShareLog("[PiP] Opened target successfully for \(target)")
+            } else {
+              self.appendShareLog("[PiP] Failed to open target \(target): \(errorMsg ?? "unknown error")")
+            }
+            result(success)
+          }
         default:
           result(FlutterMethodNotImplemented)
         }
@@ -684,7 +715,12 @@ class PipTutorialManager: NSObject {
       }
     }
     pendingTargetApp = targetApp
-    pendingDeepLink = deepLink?.isEmpty == true ? nil : deepLink
+    // Only browser target should carry a URL-style deep link.
+    if targetApp == "safari" {
+      pendingDeepLink = deepLink?.isEmpty == true ? nil : deepLink
+    } else {
+      pendingDeepLink = nil
+    }
 
     logHandler?("[PiP] Starting PiP for target \(targetApp)")
     player.play()
@@ -693,6 +729,48 @@ class PipTutorialManager: NSObject {
     // Fallback: if the delegate doesn't fire quickly, still open the target app
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
       self?.openTargetIfNeeded(reason: "fallback-after-start")
+    }
+  }
+
+  func openTargetOnly(
+    targetApp: String,
+    deepLink: String?,
+    completion: @escaping (Bool, String?) -> Void
+  ) {
+    let cleanedDeepLink = deepLink?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let allowedDeepLink = targetApp == "safari" ? cleanedDeepLink : nil
+    guard let appSchemeURL = urlForTarget(targetApp, deepLink: nil) else {
+      completion(false, "Unsupported target")
+      return
+    }
+
+    if UIApplication.shared.canOpenURL(appSchemeURL) {
+      let finalURL = urlForTarget(targetApp, deepLink: allowedDeepLink) ?? appSchemeURL
+      UIApplication.shared.open(finalURL, options: [:]) { opened in
+        completion(opened, opened ? nil : "Unable to open target app")
+      }
+      return
+    }
+
+    if let appStoreURL = appStoreURLForTarget(targetApp) {
+      UIApplication.shared.open(appStoreURL, options: [:]) { opened in
+        completion(opened, opened ? nil : "Unable to open App Store")
+      }
+      return
+    }
+
+    guard targetApp == "safari" else {
+      completion(false, "App not installed")
+      return
+    }
+
+    let fallbackURL = urlForTarget(targetApp, deepLink: allowedDeepLink)
+    guard let fallbackURL = fallbackURL else {
+      completion(false, "Unable to resolve target URL")
+      return
+    }
+    UIApplication.shared.open(fallbackURL, options: [:]) { opened in
+      completion(opened, opened ? nil : "Unable to open target app")
     }
   }
 

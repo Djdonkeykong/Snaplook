@@ -44,7 +44,7 @@ enum OnboardingCheckpoint {
     if (value == null) return null;
     return OnboardingCheckpoint.values.firstWhere(
       (e) => e.value == value,
-      orElse: () => OnboardingCheckpoint.gender,
+      orElse: () => OnboardingCheckpoint.discovery,
     );
   }
 }
@@ -65,13 +65,13 @@ class OnboardingStateService {
       await _supabase.from('users').update({
         'onboarding_state': OnboardingState.inProgress.value,
         'onboarding_started_at': DateTime.now().toIso8601String(),
-        'onboarding_checkpoint': OnboardingCheckpoint.gender.value,
+        'onboarding_checkpoint': OnboardingCheckpoint.discovery.value,
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', userId);
 
       debugPrint('[OnboardingState] Started onboarding for user $userId');
       unawaited(AnalyticsService().track('onboarding_started', properties: {
-        'checkpoint': OnboardingCheckpoint.gender.value,
+        'checkpoint': OnboardingCheckpoint.discovery.value,
       }));
     } catch (e) {
       debugPrint('[OnboardingState] Error starting onboarding: $e');
@@ -82,10 +82,31 @@ class OnboardingStateService {
   /// Update onboarding checkpoint
   Future<void> updateCheckpoint(String userId, OnboardingCheckpoint checkpoint) async {
     try {
-      await _supabase.from('users').update({
+      final existing = await _supabase
+          .from('users')
+          .select('onboarding_state, onboarding_started_at')
+          .eq('id', userId)
+          .maybeSingle();
+
+      final existingState = OnboardingState.fromString(
+        existing?['onboarding_state'] ?? OnboardingState.notStarted.value,
+      );
+      final hasStartedAt = existing?['onboarding_started_at'] != null;
+
+      final updates = <String, dynamic>{
         'onboarding_checkpoint': checkpoint.value,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', userId);
+      };
+
+      // If checkpoint advances while onboarding is not_started, promote to in_progress.
+      if (existingState == OnboardingState.notStarted) {
+        updates['onboarding_state'] = OnboardingState.inProgress.value;
+        if (!hasStartedAt) {
+          updates['onboarding_started_at'] = DateTime.now().toIso8601String();
+        }
+      }
+
+      await _supabase.from('users').update(updates).eq('id', userId);
 
       debugPrint('[OnboardingState] Updated checkpoint to ${checkpoint.value} for user $userId');
       unawaited(AnalyticsService().track('onboarding_checkpoint_updated', properties: {
@@ -310,8 +331,8 @@ class OnboardingStateService {
       debugPrint('[OnboardingState]   - Raw state object: $state');
 
       if (state == null) {
-        debugPrint('[OnboardingState]   - State is null → routing to gender');
-        return 'gender';
+        debugPrint('[OnboardingState]   - State is null -> routing to discovery');
+        return 'discovery';
       }
 
       final onboardingStateRaw = state['onboarding_state'];
@@ -401,14 +422,14 @@ class OnboardingStateService {
 
         // Otherwise, reset onboarding if they closed app before creating account
         await resetOnboarding(userId);
-        return 'gender';
+        return 'discovery';
       }
 
       // Onboarding not started
-      return 'gender';
+      return 'discovery';
     } catch (e) {
       debugPrint('[OnboardingState] Error determining route: $e');
-      return 'gender'; // Default to start of onboarding
+      return 'discovery'; // Default to start of onboarding
     }
   }
 

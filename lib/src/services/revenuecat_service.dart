@@ -10,6 +10,7 @@ class RevenueCatService {
   factory RevenueCatService() => _instance;
 
   bool _configured = false;
+  bool _logHandlerInstalled = false;
   CustomerInfo? _customerInfo;
   Offerings? _cachedOfferings;
 
@@ -18,10 +19,19 @@ class RevenueCatService {
     if (_configured) return;
 
     try {
+      if (kDebugMode) {
+        await Purchases.setLogLevel(LogLevel.debug);
+        if (!_logHandlerInstalled) {
+          await Purchases.setLogHandler((level, message) {
+            debugPrint('[RevenueCatSDK][${level.name}] $message');
+          });
+          _logHandlerInstalled = true;
+        }
+      }
+
       // Configure RevenueCat SDK
       await Purchases.configure(
-        PurchasesConfiguration(apiKey)
-          ..appUserID = userId,
+        PurchasesConfiguration(apiKey)..appUserID = userId,
       );
 
       _configured = true;
@@ -63,7 +73,8 @@ class RevenueCatService {
   Future<void> identify(String userId) async {
     if (!_configured) {
       if (kDebugMode) {
-        debugPrint('[RevenueCat] identify called but not configured - skipping');
+        debugPrint(
+            '[RevenueCat] identify called but not configured - skipping');
       }
       return;
     }
@@ -116,7 +127,8 @@ class RevenueCatService {
     // Return cached offerings if available
     if (_cachedOfferings != null) {
       if (kDebugMode) {
-        debugPrint('[RevenueCat] Returning cached offerings: ${_cachedOfferings!.current?.identifier}');
+        debugPrint(
+            '[RevenueCat] Returning cached offerings: ${_cachedOfferings!.current?.identifier}');
       }
       return _cachedOfferings;
     }
@@ -126,10 +138,29 @@ class RevenueCatService {
       _cachedOfferings = offerings;
 
       if (kDebugMode) {
-        debugPrint('[RevenueCat] Fetched offerings: ${offerings.current?.identifier}');
+        final current = offerings.current;
+        final allKeys = offerings.all.keys.toList(growable: false);
+        debugPrint(
+          '[RevenueCat] Fetched offerings: current=${current?.identifier ?? "null"} all=$allKeys',
+        );
+        if (current != null) {
+          for (final pkg in current.availablePackages) {
+            debugPrint(
+              '[RevenueCat] Package ${pkg.identifier} product=${pkg.storeProduct.identifier} price=${pkg.storeProduct.priceString}',
+            );
+          }
+        }
       }
 
       return offerings;
+    } on PlatformException catch (e) {
+      final errorCode = PurchasesErrorHelper.getErrorCode(e);
+      if (kDebugMode) {
+        debugPrint(
+          '[RevenueCat] Error fetching offerings: code=$errorCode message=${e.message}',
+        );
+      }
+      return null;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('[RevenueCat] Error fetching offerings: $e');
@@ -155,10 +186,12 @@ class RevenueCatService {
       final customerInfo = await Purchases.purchasePackage(package);
       _customerInfo = customerInfo;
 
-      final hasActiveEntitlement = _customerInfo?.entitlements.active.isNotEmpty ?? false;
+      final hasActiveEntitlement =
+          _customerInfo?.entitlements.active.isNotEmpty ?? false;
 
       if (kDebugMode) {
-        debugPrint('[RevenueCat] Purchase completed - Has active entitlement: $hasActiveEntitlement');
+        debugPrint(
+            '[RevenueCat] Purchase completed - Has active entitlement: $hasActiveEntitlement');
       }
 
       return hasActiveEntitlement;
@@ -197,10 +230,12 @@ class RevenueCatService {
       }
 
       _customerInfo = await Purchases.restorePurchases();
-      final hasActiveEntitlement = _customerInfo?.entitlements.active.isNotEmpty ?? false;
+      final hasActiveEntitlement =
+          _customerInfo?.entitlements.active.isNotEmpty ?? false;
 
       if (kDebugMode) {
-        debugPrint('[RevenueCat] Restore completed - Has active entitlement: $hasActiveEntitlement');
+        debugPrint(
+            '[RevenueCat] Restore completed - Has active entitlement: $hasActiveEntitlement');
       }
 
       return hasActiveEntitlement;
@@ -250,12 +285,14 @@ class RevenueCatService {
 
         // User is NOT eligible if they have any non-subscription purchases for this product
         // or if they've already subscribed to this product in the past
-        final allPurchasedProductIds = customerInfo.allPurchasedProductIdentifiers;
+        final allPurchasedProductIds =
+            customerInfo.allPurchasedProductIdentifiers;
 
         // If user has purchased the yearly product before, they're not eligible for trial
         if (allPurchasedProductIds.contains(product.identifier)) {
           if (kDebugMode) {
-            debugPrint('[RevenueCat] User NOT eligible for trial - already purchased ${product.identifier}');
+            debugPrint(
+                '[RevenueCat] User NOT eligible for trial - already purchased ${product.identifier}');
           }
           return false;
         }
@@ -270,6 +307,46 @@ class RevenueCatService {
         debugPrint('[RevenueCat] Error checking trial eligibility: $e');
       }
       return true; // Default to eligible on error
+    }
+  }
+
+  /// Returns true if the user appears to have consumed a trial/intro previously.
+  /// Used to avoid routing known ineligible users through trial-intro UI.
+  Future<bool> hasUsedFreeTrialBefore() async {
+    if (!_configured) return false;
+
+    try {
+      final customerInfo = _customerInfo ?? await Purchases.getCustomerInfo();
+      _customerInfo = customerInfo;
+
+      final hadIntroPeriod = customerInfo.entitlements.all.values.any((ent) =>
+          ent.periodType == PeriodType.trial ||
+          ent.periodType == PeriodType.intro);
+      if (hadIntroPeriod) {
+        if (kDebugMode) {
+          debugPrint(
+              '[RevenueCat] Trial history detected via entitlement periodType');
+        }
+        return true;
+      }
+
+      final purchasedIds = customerInfo.allPurchasedProductIdentifiers
+          .map((id) => id.toLowerCase())
+          .toSet();
+      final hasYearlyHistory = purchasedIds.any((id) =>
+          id == 'com.snaplook.snaplook.yearly' ||
+          id.startsWith('com.snaplook.snaplook.yearly:'));
+
+      if (kDebugMode) {
+        debugPrint(
+            '[RevenueCat] Trial history fallback check (yearly purchase): $hasYearlyHistory');
+      }
+      return hasYearlyHistory;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Error checking trial history: $e');
+      }
+      return false;
     }
   }
 

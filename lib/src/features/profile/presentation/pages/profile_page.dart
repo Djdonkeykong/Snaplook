@@ -11,7 +11,6 @@ import '../../../paywall/providers/credit_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'edit_profile_page.dart';
 import 'appearance_preferences_page.dart';
-import 'feed_preferences_page.dart';
 import 'manage_subscription_page.dart';
 import 'notification_settings_page.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
@@ -464,16 +463,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
                 // Settings
                 _SectionHeader(title: 'Settings'),
-                _SimpleSettingItem(
-                  title: 'Feed Preferences',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const FeedPreferencesPage(),
-                      ),
-                    );
-                  },
-                ),
                 // Disabled until dark mode is fully implemented
                 // _SimpleSettingItem(
                 //   title: 'Appearance',

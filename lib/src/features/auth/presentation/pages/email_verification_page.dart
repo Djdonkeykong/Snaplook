@@ -291,7 +291,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               );
             } else {
               // New user - check onboarding progress
-              final hasOnboardingData = selectedGender != null;
+              final hasOnboardingData = discoverySource != null;
 
               if (hasActiveSubscription) {
                 // User purchased subscription - go straight to home

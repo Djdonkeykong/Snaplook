@@ -74,8 +74,8 @@ class _RatingSocialProofPageState extends State<RatingSocialProofPage> {
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final radius = context.radius;
-    final currentStep = 6;
-    final totalSteps = 7;
+    final currentStep = 5;
+    final totalSteps = 6;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(

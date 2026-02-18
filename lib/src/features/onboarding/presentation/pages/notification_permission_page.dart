@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io' show Platform;
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -15,16 +16,13 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import 'save_progress_page.dart';
 import 'trial_intro_page.dart';
-import 'welcome_free_analysis_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/paywall_helper.dart';
-import '../../../../services/superwall_service.dart';
 import '../../../../services/subscription_sync_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Provider to store notification permission choice
 final notificationPermissionGrantedProvider =
@@ -46,6 +44,7 @@ class NotificationPermissionPage extends ConsumerStatefulWidget {
 class _NotificationPermissionPageState
     extends ConsumerState<NotificationPermissionPage> {
   bool _isRequesting = false;
+  bool _isRouting = false;
 
   @override
   void initState() {
@@ -155,18 +154,10 @@ class _NotificationPermissionPageState
       // Store permission result in provider
       ref.read(notificationPermissionGrantedProvider.notifier).state = granted;
 
-      // Save preference to database if user is authenticated
-      await _saveNotificationPreference(granted);
-
-      // Initialize FCM and register token if permission granted
+      // Non-critical work: run in background so routing is not delayed.
+      unawaited(_saveNotificationPreference(granted));
       if (granted && firebaseReady) {
-        try {
-          await NotificationService().initialize();
-          debugPrint(
-              '[NotificationPermission] FCM initialized and token registered');
-        } catch (e) {
-          debugPrint('[NotificationPermission] Error initializing FCM: $e');
-        }
+        unawaited(_initializeFcmInBackground());
       }
 
       _navigateToNextStep();
@@ -194,24 +185,43 @@ class _NotificationPermissionPageState
     // Store that permission was denied
     ref.read(notificationPermissionGrantedProvider.notifier).state = false;
 
-    // Save preference to database if user is authenticated
-    await _saveNotificationPreference(false);
+    // Non-critical write: do not block navigation.
+    unawaited(_saveNotificationPreference(false));
 
     _navigateToNextStep();
   }
 
+  Future<void> _initializeFcmInBackground() async {
+    try {
+      await NotificationService().initialize();
+      debugPrint('[NotificationPermission] FCM initialized and token registered');
+    } catch (e) {
+      debugPrint('[NotificationPermission] Error initializing FCM: $e');
+    }
+  }
+
   Future<void> _navigateToNextStep() async {
     if (!mounted) return;
+    setState(() => _isRouting = true);
 
-    // Check if user is already authenticated (works for Apple, Google, and Email)
-    final user = ref.read(authServiceProvider).currentUser;
+    try {
+      // Check if user is already authenticated (works for Apple, Google, and Email)
+      final user = ref.read(authServiceProvider).currentUser;
 
-    if (user != null) {
-      // User is authenticated - skip SaveProgressPage and route based on subscription
-      debugPrint(
-          '[NotificationPermission] User authenticated - skipping SaveProgressPage');
+      if (user != null) {
+        // User is authenticated - skip SaveProgressPage and route based on subscription
+        debugPrint(
+            '[NotificationPermission] User authenticated - skipping SaveProgressPage');
 
-      try {
+        // Ensure RevenueCat is identified to this user before checking status/eligibility.
+        try {
+          await SubscriptionSyncService()
+              .identify(user.id)
+              .timeout(const Duration(seconds: 4));
+        } catch (e) {
+          debugPrint('[NotificationPermission] RevenueCat identify error: $e');
+        }
+
         // Update checkpoint
         unawaited(OnboardingStateService().updateCheckpoint(
           user.id,
@@ -221,7 +231,8 @@ class _NotificationPermissionPageState
         // Check subscription status from RevenueCat
         CustomerInfo? customerInfo;
         try {
-          customerInfo = await Purchases.getCustomerInfo();
+          customerInfo = await Purchases.getCustomerInfo()
+              .timeout(const Duration(seconds: 5));
         } catch (e) {
           debugPrint(
               '[NotificationPermission] Error fetching customer info: $e');
@@ -248,109 +259,84 @@ class _NotificationPermissionPageState
             );
           }
         } else {
-          // No subscription - check trial eligibility
-          debugPrint(
-              '[NotificationPermission] No subscription - checking trial eligibility');
-
-          bool isEligibleForTrial = false;
+          // No subscription:
+          // - If user has used trial before, skip TrialIntroPage and go directly to paywall.
+          // - Otherwise route to TrialIntroPage.
+          bool hasUsedTrialBefore = false;
           try {
-            isEligibleForTrial = await RevenueCatService().isEligibleForTrial();
+            hasUsedTrialBefore = await RevenueCatService()
+                .hasUsedFreeTrialBefore()
+                .timeout(
+                  const Duration(seconds: 5),
+                  onTimeout: () {
+                    debugPrint(
+                        '[NotificationPermission] Trial history check timed out - defaulting to prior-trial path');
+                    return true;
+                  },
+                );
             debugPrint(
-                '[NotificationPermission] Trial eligible: $isEligibleForTrial');
+                '[NotificationPermission] Has used free trial before: $hasUsedTrialBefore');
           } catch (e) {
             debugPrint(
-                '[NotificationPermission] Error checking trial eligibility: $e');
-            // Default to eligible on error
-            isEligibleForTrial = true;
+                '[NotificationPermission] Error checking trial history: $e');
+            hasUsedTrialBefore = true;
           }
 
-          if (isEligibleForTrial) {
-            // Eligible for trial - go to TrialIntroPage
-            debugPrint('[NotificationPermission] Navigating to trial intro');
+          if (hasUsedTrialBefore) {
+            debugPrint(
+                '[NotificationPermission] Prior trial detected - presenting Superwall paywall');
+
+            // Determine whether this is a returning user who already completed onboarding.
+            bool isReturningUser = false;
+            try {
+              final userResponse = await Supabase.instance.client
+                  .from('users')
+                  .select('onboarding_state')
+                  .eq('id', user.id)
+                  .maybeSingle();
+              isReturningUser = userResponse?['onboarding_state'] == 'completed';
+            } catch (_) {}
+
+            if (mounted) {
+              await PaywallHelper.presentPaywallAndNavigate(
+                context: context,
+                userId: user.id,
+                placement: 'onboarding_paywall',
+                isReturningUser: isReturningUser,
+              );
+            }
+          } else {
+            debugPrint(
+                '[NotificationPermission] No prior trial - navigating to trial intro');
             if (mounted) {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => const TrialIntroPage()),
               );
             }
-          } else {
-            // Not eligible for trial - present paywall
-            debugPrint(
-                '[NotificationPermission] Not eligible for trial - presenting paywall');
-            if (mounted) {
-              final userId = Supabase.instance.client.auth.currentUser?.id;
-              final didPurchase = await SuperwallService().presentPaywall(
-                placement: 'onboarding_paywall',
-              );
-
-              if (!mounted) return;
-
-              if (didPurchase && userId != null) {
-                // User purchased - sync subscription and navigate to home or next step
-                debugPrint('[NotificationPermission] Purchase completed - syncing subscription');
-
-                try {
-                  await Future.delayed(const Duration(milliseconds: 500));
-                  await SubscriptionSyncService().syncSubscriptionToSupabase();
-                  await OnboardingStateService().markPaymentComplete(userId);
-                } catch (e) {
-                  debugPrint('[NotificationPermission] Error syncing subscription: $e');
-                }
-
-                if (mounted) {
-                  // Check if user has completed onboarding before
-                  final userResponse = await Supabase.instance.client
-                      .from('users')
-                      .select('onboarding_state')
-                      .eq('id', userId)
-                      .maybeSingle();
-
-                  final hasCompletedOnboarding =
-                      userResponse?['onboarding_state'] == 'completed';
-
-                  debugPrint('[NotificationPermission] Has completed onboarding: $hasCompletedOnboarding');
-
-                  if (hasCompletedOnboarding) {
-                    // Returning user - go directly to home
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(
-                        builder: (context) => const MainNavigation(
-                          key: ValueKey('fresh-main-nav'),
-                        ),
-                      ),
-                      (route) => false,
-                    );
-                  } else {
-                    // New user - show welcome page first
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => const WelcomeFreeAnalysisPage(),
-                      ),
-                    );
-                  }
-                }
-              }
-              // If user dismissed without purchasing, stay on this page
-            }
           }
         }
-      } catch (e) {
-        debugPrint('[NotificationPermission] Error in routing: $e');
-        // On error, default to trial flow
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const TrialIntroPage()),
-          );
-        }
+      } else {
+        // User NOT authenticated - show SaveProgressPage to create account
+        debugPrint(
+            '[NotificationPermission] User not authenticated - showing SaveProgressPage');
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const SaveProgressPage(),
+          ),
+        );
       }
-    } else {
-      // User NOT authenticated - show SaveProgressPage to create account
-      debugPrint(
-          '[NotificationPermission] User not authenticated - showing SaveProgressPage');
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => const SaveProgressPage(),
-        ),
-      );
+    } catch (e) {
+      debugPrint('[NotificationPermission] Error in routing: $e');
+      // On error, default to trial flow
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const TrialIntroPage()),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRouting = false);
+      }
     }
   }
 
@@ -358,6 +344,9 @@ class _NotificationPermissionPageState
   Widget build(BuildContext context) {
     final spacing = context.spacing;
     final colorScheme = Theme.of(context).colorScheme;
+    final hasAuthenticatedUser =
+        ref.read(authServiceProvider).currentUser != null;
+    final progressStep = hasAuthenticatedUser ? 6 : 5;
 
     return Stack(
       children: [
@@ -373,9 +362,9 @@ class _NotificationPermissionPageState
               iconColor: colorScheme.onSurface,
             ),
             centerTitle: true,
-            title: const OnboardingProgressIndicator(
-              currentStep: 7,
-              totalSteps: 7,
+            title: OnboardingProgressIndicator(
+              currentStep: progressStep,
+              totalSteps: 6,
             ),
           ),
           body: SafeArea(
@@ -460,7 +449,7 @@ class _NotificationPermissionPageState
             ),
           ),
         ),
-        if (_isRequesting)
+        if (_isRequesting || _isRouting)
           Container(
             color: colorScheme.scrim.withOpacity(0.3),
             child: Center(

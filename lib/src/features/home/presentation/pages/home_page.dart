@@ -1,23 +1,33 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:easy_refresh/easy_refresh.dart';
+import 'package:in_app_review/in_app_review.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../domain/providers/image_provider.dart';
+import '../../domain/providers/history_bootstrap_provider.dart';
 import '../../domain/providers/pending_share_provider.dart';
 import '../../../detection/presentation/pages/detection_page.dart';
 import '../../../paywall/models/subscription_plan.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import '../../../wardrobe/domain/providers/history_provider.dart';
+import '../../../../shared/services/supabase_service.dart';
 import '../../../wardrobe/presentation/widgets/history_card.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../services/pip_tutorial_service.dart';
+import '../../../../shared/services/review_prompt_logs_service.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 
@@ -34,7 +44,8 @@ enum _TutorialSource {
 
 const String _snapActionIcon = 'assets/icons/solar--camera-square-bold-new.svg';
 const String _uploadActionIcon = 'assets/icons/upload_filled.svg';
-const String _tutorialActionIcon = 'assets/icons/tutorials_filled.svg';
+const String _shareActionIcon = 'assets/icons/solar--share-bold-duotone.svg';
+const double _importOptionSpacing = 9.0;
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -43,10 +54,21 @@ class HomePage extends ConsumerStatefulWidget {
   ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver {
+class _HomePageState extends ConsumerState<HomePage>
+    with WidgetsBindingObserver {
+  static const _firstAnalysisReviewPromptedKeyPrefix =
+      'review_prompted_after_first_analysis_';
+  static const _homePolaroidsAsset =
+      AssetImage('assets/images/home-polaroids.png');
+  static const _homeLogoAsset = AssetImage('assets/images/logo.png');
+  static const _safariDeepLink =
+      'https://media.glamour.com/photos/5ae09534ed441129f636ed0b/master/w_1600%2Cc_limit/Aimee_song_of_style_caroline_constas_polka_dot_puffer_sleeves_top_amo_distressed_jeans_dior_kitten_heels_pumps_le_specs_adam_selman_sunglasses_straw_bag_earrings.jpg';
+
   final ImagePicker _picker = ImagePicker();
   ProviderSubscription<XFile?>? _pendingShareListener;
   bool _isProcessingPendingNavigation = false;
+  bool _isCheckingReviewPrompt = false;
+  bool _isTutorialEnabled = true;
   final PipTutorialService _pipTutorialService = PipTutorialService();
   _TutorialSource? _loadingTutorialSource;
 
@@ -56,9 +78,13 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_precacheHomeAssets());
+
       Future.delayed(const Duration(milliseconds: 1000), () {
         _checkPendingSharedImage();
       });
+
+      unawaited(_maybeRequestReviewFromExistingFirstAnalysis());
     });
 
     _pendingShareListener ??= ref.listenManual<XFile?>(
@@ -69,6 +95,16 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         }
       },
     );
+  }
+
+  Future<void> _precacheHomeAssets() async {
+    if (!mounted) return;
+    try {
+      await precacheImage(_homePolaroidsAsset, context);
+      await precacheImage(_homeLogoAsset, context);
+    } catch (e) {
+      debugPrint('[HomePage] Failed to precache home assets: $e');
+    }
   }
 
   void _checkPendingSharedImage() {
@@ -114,7 +150,6 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
             },
           ),
         );
-
       } catch (e) {
         debugPrint('Error handling pending shared image: $e');
       } finally {
@@ -135,6 +170,60 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _pipTutorialService.stopTutorial();
+      ref.invalidate(historyProvider);
+      unawaited(_maybeRequestReviewFromExistingFirstAnalysis());
+    }
+  }
+
+  Future<void> _maybeRequestReviewFromExistingFirstAnalysis() async {
+    if (_isCheckingReviewPrompt) return;
+
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    _isCheckingReviewPrompt = true;
+    try {
+      final storageKey = '$_firstAnalysisReviewPromptedKeyPrefix$userId';
+      final prefs = await SharedPreferences.getInstance();
+      final alreadyPrompted = prefs.getBool(storageKey) ?? false;
+      if (alreadyPrompted) return;
+
+      final existingSearches = await Supabase.instance.client
+          .from('user_searches')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1);
+      final hasAnyAnalysis = (existingSearches as List).isNotEmpty;
+      if (!hasAnyAnalysis) return;
+
+      final timestamp = DateTime.now().toIso8601String();
+      final inAppReview = InAppReview.instance;
+      try {
+        final available = await inAppReview.isAvailable();
+        await ReviewPromptLogsService.addLog(
+          '[$timestamp] home fallback requestReview() available=$available',
+        );
+        if (available) {
+          await inAppReview.requestReview();
+          await ReviewPromptLogsService.addLog(
+            '[$timestamp] home fallback requestReview() invoked successfully',
+          );
+        } else {
+          await ReviewPromptLogsService.addLog(
+            '[$timestamp] home fallback requestReview() skipped (not available)',
+          );
+        }
+      } catch (e) {
+        await ReviewPromptLogsService.addLog(
+          '[$timestamp] home fallback requestReview() error: $e',
+        );
+      } finally {
+        await prefs.setBool(storageKey, true);
+      }
+    } catch (e) {
+      debugPrint('[ReviewPrompt] Home fallback error: $e');
+    } finally {
+      _isCheckingReviewPrompt = false;
     }
   }
 
@@ -181,9 +270,13 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     final spacing = context.spacing;
     final radius = context.radius;
     final historyAsync = ref.watch(historyProvider);
+    final historyBootstrap = ref.watch(historyBootstrapProvider);
 
     final searches = historyAsync.valueOrNull ?? [];
-    final isHistoryLoading = historyAsync.isLoading && !historyAsync.hasValue;
+    final isInitialHistoryLoading =
+        historyAsync.isLoading && !historyAsync.hasValue;
+    final shouldShowSpinnerWhileLoading = isInitialHistoryLoading &&
+        historyBootstrap == HistoryBootstrapState.hasHistory;
     final hasHistoryError = historyAsync.hasError && !historyAsync.hasValue;
     final hasHistory = searches.isNotEmpty;
 
@@ -192,13 +285,15 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       body: Stack(
         children: [
           // Main content
-          if (isHistoryLoading)
+          if (shouldShowSpinnerWhileLoading)
             Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
                 strokeWidth: 2,
               ),
             )
+          else if (isInitialHistoryLoading)
+            _buildCtaView(colorScheme)
           else if (hasHistoryError)
             _buildErrorState(colorScheme)
           else if (!hasHistory)
@@ -206,20 +301,53 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
           else
             _buildHistoryList(searches, spacing, radius, colorScheme),
 
+          if (hasHistory)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Container(
+                  height: MediaQuery.of(context).padding.top + 68,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Theme.of(context).scaffoldBackgroundColor,
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withValues(alpha: 0.78),
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withValues(alpha: 0.34),
+                        Theme.of(context)
+                            .scaffoldBackgroundColor
+                            .withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 0.35, 0.72, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           // Top bar
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
             left: 16,
             right: 16,
-            child: _buildTopBar(colorScheme, hasHistory),
+            child:
+                _buildTopBar(colorScheme, hasHistory, isInitialHistoryLoading),
           ),
 
-          // Floating action bar (only when history exists)
-          if (hasHistory)
-            Positioned(
-              bottom: 24,
-              left: MediaQuery.of(context).size.width * 0.09,
-              right: MediaQuery.of(context).size.width * 0.09,
+          // Floating action bar (slide up + fade in once history is confirmed)
+          Positioned(
+            bottom: 24,
+            left: MediaQuery.of(context).size.width * 0.09,
+            right: MediaQuery.of(context).size.width * 0.09,
+            child: _AnimatedFloatingBar(
+              visible: hasHistory && !isInitialHistoryLoading,
               child: _FloatingActionBar(
                 onSnapTap: () => _pickImage(ImageSource.camera),
                 onUploadTap: () => _pickImage(ImageSource.gallery),
@@ -227,55 +355,57 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                 onInfoTap: () => _showInfoBottomSheet(context),
               ),
             ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTopBar(ColorScheme colorScheme, bool hasHistory) {
+  Widget _buildTopBar(
+      ColorScheme colorScheme, bool hasHistory, bool isLoading) {
+    // Show info icon only when we've confirmed there's no history (not still loading)
+    final showInfoIcon = !hasHistory && !isLoading;
+
     return Row(
       children: [
-        // Left spacer to balance
-        SizedBox(width: hasHistory ? 40 : 40),
-        // Center logo
-        Expanded(
-          child: Center(
-            child: Image.asset(
-              'assets/images/logo.png',
-              height: 32,
-              fit: BoxFit.contain,
-            ),
-          ),
+        Image.asset(
+          'assets/images/logo.png',
+          height: 32,
+          fit: BoxFit.contain,
         ),
-        // Info icon - only when no history
-        if (!hasHistory)
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              _showInfoBottomSheet(context);
-            },
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/icons/info_icon.svg',
-                  width: 24,
-                  height: 24,
-                  colorFilter: ColorFilter.mode(
-                    colorScheme.onSurface,
-                    BlendMode.srcIn,
+        const Spacer(),
+        AnimatedOpacity(
+          opacity: showInfoIcon ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 300),
+          child: IgnorePointer(
+            ignoring: !showInfoIcon,
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                _showInfoBottomSheet(context);
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: SvgPicture.asset(
+                    'assets/icons/info_icon.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: ColorFilter.mode(
+                      colorScheme.onSurface,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
               ),
             ),
-          )
-        else
-          const SizedBox(width: 40),
+          ),
+        ),
       ],
     );
   }
@@ -384,7 +514,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         noMoreText: '',
         failedText: '',
         messageText: '',
-        safeArea: false,
+        safeArea: true,
         showMessage: false,
         showText: false,
         processedDuration: Duration.zero,
@@ -395,22 +525,25 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         ),
         backgroundColor: colorScheme.surface,
       ),
-      child: ListView.builder(
+      child: GridView.builder(
         // Account for top bar and floating bar
         padding: EdgeInsets.only(
           top: MediaQuery.of(context).padding.top + 68,
           bottom: 110,
+          left: spacing.m,
+          right: spacing.m,
+        ),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: spacing.m,
+          mainAxisSpacing: spacing.m,
+          childAspectRatio: 0.78,
         ),
         itemCount: searches.length,
         itemBuilder: (context, index) {
           final search = searches[index];
-          return Padding(
-            padding: EdgeInsets.only(bottom: spacing.m),
-            child: HistoryCard(
-              search: search,
-              spacing: spacing,
-              radius: radius,
-            ),
+          return _HomeHistoryGridCard(
+            search: search,
           );
         },
       ),
@@ -418,6 +551,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   }
 
   void _showTutorialOptionsSheet() {
+    var isTutorialEnabled = _isTutorialEnabled;
     final options = [
       _TutorialOptionData(
         label: 'Instagram',
@@ -543,7 +677,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                             Expanded(
                               child: ListView.separated(
                                 physics: const BouncingScrollPhysics(),
-                                padding: EdgeInsets.only(bottom: spacing.l),
+                                padding: EdgeInsets.only(bottom: spacing.s),
                                 itemCount: options.length,
                                 separatorBuilder: (_, __) =>
                                     SizedBox(height: spacing.l),
@@ -556,14 +690,38 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                                     statusLabel: option.statusLabel,
                                     isLoading:
                                         _loadingTutorialSource == option.source,
+                                    loadingLabel: isTutorialEnabled
+                                        ? 'Preparing your tutorial...'
+                                        : 'Opening app...',
                                     onTap: () => _onTutorialOptionSelected(
                                       option.source,
                                       sheetContext,
                                       sheetSetState,
+                                      isTutorialEnabled,
                                     ),
                                   );
                                 },
                               ),
+                            ),
+                            SizedBox(height: spacing.m),
+                            Container(
+                              height: 1,
+                              color: colorScheme.outlineVariant,
+                            ),
+                            SizedBox(height: spacing.m),
+                            _TutorialToggleCard(
+                              value: isTutorialEnabled,
+                              onChanged: (enabled) {
+                                HapticFeedback.selectionClick();
+                                sheetSetState(() {
+                                  isTutorialEnabled = enabled;
+                                });
+                                if (mounted) {
+                                  setState(() {
+                                    _isTutorialEnabled = enabled;
+                                  });
+                                }
+                              },
                             ),
                           ],
                         ),
@@ -574,8 +732,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                         child: SnaplookCircularIconButton(
                           icon: Icons.close,
                           iconSize: 18,
-                          backgroundColor:
-                              colorScheme.surfaceContainerHighest,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
                           iconColor: colorScheme.onSurface,
                           onPressed: () => Navigator.of(sheetContext).pop(),
                           tooltip: 'Close',
@@ -597,6 +754,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     _TutorialSource source,
     BuildContext sheetContext,
     StateSetter sheetSetState,
+    bool isTutorialEnabled,
   ) async {
     if (!mounted) return;
 
@@ -639,15 +797,23 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     try {
       HapticFeedback.mediumImpact();
 
-      await Future.delayed(const Duration(milliseconds: 1500));
+      await Future.delayed(
+        Duration(milliseconds: isTutorialEnabled ? 1500 : 1000),
+      );
 
       if (sheetContext.mounted) {
         await Navigator.of(sheetContext).maybePop();
-        await Future.delayed(const Duration(milliseconds: 300));
+        await Future.delayed(
+          Duration(milliseconds: isTutorialEnabled ? 300 : 200),
+        );
       }
 
       if (!mounted) return;
-      await _launchPipTutorial(target);
+      if (isTutorialEnabled) {
+        await _launchPipTutorial(target);
+      } else {
+        await _openTutorialTarget(target);
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -659,35 +825,8 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
   }
 
   Future<void> _launchPipTutorial(PipTutorialTarget target) async {
-    const instagramDeepLink =
-        'https://www.instagram.com/p/DQSaR_FEsU8/?igsh=MTEyNzJuaXF6cDlmNA==';
-    const pinterestDeepLink = 'https://pin.it/223au9vpX';
-    const tiktokDeepLink = 'https://vm.tiktok.com/ZNRr4FE31/';
-    const imdbDeepLink = 'https://www.imdb.com/';
-    const xDeepLink =
-        'https://x.com/iamjhud/status/1962314855802651108?s=46';
-    const safariDeepLink =
-        'https://media.glamour.com/photos/5ae09534ed441129f636ed0b/master/w_1600%2Cc_limit/Aimee_song_of_style_caroline_constas_polka_dot_puffer_sleeves_top_amo_distressed_jeans_dior_kitten_heels_pumps_le_specs_adam_selman_sunglasses_straw_bag_earrings.jpg';
-    final videoAsset = switch (target) {
-      PipTutorialTarget.instagram => 'assets/videos/instagram-tutorial.mp4',
-      PipTutorialTarget.pinterest => 'assets/videos/pinterest-tutorial.mp4',
-      PipTutorialTarget.tiktok => 'assets/videos/tiktok-tutorial.mp4',
-      PipTutorialTarget.photos => 'assets/videos/photos-tutorial.mp4',
-      PipTutorialTarget.imdb => 'assets/videos/imdb-tutorial.mp4',
-      PipTutorialTarget.x => 'assets/videos/x-tutorial.mp4',
-      PipTutorialTarget.safari => 'assets/videos/web-tutorial.mp4',
-      _ => 'assets/videos/pip-test.mp4',
-    };
-    final deepLink = switch (target) {
-      PipTutorialTarget.instagram => instagramDeepLink,
-      PipTutorialTarget.pinterest => pinterestDeepLink,
-      PipTutorialTarget.tiktok => tiktokDeepLink,
-      PipTutorialTarget.photos => null,
-      PipTutorialTarget.imdb => imdbDeepLink,
-      PipTutorialTarget.x => xDeepLink,
-      PipTutorialTarget.safari => safariDeepLink,
-      _ => null,
-    };
+    final videoAsset = _videoAssetForTarget(target);
+    final deepLink = _deepLinkForTarget(target);
     try {
       await _pipTutorialService.startTutorial(
         target: target,
@@ -708,6 +847,77 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
         ),
       );
     }
+  }
+
+  Future<void> _openTutorialTarget(PipTutorialTarget target) async {
+    final deepLink = _deepLinkForTarget(target);
+
+    try {
+      final opened = await _pipTutorialService.openTarget(
+        target: target,
+        deepLink: deepLink,
+      );
+      if (opened) return;
+    } catch (e) {
+      debugPrint('[HomePage] Native openTarget failed: $e');
+    }
+
+    final fallbackUrl = _fallbackUrlForTarget(target, deepLink: deepLink);
+    final uri = fallbackUrl != null ? Uri.tryParse(fallbackUrl) : null;
+    if (uri != null) {
+      try {
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (launched) return;
+      } catch (e) {
+        debugPrint('[HomePage] URL fallback failed: $e');
+      }
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Unable to open app right now.',
+          style: context.snackTextStyle(
+            merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+          ),
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  String _videoAssetForTarget(PipTutorialTarget target) {
+    return switch (target) {
+      PipTutorialTarget.instagram => 'assets/videos/instagram-tutorial.mp4',
+      PipTutorialTarget.pinterest => 'assets/videos/pinterest-tutorial.mp4',
+      PipTutorialTarget.tiktok => 'assets/videos/tiktok-tutorial.mp4',
+      PipTutorialTarget.photos => 'assets/videos/photos-tutorial.mp4',
+      PipTutorialTarget.imdb => 'assets/videos/imdb-tutorial.mp4',
+      PipTutorialTarget.x => 'assets/videos/x-tutorial.mp4',
+      PipTutorialTarget.safari => 'assets/videos/web-tutorial.mp4',
+      _ => 'assets/videos/pip-test.mp4',
+    };
+  }
+
+  String? _deepLinkForTarget(PipTutorialTarget target) {
+    return switch (target) {
+      PipTutorialTarget.safari => _safariDeepLink,
+      _ => null,
+    };
+  }
+
+  String? _fallbackUrlForTarget(
+    PipTutorialTarget target, {
+    String? deepLink,
+  }) {
+    return switch (target) {
+      PipTutorialTarget.safari => deepLink ?? _safariDeepLink,
+      _ => null,
+    };
   }
 
   void _showImportOptionsSheet() {
@@ -754,6 +964,82 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       isScrollControlled: true,
       useRootNavigator: true,
       builder: (context) => _InfoBottomSheetContent(spacing: spacing),
+    );
+  }
+}
+
+class _AnimatedFloatingBar extends StatefulWidget {
+  final bool visible;
+  final Widget child;
+
+  const _AnimatedFloatingBar({
+    required this.visible,
+    required this.child,
+  });
+
+  @override
+  State<_AnimatedFloatingBar> createState() => _AnimatedFloatingBarState();
+}
+
+class _AnimatedFloatingBarState extends State<_AnimatedFloatingBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 900),
+      vsync: this,
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.7, curve: Curves.easeOut),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, 1.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+
+    if (widget.visible) {
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedFloatingBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible && !oldWidget.visible) {
+      _controller.forward();
+    } else if (!widget.visible && oldWidget.visible) {
+      _controller.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: IgnorePointer(
+          ignoring: !widget.visible,
+          child: widget.child,
+        ),
+      ),
     );
   }
 }
@@ -814,8 +1100,8 @@ class _FloatingActionBar extends StatelessWidget {
             const SizedBox(width: 4),
             Expanded(
               child: _FloatingActionButtonSvg(
-                svgIcon: _tutorialActionIcon,
-                label: 'Tutorials',
+                svgIcon: _shareActionIcon,
+                label: 'Share',
                 onTap: onTutorialsTap,
               ),
             ),
@@ -825,6 +1111,7 @@ class _FloatingActionBar extends StatelessWidget {
                 svgIcon: 'assets/icons/info_icon.svg',
                 label: 'Info',
                 onTap: onInfoTap,
+                iconSize: 23.5,
               ),
             ),
           ],
@@ -838,11 +1125,13 @@ class _FloatingActionButtonSvg extends StatelessWidget {
   final String svgIcon;
   final String label;
   final VoidCallback onTap;
+  final double iconSize;
 
   const _FloatingActionButtonSvg({
     required this.svgIcon,
     required this.label,
     required this.onTap,
+    this.iconSize = 24,
   });
 
   @override
@@ -859,9 +1148,10 @@ class _FloatingActionButtonSvg extends StatelessWidget {
           children: [
             SvgPicture.asset(
               svgIcon,
-              width: 24,
-              height: 24,
-              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              width: iconSize,
+              height: iconSize,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
             const SizedBox(height: 4),
             Text(
@@ -898,7 +1188,7 @@ class _ImportOptionsBottomSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SafeArea(
         top: false,
@@ -906,7 +1196,7 @@ class _ImportOptionsBottomSheet extends StatelessWidget {
           children: [
             Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: spacing.l,
+                horizontal: spacing.m,
                 vertical: spacing.l,
               ),
               child: Column(
@@ -917,9 +1207,9 @@ class _ImportOptionsBottomSheet extends StatelessWidget {
                     margin: EdgeInsets.only(bottom: spacing.m),
                   ),
                   Text(
-                    'Find your look',
+                    'Pick your source',
                     style: TextStyle(
-                      fontSize: 34,
+                      fontSize: 32,
                       fontFamily: 'PlusJakartaSans',
                       letterSpacing: -1.0,
                       fontWeight: FontWeight.bold,
@@ -929,41 +1219,46 @@ class _ImportOptionsBottomSheet extends StatelessWidget {
                   ),
                   SizedBox(height: spacing.xs),
                   Text(
-                    'Pick your starting point',
+                    'Choose your starting point',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       color: colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w500,
                       fontFamily: 'PlusJakartaSans',
                     ),
                   ),
                   SizedBox(height: spacing.l),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ImportOptionTile(
-                          svgIcon: _snapActionIcon,
-                          label: 'Snap',
-                          onTap: onSnapTap,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: _importOptionSpacing,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _ImportOptionTile(
+                            label: 'Snap',
+                            svgIcon: _snapActionIcon,
+                            onTap: onSnapTap,
+                          ),
                         ),
-                      ),
-                      SizedBox(width: spacing.s),
-                      Expanded(
-                        child: _ImportOptionTile(
-                          svgIcon: _uploadActionIcon,
-                          label: 'Upload',
-                          onTap: onUploadTap,
+                        SizedBox(width: _importOptionSpacing),
+                        Expanded(
+                          child: _ImportOptionTile(
+                            label: 'Upload',
+                            svgIcon: _uploadActionIcon,
+                            onTap: onUploadTap,
+                          ),
                         ),
-                      ),
-                      SizedBox(width: spacing.s),
-                      Expanded(
-                        child: _ImportOptionTile(
-                          svgIcon: _tutorialActionIcon,
-                          label: 'Share',
-                          onTap: onShareFromAppTap,
+                        SizedBox(width: _importOptionSpacing),
+                        Expanded(
+                          child: _ImportOptionTile(
+                            label: 'Share',
+                            svgIcon: _shareActionIcon,
+                            onTap: onShareFromAppTap,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   SizedBox(height: spacing.l),
                 ],
@@ -990,13 +1285,13 @@ class _ImportOptionsBottomSheet extends StatelessWidget {
 }
 
 class _ImportOptionTile extends StatelessWidget {
-  final String svgIcon;
   final String label;
+  final String svgIcon;
   final VoidCallback onTap;
 
   const _ImportOptionTile({
-    required this.svgIcon,
     required this.label,
+    required this.svgIcon,
     required this.onTap,
   });
 
@@ -1010,41 +1305,218 @@ class _ImportOptionTile extends StatelessWidget {
         onTap();
       },
       child: Container(
-        height: 84,
+        width: double.infinity,
+        height: 97,
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.35),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgPicture.asset(
-              svgIcon,
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(colorScheme.onSurface, BlendMode.srcIn),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface,
-                fontFamily: 'PlusJakartaSans',
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                svgIcon,
+                width: 26,
+                height: 26,
+                colorFilter: const ColorFilter.mode(
+                  AppColors.secondary,
+                  BlendMode.srcIn,
+                ),
               ),
-              textAlign: TextAlign.center,
+              const SizedBox(height: _importOptionSpacing),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                  fontFamily: 'PlusJakartaSans',
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeHistoryGridCard extends ConsumerWidget {
+  final Map<String, dynamic> search;
+
+  const _HomeHistoryGridCard({
+    required this.search,
+  });
+
+  String _timeAgo() {
+    final raw = search['created_at'];
+    if (raw == null) return '';
+    final date = DateTime.tryParse(raw.toString());
+    if (date == null) return '';
+    final diff = DateTime.now().toUtc().difference(date);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'Yesterday';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w ago';
+    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo ago';
+    return '${(diff.inDays / 365).floor()}y ago';
+  }
+
+  String _sourceLabelFromSearch() {
+    final rawType =
+        (search['search_type'] ?? search['source_type'])?.toString();
+    final type = rawType?.trim().toLowerCase();
+
+    switch (type) {
+      case 'ig':
+      case 'instagram':
+        return 'Instagram';
+      case 'pin':
+      case 'pinterest':
+        return 'Pinterest';
+      case 'tt':
+      case 'tiktok':
+        return 'TikTok';
+      case 'photos':
+      case 'photo':
+      case 'gallery':
+        return 'Photos';
+      case 'imdb':
+        return 'IMDb';
+      case 'x':
+      case 'twitter':
+        return 'X';
+      case 'web':
+      case 'browser':
+        return 'Web';
+      case 'share':
+      case 'share_extension':
+      case 'shareextension':
+      case 'camera':
+      case 'home':
+      case null:
+        return 'Snaplook';
+      default:
+        return rawType!
+            .split(RegExp(r'[_-]+'))
+            .map((word) => word.isEmpty
+                ? ''
+                : '${word[0].toUpperCase()}${word.substring(1)}')
+            .join(' ');
+    }
+  }
+
+  Future<void> _deleteSearch(BuildContext context, WidgetRef ref) async {
+    final searchId = search['id'] as String?;
+    if (searchId == null) return;
+
+    final confirmed = await showDeleteConfirmDialog(
+      context,
+      title: 'Delete search',
+      message: 'This will permanently remove this search from your history.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+    );
+
+    if (confirmed != true) return;
+
+    final success = await SupabaseService().deleteSearch(searchId);
+    if (success) {
+      ref.invalidate(historyProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final cloudinaryUrl = (search['cloudinary_url'] as String?)?.trim();
+    final totalResults = (search['total_results'] as num?)?.toInt() ?? 0;
+    final searchId = search['id'] as String?;
+    const cardRadius = 24.0;
+
+    return GestureDetector(
+      onTap: () {
+        if (searchId == null) return;
+        Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute(
+            builder: (context) => DetectionPage(searchId: searchId),
+          ),
+        );
+      },
+      onLongPress: () {
+        HapticFeedback.mediumImpact();
+        _deleteSearch(context, ref);
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(cardRadius),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: cloudinaryUrl != null && cloudinaryUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: cloudinaryUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: (_, __) => Container(
+                        color: colorScheme.surfaceContainerHighest,
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        color: colorScheme.surfaceContainerHighest,
+                        child: Icon(
+                          Icons.image_outlined,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      color: colorScheme.surfaceContainerHighest,
+                      width: double.infinity,
+                      child: Icon(
+                        Icons.image_outlined,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _sourceLabelFromSearch(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${totalResults == 1 ? '1 result' : '$totalResults results'} - ${_timeAgo()}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                      fontFamily: 'PlusJakartaSans',
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1076,198 +1548,183 @@ class _InfoBottomSheetContent extends ConsumerWidget {
             Padding(
               padding: EdgeInsets.all(spacing.l),
               child: creditBalance.when(
-                      data: (balance) {
-                        final membershipType = balance.hasActiveSubscription
-                            ? (balance.isTrialSubscription ? 'Premium (Trial)' : 'Premium')
-                            : 'Free';
-                        final maxCredits =
-                            SubscriptionPlan.monthly.creditsPerMonth;
-                        final creditsRemaining =
-                            balance.availableCredits.clamp(0, maxCredits).toInt();
-                        final creditsPercentage = maxCredits > 0
-                            ? (creditsRemaining / maxCredits).clamp(0.0, 1.0)
-                            : 0.0;
+                data: (balance) {
+                  final membershipType = balance.hasActiveSubscription
+                      ? (balance.isTrialSubscription
+                          ? 'Premium (Trial)'
+                          : 'Premium')
+                      : 'Free';
+                  final maxCredits = SubscriptionPlan.monthly.creditsPerMonth;
+                  final creditsRemaining =
+                      balance.availableCredits.clamp(0, maxCredits).toInt();
+                  final creditsPercentage = maxCredits > 0
+                      ? (creditsRemaining / maxCredits).clamp(0.0, 1.0)
+                      : 0.0;
 
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            BottomSheetHandle(
-                              margin: EdgeInsets.only(bottom: spacing.m),
-                            ),
-
-                            Text(
-                              'Membership',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: colorScheme.onSurfaceVariant,
-                                fontFamily: 'PlusJakartaSans',
-                              ),
-                            ),
-
-                            const SizedBox(height: 2),
-
-                            Text(
-                              membershipType,
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface,
-                                fontFamily: 'PlusJakartaSans',
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-
-                            SizedBox(height: spacing.l),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(
-                                  '$creditsRemaining',
-                                  style: TextStyle(
-                                    fontSize: 48,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? colorScheme.onSurface
-                                        : AppColors.secondary,
-                                    fontFamily: 'PlusJakartaSans',
-                                    letterSpacing: -2,
-                                  ),
-                                ),
-                                Text(
-                                  ' / $maxCredits',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w500,
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontFamily: 'PlusJakartaSans',
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            SizedBox(height: spacing.xs),
-
-                            Text(
-                              'Credits Remaining',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: colorScheme.onSurfaceVariant,
-                                fontFamily: 'PlusJakartaSans',
-                              ),
-                            ),
-
-                            SizedBox(height: spacing.l),
-
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: LinearProgressIndicator(
-                                value: creditsPercentage,
-                                minHeight: 6,
-                                backgroundColor:
-                                    colorScheme.surfaceContainerHighest,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Theme.of(context).brightness == Brightness.dark
-                                      ? colorScheme.onSurface
-                                      : AppColors.secondary,
-                                ),
-                              ),
-                            ),
-
-                            SizedBox(height: spacing.m),
-
-                            Text(
-                              'Resets monthly on the 1st',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.onSurfaceVariant,
-                                fontFamily: 'PlusJakartaSans',
-                              ),
-                            ),
-
-                            SizedBox(height: spacing.l),
-
-                            Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.all(spacing.m),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerHighest
-                                    .withOpacity(
-                                  Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? 0.4
-                                      : 0.6,
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    size: 20,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  SizedBox(width: spacing.m),
-                                  Expanded(
-                                    child: Text(
-                                      'Each garment costs 1 credit. If there are multiple items in a photo, cropping to just one helps conserve credits.',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        height: 1.4,
-                                        color: colorScheme.onSurfaceVariant,
-                                        fontFamily: 'PlusJakartaSans',
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            SizedBox(height: spacing.l),
-                          ],
-                        );
-                      },
-                      loading: () => const SizedBox.shrink(),
-                      error: (error, stackTrace) => Column(
-                        mainAxisSize: MainAxisSize.min,
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      BottomSheetHandle(
+                        margin: EdgeInsets.only(bottom: spacing.m),
+                      ),
+                      Text(
+                        'Membership',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurfaceVariant,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        membershipType,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                          fontFamily: 'PlusJakartaSans',
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      SizedBox(height: spacing.l),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
                         children: [
-                          BottomSheetHandle(
-                            margin: EdgeInsets.only(bottom: spacing.m),
-                          ),
-                          Icon(
-                            Icons.error_outline,
-                            size: 28,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          SizedBox(height: spacing.s),
                           Text(
-                            'Unable to load credits',
+                            '$creditsRemaining',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurface,
+                              fontSize: 48,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? colorScheme.onSurface
+                                  : AppColors.secondary,
                               fontFamily: 'PlusJakartaSans',
+                              letterSpacing: -2,
                             ),
                           ),
-                          SizedBox(height: spacing.xs),
                           Text(
-                            'Please try again.',
+                            ' / $maxCredits',
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
                               color: colorScheme.onSurfaceVariant,
                               fontFamily: 'PlusJakartaSans',
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                          SizedBox(height: spacing.m),
                         ],
                       ),
+                      SizedBox(height: spacing.xs),
+                      Text(
+                        'Credits Remaining',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colorScheme.onSurfaceVariant,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                      SizedBox(height: spacing.l),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: creditsPercentage,
+                          minHeight: 6,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? colorScheme.onSurface
+                                : AppColors.secondary,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: spacing.m),
+                      Text(
+                        'Resets monthly on the 1st',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurfaceVariant,
+                          fontFamily: 'PlusJakartaSans',
+                        ),
+                      ),
+                      SizedBox(height: spacing.l),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(spacing.m),
+                        decoration: BoxDecoration(
+                          color:
+                              colorScheme.surfaceContainerHighest.withOpacity(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? 0.4
+                                : 0.6,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 20,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            SizedBox(width: spacing.m),
+                            Expanded(
+                              child: Text(
+                                'Each garment costs 1 credit. If there are multiple items in a photo, cropping to just one helps conserve credits.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  height: 1.4,
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontFamily: 'PlusJakartaSans',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: spacing.l),
+                    ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (error, stackTrace) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    BottomSheetHandle(
+                      margin: EdgeInsets.only(bottom: spacing.m),
                     ),
+                    Icon(
+                      Icons.error_outline,
+                      size: 28,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    SizedBox(height: spacing.s),
+                    Text(
+                      'Unable to load credits',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                    ),
+                    SizedBox(height: spacing.xs),
+                    Text(
+                      'Please try again.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colorScheme.onSurfaceVariant,
+                        fontFamily: 'PlusJakartaSans',
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: spacing.m),
+                  ],
+                ),
+              ),
             ),
             Positioned(
               top: spacing.l,
@@ -1305,11 +1762,80 @@ class _TutorialOptionData {
   });
 }
 
+class _TutorialToggleCard extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _TutorialToggleCard({
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final helperText =
+        value ? 'Show tutorial while using app' : 'Open app directly';
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: colorScheme.outlineVariant,
+          width: 1.5,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Enable tutorial',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'PlusJakartaSans',
+                      color: colorScheme.onSurface,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                CupertinoSwitch(
+                  value: value,
+                  activeColor: const Color(0xFFF2003C),
+                  onChanged: onChanged,
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              helperText,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: colorScheme.onSurfaceVariant,
+                fontFamily: 'PlusJakartaSans',
+                letterSpacing: -0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _TutorialAppCard extends StatelessWidget {
   final String label;
   final Widget iconWidget;
   final VoidCallback onTap;
   final bool isLoading;
+  final String loadingLabel;
   final bool isEnabled;
   final String? statusLabel;
 
@@ -1318,6 +1844,7 @@ class _TutorialAppCard extends StatelessWidget {
     required this.iconWidget,
     required this.onTap,
     this.isLoading = false,
+    this.loadingLabel = 'Preparing your tutorial...',
     this.isEnabled = true,
     this.statusLabel,
   });
@@ -1361,7 +1888,8 @@ class _TutorialAppCard extends StatelessWidget {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.secondary),
                           ),
                         )
                       : Opacity(
@@ -1373,7 +1901,7 @@ class _TutorialAppCard extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
-                  isLoading ? 'Preparing your tutorial...' : label,
+                  isLoading ? loadingLabel : label,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

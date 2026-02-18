@@ -10,8 +10,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:in_app_review/in_app_review.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:snaplook/src/shared/utils/native_share_helper.dart';
@@ -34,6 +36,7 @@ import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../../services/paywall_helper.dart';
 import '../../../../services/superwall_service.dart';
 import '../../../wardrobe/presentation/pages/wishlist_page.dart';
+import '../../../../shared/services/review_prompt_logs_service.dart';
 
 class DetectionPage extends ConsumerStatefulWidget {
   final String? imageUrl;
@@ -57,6 +60,9 @@ class DetectionPage extends ConsumerStatefulWidget {
 }
 
 class _DetectionPageState extends ConsumerState<DetectionPage> {
+  static const _firstAnalysisReviewPromptedKeyPrefix =
+      'review_prompted_after_first_analysis_';
+
   final PageController _pageController = PageController();
 
   // Crop selection state
@@ -1760,6 +1766,64 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     _overlayTimers.clear();
   }
 
+  Future<bool> _isFirstCompletedAnalysisForUser() async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return false;
+
+    try {
+      final existingSearches = await Supabase.instance.client
+          .from('user_searches')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1);
+
+      return (existingSearches as List).isEmpty;
+    } catch (e) {
+      debugPrint('[ReviewPrompt] Error checking first analysis state: $e');
+      return false;
+    }
+  }
+
+  Future<void> _maybeRequestFirstAnalysisReview({
+    required bool shouldPrompt,
+  }) async {
+    if (!shouldPrompt) return;
+
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final storageKey = '$_firstAnalysisReviewPromptedKeyPrefix$userId';
+    final prefs = await SharedPreferences.getInstance();
+    final alreadyPrompted = prefs.getBool(storageKey) ?? false;
+    if (alreadyPrompted) return;
+
+    final timestamp = DateTime.now().toIso8601String();
+    try {
+      final inAppReview = InAppReview.instance;
+      final available = await inAppReview.isAvailable();
+      await ReviewPromptLogsService.addLog(
+        '[$timestamp] first-analysis requestReview() available=$available',
+      );
+
+      if (available) {
+        await inAppReview.requestReview();
+        await ReviewPromptLogsService.addLog(
+          '[$timestamp] first-analysis requestReview() invoked successfully',
+        );
+      } else {
+        await ReviewPromptLogsService.addLog(
+          '[$timestamp] first-analysis requestReview() skipped (not available)',
+        );
+      }
+    } catch (e) {
+      await ReviewPromptLogsService.addLog(
+        '[$timestamp] first-analysis requestReview() error: $e',
+      );
+    } finally {
+      await prefs.setBool(storageKey, true);
+    }
+  }
+
   void _startDetection() async {
     print('[SAVE] _startDetection() called');
 
@@ -1877,6 +1941,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       // Skip YOLO detection if user manually cropped the image
       final skipDetection =
           _croppedImageBytes != null || (_isCropMode && _cropRect != null);
+      final shouldPromptReviewAfterSuccess =
+          await _isFirstCompletedAnalysisForUser();
 
       _enterSearchPhase();
       _setTargetProgress(0.8);
@@ -2021,6 +2087,10 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
         // Refresh history list so new analysis appears immediately
         ref.invalidate(historyProvider);
+
+        unawaited(_maybeRequestFirstAnalysisReview(
+          shouldPrompt: shouldPromptReviewAfterSuccess,
+        ));
       } else {
         _hideAnalysisOverlay();
         if (mounted) {

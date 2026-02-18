@@ -19,8 +19,7 @@ class PipTutorialService {
     String? videoAsset,
     String? deepLink,
   }) async {
-    final asset =
-        videoAsset ?? _defaultAssetForTarget(target);
+    final asset = videoAsset ?? _defaultAssetForTarget(target);
     final targetKey = target.name;
     try {
       await _channel.invokeMethod('start', {
@@ -40,6 +39,26 @@ class PipTutorialService {
       await _channel.invokeMethod('stop');
     } catch (_) {
       // best effort; ignore stop failures
+    }
+  }
+
+  Future<bool> openTarget({
+    required PipTutorialTarget target,
+    String? deepLink,
+  }) async {
+    final targetKey = target.name;
+    try {
+      final opened = await _channel.invokeMethod<bool>('openTarget', {
+        'target': targetKey,
+        'deepLink': deepLink,
+      });
+      return opened ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    } catch (_) {
+      return false;
     }
   }
 

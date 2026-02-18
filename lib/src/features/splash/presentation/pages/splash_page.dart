@@ -10,6 +10,8 @@ import '../../../../shared/services/image_preloader.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../onboarding/presentation/pages/paywall_presentation_page.dart';
+import '../../../home/domain/providers/history_bootstrap_provider.dart';
+import '../../../wardrobe/domain/providers/history_provider.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -44,6 +46,13 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       await ImagePreloader.instance.preloadSocialMediaShareImage(context);
     } catch (e) {
       debugPrint('[Splash] Failed to preload onboarding images: $e');
+    }
+
+    // Preload home CTA assets so first Home paint is immediate.
+    try {
+      await ImagePreloader.instance.preloadHomeAssets(context);
+    } catch (e) {
+      debugPrint('[Splash] Failed to preload home assets: $e');
     }
 
     // Wait for auth state to be ready (with minimum 0.5s splash time)
@@ -96,6 +105,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
           if (onboardingRoute == null) {
             // Onboarding complete - go to home
             debugPrint('[Splash] User has completed onboarding - routing to home');
+            await _bootstrapHistoryUiState();
             nextPage = const MainNavigation();
           } else if (onboardingRoute == 'welcome') {
             // Payment complete but need to finish onboarding
@@ -116,6 +126,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
           try {
             final canAccess = await onboardingService.canAccessHome(user.id);
             if (canAccess) {
+              await _bootstrapHistoryUiState();
               nextPage = const MainNavigation();
             } else {
               // Default to login
@@ -183,6 +194,21 @@ class _SplashPageState extends ConsumerState<SplashPage> {
     } catch (e) {
       debugPrint('[Splash] Error checking needs credits flag: $e');
       return false;
+    }
+  }
+
+  Future<void> _bootstrapHistoryUiState() async {
+    try {
+      final history = await ref
+          .read(historyProvider.future)
+          .timeout(const Duration(seconds: 4));
+      ref.read(historyBootstrapProvider.notifier).state = history.isNotEmpty
+          ? HistoryBootstrapState.hasHistory
+          : HistoryBootstrapState.noHistory;
+    } catch (e) {
+      debugPrint('[Splash] Failed to bootstrap history UI state: $e');
+      ref.read(historyBootstrapProvider.notifier).state =
+          HistoryBootstrapState.unknown;
     }
   }
 }

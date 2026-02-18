@@ -270,25 +270,6 @@ void main() async {
     debugPrint('[RevenueCat] Initialization failed: $e');
   }
 
-  // Initialize Superwall for subscriptions (DEPRECATED - migrating to RevenueCat)
-  // TODO: Remove after full migration to RevenueCat
-  try {
-    // SECURITY: Only use environment variable, no hardcoded fallback
-    final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'];
-    final debugLog = DebugLogService();
-    debugLog.log('API key from .env: ${superwallApiKey != null ? "present (${superwallApiKey.substring(0, 5)}...)" : "NULL"}', tag: 'Main', level: DebugLogLevel.info);
-    if (superwallApiKey != null && superwallApiKey.isNotEmpty) {
-      debugLog.log('Starting Superwall initialization...', tag: 'Main', level: DebugLogLevel.info);
-      await SuperwallService().initialize(apiKey: superwallApiKey);
-      debugLog.log('Superwall initialized successfully', tag: 'Main', level: DebugLogLevel.info);
-    } else {
-      debugLog.log('ERROR - SUPERWALL_API_KEY not found in .env', tag: 'Main', level: DebugLogLevel.error);
-    }
-  } catch (e, stackTrace) {
-    final debugLog = DebugLogService();
-    debugLog.log('Superwall initialization failed: $e\nStack trace: $stackTrace', tag: 'Main', level: DebugLogLevel.error);
-  }
-
   // Preload video immediately on app startup
   VideoPreloader.instance.preloadShareVideo();
 
@@ -299,9 +280,57 @@ void main() async {
   await _precacheSplashLogo();
 
   final app = ProviderScope(child: SnaplookApp(isFirebaseReady: firebaseInitialized));
+  final debugLog = DebugLogService();
+
+  Future<void> initializeSuperwallAfterStartup() async {
+    // Android can keep Superwall in pending state if initialized before the
+    // activity is fully attached. Delay until after first frame.
+    await Future.delayed(const Duration(milliseconds: 900));
+
+    try {
+      final superwallApiKey = Platform.isIOS
+          ? (dotenv.env['SUPERWALL_IOS_API_KEY'] ?? dotenv.env['SUPERWALL_API_KEY'])
+          : (dotenv.env['SUPERWALL_ANDROID_API_KEY'] ?? dotenv.env['SUPERWALL_API_KEY']);
+
+      debugLog.log(
+        'API key from .env: ${superwallApiKey != null ? "present (${superwallApiKey.substring(0, 5)}...)" : "NULL"}',
+        tag: 'Main',
+        level: DebugLogLevel.info,
+      );
+
+      if (superwallApiKey != null && superwallApiKey.isNotEmpty) {
+        debugLog.log(
+          'Starting Superwall initialization (post-startup)...',
+          tag: 'Main',
+          level: DebugLogLevel.info,
+        );
+        await SuperwallService().initialize(apiKey: superwallApiKey);
+        debugLog.log(
+          'Superwall initialized successfully',
+          tag: 'Main',
+          level: DebugLogLevel.info,
+        );
+      } else {
+        debugLog.log(
+          'ERROR - SUPERWALL_API_KEY not found in .env',
+          tag: 'Main',
+          level: DebugLogLevel.error,
+        );
+      }
+    } catch (e, stackTrace) {
+      debugLog.log(
+        'Superwall initialization failed: $e\nStack trace: $stackTrace',
+        tag: 'Main',
+        level: DebugLogLevel.error,
+      );
+    }
+  }
 
   runZonedGuarded(
-    () => runApp(app),
+    () {
+      runApp(app);
+      unawaited(initializeSuperwallAfterStartup());
+    },
     (error, stackTrace) =>
         debugPrint('Uncaught zone error: $error\n$stackTrace'),
     zoneSpecification: ZoneSpecification(

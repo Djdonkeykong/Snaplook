@@ -122,6 +122,17 @@ class MainActivity: FlutterActivity() {
                         startActivity(intent)
                         result.success(true)
                     }
+                    "openTarget" -> {
+                        val args = call.arguments as? Map<*, *>
+                        val target = args?.get("target") as? String
+                        val deepLink = (args?.get("deepLink") as? String)?.trim()
+                        if (target == null) {
+                            result.error("INVALID_ARGS", "Missing target", null)
+                            return@setMethodCallHandler
+                        }
+                        val opened = openTutorialTarget(target, deepLink)
+                        result.success(opened)
+                    }
                     "stop" -> {
                         TutorialPipActivity.stopActive()
                         result.success(null)
@@ -129,6 +140,98 @@ class MainActivity: FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun openTutorialTarget(target: String, deepLink: String?): Boolean {
+        val cleanedDeepLink = deepLink?.trim()
+        val packageCandidates = getTutorialPackageCandidatesForTarget(target)
+        val canonicalPackageName = packageCandidates.firstOrNull()
+
+        // Web browsers option can still open a URL in browser.
+        if (target == "safari") {
+            val webIntent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(if (!cleanedDeepLink.isNullOrEmpty()) cleanedDeepLink else "https://www.google.com")
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (tryStartIntent(webIntent)) return true
+            return false
+        }
+
+        // 1) Try package-scoped deep link against known package candidates.
+        if (!cleanedDeepLink.isNullOrEmpty()) {
+            for (pkg in packageCandidates) {
+                val deepLinkIntent = Intent(Intent.ACTION_VIEW, Uri.parse(cleanedDeepLink)).apply {
+                    setPackage(pkg)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (tryStartIntent(deepLinkIntent)) return true
+            }
+        }
+
+        // 2) Open app directly for any installed candidate package.
+        for (pkg in packageCandidates) {
+            val launchIntent = packageManager.getLaunchIntentForPackage(pkg)?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (launchIntent != null && tryStartIntent(launchIntent)) return true
+        }
+
+        // 3) If the app is not installed (or launch failed), open its Play Store page.
+        if (canonicalPackageName != null) {
+            openTutorialTargetPlayStore(target)
+            return true
+        }
+
+        return false
+    }
+
+    private fun tryStartIntent(intent: Intent): Boolean {
+        return try {
+            startActivity(intent)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun getTutorialPackageCandidatesForTarget(target: String): List<String> {
+        return when (target) {
+            "instagram" -> listOf(
+                "com.instagram.android",
+                "com.instagram.lite"
+            )
+            "pinterest" -> listOf("com.pinterest")
+            "tiktok" -> listOf("com.zhiliaoapp.musically", "com.ss.android.ugc.trill")
+            "photos" -> listOf("com.google.android.apps.photos")
+            "facebook" -> listOf("com.facebook.katana", "com.facebook.lite")
+            "imdb" -> listOf("com.imdb.mobile")
+            "x" -> listOf("com.twitter.android")
+            else -> emptyList()
+        }
+    }
+
+    private fun openTutorialTargetPlayStore(target: String) {
+        val packageName = getTutorialPackageCandidatesForTarget(target).firstOrNull() ?: return
+
+        val playStoreIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName"))
+        playStoreIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+        try {
+            startActivity(playStoreIntent)
+        } catch (_: Exception) {
+            val browserIntent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("https://play.google.com/store/apps/details?id=$packageName")
+            )
+            browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                startActivity(browserIntent)
+            } catch (_: Exception) {
+                Log.e("MainActivity", "Failed to open Play Store for $packageName")
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

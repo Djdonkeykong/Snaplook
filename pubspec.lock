@@ -1721,10 +1721,10 @@ packages:
     dependency: "direct main"
     description:
       name: superwallkit_flutter
-      sha256: "96a461b17e6c058fdac2875c5c1fef13783b018c0a4473f2d92693f734efefd8"
+      sha256: "57f21329f602fc4754a35d6d34848d3c3ad6153be74544dcdee5756bac5f7336"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.5"
+    version: "2.4.8"
   synchronized:
     dependency: transitive
     description:

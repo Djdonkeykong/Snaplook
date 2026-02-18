@@ -79,8 +79,8 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
             ),
             centerTitle: true,
             title: const OnboardingProgressIndicator(
-              currentStep: 17,
-              totalSteps: 20,
+              currentStep: 8,
+              totalSteps: 10,
             ),
             actions: [
               TextButton(
@@ -210,6 +210,10 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                         final didPurchase =
                             await SuperwallService().presentPaywall(
                           placement: 'onboarding_paywall',
+                          params: const {
+                            'occurrence': 1,
+                            'source': 'trial_reminder',
+                          },
                         );
 
                         if (!mounted) return;
@@ -270,7 +274,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                             }
                           }
                         }
-                        // If user dismissed without purchasing, stay on this page
+                        // If user dismissed without purchasing, stay on this page.
                       } catch (e) {
                         debugPrint(
                             '[TrialReminder] Error presenting paywall: $e');

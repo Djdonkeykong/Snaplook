@@ -351,8 +351,8 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         automaticallyImplyLeading: false,
         centerTitle: true,
         title: const OnboardingProgressIndicator(
-          currentStep: 7,
-          totalSteps: 7,
+          currentStep: 6,
+          totalSteps: 6,
         ),
       ),
       body: SafeArea(

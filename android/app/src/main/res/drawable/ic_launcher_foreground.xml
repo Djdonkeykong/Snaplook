@@ -2,7 +2,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <inset
-            android:inset="32dp"
+            android:inset="0dp"
             android:drawable="@drawable/ic_launcher_logo" />
     </item>
 </layer-list>

@@ -671,6 +671,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var isImageComparisonExpanded = false
     private var isShowingResults = false
     private var isShowingPreview = false
+    private var shouldShowOutOfCreditsAfterAnalysis = false
+    private var hasShownPostAnalysisOutOfCreditsModal = false
     private let bannedKeywordPatterns: [NSRegularExpression] = [
         try! NSRegularExpression(pattern: "\\bwig\\b", options: [.caseInsensitive]),
         try! NSRegularExpression(pattern: "\\bwigs\\b", options: [.caseInsensitive]),
@@ -4036,6 +4038,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                             }
                             self.detectionResults = sanitized
                             self.isShowingDetectionResults = true
+                            self.maybeShowPostAnalysisOutOfCreditsModal()
 
                             // Haptic feedback for successful analysis
                             let generator = UIImpactFeedbackGenerator(style: .medium)
@@ -5599,6 +5602,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
                             DispatchQueue.main.async {
                                 defaults.set(remaining, forKey: "user_available_credits")
                                 defaults.synchronize()
+                                if remaining <= 0 {
+                                    shareLog("[Credits] Remaining credits are now 0 - scheduling out of credits modal")
+                                    self.shouldShowOutOfCreditsAfterAnalysis = true
+                                    self.maybeShowPostAnalysisOutOfCreditsModal()
+                                }
                             }
                         } else {
                             let message = result["message"] as? String ?? "Unknown error"
@@ -7305,6 +7313,30 @@ open class RSIShareViewController: SLComposeServiceViewController {
         } else {
             shareLog("[INFO] User has 0 credits available")
             return false
+        }
+    }
+
+    private func maybeShowPostAnalysisOutOfCreditsModal() {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.maybeShowPostAnalysisOutOfCreditsModal()
+            }
+            return
+        }
+
+        guard shouldShowOutOfCreditsAfterAnalysis else { return }
+        guard !hasShownPostAnalysisOutOfCreditsModal else { return }
+        guard !didCompleteRequest, !hasQueuedRedirect else { return }
+        guard isShowingDetectionResults || isShowingResults else { return }
+
+        hasShownPostAnalysisOutOfCreditsModal = true
+        shouldShowOutOfCreditsAfterAnalysis = false
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            guard let self = self else { return }
+            guard !self.didCompleteRequest, !self.hasQueuedRedirect else { return }
+            shareLog("[Credits] Showing out of credits modal after completed analysis")
+            self.showOutOfCreditsModal()
         }
     }
 

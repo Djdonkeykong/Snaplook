@@ -14,7 +14,6 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
-import '../../../onboarding/presentation/pages/gender_selection_page.dart';
 import '../../../onboarding/presentation/pages/discovery_source_page.dart';
 import '../../../onboarding/presentation/pages/tutorial_image_analysis_page.dart';
 import '../../../onboarding/presentation/pages/notification_permission_page.dart';
@@ -446,8 +445,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   switch (checkpoint) {
                                     case 'gender':
                                       debugPrint(
-                                          '[LoginPage] Resuming at gender selection');
-                                      nextPage = const GenderSelectionPage();
+                                          '[LoginPage] Resuming from legacy gender checkpoint to discovery source');
+                                      nextPage = const DiscoverySourcePage();
                                       break;
                                     case 'discovery':
                                       debugPrint(
@@ -707,8 +706,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 switch (checkpoint) {
                                   case 'gender':
                                     debugPrint(
-                                        '[LoginPage] Resuming at gender selection');
-                                    nextPage = const GenderSelectionPage();
+                                        '[LoginPage] Resuming from legacy gender checkpoint to discovery source');
+                                    nextPage = const DiscoverySourcePage();
                                     break;
                                   case 'discovery':
                                     debugPrint(

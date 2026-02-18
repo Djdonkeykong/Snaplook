@@ -15,6 +15,7 @@ import '../../../user/repositories/user_profile_repository.dart';
 import 'notification_permission_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
+import '../../../../shared/services/image_preloader.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../../domain/providers/gender_provider.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
@@ -370,6 +371,12 @@ class _WelcomeFreeAnalysisPageState
               }
 
               if (mounted) {
+                try {
+                  await ImagePreloader.instance.preloadHomeAssets(context);
+                } catch (e) {
+                  debugPrint('[WelcomePage] Failed to preload home assets: $e');
+                }
+
                 // Reset to home tab and navigate to main app
                 ref.read(selectedIndexProvider.notifier).state = 0;
                 ref.invalidate(inspirationProvider);
