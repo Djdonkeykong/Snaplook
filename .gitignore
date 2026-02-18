@@ -64,8 +64,6 @@ coverage/
 # Platform specific
 ios/Flutter/Generated.xcconfig
 ios/Runner/GeneratedPluginRegistrant.*
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
 
 # Firebase
 firebase_options.dart
