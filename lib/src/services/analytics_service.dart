@@ -4,6 +4,7 @@ import 'package:amplitude_flutter/constants.dart';
 import 'package:amplitude_flutter/default_tracking.dart';
 import 'package:amplitude_flutter/events/base_event.dart';
 import 'package:amplitude_flutter/events/identify.dart';
+import 'package:amplitude_flutter/tracking_options.dart';
 import 'package:flutter/foundation.dart';
 import 'debug_log_service.dart';
 import '../../core/constants/onboarding_analytics.dart';
@@ -48,6 +49,11 @@ class AnalyticsService {
         formInteractions: false,
         fileDownloads: false,
       ),
+      // Explicitly disable Android Advertising ID collection for Play policy.
+      trackingOptions: TrackingOptions(
+        adid: false,
+      ),
+      useAdvertisingIdForDeviceId: false,
     );
 
     final client = Amplitude(config);

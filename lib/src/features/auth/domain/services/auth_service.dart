@@ -13,6 +13,21 @@ class AuthService {
   StreamSubscription<AuthState>? _authSubscription;
   static const _friendlyGenericError =
       'Could not complete sign in. Please try again.';
+  static const List<String> reviewerEmails = <String>[
+    'appstore@snaplook.app',
+    'googleplay@snaplook.app',
+  ];
+  static const Map<String, List<String>> _reviewerPasswordCandidates =
+      <String, List<String>>{
+    'appstore@snaplook.app': <String>[
+      'SnaplookReview2026!',
+      '123456',
+    ],
+    'googleplay@snaplook.app': <String>[
+      '123456',
+      'SnaplookReview2026!',
+    ],
+  };
   static final Exception authCancelledException =
       Exception('__auth_cancelled__');
 
@@ -141,7 +156,8 @@ class AuthService {
               .maybeSingle()
               .timeout(const Duration(seconds: 5));
 
-          final subscriptionStatus = userResponse?['subscription_status'] ?? 'free';
+          final subscriptionStatus =
+              userResponse?['subscription_status'] ?? 'free';
           final isTrial = userResponse?['is_trial'] == true;
           hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
 
@@ -155,7 +171,8 @@ class AuthService {
           print('[Auth]   - paid_credits_remaining: $paidCredits');
           print('[Auth]   - availableCredits: $availableCredits');
         } catch (e) {
-          print('[Auth] WARNING: Failed to fetch subscription and credit status: $e');
+          print(
+              '[Auth] WARNING: Failed to fetch subscription and credit status: $e');
           // Continue with hasActiveSubscription = false and availableCredits = 0
         }
       }
@@ -248,7 +265,8 @@ class AuthService {
       // Check if user cancelled the sign-in
       final errorString = e.toString().toLowerCase();
       if (errorString.contains('cancel') ||
-          errorString.contains('12501') ||  // Google's user cancellation error code
+          errorString
+              .contains('12501') || // Google's user cancellation error code
           errorString.contains('user_cancelled') ||
           errorString.contains('sign_in_cancelled')) {
         throw authCancelledException;
@@ -297,7 +315,7 @@ class AuthService {
 
       final errorString = e.toString().toLowerCase();
       if (errorString.contains('cancel') ||
-          errorString.contains('1001') ||  // Apple's cancellation error code
+          errorString.contains('1001') || // Apple's cancellation error code
           errorString.contains('user_cancelled')) {
         throw authCancelledException;
       }
@@ -384,8 +402,7 @@ class AuthService {
         try {
           await _supabase
               .from('users')
-              .update({'username': username})
-              .eq('id', currentUser!.id);
+              .update({'username': username}).eq('id', currentUser!.id);
           print('[Auth] Updated username column in users table: $username');
         } catch (e) {
           print('[Auth] Error updating username column: $e');
@@ -418,8 +435,8 @@ class AuthService {
     try {
       // Test/Demo mode for App Store/Google Play reviewers
       // Skip OTP email send for the test accounts
-      final reviewerEmails = ['appstore@snaplook.app', 'googleplay@snaplook.app'];
-      if (reviewerEmails.contains(email.toLowerCase())) {
+      final normalizedEmail = email.trim().toLowerCase();
+      if (reviewerEmails.contains(normalizedEmail)) {
         print('[Auth] Test account detected - skipping OTP email send');
         // Return success without sending email
         // The actual authentication will happen in verifyOtp with hardcoded token '123456'
@@ -436,9 +453,12 @@ class AuthService {
       // Show more specific error messages based on the error type
       final errorString = e.toString().toLowerCase();
       if (errorString.contains('invalid') || errorString.contains('email')) {
-        throw Exception('This email address cannot be used. Please try a different email.');
-      } else if (errorString.contains('rate') || errorString.contains('too many')) {
-        throw Exception('Too many attempts. Please wait a minute and try again.');
+        throw Exception(
+            'This email address cannot be used. Please try a different email.');
+      } else if (errorString.contains('rate') ||
+          errorString.contains('too many')) {
+        throw Exception(
+            'Too many attempts. Please wait a minute and try again.');
       }
 
       throw Exception('Could not send the code. Please try again.');
@@ -452,16 +472,38 @@ class AuthService {
     try {
       // Test/Demo mode for App Store/Google Play reviewers
       // Accept hardcoded OTP for the reviewer test accounts
-      final reviewerEmails = ['appstore@snaplook.app', 'googleplay@snaplook.app'];
-      if (reviewerEmails.contains(email.toLowerCase()) && token == '123456') {
+      final normalizedEmail = email.trim().toLowerCase();
+      if (reviewerEmails.contains(normalizedEmail) && token == '123456') {
         print('[Auth] Test account detected - using demo OTP bypass');
 
-        // Sign in with password for the test account
-        // This allows reviewers to use a fixed OTP code instead of checking email
-        final response = await _supabase.auth.signInWithPassword(
-          email: email,
-          password: 'SnaplookReview2026!',
-        );
+        final passwordCandidates =
+            _reviewerPasswordCandidates[normalizedEmail] ?? const <String>[];
+        Object? lastError;
+        AuthResponse? response;
+
+        // Sign in with password for the reviewer test account.
+        // This allows reviewers to use a fixed OTP code instead of checking email.
+        for (final password in passwordCandidates) {
+          try {
+            response = await _supabase.auth.signInWithPassword(
+              email: normalizedEmail,
+              password: password,
+            );
+            if (response.user != null) {
+              break;
+            }
+          } catch (e) {
+            lastError = e;
+          }
+        }
+
+        if (response == null || response.user == null) {
+          throw Exception(
+            'Reviewer login failed for $normalizedEmail. '
+            'Ensure the Supabase password matches one of the configured reviewer credentials. '
+            'Last error: $lastError',
+          );
+        }
 
         // Update auth flag for share extension
         await _updateAuthFlag(

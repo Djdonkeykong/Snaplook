@@ -8,7 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../domain/providers/auth_provider.dart';
-import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
+import '../../domain/services/auth_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../../services/paywall_helper.dart';
@@ -96,7 +96,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
     }
 
     if (value.isNotEmpty && index < 5) {
-      _focusNodes[index + 1].requestFocus();
+      FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
     }
 
     // Check if all fields are filled
@@ -126,6 +126,24 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
+        final normalizedEmail = widget.email.trim().toLowerCase();
+        if (AuthService.reviewerEmails.contains(normalizedEmail)) {
+          print(
+              '[EmailVerification] Reviewer account detected - navigating directly to home');
+          ref.read(selectedIndexProvider.notifier).state = 0;
+          ref.invalidate(selectedIndexProvider);
+          ref.invalidate(scrollToTopTriggerProvider);
+          ref.invalidate(isAtHomeRootProvider);
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) =>
+                  const MainNavigation(key: ValueKey('fresh-main-nav')),
+            ),
+            (route) => false,
+          );
+          return;
+        }
+
         // Check if this is a new user or existing user
         final userId = authService.currentUser?.id;
         print('[EmailVerification] User ID after OTP verification: $userId');
@@ -528,6 +546,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                         focusNode: _focusNodes[index],
                         textAlign: TextAlign.center,
                         keyboardType: TextInputType.number,
+                        textInputAction: index < 5
+                            ? TextInputAction.next
+                            : TextInputAction.done,
                         maxLength: 1,
                         showCursor: true,
                         cursorColor: Colors.black,
