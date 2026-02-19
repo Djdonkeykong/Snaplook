@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -40,75 +41,83 @@ class EmailVerificationPage extends ConsumerStatefulWidget {
 }
 
 class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  static const int _otpLength = 6;
+  final TextEditingController _otpController = TextEditingController();
+  final FocusNode _otpFocusNode = FocusNode();
   bool _isVerifying = false;
   bool _isResending = false;
 
   @override
   void initState() {
     super.initState();
-
-    // Add keyboard event listeners to each focus node
-    for (int i = 0; i < 6; i++) {
-      final index = i; // Capture index for closure
-      _focusNodes[i].onKeyEvent = (node, event) {
-        if (event is KeyDownEvent || event is KeyRepeatEvent) {
-          final key = event.logicalKey;
-          if (key == LogicalKeyboardKey.backspace ||
-              key == LogicalKeyboardKey.delete) {
-            final handled = _handleBackspaceKey(index);
-            return handled ? KeyEventResult.handled : KeyEventResult.ignored;
-          }
-        }
-        return KeyEventResult.ignored;
-      };
-    }
+    _otpController.addListener(_onOtpChanged);
+    _otpFocusNode.addListener(_onOtpFocusChanged);
 
     // Auto-focus first code input field after a short delay
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
-        _focusNodes[0].requestFocus();
+        FocusScope.of(context).requestFocus(_otpFocusNode);
       }
     });
   }
 
   @override
   void dispose() {
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
-    for (var node in _focusNodes) {
-      node.dispose();
-    }
+    _otpController
+      ..removeListener(_onOtpChanged)
+      ..dispose();
+    _otpFocusNode
+      ..removeListener(_onOtpFocusChanged)
+      ..dispose();
     super.dispose();
   }
 
-  Future<void> _handleCodeInput(int index, String value) async {
-    if (value.length > 1) {
-      // If user pastes or types multiple digits, take only the first one
-      _controllers[index].text = value[0];
-      _controllers[index].selection = TextSelection.fromPosition(
-        TextPosition(offset: 1),
+  void _onOtpFocusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _onOtpChanged() {
+    if (!mounted) return;
+
+    final sanitized = _sanitizeOtp(_otpController.text);
+    if (sanitized != _otpController.text) {
+      _otpController.value = TextEditingValue(
+        text: sanitized,
+        selection: TextSelection.collapsed(offset: sanitized.length),
       );
-      value = value[0];
+      return;
     }
 
-    if (value.isNotEmpty && index < 5) {
-      FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
-    }
+    setState(() {});
 
-    // Check if all fields are filled
-    bool allFilled = _controllers.every((c) => c.text.isNotEmpty);
-    if (allFilled) {
-      String code = _controllers.map((c) => c.text).join();
-      // Give the keyboard a moment to close before verifying
-      FocusScope.of(context).unfocus();
-      await Future.delayed(const Duration(milliseconds: 150));
-      if (!mounted) return;
-      await _verifyCode(code);
+    if (!_isVerifying && sanitized.length == _otpLength) {
+      unawaited(_submitOtpIfReady(sanitized));
     }
+  }
+
+  String _sanitizeOtp(String raw) {
+    final digitsOnly = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digitsOnly.length <= _otpLength) return digitsOnly;
+    return digitsOnly.substring(0, _otpLength);
+  }
+
+  Future<void> _submitOtpIfReady(String code) async {
+    if (!mounted || _isVerifying || code.length != _otpLength) return;
+    if (_otpController.text != code) return;
+
+    FocusScope.of(context).unfocus();
+    await Future.delayed(const Duration(milliseconds: 120));
+    if (!mounted) return;
+    await _verifyCode(code);
+  }
+
+  void _focusOtpInput() {
+    if (!mounted) return;
+    FocusScope.of(context).requestFocus(_otpFocusNode);
+    _otpController.selection =
+        TextSelection.collapsed(offset: _otpController.text.length);
   }
 
   Future<void> _verifyCode(String code) async {
@@ -363,11 +372,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
     } catch (e) {
       print('[EmailVerification] OTP verification error: $e');
       if (mounted) {
-        // Clear all fields on error
-        for (var controller in _controllers) {
-          controller.clear();
-        }
-        _focusNodes[0].requestFocus();
+        // Clear OTP field on error
+        _otpController.clear();
+        _focusOtpInput();
 
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -387,27 +394,6 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
         setState(() => _isVerifying = false);
       }
     }
-  }
-
-  bool _handleBackspaceKey(int index) {
-    final controller = _controllers[index];
-    if (controller.text.isNotEmpty) {
-      // Current field has content - clear it
-      controller.clear();
-      controller.selection = const TextSelection.collapsed(offset: 0);
-      return true;
-    }
-
-    if (index > 0) {
-      // Current field is empty - go to previous field and clear it
-      final previousController = _controllers[index - 1];
-      _focusNodes[index - 1].requestFocus();
-      previousController.clear();
-      previousController.selection = const TextSelection.collapsed(offset: 0);
-      return true;
-    }
-
-    return false;
   }
 
   String _maskEmail(String email) {
@@ -535,76 +521,79 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 SizedBox(height: spacing.l),
 
                 // Code input boxes
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(6, (index) {
-                    return SizedBox(
-                      width: 56,
-                      height: 76,
-                      child: TextField(
-                        controller: _controllers[index],
-                        focusNode: _focusNodes[index],
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        textInputAction: index < 5
-                            ? TextInputAction.next
-                            : TextInputAction.done,
-                        maxLength: 1,
-                        showCursor: true,
-                        cursorColor: Colors.black,
-                        cursorWidth: 2,
-                        cursorHeight: 32,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'PlusJakartaSans',
-                          color: Colors.black,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: InputDecoration(
-                          counterText: '',
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 0,
-                            vertical: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Colors.black,
-                              width: 2,
+                Stack(
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _focusOtpInput,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: List.generate(_otpLength, (index) {
+                          final value = _otpController.text;
+                          final digit =
+                              index < value.length ? value[index] : '';
+                          final isActive = _otpFocusNode.hasFocus &&
+                              value.length < _otpLength &&
+                              index == value.length;
+
+                          return Container(
+                            width: 56,
+                            height: 76,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.black,
+                                width: isActive ? 2.4 : 2,
+                              ),
                             ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Colors.black,
-                              width: 2,
+                            child: Text(
+                              digit,
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'PlusJakartaSans',
+                                color: Colors.black,
+                              ),
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Colors.black,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                        onChanged: (value) {
-                          _handleCodeInput(index, value);
-                        },
-                        onTap: () {
-                          _controllers[index].selection = TextSelection(
-                            baseOffset: 0,
-                            extentOffset: _controllers[index].text.length,
                           );
-                        },
+                        }),
                       ),
-                    );
-                  }),
+                    ),
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      child: SizedBox(
+                        width: 1,
+                        height: 1,
+                        child: TextField(
+                          controller: _otpController,
+                          focusNode: _otpFocusNode,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.oneTimeCode],
+                          showCursor: false,
+                          cursorColor: Colors.transparent,
+                          style: const TextStyle(
+                            fontSize: 1,
+                            color: Colors.transparent,
+                          ),
+                          enableSuggestions: false,
+                          autocorrect: false,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            isCollapsed: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(_otpLength),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 SizedBox(height: spacing.xl),
