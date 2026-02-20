@@ -159,12 +159,14 @@ class SubscriptionSyncService {
       final creditsRaw = userResponse?['paid_credits_remaining'];
       final availableCredits =
           creditsRaw is int ? creditsRaw : (creditsRaw as num?)?.toInt() ?? 0;
+      final accessToken = _supabase.auth.currentSession?.accessToken;
 
       await _authChannel.invokeMethod('setAuthFlag', {
         'isAuthenticated': true,
         'userId': userId,
         'hasActiveSubscription': hasActiveSubscription,
         'availableCredits': availableCredits,
+        'accessToken': accessToken,
       });
 
       debugPrint(

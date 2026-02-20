@@ -182,6 +182,8 @@ class AuthService {
       print('[Auth]   - userId: $effectiveUserId');
       print('[Auth]   - hasActiveSubscription: $hasActiveSubscription');
       print('[Auth]   - availableCredits: $availableCredits');
+      final accessToken = _supabase.auth.currentSession?.accessToken;
+      print('[Auth]   - hasAccessToken: ${accessToken != null && accessToken.isNotEmpty}');
 
       // IMPORTANT: Always send the current state, even if null
       // This ensures old user_id values are cleared from UserDefaults
@@ -191,6 +193,7 @@ class AuthService {
             effectiveUserId, // Will be null if not authenticated, clearing old values
         'hasActiveSubscription': hasActiveSubscription,
         'availableCredits': availableCredits,
+        'accessToken': accessToken,
       });
 
       print('[Auth] Method channel call completed, result: $result');

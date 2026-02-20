@@ -25,6 +25,9 @@ let kProcessingSessionKey = "ShareProcessingSession"
 let kSerpApiKey = "SerpApiKey"
 let kDetectorEndpoint = "DetectorEndpoint"
 let kShareExtensionLogKey = "ShareExtensionLogEntries"
+let kSupabaseUrlKey = "SupabaseUrl"
+let kSupabaseAnonKeyKey = "SupabaseAnonKey"
+let kSupabaseAccessTokenKey = "supabase_access_token"
 
 @inline(__always)
 private func shareLog(_ message: String) {
@@ -862,13 +865,18 @@ open class RSIShareViewController: SLComposeServiceViewController {
         if !isUserAuthenticated() {
             shareLog("User not authenticated - building login modal in viewDidLoad")
             showLoginRequiredModal()
-        } else if !hasAvailableCredits() {
-            shareLog("User authenticated but no credits - building out of credits modal in viewDidLoad")
-            showOutOfCreditsModal()
         } else {
-            shareLog("User authenticated with credits - building choice buttons in viewDidLoad")
-            addLogoAndCancel()
-            showChoiceButtons()
+            resolveCreditAccess { [weak self] hasCredits in
+                guard let self = self else { return }
+                if hasCredits {
+                    shareLog("User authenticated with credits - building choice buttons in viewDidLoad")
+                    self.addLogoAndCancel()
+                    self.showChoiceButtons()
+                } else {
+                    shareLog("User authenticated but no credits - building out of credits modal in viewDidLoad")
+                    self.showOutOfCreditsModal()
+                }
+            }
         }
     }
 
@@ -5716,8 +5724,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
-        guard let supabaseUrl = defaults.string(forKey: "SupabaseUrl"),
-              let supabaseAnonKey = defaults.string(forKey: "SupabaseAnonKey") else {
+        guard let supabaseUrl = defaults.string(forKey: kSupabaseUrlKey),
+              let supabaseAnonKey = defaults.string(forKey: kSupabaseAnonKeyKey) else {
             shareLog("[Credits] ERROR: Supabase configuration not found in UserDefaults")
             return
         }
@@ -7130,8 +7138,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Check if user has available credits
         if !hasAvailableCredits() {
-            shareLog("User has no credits - showing out of credits modal")
-            showOutOfCreditsModal()
+            shareLog("Local credits unavailable - attempting server verification before blocking preview analysis")
+            resolveCreditAccess { [weak self] hasCredits in
+                guard let self = self else { return }
+                if hasCredits {
+                    shareLog("Server verification succeeded - retrying preview analysis")
+                    self.analyzeFromPreviewTapped()
+                } else {
+                    shareLog("User has no credits - showing out of credits modal")
+                    self.showOutOfCreditsModal()
+                }
+            }
             return
         }
 
@@ -7491,22 +7508,147 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         let availableCredits = defaults.integer(forKey: "user_available_credits")
-        let hasActiveSubscription = defaults.bool(forKey: "user_has_active_subscription")
 
         if availableCredits > 0 {
             shareLog("[SUCCESS] User has \(availableCredits) credits available")
             return true
         }
 
-        // Prevent false negatives for newly purchased users when cached credits
-        // have not propagated yet from the main app.
-        if hasActiveSubscription {
-            shareLog("[SUCCESS] User has active subscription - allowing access with 0 cached credits")
-            return true
+        shareLog("[INFO] User has 0 credits available")
+        return false
+    }
+
+    private func resolveCreditAccess(completion: @escaping (Bool) -> Void) {
+        if hasAvailableCredits() {
+            completion(true)
+            return
         }
 
-        shareLog("[INFO] User has 0 credits available and no active subscription")
-        return false
+        refreshCreditsFromServerIfNeeded(completion: completion)
+    }
+
+    private func refreshCreditsFromServerIfNeeded(completion: @escaping (Bool) -> Void) {
+        guard let defaults = UserDefaults(suiteName: appGroupId) else {
+            shareLog("[Credits] Cannot refresh from server - UserDefaults unavailable")
+            DispatchQueue.main.async { completion(false) }
+            return
+        }
+
+        let cachedCredits = defaults.integer(forKey: "user_available_credits")
+
+        // Only attempt network fallback when local credits are exhausted.
+        guard cachedCredits <= 0 else {
+            DispatchQueue.main.async { completion(true) }
+            return
+        }
+
+        guard let supabaseUrl = defaults.string(forKey: kSupabaseUrlKey),
+              let supabaseAnonKey = defaults.string(forKey: kSupabaseAnonKeyKey) else {
+            shareLog("[Credits] Cannot refresh from server - Supabase config missing")
+            DispatchQueue.main.async { completion(false) }
+            return
+        }
+
+        guard let accessToken = defaults.string(forKey: kSupabaseAccessTokenKey),
+              !accessToken.isEmpty else {
+            shareLog("[Credits] Cannot refresh from server - access token missing")
+            DispatchQueue.main.async { completion(false) }
+            return
+        }
+
+        let userId = getUserId()
+        guard userId != "anonymous" else {
+            shareLog("[Credits] Cannot refresh from server - anonymous user")
+            DispatchQueue.main.async { completion(false) }
+            return
+        }
+
+        var components = URLComponents(string: "\(supabaseUrl)/rest/v1/users")
+        components?.queryItems = [
+            URLQueryItem(name: "id", value: "eq.\(userId)"),
+            URLQueryItem(name: "select", value: "paid_credits_remaining,subscription_status,is_trial"),
+            URLQueryItem(name: "limit", value: "1")
+        ]
+
+        guard let url = components?.url else {
+            shareLog("[Credits] Cannot refresh from server - invalid users URL")
+            DispatchQueue.main.async { completion(false) }
+            return
+        }
+
+        shareLog("[Credits] Refreshing credit snapshot from Supabase")
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 8
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else {
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
+
+            if let error = error {
+                shareLog("[Credits] Server refresh failed: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                shareLog("[Credits] Server refresh failed: invalid response")
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
+
+            guard httpResponse.statusCode == 200, let data = data else {
+                shareLog("[Credits] Server refresh failed with status \(httpResponse.statusCode)")
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
+
+            do {
+                guard
+                    let rows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+                    let row = rows.first
+                else {
+                    shareLog("[Credits] Server refresh returned empty user payload")
+                    DispatchQueue.main.async { completion(false) }
+                    return
+                }
+
+                let refreshedCredits = self.intFromAny(row["paid_credits_remaining"]) ?? 0
+                let subscriptionStatus = (row["subscription_status"] as? String ?? "free").lowercased()
+                let isTrial = row["is_trial"] as? Bool ?? false
+                let refreshedHasActiveSubscription = subscriptionStatus == "active" || isTrial
+
+                DispatchQueue.main.async {
+                    defaults.set(refreshedCredits, forKey: "user_available_credits")
+                    defaults.set(refreshedHasActiveSubscription, forKey: "user_has_active_subscription")
+                    defaults.synchronize()
+
+                    shareLog("[Credits] Server refresh success - credits: \(refreshedCredits), active: \(refreshedHasActiveSubscription)")
+                    completion(refreshedCredits > 0)
+                }
+            } catch {
+                shareLog("[Credits] Server refresh parse error: \(error.localizedDescription)")
+                DispatchQueue.main.async { completion(false) }
+            }
+        }.resume()
+    }
+
+    private func intFromAny(_ value: Any?) -> Int? {
+        if let intValue = value as? Int {
+            return intValue
+        }
+        if let numberValue = value as? NSNumber {
+            return numberValue.intValue
+        }
+        if let stringValue = value as? String {
+            return Int(stringValue.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        return nil
     }
 
     private func maybeShowPostAnalysisOutOfCreditsModal() {
@@ -7533,22 +7675,32 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
+    private func createBlockingModalOverlay() -> UIView {
+        // Ensure previous interactive overlays are gone before presenting a blocking modal.
+        hideLoadingUI()
+        view.subviews
+            .filter { $0.tag == 9999 || $0.tag == 9997 }
+            .forEach { $0.removeFromSuperview() }
+
+        let overlay = UIView(frame: view.bounds)
+        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        overlay.backgroundColor = UIColor.systemBackground
+        overlay.tag = 9999
+        overlay.isUserInteractionEnabled = true
+        view.addSubview(overlay)
+        view.bringSubviewToFront(overlay)
+        loadingView = overlay
+        hideDefaultUI()
+        view.bringSubviewToFront(overlay)
+        return overlay
+    }
+
     private func showLoginRequiredModal() {
         // Haptic feedback
         let notificationFeedback = UINotificationFeedbackGenerator()
         notificationFeedback.notificationOccurred(.warning)
 
-        // Use existing blank overlay or create new one
-        let overlay: UIView
-        if let existingOverlay = view.subviews.first(where: { $0.tag == 9999 }) {
-            overlay = existingOverlay
-            // Keep tag as 9999 so hideDefaultUI() doesn't hide it
-        } else {
-            overlay = UIView(frame: view.bounds)
-            overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            overlay.backgroundColor = UIColor.systemBackground
-            overlay.tag = 9999 // Use 9999 so hideDefaultUI() doesn't hide it
-        }
+        let overlay = createBlockingModalOverlay()
 
         // Add logo and cancel button at top
         let headerContainer = UIView()
@@ -7630,11 +7782,6 @@ open class RSIShareViewController: SLComposeServiceViewController {
         overlay.addSubview(headerContainer)
         overlay.addSubview(contentContainer)
 
-        // Add overlay to view if it's new
-        if overlay.superview == nil {
-            view.addSubview(overlay)
-        }
-
         // Layout constraints
         NSLayoutConstraint.activate([
             // Header container
@@ -7688,16 +7835,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let notificationFeedback = UINotificationFeedbackGenerator()
         notificationFeedback.notificationOccurred(.warning)
 
-        // Use existing blank overlay or create new one
-        let overlay: UIView
-        if let existingOverlay = view.subviews.first(where: { $0.tag == 9999 }) {
-            overlay = existingOverlay
-        } else {
-            overlay = UIView(frame: view.bounds)
-            overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            overlay.backgroundColor = UIColor.systemBackground
-            overlay.tag = 9999
-        }
+        // Freeze interactive state while this blocking modal is visible.
+        shouldAttemptDetection = false
+        deferredShareAction = nil
+        isShowingPreview = false
+        isShowingResults = false
+        isShowingDetectionResults = false
+
+        let overlay = createBlockingModalOverlay()
 
         // Add logo and cancel button at top
         let headerContainer = UIView()
@@ -8085,8 +8230,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Check if user has available credits
         if !hasAvailableCredits() {
-            shareLog("User has no credits - showing out of credits modal")
-            showOutOfCreditsModal()
+            shareLog("Local credits unavailable - attempting server verification before blocking analyze-in-app")
+            resolveCreditAccess { [weak self] hasCredits in
+                guard let self = self else { return }
+                if hasCredits {
+                    shareLog("Server verification succeeded - retrying analyze-in-app")
+                    self.analyzeInAppTapped()
+                } else {
+                    shareLog("User has no credits - showing out of credits modal")
+                    self.showOutOfCreditsModal()
+                }
+            }
             return
         }
 
@@ -8276,8 +8430,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         // Check if user has available credits
         if !hasAvailableCredits() {
-            shareLog("User has no credits - showing out of credits modal")
-            showOutOfCreditsModal()
+            shareLog("Local credits unavailable - attempting server verification before blocking analyze-now")
+            resolveCreditAccess { [weak self] hasCredits in
+                guard let self = self else { return }
+                if hasCredits {
+                    shareLog("Server verification succeeded - retrying analyze-now")
+                    self.analyzeNowTapped()
+                } else {
+                    shareLog("User has no credits - showing out of credits modal")
+                    self.showOutOfCreditsModal()
+                }
+            }
             return
         }
 

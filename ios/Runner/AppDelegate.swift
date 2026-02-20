@@ -62,6 +62,7 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
   private let shareLogsKey = "ShareExtensionLogEntries"
   private let authFlagKey = "user_authenticated"
   private let authUserIdKey = "supabase_user_id"
+  private let authAccessTokenKey = "supabase_access_token"
   private let authSubscriptionKey = "user_has_active_subscription"
   private let authCreditsKey = "user_available_credits"
   private let pipTutorialChannelName = "pip_tutorial"
@@ -180,6 +181,15 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
             NSLog("[Auth] WARNING: setAuthFlag called with isAuthenticated=true but missing userId; preserving existing ID")
           }
 
+          // Store current Supabase access token for share-extension verification calls.
+          if !isAuthenticated {
+            defaults.removeObject(forKey: self.authAccessTokenKey)
+          } else if let accessToken = args["accessToken"] as? String, !accessToken.isEmpty {
+            defaults.set(accessToken, forKey: self.authAccessTokenKey)
+          } else {
+            NSLog("[Auth] INFO: accessToken missing while authenticated; preserving existing token")
+          }
+
           // Store subscription status
           let hasActiveSubscription = args["hasActiveSubscription"] as? Bool ?? false
           defaults.set(hasActiveSubscription, forKey: self.authSubscriptionKey)
@@ -194,7 +204,8 @@ private class ShareItemWithThumbnail: NSObject, UIActivityItemSource {
           let readBackUserId = defaults.string(forKey: self.authUserIdKey)
           let readBackSubscription = defaults.bool(forKey: self.authSubscriptionKey)
           let readBackCredits = defaults.integer(forKey: self.authCreditsKey)
-          NSLog("[Auth] Set auth flag to: \(isAuthenticated), userId: \(readBackUserId ?? "nil"), subscription: \(readBackSubscription), credits: \(readBackCredits)")
+          let hasAccessToken = (defaults.string(forKey: self.authAccessTokenKey)?.isEmpty == false)
+          NSLog("[Auth] Set auth flag to: \(isAuthenticated), userId: \(readBackUserId ?? "nil"), token: \(hasAccessToken), subscription: \(readBackSubscription), credits: \(readBackCredits)")
 
           result(nil)
         case "getNeedsCreditsFlag":
