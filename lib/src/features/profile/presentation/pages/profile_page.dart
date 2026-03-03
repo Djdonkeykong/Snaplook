@@ -13,6 +13,7 @@ import 'edit_profile_page.dart';
 import 'appearance_preferences_page.dart';
 import 'manage_subscription_page.dart';
 import 'notification_settings_page.dart';
+import '../../../paywall/presentation/pages/buy_credits_page.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
@@ -449,6 +450,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               _SimpleSettingItem(
                 title: 'Manage Subscription',
                 onTap: _handleManageSubscription,
+              ),
+              _SimpleSettingItem(
+                title: 'Buy Credits',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const BuyCreditsPage(),
+                  ),
+                ),
               ),
 
               SizedBox(height: spacing.l),

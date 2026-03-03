@@ -350,6 +350,80 @@ class RevenueCatService {
     }
   }
 
+  /// Fetch StoreProduct objects for the given product IDs (consumables / non-subscriptions)
+  Future<List<StoreProduct>> getStoreProducts(List<String> productIds) async {
+    if (!_configured) {
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] getStoreProducts called but not configured');
+      }
+      return [];
+    }
+
+    try {
+      final products = await Purchases.getProducts(
+        productIds,
+        productCategory: ProductCategory.nonSubscription,
+      );
+
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Fetched ${products.length} store products');
+        for (final p in products) {
+          debugPrint('[RevenueCat] Product ${p.identifier} price=${p.priceString}');
+        }
+      }
+
+      return products;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Error fetching store products: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Purchase a consumable StoreProduct (credit pack).
+  /// Returns true if the purchase completed without throwing.
+  Future<bool> purchaseStoreProduct(StoreProduct product) async {
+    if (!_configured) {
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] purchaseStoreProduct called but not configured');
+      }
+      return false;
+    }
+
+    try {
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Purchasing product: ${product.identifier}');
+      }
+
+      final customerInfo = await Purchases.purchaseStoreProduct(product);
+      _customerInfo = customerInfo;
+
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Consumable purchase completed: ${product.identifier}');
+      }
+
+      return true;
+    } on PlatformException catch (e) {
+      final errorCode = PurchasesErrorHelper.getErrorCode(e);
+      if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
+        if (kDebugMode) {
+          debugPrint('[RevenueCat] Consumable purchase cancelled');
+        }
+        return false;
+      }
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Consumable purchase error: ${e.message}');
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] Consumable purchase error: $e');
+      }
+      return false;
+    }
+  }
+
   /// Get current customer info
   CustomerInfo? get currentCustomerInfo => _customerInfo;
 

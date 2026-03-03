@@ -4,7 +4,51 @@
 
   ],
   "products" : [
-
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "6759985981",
+      "localizations" : [
+        {
+          "description" : "Includes 20 credits. 1 credit unlocks 1 garment match.",
+          "displayName" : "20 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.snaplook.credits20",
+      "referenceName" : "Snaplook 20 Credits",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "5.99",
+      "familyShareable" : false,
+      "internalID" : "6759985982",
+      "localizations" : [
+        {
+          "description" : "Includes 50 credits. 1 credit unlocks 1 garment match.",
+          "displayName" : "50 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.snaplook.credits50",
+      "referenceName" : "Snaplook 50 Credits",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "6759985983",
+      "localizations" : [
+        {
+          "description" : "Includes 100 credits. 1 credit unlocks 1 garment match.",
+          "displayName" : "100 Credits",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.snaplook.credits100",
+      "referenceName" : "Snaplook 100 Credits",
+      "type" : "Consumable"
+    }
   ],
   "settings" : {
     "_applicationInternalID" : "6738294651",
