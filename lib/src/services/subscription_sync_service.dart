@@ -33,7 +33,9 @@ class SubscriptionSyncService {
       debugPrint(
           '[SubscriptionSync] Starting RevenueCat sync for user ${user.id}');
 
-      // Get FRESH RevenueCat customer info (don't use cache after purchase)
+      // Get FRESH RevenueCat customer info (don't use cache after purchase).
+      // Fall back to the instance cached by RevenueCatService.identify() so a
+      // transient network error doesn't abort the entire sync.
       CustomerInfo? customerInfo;
       try {
         customerInfo = await Purchases.getCustomerInfo();
@@ -42,8 +44,15 @@ class SubscriptionSyncService {
       } catch (e) {
         debugPrint(
             '[SubscriptionSync] Error fetching RevenueCat customer info: $e');
-        await _syncShareExtensionAuthSnapshot(userId: user.id);
-        return;
+        customerInfo = _revenueCat.currentCustomerInfo;
+        if (customerInfo == null) {
+          debugPrint(
+              '[SubscriptionSync] No cached customer info available - skipping sync');
+          await _syncShareExtensionAuthSnapshot(userId: user.id);
+          return;
+        }
+        debugPrint(
+            '[SubscriptionSync] Using cached customer info as fallback');
       }
 
       // Parse RevenueCat subscription data
