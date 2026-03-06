@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +25,16 @@ const double _tapMoreBottomFraction = 0.16;
 const double _tapMoreLeftFraction = 0.72;
 const double _tapMoreWidthFraction = 0.3;
 const double _tapMoreHeightFraction = 0.15;
+
+// Android-only Step 2 (share) and Step 3 (Snaplook) tap areas
+const double _androidStep2BottomFraction = 0.01;
+const double _androidStep2LeftFraction = 0.0;
+const double _androidStep2WidthFraction = 0.25;
+const double _androidStep2HeightFraction = 0.12;
+const double _androidStep3BottomFraction = 0.02;
+const double _androidStep3LeftFraction = 0.12;
+const double _androidStep3WidthFraction = 0.36;
+const double _androidStep3HeightFraction = 0.12;
 
 // Step 4 (tapEdit) - centered bottom tap area
 const double _tapEditBottomFraction = 0.82;
@@ -91,6 +102,8 @@ class InstagramTutorialPage extends ConsumerStatefulWidget {
 }
 
 class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
+  bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
+
   @override
   void initState() {
     super.initState();
@@ -109,8 +122,14 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
       case TutorialStep.tapShare:
         return "When you find a clothing item you love on Instagram, tap the share button at the bottom.";
       case TutorialStep.selectSnaplook:
+        if (_isAndroid) {
+          return "Now tap \"Share\" to open the sharing options.";
+        }
         return "Now tap \"Share to\" to open the sharing options.";
       case TutorialStep.tapMore:
+        if (_isAndroid) {
+          return "Tap Snaplook to share the image with our app.";
+        }
         return "This is a one-time setup to add Snaplook as a shortcut. Scroll to the right and tap 'More'.";
       case TutorialStep.tapEdit:
         return "Tap 'Edit'.";
@@ -126,11 +145,33 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
   }
 
   bool _isOneTimeSetupStep(TutorialStep step) {
+    if (_isAndroid) {
+      return false;
+    }
+
     return step == TutorialStep.tapMore ||
         step == TutorialStep.tapEdit ||
         step == TutorialStep.tapSnaplookShortcut ||
         step == TutorialStep.tapDone ||
         step == TutorialStep.tapDoneLast;
+  }
+
+  Future<void> _openAnalysisPage() async {
+    await precacheImage(
+      const AssetImage('assets/images/tutorial_analysis_image_2.jpg'),
+      context,
+    );
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => TutorialImageAnalysisPage(
+          imagePath: 'assets/images/tutorial_analysis_image_2.jpg',
+          scenario: 'Instagram',
+          returnToOnboarding: widget.returnToOnboarding,
+        ),
+        allowSnapshotting: false,
+      ),
+    );
   }
 
   void _onInstructionComplete() {
@@ -161,6 +202,12 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
+    final step2PopupAsset = _isAndroid
+        ? 'assets/images/instagram_step2_popup_android.png'
+        : 'assets/images/instagram_popup.png';
+    final step3PopupAsset = _isAndroid
+        ? 'assets/images/instagram_step3_popup_android.png'
+        : 'assets/images/tap-more.png';
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -179,11 +226,12 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
           if (hasUserTapped &&
               (currentStep == TutorialStep.selectSnaplook ||
                   currentStep == TutorialStep.tapMore ||
-                  currentStep == TutorialStep.tapEdit ||
-                  currentStep == TutorialStep.tapSnaplookShortcut ||
-                  currentStep == TutorialStep.tapDone ||
-                  currentStep == TutorialStep.tapDoneLast ||
-                  currentStep == TutorialStep.confirmShare))
+                  (!_isAndroid &&
+                      (currentStep == TutorialStep.tapEdit ||
+                          currentStep == TutorialStep.tapSnaplookShortcut ||
+                          currentStep == TutorialStep.tapDone ||
+                          currentStep == TutorialStep.tapDoneLast ||
+                          currentStep == TutorialStep.confirmShare))))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -197,7 +245,7 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/instagram_popup.png',
+                step2PopupAsset,
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
@@ -210,14 +258,16 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                'assets/images/tap-more.png',
+                step3PopupAsset,
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
             ),
 
           // Step 4 popup overlay (after tapping More - shows Edit button)
-          if (hasUserTapped && currentStep == TutorialStep.tapEdit)
+          if (!_isAndroid &&
+              hasUserTapped &&
+              currentStep == TutorialStep.tapEdit)
             Positioned(
               bottom: 0,
               left: 0,
@@ -230,7 +280,9 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
             ),
 
           // Step 5 popup overlay (after tapping Edit - shows Snaplook shortcut)
-          if (hasUserTapped && currentStep == TutorialStep.tapSnaplookShortcut)
+          if (!_isAndroid &&
+              hasUserTapped &&
+              currentStep == TutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: 0,
               left: 0,
@@ -243,7 +295,9 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
             ),
 
           // Step 6 popup overlay (after tapping Snaplook shortcut - shows Done button)
-          if (hasUserTapped && currentStep == TutorialStep.tapDone)
+          if (!_isAndroid &&
+              hasUserTapped &&
+              currentStep == TutorialStep.tapDone)
             Positioned(
               bottom: 0,
               left: 0,
@@ -256,7 +310,9 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
             ),
 
           // Step 7 popup overlay (after tapping first Done - shows second Done button)
-          if (hasUserTapped && currentStep == TutorialStep.tapDoneLast)
+          if (!_isAndroid &&
+              hasUserTapped &&
+              currentStep == TutorialStep.tapDoneLast)
             Positioned(
               bottom: 0,
               left: 0,
@@ -269,7 +325,9 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
             ),
 
           // Step 8 popup overlay (after tapping second Done - final confirmation)
-          if (hasUserTapped && currentStep == TutorialStep.confirmShare)
+          if (!_isAndroid &&
+              hasUserTapped &&
+              currentStep == TutorialStep.confirmShare)
             Positioned(
               bottom: 0,
               left: 0,
@@ -312,16 +370,28 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TutorialStep.selectSnaplook)
             Positioned(
-              bottom: screenHeight * _selectTapAreaBottomFraction,
-              left: screenWidth * _selectTapAreaLeftFraction,
+              bottom: screenHeight *
+                  (_isAndroid
+                      ? _androidStep2BottomFraction
+                      : _selectTapAreaBottomFraction),
+              left: screenWidth *
+                  (_isAndroid
+                      ? _androidStep2LeftFraction
+                      : _selectTapAreaLeftFraction),
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
                   _onActionComplete(TutorialStep.tapMore);
                 },
                 child: Container(
-                  width: screenWidth * _selectTapAreaWidthFraction,
-                  height: screenHeight * _selectTapAreaHeightFraction,
+                  width: screenWidth *
+                      (_isAndroid
+                          ? _androidStep2WidthFraction
+                          : _selectTapAreaWidthFraction),
+                  height: screenHeight *
+                      (_isAndroid
+                          ? _androidStep2HeightFraction
+                          : _selectTapAreaHeightFraction),
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets
                         ? Colors.red.withValues(alpha: 0.25)
@@ -339,16 +409,32 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TutorialStep.tapMore)
             Positioned(
-              bottom: screenHeight * _tapMoreBottomFraction,
-              left: screenWidth * _tapMoreLeftFraction,
+              bottom: screenHeight *
+                  (_isAndroid
+                      ? _androidStep3BottomFraction
+                      : _tapMoreBottomFraction),
+              left: screenWidth *
+                  (_isAndroid
+                      ? _androidStep3LeftFraction
+                      : _tapMoreLeftFraction),
               child: GestureDetector(
-                onTap: () {
+                onTap: () async {
                   HapticFeedback.mediumImpact();
+                  if (_isAndroid) {
+                    await _openAnalysisPage();
+                    return;
+                  }
                   _onActionComplete(TutorialStep.tapEdit);
                 },
                 child: Container(
-                  width: screenWidth * _tapMoreWidthFraction,
-                  height: screenHeight * _tapMoreHeightFraction,
+                  width: screenWidth *
+                      (_isAndroid
+                          ? _androidStep3WidthFraction
+                          : _tapMoreWidthFraction),
+                  height: screenHeight *
+                      (_isAndroid
+                          ? _androidStep3HeightFraction
+                          : _tapMoreHeightFraction),
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets
                         ? Colors.red.withValues(alpha: 0.25)
@@ -362,7 +448,8 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
             ),
 
           // Tap Edit area (tapEdit step) - centered bottom tap area
-          if (hasUserTapped &&
+          if (!_isAndroid &&
+              hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TutorialStep.tapEdit)
             Positioned(
@@ -389,7 +476,8 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
             ),
 
           // Tap Snaplook Shortcut area (tapSnaplookShortcut step) - centered tap area
-          if (hasUserTapped &&
+          if (!_isAndroid &&
+              hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TutorialStep.tapSnaplookShortcut)
             Positioned(
@@ -416,7 +504,8 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
             ),
 
           // Tap Done area (tapDone step) - top right
-          if (hasUserTapped &&
+          if (!_isAndroid &&
+              hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TutorialStep.tapDone)
             Positioned(
@@ -443,7 +532,8 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
             ),
 
           // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (hasUserTapped &&
+          if (!_isAndroid &&
+              hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TutorialStep.tapDoneLast)
             Positioned(
@@ -470,7 +560,8 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
             ),
 
           // Confirm share tap area (confirmShare step) - only active when popup is visible
-          if (hasUserTapped &&
+          if (!_isAndroid &&
+              hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TutorialStep.confirmShare)
             Positioned(
@@ -479,23 +570,7 @@ class _InstagramTutorialPageState extends ConsumerState<InstagramTutorialPage> {
               child: GestureDetector(
                 onTap: () async {
                   HapticFeedback.mediumImpact();
-                  // Precache the image before navigating
-                  await precacheImage(
-                    const AssetImage(
-                        'assets/images/tutorial_analysis_image_2.jpg'),
-                    context,
-                  );
-                  if (!mounted) return;
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => TutorialImageAnalysisPage(
-                        imagePath: 'assets/images/tutorial_analysis_image_2.jpg',
-                        scenario: 'Instagram',
-                        returnToOnboarding: widget.returnToOnboarding,
-                      ),
-                      allowSnapshotting: false,
-                    ),
-                  );
+                  await _openAnalysisPage();
                 },
                 child: Container(
                   width: screenWidth * _confirmTapAreaWidthFraction,
