@@ -8,7 +8,7 @@ import '../../../../services/analytics_service.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
-import 'notification_permission_page.dart';
+import 'trial_intro_page.dart';
 import '../../../../shared/services/review_prompt_logs_service.dart';
 
 class RatingSocialProofPage extends StatefulWidget {
@@ -140,9 +140,7 @@ class _RatingSocialProofPageState extends State<RatingSocialProofPage> {
 
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => NotificationPermissionPage(
-                          continueToTrialFlow: widget.continueToTrialFlow,
-                        ),
+                        builder: (context) => const TrialIntroPage(),
                       ),
                     );
                   }

@@ -12,6 +12,7 @@ import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_reminder_page.dart';
 import 'welcome_free_analysis_page.dart';
+import 'save_progress_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -90,46 +91,57 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
 
           if (!mounted) return;
 
-          if (didPurchase && userId != null) {
-            // User purchased - sync subscription and navigate
-            debugPrint('[TrialIntro] Purchase completed - syncing subscription');
+          if (didPurchase) {
+            if (userId != null) {
+              // Authenticated user purchased - sync subscription and navigate
+              debugPrint('[TrialIntro] Purchase completed - syncing subscription');
 
-            try {
-              await Future.delayed(const Duration(milliseconds: 500));
-              await SubscriptionSyncService().syncSubscriptionToSupabase();
-              await OnboardingStateService().markPaymentComplete(userId);
-            } catch (e) {
-              debugPrint('[TrialIntro] Error syncing subscription: $e');
-            }
+              try {
+                await Future.delayed(const Duration(milliseconds: 500));
+                await SubscriptionSyncService().syncSubscriptionToSupabase();
+                await OnboardingStateService().markPaymentComplete(userId);
+              } catch (e) {
+                debugPrint('[TrialIntro] Error syncing subscription: $e');
+              }
 
-            if (mounted) {
-              // Check if user has completed onboarding before
-              final userResponse = await Supabase.instance.client
-                  .from('users')
-                  .select('onboarding_state')
-                  .eq('id', userId)
-                  .maybeSingle();
+              if (mounted) {
+                // Check if user has completed onboarding before
+                final userResponse = await Supabase.instance.client
+                    .from('users')
+                    .select('onboarding_state')
+                    .eq('id', userId)
+                    .maybeSingle();
 
-              final hasCompletedOnboarding =
-                  userResponse?['onboarding_state'] == 'completed';
+                final hasCompletedOnboarding =
+                    userResponse?['onboarding_state'] == 'completed';
 
-              debugPrint('[TrialIntro] Has completed onboarding: $hasCompletedOnboarding');
+                debugPrint('[TrialIntro] Has completed onboarding: $hasCompletedOnboarding');
 
-              if (hasCompletedOnboarding) {
-                // Returning user - go directly to home
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (context) => const MainNavigation(
-                      key: ValueKey('fresh-main-nav'),
+                if (hasCompletedOnboarding) {
+                  // Returning user - go directly to home
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => const MainNavigation(
+                        key: ValueKey('fresh-main-nav'),
+                      ),
                     ),
-                  ),
-                  (route) => false,
-                );
-              } else {
-                // New user - show welcome page first
+                    (route) => false,
+                  );
+                } else {
+                  // Authenticated new user - show welcome page first
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => const WelcomeFreeAnalysisPage(),
+                    ),
+                  );
+                }
+              }
+            } else {
+              // Unauthenticated user purchased - create account before continuing
+              if (mounted) {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (context) => const WelcomeFreeAnalysisPage(),
+                    builder: (context) => const SaveProgressPage(),
                   ),
                 );
               }

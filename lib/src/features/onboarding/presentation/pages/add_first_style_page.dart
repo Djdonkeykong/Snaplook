@@ -16,8 +16,7 @@ import 'safari_tutorial_page.dart';
 import 'photos_tutorial_page.dart';
 import 'imdb_tutorial_page.dart';
 import 'x_tutorial_page.dart';
-import 'personalization_intro_page.dart';
-import 'discovery_source_page.dart';
+import 'trial_intro_page.dart';
 
 class AddFirstStylePage extends ConsumerStatefulWidget {
   const AddFirstStylePage({super.key});
@@ -84,7 +83,9 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
     // Only precache icons that are actually shown on this page
     precacheImage(const AssetImage('assets/icons/insta.png'), context);
     precacheImage(const AssetImage('assets/icons/safari.png'), context);
-    precacheImage(const AssetImage('assets/icons/photos.png'), context);
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      precacheImage(const AssetImage('assets/icons/photos.png'), context);
+    }
     precacheImage(const AssetImage('assets/icons/imdb.png'), context);
     precacheImage(const AssetImage('assets/icons/firefox.png'), context);
     precacheImage(const AssetImage('assets/icons/brave.png'), context);
@@ -148,7 +149,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const DiscoverySourcePage(),
+          builder: (context) => const TrialIntroPage(),
         ),
       );
     });
@@ -228,7 +229,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
             HapticFeedback.mediumImpact();
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => const DiscoverySourcePage(),
+                builder: (context) => const TrialIntroPage(),
               ),
             );
           },
@@ -271,14 +272,17 @@ class _AppList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final spacing = context.spacing;
+    final isAndroid = defaultTargetPlatform == TargetPlatform.android;
+    final itemCount = isAndroid ? 6 : 7;
 
     return ListView.separated(
       padding: EdgeInsets.only(bottom: spacing.l),
       physics: const BouncingScrollPhysics(),
-      itemCount: 7,
+      itemCount: itemCount,
       separatorBuilder: (_, __) => SizedBox(height: spacing.l),
       itemBuilder: (context, index) {
-        switch (index) {
+        final itemIndex = (isAndroid && index >= 4) ? index + 1 : index;
+        switch (itemIndex) {
           case 0:
             return AnimatedBuilder(
               animation: animationControllers[0],

@@ -12,14 +12,12 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import '../../../user/repositories/user_profile_repository.dart';
-import 'notification_permission_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
 import '../../../../shared/services/image_preloader.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../../domain/providers/gender_provider.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
-import 'discovery_source_page.dart';
 
 class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
   const WelcomeFreeAnalysisPage({super.key});
@@ -128,8 +126,6 @@ class _WelcomeFreeAnalysisPageState
 
       // Read ALL preferences from providers
       final selectedGender = ref.read(selectedGenderProvider);
-      final notificationGranted =
-          ref.read(notificationPermissionGrantedProvider);
       final styleDirection = ref.read(styleDirectionProvider);
       final whatYouWant = ref.read(whatYouWantProvider);
       final budget = ref.read(budgetProvider);
@@ -138,8 +134,6 @@ class _WelcomeFreeAnalysisPageState
       debugPrint('');
       debugPrint('[WelcomePage] ===== CHECKING ALL PROVIDERS =====');
       debugPrint('[WelcomePage] Gender from provider: ${selectedGender?.name}');
-      debugPrint(
-          '[WelcomePage] Notification permission from provider: $notificationGranted');
       debugPrint(
           '[WelcomePage] Style direction from provider: $styleDirection');
       debugPrint('[WelcomePage] What you want from provider: $whatYouWant');
@@ -181,7 +175,7 @@ class _WelcomeFreeAnalysisPageState
         await OnboardingStateService().saveUserPreferences(
           userId: userId,
           preferredGenderFilter: preferredGenderFilter,
-          notificationEnabled: notificationGranted,
+          notificationEnabled: null,
           styleDirection: styleDirection.isNotEmpty ? styleDirection : null,
           whatYouWant: whatYouWant.isNotEmpty ? whatYouWant : null,
           budget: budget,
@@ -196,31 +190,16 @@ class _WelcomeFreeAnalysisPageState
         // Non-critical - allow user to continue
       }
 
-      // If notification permission was granted, initialize FCM and register token
-      // This needs to happen AFTER account creation so we have a user ID
-      if (notificationGranted == true) {
-        debugPrint('');
-        debugPrint('[WelcomePage] ===== INITIALIZING FCM =====');
-        debugPrint(
-            '[WelcomePage] Notification permission was granted, initializing FCM...');
-        try {
-          await NotificationService().initialize();
-          debugPrint(
-              '[WelcomePage] FCM initialized, now registering token for user...');
-          // Also explicitly register token for the new user
-          await NotificationService().registerTokenForUser();
-          debugPrint(
-              '[WelcomePage] SUCCESS: FCM initialized and token registered');
-          debugPrint('[WelcomePage] ==============================');
-        } catch (fcmError, stackTrace) {
-          debugPrint('[WelcomePage] ERROR initializing FCM: $fcmError');
-          debugPrint('[WelcomePage] Stack trace: $stackTrace');
-          debugPrint('[WelcomePage] ==============================');
-          // Non-critical - allow user to continue
-        }
-      } else {
-        debugPrint(
-            '[WelcomePage] Skipping FCM initialization (notification permission not granted or null)');
+      // Initialize FCM and register token now that we have a user ID
+      // iOS will show the system dialog if not yet decided; safe to always call
+      try {
+        await NotificationService().initialize();
+        await NotificationService().registerTokenForUser();
+        debugPrint('[WelcomePage] FCM initialized and token registered');
+      } catch (fcmError, stackTrace) {
+        debugPrint('[WelcomePage] ERROR initializing FCM: $fcmError');
+        debugPrint('[WelcomePage] Stack trace: $stackTrace');
+        // Non-critical - allow user to continue
       }
 
       // Mark onboarding as completed

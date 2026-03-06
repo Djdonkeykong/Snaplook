@@ -16,7 +16,7 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../widgets/progress_indicator.dart';
-import 'trial_intro_page.dart';
+import 'welcome_free_analysis_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
@@ -25,8 +25,6 @@ import '../../../../services/revenuecat_service.dart';
 import '../../../../services/superwall_service.dart';
 import '../../domain/providers/gender_provider.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
-import 'notification_permission_page.dart';
-import 'discovery_source_page.dart';
 
 class SaveProgressPage extends ConsumerStatefulWidget {
   const SaveProgressPage({super.key});
@@ -223,11 +221,13 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           }
         }
       } else {
-        // New user (hasn't completed onboarding) → TrialIntroPage
-        debugPrint('[SaveProgress] New user - navigating to trial intro');
+        // New user (hasn't completed onboarding) → WelcomeFreeAnalysisPage
+        // User already went through paywall, no need to send them back to it
+        debugPrint('[SaveProgress] New user - navigating to welcome page');
         if (mounted) {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const TrialIntroPage()),
+            MaterialPageRoute(
+                builder: (context) => const WelcomeFreeAnalysisPage()),
           );
         }
       }
@@ -236,9 +236,10 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
       debugPrint('[SaveProgress] Stack trace: $stackTrace');
 
       if (mounted) {
-        // On error, default to trial flow
+        // On error, go to welcome page (user has already completed paywall)
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const TrialIntroPage()),
+          MaterialPageRoute(
+              builder: (context) => const WelcomeFreeAnalysisPage()),
         );
       }
     }

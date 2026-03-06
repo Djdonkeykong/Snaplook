@@ -1,5 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+// Discovery source - how the user found Snaplook
+enum DiscoverySource {
+  instagram,
+  tiktok,
+  facebook,
+  youtube,
+  google,
+  friendOrFamily,
+  other
+}
+
+final selectedDiscoverySourceProvider =
+    StateProvider<DiscoverySource?>((ref) => null);
+
+// Notification permission choice during onboarding
+final notificationPermissionGrantedProvider =
+    StateProvider<bool?>((ref) => null);
+
 // ACTUAL ONBOARDING FLOW - Used in production
 // Style direction - "Which styles do you like?" (multi-select)
 // Options: Streetwear, Minimal, Casual, Classic, Bold, Everything

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
+import '../../src/services/notification_service.dart';
 import '../../src/features/home/presentation/pages/home_page.dart';
 import '../../src/features/wardrobe/presentation/pages/wishlist_page.dart';
 import '../../src/features/profile/presentation/pages/profile_page.dart';
@@ -43,6 +44,9 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     super.initState();
     Future.microtask(() => ref.read(creditBalanceProvider));
     SystemChrome.setSystemUIOverlayStyle(_mainOverlayStyle);
+    Future.delayed(const Duration(seconds: 2), () {
+      NotificationService().initialize();
+    });
   }
 
   void _handleTabTap(int index) {

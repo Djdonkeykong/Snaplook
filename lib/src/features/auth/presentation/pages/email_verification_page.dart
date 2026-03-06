@@ -11,7 +11,6 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
-import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../../services/paywall_helper.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
@@ -25,7 +24,6 @@ import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../onboarding/domain/providers/gender_provider.dart';
 import '../../../onboarding/domain/providers/onboarding_preferences_provider.dart';
-import '../../../onboarding/presentation/pages/discovery_source_page.dart';
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
