@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -184,9 +185,9 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
                     iconColor: colorScheme.onSurface,
                   ),
                   centerTitle: true,
-                  title: const OnboardingProgressIndicator(
+                  title: OnboardingProgressIndicator(
                     currentStep: 1,
-                    totalSteps: 6,
+                    totalSteps: Platform.isAndroid ? 4 : 5,
                   ),
                 ),
               ),

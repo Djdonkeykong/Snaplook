@@ -15,7 +15,6 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
-import '../widgets/progress_indicator.dart';
 import 'welcome_free_analysis_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/subscription_sync_service.dart';
@@ -350,11 +349,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
-        centerTitle: true,
-        title: const OnboardingProgressIndicator(
-          currentStep: 6,
-          totalSteps: 6,
-        ),
       ),
       body: SafeArea(
         child: NotificationListener<ScrollNotification>(

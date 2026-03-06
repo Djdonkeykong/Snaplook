@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -203,9 +205,9 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
           iconColor: colorScheme.onSurface,
         ),
         centerTitle: true,
-        title: const OnboardingProgressIndicator(
-          currentStep: 7,
-          totalSteps: 10,
+        title: OnboardingProgressIndicator(
+          currentStep: Platform.isAndroid ? 3 : 4,
+          totalSteps: Platform.isAndroid ? 4 : 5,
         ),
       ),
       body: Padding(

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'welcome_free_analysis_page.dart';
+import 'save_progress_page.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
   const TrialReminderPage({super.key});
@@ -78,9 +80,9 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
               iconColor: colorScheme.onSurface,
             ),
             centerTitle: true,
-            title: const OnboardingProgressIndicator(
-              currentStep: 8,
-              totalSteps: 10,
+            title: OnboardingProgressIndicator(
+              currentStep: Platform.isAndroid ? 4 : 5,
+              totalSteps: Platform.isAndroid ? 4 : 5,
             ),
             actions: [
               TextButton(
@@ -222,53 +224,67 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                           _isPresenting = false;
                         });
 
-                        if (didPurchase && userId != null) {
-                          // User purchased - sync subscription and navigate to welcome or home
-                          debugPrint(
-                              '[TrialReminder] Purchase completed - syncing subscription');
-
-                          try {
-                            await Future.delayed(
-                                const Duration(milliseconds: 500));
-                            await SubscriptionSyncService()
-                                .syncSubscriptionToSupabase();
-                            await OnboardingStateService()
-                                .markPaymentComplete(userId);
-                          } catch (e) {
+                        if (didPurchase) {
+                          if (userId != null) {
+                            // Authenticated user purchased - sync and navigate
                             debugPrint(
-                                '[TrialReminder] Error syncing subscription: $e');
-                          }
+                                '[TrialReminder] Purchase completed - syncing subscription');
 
-                          if (mounted) {
-                            // Check if user has completed onboarding before
-                            final userResponse = await Supabase.instance.client
-                                .from('users')
-                                .select('onboarding_state')
-                                .eq('id', userId)
-                                .maybeSingle();
+                            try {
+                              await Future.delayed(
+                                  const Duration(milliseconds: 500));
+                              await SubscriptionSyncService()
+                                  .syncSubscriptionToSupabase();
+                              await OnboardingStateService()
+                                  .markPaymentComplete(userId);
+                            } catch (e) {
+                              debugPrint(
+                                  '[TrialReminder] Error syncing subscription: $e');
+                            }
 
-                            final hasCompletedOnboarding =
-                                userResponse?['onboarding_state'] == 'completed';
+                            if (mounted) {
+                              // Check if user has completed onboarding before
+                              final userResponse =
+                                  await Supabase.instance.client
+                                      .from('users')
+                                      .select('onboarding_state')
+                                      .eq('id', userId)
+                                      .maybeSingle();
 
-                            debugPrint(
-                                '[TrialReminder] Has completed onboarding: $hasCompletedOnboarding');
+                              final hasCompletedOnboarding =
+                                  userResponse?['onboarding_state'] ==
+                                      'completed';
 
-                            if (hasCompletedOnboarding) {
-                              // Returning user - go directly to home
-                              Navigator.of(context).pushAndRemoveUntil(
-                                MaterialPageRoute(
-                                  builder: (context) => const MainNavigation(
-                                    key: ValueKey('fresh-main-nav'),
+                              debugPrint(
+                                  '[TrialReminder] Has completed onboarding: $hasCompletedOnboarding');
+
+                              if (hasCompletedOnboarding) {
+                                // Returning user - go directly to home
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (context) => const MainNavigation(
+                                      key: ValueKey('fresh-main-nav'),
+                                    ),
                                   ),
-                                ),
-                                (route) => false,
-                              );
-                            } else {
-                              // New user - show welcome page first
+                                  (route) => false,
+                                );
+                              } else {
+                                // Authenticated new user - show welcome page
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const WelcomeFreeAnalysisPage(),
+                                  ),
+                                );
+                              }
+                            }
+                          } else {
+                            // Unauthenticated user purchased - create account
+                            if (mounted) {
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                      const WelcomeFreeAnalysisPage(),
+                                      const SaveProgressPage(),
                                 ),
                               );
                             }

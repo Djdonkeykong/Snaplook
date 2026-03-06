@@ -47,9 +47,9 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
           iconColor: colorScheme.onSurface,
         ),
         centerTitle: true,
-        title: const OnboardingProgressIndicator(
+        title: OnboardingProgressIndicator(
           currentStep: 2,
-          totalSteps: 6,
+          totalSteps: Platform.isAndroid ? 4 : 5,
         ),
       ),
       body: Padding(
