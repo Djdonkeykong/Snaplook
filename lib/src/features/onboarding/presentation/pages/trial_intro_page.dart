@@ -16,6 +16,7 @@ import 'trial_reminder_page.dart';
 import 'welcome_free_analysis_page.dart';
 import 'save_progress_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/superwall_service.dart';
@@ -87,16 +88,32 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         // If not eligible, present paywall directly
         if (!isEligible && mounted) {
           final userId = Supabase.instance.client.auth.currentUser?.id;
-          final didPurchase = await SuperwallService().presentPaywall(
+
+          await SuperwallService().presentPaywall(
             placement: 'onboarding_paywall',
           );
 
           if (!mounted) return;
 
-          if (didPurchase) {
+          // Validate actual subscription state from RevenueCat.
+          // Superwall can return false when it skips the paywall for
+          // already-subscribed users, so we check RC directly.
+          bool hasActiveSubscription = false;
+          try {
+            final customerInfo = await Purchases.getCustomerInfo();
+            hasActiveSubscription =
+                customerInfo.entitlements.active.isNotEmpty;
+            debugPrint(
+                '[TrialIntro] hasActiveSubscription=$hasActiveSubscription');
+          } catch (e) {
+            debugPrint('[TrialIntro] Error checking subscription state: $e');
+          }
+
+          if (hasActiveSubscription) {
             if (userId != null) {
               // Authenticated user purchased - sync subscription and navigate
-              debugPrint('[TrialIntro] Purchase completed - syncing subscription');
+              debugPrint(
+                  '[TrialIntro] Purchase completed - syncing subscription');
 
               try {
                 await Future.delayed(const Duration(milliseconds: 500));
@@ -117,7 +134,8 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
                 final hasCompletedOnboarding =
                     userResponse?['onboarding_state'] == 'completed';
 
-                debugPrint('[TrialIntro] Has completed onboarding: $hasCompletedOnboarding');
+                debugPrint(
+                    '[TrialIntro] Has completed onboarding: $hasCompletedOnboarding');
 
                 if (hasCompletedOnboarding) {
                   // Returning user - go directly to home
@@ -149,7 +167,7 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
               }
             }
           } else {
-            // User dismissed paywall - show trial eligibility again
+            // User dismissed paywall without purchasing - show trial page again
             if (mounted) {
               setState(() {
                 _isEligibleForTrial = true;

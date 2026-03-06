@@ -13,7 +13,6 @@ import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import '../../../user/repositories/user_profile_repository.dart';
 import '../../../../services/onboarding_state_service.dart';
-import '../../../../services/notification_service.dart';
 import '../../../../shared/services/image_preloader.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../../domain/providers/gender_provider.dart';
@@ -190,17 +189,9 @@ class _WelcomeFreeAnalysisPageState
         // Non-critical - allow user to continue
       }
 
-      // Initialize FCM and register token now that we have a user ID
-      // iOS will show the system dialog if not yet decided; safe to always call
-      try {
-        await NotificationService().initialize();
-        await NotificationService().registerTokenForUser();
-        debugPrint('[WelcomePage] FCM initialized and token registered');
-      } catch (fcmError, stackTrace) {
-        debugPrint('[WelcomePage] ERROR initializing FCM: $fcmError');
-        debugPrint('[WelcomePage] Stack trace: $stackTrace');
-        // Non-critical - allow user to continue
-      }
+      // FCM token registration is deferred to main_navigation.dart which calls
+      // NotificationService().initialize() after a short delay. This ensures
+      // the iOS permission dialog appears on the home page, not here.
 
       // Mark onboarding as completed
       print('[WelcomePage] Marking onboarding as completed...');

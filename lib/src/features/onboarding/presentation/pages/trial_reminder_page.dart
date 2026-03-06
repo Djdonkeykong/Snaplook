@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../services/analytics_service.dart';
@@ -209,8 +210,8 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                       try {
                         final userId =
                             Supabase.instance.client.auth.currentUser?.id;
-                        final didPurchase =
-                            await SuperwallService().presentPaywall(
+
+                        await SuperwallService().presentPaywall(
                           placement: 'onboarding_paywall',
                           params: const {
                             'occurrence': 1,
@@ -224,70 +225,83 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                           _isPresenting = false;
                         });
 
-                        if (didPurchase) {
-                          if (userId != null) {
-                            // Authenticated user purchased - sync and navigate
+                        // Validate actual subscription state from RevenueCat.
+                        // Superwall can return false when it skips the paywall for
+                        // already-subscribed users, so we check RC directly.
+                        bool hasActiveSubscription = false;
+                        try {
+                          final customerInfo =
+                              await Purchases.getCustomerInfo();
+                          hasActiveSubscription =
+                              customerInfo.entitlements.active.isNotEmpty;
+                          debugPrint(
+                              '[TrialReminder] hasActiveSubscription=$hasActiveSubscription');
+                        } catch (e) {
+                          debugPrint(
+                              '[TrialReminder] Error checking subscription state: $e');
+                        }
+
+                        if (!hasActiveSubscription) return;
+
+                        if (userId != null) {
+                          // Authenticated user purchased - sync and navigate
+                          debugPrint(
+                              '[TrialReminder] Purchase completed - syncing subscription');
+
+                          try {
+                            await Future.delayed(
+                                const Duration(milliseconds: 500));
+                            await SubscriptionSyncService()
+                                .syncSubscriptionToSupabase();
+                            await OnboardingStateService()
+                                .markPaymentComplete(userId);
+                          } catch (e) {
                             debugPrint(
-                                '[TrialReminder] Purchase completed - syncing subscription');
+                                '[TrialReminder] Error syncing subscription: $e');
+                          }
 
-                            try {
-                              await Future.delayed(
-                                  const Duration(milliseconds: 500));
-                              await SubscriptionSyncService()
-                                  .syncSubscriptionToSupabase();
-                              await OnboardingStateService()
-                                  .markPaymentComplete(userId);
-                            } catch (e) {
-                              debugPrint(
-                                  '[TrialReminder] Error syncing subscription: $e');
-                            }
+                          if (mounted) {
+                            // Check if user has completed onboarding before
+                            final userResponse = await Supabase.instance.client
+                                .from('users')
+                                .select('onboarding_state')
+                                .eq('id', userId)
+                                .maybeSingle();
 
-                            if (mounted) {
-                              // Check if user has completed onboarding before
-                              final userResponse =
-                                  await Supabase.instance.client
-                                      .from('users')
-                                      .select('onboarding_state')
-                                      .eq('id', userId)
-                                      .maybeSingle();
+                            final hasCompletedOnboarding =
+                                userResponse?['onboarding_state'] == 'completed';
 
-                              final hasCompletedOnboarding =
-                                  userResponse?['onboarding_state'] ==
-                                      'completed';
+                            debugPrint(
+                                '[TrialReminder] Has completed onboarding: $hasCompletedOnboarding');
 
-                              debugPrint(
-                                  '[TrialReminder] Has completed onboarding: $hasCompletedOnboarding');
-
-                              if (hasCompletedOnboarding) {
-                                // Returning user - go directly to home
-                                Navigator.of(context).pushAndRemoveUntil(
-                                  MaterialPageRoute(
-                                    builder: (context) => const MainNavigation(
-                                      key: ValueKey('fresh-main-nav'),
-                                    ),
+                            if (hasCompletedOnboarding) {
+                              // Returning user - go directly to home
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (context) => const MainNavigation(
+                                    key: ValueKey('fresh-main-nav'),
                                   ),
-                                  (route) => false,
-                                );
-                              } else {
-                                // Authenticated new user - show welcome page
-                                Navigator.of(context).pushReplacement(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const WelcomeFreeAnalysisPage(),
-                                  ),
-                                );
-                              }
-                            }
-                          } else {
-                            // Unauthenticated user purchased - create account
-                            if (mounted) {
+                                ),
+                                (route) => false,
+                              );
+                            } else {
+                              // Authenticated new user - show welcome page
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                      const SaveProgressPage(),
+                                      const WelcomeFreeAnalysisPage(),
                                 ),
                               );
                             }
+                          }
+                        } else {
+                          // Unauthenticated user purchased - create account
+                          if (mounted) {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (context) => const SaveProgressPage(),
+                              ),
+                            );
                           }
                         }
                         // If user dismissed without purchasing, stay on this page.
