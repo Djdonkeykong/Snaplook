@@ -209,9 +209,11 @@ class _WelcomeFreeAnalysisPageState
       debugPrint(
           '[WelcomePage] Skipping device locale setup (user_profiles table not configured)');
 
-      // Initialize credits (auto-initialized when first accessed)
+      // Initialize credits - clear cache first so we always get fresh data
+      // from Supabase after subscription sync (avoids showing stale 0 credits).
       print('[WelcomePage] Initializing credits...');
       final creditService = ref.read(creditServiceProvider);
+      creditService.clearCache();
       await creditService.getCreditBalance();
       print('[WelcomePage] Credits initialized');
 

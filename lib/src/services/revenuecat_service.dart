@@ -81,10 +81,21 @@ class RevenueCatService {
 
     try {
       await Purchases.logIn(userId);
-      _customerInfo = await Purchases.getCustomerInfo();
+
+      // Restore purchases after logIn so that any receipts from anonymous
+      // purchases (e.g. user bought trial before creating account) are
+      // transferred to the identified user. Without this, the new RC user
+      // has no entitlements and syncSubscriptionToSupabase sets status 'free'.
+      try {
+        _customerInfo = await Purchases.restorePurchases();
+      } catch (_) {
+        _customerInfo = await Purchases.getCustomerInfo();
+      }
 
       if (kDebugMode) {
         debugPrint('[RevenueCat] User identified: $userId');
+        debugPrint(
+            '[RevenueCat] Active entitlements: ${_customerInfo?.entitlements.active.keys.toList()}');
       }
     } catch (e) {
       if (kDebugMode) {
