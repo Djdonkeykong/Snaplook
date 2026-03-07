@@ -111,12 +111,17 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
       final supabase = Supabase.instance.client;
       final userResponse = await supabase
           .from('users')
-          .select('onboarding_state')
+          .select('onboarding_state, paid_credits_remaining')
           .eq('id', userId)
           .maybeSingle();
 
       final hasCompletedOnboarding = userResponse != null &&
           userResponse['onboarding_state'] == 'completed';
+      final paidCreditsRaw = userResponse?['paid_credits_remaining'];
+      final paidCredits = paidCreditsRaw is int
+          ? paidCreditsRaw
+          : (paidCreditsRaw as num?)?.toInt() ?? 0;
+      final hasCredits = paidCredits > 0;
 
       debugPrint(
           '[SaveProgress] Has completed onboarding: $hasCompletedOnboarding');
@@ -144,7 +149,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
             if (retryCount >= maxRetries) {
               debugPrint(
-                  '[SaveProgress] Max retries reached, defaulting to paywall');
+                  '[SaveProgress] Max retries reached, defaulting to no active entitlement');
               break;
             }
 
@@ -158,18 +163,23 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
         debugPrint(
             '[SaveProgress] Has active subscription: $hasActiveSubscription');
+        debugPrint(
+            '[SaveProgress] User has credits: $hasCredits ($paidCredits remaining)');
 
-        if (hasActiveSubscription) {
-          // Completed onboarding + subscription → Home
-          debugPrint('[SaveProgress] User has subscription - going to home');
+        if (hasActiveSubscription || hasCredits) {
+          // Completed onboarding + access (subscription OR credits) -> Home
+          debugPrint(
+              '[SaveProgress] User has access - going to home (subscription: $hasActiveSubscription, credits: $hasCredits)');
 
-          // Sync subscription to Supabase
-          try {
-            await SubscriptionSyncService()
-                .syncSubscriptionToSupabase()
-                .timeout(const Duration(seconds: 10));
-          } catch (e) {
-            debugPrint('[SaveProgress] Error syncing subscription: $e');
+          // Sync subscription to Supabase when RevenueCat entitlement is active.
+          if (hasActiveSubscription) {
+            try {
+              await SubscriptionSyncService()
+                  .syncSubscriptionToSupabase()
+                  .timeout(const Duration(seconds: 10));
+            } catch (e) {
+              debugPrint('[SaveProgress] Error syncing subscription: $e');
+            }
           }
 
           if (mounted) {
@@ -184,8 +194,9 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
             );
           }
         } else {
-          // Completed onboarding + NO subscription → Present paywall
-          debugPrint('[SaveProgress] User has no subscription - presenting paywall');
+          // Completed onboarding + no entitlement and no credits -> paywall
+          debugPrint(
+              '[SaveProgress] User has no subscription and no credits - presenting paywall');
           if (mounted) {
             final didPurchase = await SuperwallService().presentPaywall(
               placement: 'onboarding_paywall',

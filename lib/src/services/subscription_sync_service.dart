@@ -16,6 +16,11 @@ class SubscriptionSyncService {
   final _superwall = SuperwallService();
   final _revenueCat = RevenueCatService();
   static const MethodChannel _authChannel = MethodChannel('snaplook/auth');
+  static const Map<String, int> _creditPackProducts = {
+    'com.snaplook.credits20': 20,
+    'com.snaplook.credits50': 50,
+    'com.snaplook.credits100': 100,
+  };
 
   /// Sync subscription data from RevenueCat to Supabase.
   /// Call this after:
@@ -72,6 +77,12 @@ class SubscriptionSyncService {
       debugPrint('  - isTrial: $isTrial');
       debugPrint('  - productId: $productId');
       debugPrint('  - expiresAt: $expirationDateIso');
+
+      await _syncCreditPackPurchases(
+        userId: user.id,
+        revenueCatUserId: revenueCatUserId,
+        customerInfo: customerInfo,
+      );
 
       // Check if user has credits (users with credits should not have their status overwritten to 'free')
       final userResponse = await _supabase
@@ -149,6 +160,63 @@ class SubscriptionSyncService {
     } catch (e, stackTrace) {
       debugPrint('[SubscriptionSync] Error syncing subscription: $e');
       debugPrint('[SubscriptionSync] Stack trace: $stackTrace');
+    }
+  }
+
+  int? _creditsForProduct(String productId) {
+    final normalized = productId.toLowerCase();
+    for (final entry in _creditPackProducts.entries) {
+      final sku = entry.key.toLowerCase();
+      if (normalized == sku || normalized.startsWith('$sku:')) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _syncCreditPackPurchases({
+    required String userId,
+    required String revenueCatUserId,
+    required CustomerInfo customerInfo,
+  }) async {
+    final transactions = customerInfo.nonSubscriptionTransactions;
+    if (transactions.isEmpty) return;
+
+    for (final transaction in transactions) {
+      final productId = transaction.productIdentifier;
+      final credits = _creditsForProduct(productId);
+      if (credits == null) continue;
+
+      final purchaseDateIso =
+          DateTime.tryParse(transaction.purchaseDate)?.toIso8601String() ??
+              DateTime.now().toIso8601String();
+      final fallbackTransactionId =
+          '$revenueCatUserId:$productId:${transaction.purchaseDate}';
+      final transactionId = transaction.transactionIdentifier.isNotEmpty
+          ? transaction.transactionIdentifier
+          : fallbackTransactionId;
+
+      try {
+        final response = await _supabase.rpc(
+          'apply_credit_purchase',
+          params: {
+            'p_user_id': userId,
+            'p_product_id': productId,
+            'p_transaction_id': transactionId,
+            'p_purchased_at': purchaseDateIso,
+            'p_source': 'client_sync',
+          },
+        );
+        debugPrint(
+          '[SubscriptionSync] Synced credit pack purchase: '
+          'product=$productId credits=$credits tx=$transactionId response=$response',
+        );
+      } catch (e) {
+        debugPrint(
+          '[SubscriptionSync] Failed syncing credit pack purchase '
+          '(product=$productId tx=$transactionId): $e',
+        );
+      }
     }
   }
 

@@ -600,7 +600,8 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   void _showTutorialOptionsSheet() {
-    var isTutorialEnabled = _isTutorialEnabled;
+    final isIOS = Platform.isIOS;
+    var isTutorialEnabled = isIOS ? _isTutorialEnabled : false;
     final options = [
       _TutorialOptionData(
         label: 'Instagram',
@@ -762,20 +763,21 @@ class _HomePageState extends ConsumerState<HomePage>
                               ),
                             ),
                           ),
-                          _TutorialToggleCard(
-                            value: isTutorialEnabled,
-                            onChanged: (enabled) {
-                              HapticFeedback.selectionClick();
-                              sheetSetState(() {
-                                isTutorialEnabled = enabled;
-                              });
-                              if (mounted) {
-                                setState(() {
-                                  _isTutorialEnabled = enabled;
+                          if (isIOS)
+                            _TutorialToggleCard(
+                              value: isTutorialEnabled,
+                              onChanged: (enabled) {
+                                HapticFeedback.selectionClick();
+                                sheetSetState(() {
+                                  isTutorialEnabled = enabled;
                                 });
-                              }
-                            },
-                          ),
+                                if (mounted) {
+                                  setState(() {
+                                    _isTutorialEnabled = enabled;
+                                  });
+                                }
+                              },
+                            ),
                         ],
                       ),
                       Positioned(
@@ -1751,17 +1753,27 @@ class _InfoBottomSheetContent extends ConsumerWidget {
               padding: EdgeInsets.all(spacing.l),
               child: creditBalance.when(
                 data: (balance) {
+                  final hasPurchasedCreditsOnly = !balance.hasActiveSubscription &&
+                      balance.availableCredits > 0;
                   final membershipType = balance.hasActiveSubscription
                       ? (balance.isTrialSubscription
                           ? 'Premium (Trial)'
                           : 'Premium')
-                      : 'Free';
-                  final maxCredits = SubscriptionPlan.monthly.creditsPerMonth;
+                      : (hasPurchasedCreditsOnly ? 'Credit Packs' : 'Free');
+                  final monthlyAllowance =
+                      SubscriptionPlan.monthly.creditsPerMonth;
                   final creditsRemaining =
-                      balance.availableCredits.clamp(0, maxCredits).toInt();
-                  final creditsPercentage = maxCredits > 0
-                      ? (creditsRemaining / maxCredits).clamp(0.0, 1.0)
-                      : 0.0;
+                      balance.availableCredits.clamp(0, 999999).toInt();
+                  final creditsPercentage =
+                      balance.hasActiveSubscription && monthlyAllowance > 0
+                          ? (creditsRemaining / monthlyAllowance)
+                              .clamp(0.0, 1.0)
+                          : 1.0;
+                  final resetLabel = balance.hasActiveSubscription
+                      ? (creditsRemaining > monthlyAllowance
+                          ? 'Includes extra purchased credits'
+                          : 'Resets monthly on the 1st')
+                      : 'Purchased credits do not expire';
 
                   return Column(
                     mainAxisSize: MainAxisSize.min,
@@ -1808,15 +1820,16 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               letterSpacing: -2,
                             ),
                           ),
-                          Text(
-                            ' / $maxCredits',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w500,
-                              color: colorScheme.onSurfaceVariant,
-                              fontFamily: 'PlusJakartaSans',
+                          if (balance.hasActiveSubscription)
+                            Text(
+                              ' / $monthlyAllowance',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                                color: colorScheme.onSurfaceVariant,
+                                fontFamily: 'PlusJakartaSans',
+                              ),
                             ),
-                          ),
                         ],
                       ),
                       SizedBox(height: spacing.xs),
@@ -1844,7 +1857,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                       ),
                       SizedBox(height: spacing.m),
                       Text(
-                        'Resets monthly on the 1st',
+                        resetLabel,
                         style: TextStyle(
                           fontSize: 12,
                           color: colorScheme.onSurfaceVariant,

@@ -20,6 +20,8 @@ class SuperwallService {
   bool _configRefreshed = false;
   bool _lastPresentationTimedOut = false;
   bool _isPresentingPaywall = false;
+  String? _lastPurchasedProductId;
+  DateTime? _lastPurchaseObservedAt;
   Completer<void>? _pendingPlacementCompleter;
   final _debugLog = DebugLogService();
   late final _superwallDelegate = _SuperwallDebugDelegate(
@@ -247,6 +249,8 @@ class SuperwallService {
     Map<String, Object>? params,
   }) async {
     _lastPresentationTimedOut = false;
+    _lastPurchasedProductId = null;
+    _lastPurchaseObservedAt = null;
     if (_isPresentingPaywall) {
       _log(
         'presentPaywall ignored because another presentation is already in progress',
@@ -329,6 +333,8 @@ class SuperwallService {
 
       final completer = Completer<void>();
       _pendingPlacementCompleter = completer;
+      var didPurchaseThroughPaywall = false;
+      String? purchasedProductId;
 
       void resolve(String source) {
         if (!completer.isCompleted) {
@@ -343,6 +349,17 @@ class SuperwallService {
         })
         ..onDismiss((info, result) {
           _log('Paywall dismissed with result: ${result.runtimeType}');
+          if (result is sw.PurchasedPaywallResult) {
+            didPurchaseThroughPaywall = true;
+            purchasedProductId = result.productId;
+            _lastPurchasedProductId = result.productId;
+            _lastPurchaseObservedAt = DateTime.now();
+            _log('Paywall purchase detected: productId=${result.productId}');
+          } else if (result is sw.RestoredPaywallResult) {
+            didPurchaseThroughPaywall = true;
+            _lastPurchaseObservedAt = DateTime.now();
+            _log('Paywall restore detected');
+          }
           resolve('handler.onDismiss');
         })
         ..onSkip((reason) {
@@ -415,16 +432,18 @@ class SuperwallService {
         final customerInfo = await Purchases.getCustomerInfo();
         final hasActiveEntitlement =
             customerInfo.entitlements.active.isNotEmpty;
+        final didCompletePurchase =
+            didPurchaseThroughPaywall || hasActiveEntitlement;
         _log(
-          'Post-placement entitlement check: hasActiveEntitlement=$hasActiveEntitlement',
+          'Post-placement entitlement check: hasActiveEntitlement=$hasActiveEntitlement didPurchaseThroughPaywall=$didPurchaseThroughPaywall purchasedProductId=$purchasedProductId returning=$didCompletePurchase',
         );
-        return hasActiveEntitlement;
+        return didCompletePurchase;
       } catch (e) {
         _log(
           'Post-placement entitlement check failed: $e',
           level: DebugLogLevel.warning,
         );
-        return false;
+        return didPurchaseThroughPaywall;
       }
     } catch (e, stackTrace) {
       _log(
@@ -439,6 +458,8 @@ class SuperwallService {
   }
 
   bool get lastPresentationTimedOut => _lastPresentationTimedOut;
+  String? get lastPurchasedProductId => _lastPurchasedProductId;
+  DateTime? get lastPurchaseObservedAt => _lastPurchaseObservedAt;
 
   /// Current cached subscription status.
   SubscriptionStatusSnapshot getSubscriptionSnapshot() {

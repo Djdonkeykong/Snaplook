@@ -320,6 +320,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
+  Future<void> _handleBuyCredits() async {
+    await ref.read(purchaseControllerProvider).showPaywall();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Listen to scroll to top trigger for profile tab (index 2)
@@ -450,6 +454,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 title: 'Manage Subscription',
                 onTap: _handleManageSubscription,
               ),
+              if (theme.platform == TargetPlatform.iOS)
+                _SimpleSettingItem(
+                  title: 'Buy Credits',
+                  onTap: () {
+                    _handleBuyCredits();
+                  },
+                ),
 
               SizedBox(height: spacing.l),
 
