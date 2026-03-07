@@ -28,6 +28,7 @@ import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../services/pip_tutorial_service.dart';
 import '../../../../shared/services/review_prompt_logs_service.dart';
+import '../../../../services/notification_service.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 
@@ -112,6 +113,14 @@ class _HomePageState extends ConsumerState<HomePage>
       Future.delayed(const Duration(milliseconds: 1000), () {
         _checkPendingSharedImage();
       });
+
+      // Ask for notification permission from home instead of onboarding.
+      unawaited(
+        Future.delayed(const Duration(seconds: 2), () async {
+          if (!mounted) return;
+          await NotificationService().initialize();
+        }),
+      );
 
       unawaited(_maybeRequestReviewFromExistingFirstAnalysis());
     });

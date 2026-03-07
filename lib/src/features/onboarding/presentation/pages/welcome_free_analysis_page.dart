@@ -12,14 +12,12 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../../paywall/providers/credit_provider.dart';
 import '../../../user/repositories/user_profile_repository.dart';
-import 'notification_permission_page.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
 import '../../../../shared/services/image_preloader.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../../domain/providers/gender_provider.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
-import 'discovery_source_page.dart';
 
 class WelcomeFreeAnalysisPage extends ConsumerStatefulWidget {
   const WelcomeFreeAnalysisPage({super.key});

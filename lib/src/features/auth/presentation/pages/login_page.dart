@@ -14,9 +14,7 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
-import '../../../onboarding/presentation/pages/discovery_source_page.dart';
 import '../../../onboarding/presentation/pages/tutorial_image_analysis_page.dart';
-import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../onboarding/presentation/pages/trial_intro_page.dart';
 import '../../../onboarding/presentation/pages/save_progress_page.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
@@ -445,13 +443,13 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   switch (checkpoint) {
                                     case 'gender':
                                       debugPrint(
-                                          '[LoginPage] Resuming from legacy gender checkpoint to discovery source');
-                                      nextPage = const DiscoverySourcePage();
+                                          '[LoginPage] Resuming from legacy gender checkpoint to save progress');
+                                      nextPage = const SaveProgressPage();
                                       break;
                                     case 'discovery':
                                       debugPrint(
-                                          '[LoginPage] Resuming at discovery source');
-                                      nextPage = const DiscoverySourcePage();
+                                          '[LoginPage] Resuming at save progress');
+                                      nextPage = const SaveProgressPage();
                                       break;
                                     case 'tutorial':
                                       debugPrint(
@@ -461,9 +459,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                       break;
                                     case 'notification':
                                       debugPrint(
-                                          '[LoginPage] Resuming at notification permission');
-                                      nextPage =
-                                          const NotificationPermissionPage();
+                                          '[LoginPage] Resuming at save progress');
+                                      nextPage = const SaveProgressPage();
                                       break;
                                     case 'trial':
                                       debugPrint(
@@ -706,13 +703,13 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 switch (checkpoint) {
                                   case 'gender':
                                     debugPrint(
-                                        '[LoginPage] Resuming from legacy gender checkpoint to discovery source');
-                                    nextPage = const DiscoverySourcePage();
+                                        '[LoginPage] Resuming from legacy gender checkpoint to save progress');
+                                    nextPage = const SaveProgressPage();
                                     break;
                                   case 'discovery':
                                     debugPrint(
-                                        '[LoginPage] Resuming at discovery source');
-                                    nextPage = const DiscoverySourcePage();
+                                        '[LoginPage] Resuming at save progress');
+                                    nextPage = const SaveProgressPage();
                                     break;
                                   case 'tutorial':
                                     debugPrint(
@@ -722,9 +719,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     break;
                                   case 'notification':
                                     debugPrint(
-                                        '[LoginPage] Resuming at notification permission');
-                                    nextPage =
-                                        const NotificationPermissionPage();
+                                        '[LoginPage] Resuming at save progress');
+                                    nextPage = const SaveProgressPage();
                                     break;
                                   case 'trial':
                                     debugPrint(

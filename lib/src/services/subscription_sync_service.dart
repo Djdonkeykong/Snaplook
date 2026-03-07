@@ -46,6 +46,13 @@ class SubscriptionSyncService {
         return;
       }
 
+      if (customerInfo == null) {
+        debugPrint(
+            '[SubscriptionSync] Customer info was null after fetch - skipping sync');
+        await _syncShareExtensionAuthSnapshot(userId: user.id);
+        return;
+      }
+
       // Parse RevenueCat subscription data
       final activeEntitlements = customerInfo.entitlements.active.values;
       final entitlement =

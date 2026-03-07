@@ -9,6 +9,7 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/analytics_service.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'awesome_intro_page.dart';
+import 'save_progress_page.dart';
 import '../widgets/progress_indicator.dart';
 
 class HowItWorksPage extends StatefulWidget {
@@ -203,9 +204,15 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
               HapticFeedback.mediumImpact();
               // Ensure the next page's image decode finishes before transitioning.
               await (_shareImagePrecache ?? Future.value());
+
+              final platform = Theme.of(context).platform;
+              final nextPage = platform == TargetPlatform.android
+                  ? const SaveProgressPage()
+                  : const AwesomeIntroPage();
+
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const AwesomeIntroPage(),
+                  builder: (context) => nextPage,
                 ),
               );
             },
