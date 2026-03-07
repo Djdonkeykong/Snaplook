@@ -13,6 +13,7 @@ class SuperwallService {
   factory SuperwallService() => _instance;
 
   static const String defaultPlacement = 'onboarding_paywall';
+  static const String creditsPlacement = 'credits_paywall';
 
   sw.SubscriptionStatus _latestStatus = sw.SubscriptionStatus.unknown;
   StreamSubscription<sw.SubscriptionStatus>? _statusSub;

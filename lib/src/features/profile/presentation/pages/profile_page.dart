@@ -321,7 +321,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _handleBuyCredits() async {
-    await ref.read(purchaseControllerProvider).showPaywall();
+    await ref.read(purchaseControllerProvider).showPaywall(
+          placement: SuperwallService.creditsPlacement,
+        );
   }
 
   @override
