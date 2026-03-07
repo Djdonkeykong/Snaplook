@@ -8,6 +8,7 @@ import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../paywall/providers/credit_provider.dart';
+import '../../../../services/superwall_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'edit_profile_page.dart';
 import 'appearance_preferences_page.dart';
