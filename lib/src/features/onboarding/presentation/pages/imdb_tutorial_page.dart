@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,16 +24,6 @@ const double _tapMoreBottomFraction = 0.16;
 const double _tapMoreLeftFraction = 0.72;
 const double _tapMoreWidthFraction = 0.3;
 const double _tapMoreHeightFraction = 0.15;
-
-// Android-only Step 2 (share) and Step 3 (Snaplook) tap areas
-const double _androidStep2BottomFraction = 0.01;
-const double _androidStep2LeftFraction = 0.0;
-const double _androidStep2WidthFraction = 0.25;
-const double _androidStep2HeightFraction = 0.12;
-const double _androidStep3BottomFraction = 0.02;
-const double _androidStep3LeftFraction = 0.12;
-const double _androidStep3WidthFraction = 0.36;
-const double _androidStep3HeightFraction = 0.12;
 
 // Step 4 (tapEdit) placements
 const double _tapEditBottomFraction = 0.82;
@@ -101,8 +90,6 @@ class ImdbTutorialPage extends ConsumerStatefulWidget {
 }
 
 class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
-  bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
-
   @override
   void initState() {
     super.initState();
@@ -121,14 +108,8 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
       case ImdbTutorialStep.step1:
         return "When you find a clothing item you love on IMDb, tap the share button.";
       case ImdbTutorialStep.tapShare:
-        if (_isAndroid) {
-          return "Now tap \"Share\" to open the sharing options.";
-        }
         return "Now tap the Share button to see additional sharing options.";
       case ImdbTutorialStep.tapMore:
-        if (_isAndroid) {
-          return "Tap Snaplook to share the image with our app.";
-        }
         return "This is a one-time setup to add Snaplook as a shortcut. Scroll to the right and tap 'More'.";
       case ImdbTutorialStep.tapEdit:
         return "Tap 'Edit'.";
@@ -144,32 +125,11 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
   }
 
   bool _isOneTimeSetupStep(ImdbTutorialStep step) {
-    if (_isAndroid) {
-      return false;
-    }
-
     return step == ImdbTutorialStep.tapMore ||
         step == ImdbTutorialStep.tapEdit ||
         step == ImdbTutorialStep.tapSnaplookShortcut ||
         step == ImdbTutorialStep.tapDone ||
         step == ImdbTutorialStep.tapDoneLast;
-  }
-
-  Future<void> _openAnalysisPage() async {
-    await precacheImage(
-      const AssetImage('assets/images/imdb-analysis.jpg'),
-      context,
-    );
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => TutorialImageAnalysisPage(
-          returnToOnboarding: widget.returnToOnboarding,
-          imagePath: 'assets/images/imdb-analysis.jpg',
-          scenario: 'IMDb',
-        ),
-      ),
-    );
   }
 
   void _onInstructionComplete() {
@@ -197,19 +157,13 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
-    final step2PopupAsset = _isAndroid
-        ? 'assets/images/instagram_step2_popup_android.png'
-        : 'assets/images/imdb-step-2.png';
-    final step3PopupAsset = _isAndroid
-        ? 'assets/images/instagram_step3_popup_android.png'
-        : 'assets/images/imdb-step-3.png';
-    final useSecondBase = currentStep == ImdbTutorialStep.tapEdit ||
-        currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
-        currentStep == ImdbTutorialStep.tapDone ||
-        currentStep == ImdbTutorialStep.tapDoneLast;
-    final baseImageAsset = useSecondBase
-        ? 'assets/images/imdb-step-2.png'
-        : 'assets/images/imdb-1.png';
+    final useSecondBase =
+        currentStep == ImdbTutorialStep.tapEdit ||
+            currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
+            currentStep == ImdbTutorialStep.tapDone ||
+            currentStep == ImdbTutorialStep.tapDoneLast;
+    final baseImageAsset =
+        useSecondBase ? 'assets/images/imdb-step-2.png' : 'assets/images/imdb-1.png';
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -228,12 +182,11 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
           if (hasUserTapped &&
               (currentStep == ImdbTutorialStep.tapShare ||
                   currentStep == ImdbTutorialStep.tapMore ||
-                  (!_isAndroid &&
-                      (currentStep == ImdbTutorialStep.tapEdit ||
-                          currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
-                          currentStep == ImdbTutorialStep.tapDone ||
-                          currentStep == ImdbTutorialStep.tapDoneLast ||
-                          currentStep == ImdbTutorialStep.step2))))
+                  currentStep == ImdbTutorialStep.tapEdit ||
+                  currentStep == ImdbTutorialStep.tapSnaplookShortcut ||
+                  currentStep == ImdbTutorialStep.tapDone ||
+                  currentStep == ImdbTutorialStep.tapDoneLast ||
+                  currentStep == ImdbTutorialStep.step2))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -247,7 +200,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                step2PopupAsset,
+                'assets/images/imdb-step-2.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
@@ -260,16 +213,14 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                step3PopupAsset,
+                'assets/images/imdb-step-3.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
             ),
 
           // Step 4 overlay - after tapping More
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == ImdbTutorialStep.tapEdit)
+          if (hasUserTapped && currentStep == ImdbTutorialStep.tapEdit)
             Positioned(
               bottom: 0,
               left: 0,
@@ -282,8 +233,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Step 5 overlay - after tapping Edit
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentStep == ImdbTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: 0,
@@ -297,9 +247,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Step 6 overlay - after tapping Snaplook shortcut
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == ImdbTutorialStep.tapDone)
+          if (hasUserTapped && currentStep == ImdbTutorialStep.tapDone)
             Positioned(
               bottom: 0,
               left: 0,
@@ -312,9 +260,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Step 7 overlay - after tapping first Done (shows second Done button)
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == ImdbTutorialStep.tapDoneLast)
+          if (hasUserTapped && currentStep == ImdbTutorialStep.tapDoneLast)
             Positioned(
               bottom: 0,
               left: 0,
@@ -327,9 +273,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Step 8 overlay - after tapping second Done (final step)
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == ImdbTutorialStep.step2)
+          if (hasUserTapped && currentStep == ImdbTutorialStep.step2)
             Positioned(
               bottom: 0,
               left: 0,
@@ -372,28 +316,16 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
               currentPhase == ImdbTutorialPhase.waitingForAction &&
               currentStep == ImdbTutorialStep.tapShare)
             Positioned(
-              bottom: screenHeight *
-                  (_isAndroid
-                      ? _androidStep2BottomFraction
-                      : _tapShareBottomFraction),
-              left: screenWidth *
-                  (_isAndroid
-                      ? _androidStep2LeftFraction
-                      : _tapShareLeftFraction),
+              bottom: screenHeight * _tapShareBottomFraction,
+              left: screenWidth * _tapShareLeftFraction,
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
                   _onActionComplete(ImdbTutorialStep.tapMore);
                 },
                 child: Container(
-                  width: screenWidth *
-                      (_isAndroid
-                          ? _androidStep2WidthFraction
-                          : _tapShareWidthFraction),
-                  height: screenHeight *
-                      (_isAndroid
-                          ? _androidStep2HeightFraction
-                          : _tapShareHeightFraction),
+                  width: screenWidth * _tapShareWidthFraction,
+                  height: screenHeight * _tapShareHeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets
                         ? Colors.red.withValues(alpha: 0.25)
@@ -411,32 +343,16 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
               currentPhase == ImdbTutorialPhase.waitingForAction &&
               currentStep == ImdbTutorialStep.tapMore)
             Positioned(
-              bottom: screenHeight *
-                  (_isAndroid
-                      ? _androidStep3BottomFraction
-                      : _tapMoreBottomFraction),
-              left: screenWidth *
-                  (_isAndroid
-                      ? _androidStep3LeftFraction
-                      : _tapMoreLeftFraction),
+              bottom: screenHeight * _tapMoreBottomFraction,
+              left: screenWidth * _tapMoreLeftFraction,
               child: GestureDetector(
-                onTap: () async {
+                onTap: () {
                   HapticFeedback.mediumImpact();
-                  if (_isAndroid) {
-                    await _openAnalysisPage();
-                    return;
-                  }
                   _onActionComplete(ImdbTutorialStep.tapEdit);
                 },
                 child: Container(
-                  width: screenWidth *
-                      (_isAndroid
-                          ? _androidStep3WidthFraction
-                          : _tapMoreWidthFraction),
-                  height: screenHeight *
-                      (_isAndroid
-                          ? _androidStep3HeightFraction
-                          : _tapMoreHeightFraction),
+                  width: screenWidth * _tapMoreWidthFraction,
+                  height: screenHeight * _tapMoreHeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets
                         ? Colors.red.withValues(alpha: 0.25)
@@ -450,8 +366,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Tap area for tapEdit - Edit button
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == ImdbTutorialPhase.waitingForAction &&
               currentStep == ImdbTutorialStep.tapEdit)
             Positioned(
@@ -478,8 +393,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Tap area for tapSnaplookShortcut - Snaplook icon
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == ImdbTutorialPhase.waitingForAction &&
               currentStep == ImdbTutorialStep.tapSnaplookShortcut)
             Positioned(
@@ -506,8 +420,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Tap area for tapDone - Done button
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == ImdbTutorialPhase.waitingForAction &&
               currentStep == ImdbTutorialStep.tapDone)
             Positioned(
@@ -535,8 +448,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Tap area for tapDoneLast - second Done button
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == ImdbTutorialPhase.waitingForAction &&
               currentStep == ImdbTutorialStep.tapDoneLast)
             Positioned(
@@ -564,8 +476,7 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
             ),
 
           // Tap area for step2 - final Snaplook selection
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == ImdbTutorialPhase.waitingForAction &&
               currentStep == ImdbTutorialStep.step2)
             Positioned(
@@ -574,7 +485,20 @@ class _ImdbTutorialPageState extends ConsumerState<ImdbTutorialPage> {
               child: GestureDetector(
                 onTap: () async {
                   HapticFeedback.mediumImpact();
-                  await _openAnalysisPage();
+                  await precacheImage(
+                    const AssetImage('assets/images/imdb-analysis.jpg'),
+                    context,
+                  );
+                  if (!mounted) return;
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => TutorialImageAnalysisPage(
+                        returnToOnboarding: widget.returnToOnboarding,
+                        imagePath: 'assets/images/imdb-analysis.jpg',
+                        scenario: 'IMDb',
+                      ),
+                    ),
+                  );
                 },
                 child: Container(
                   width: screenWidth * _finalSelectWidthFraction,

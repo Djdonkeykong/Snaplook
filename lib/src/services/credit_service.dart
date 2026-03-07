@@ -214,29 +214,6 @@ class CreditService {
     }
   }
 
-  /// Add credits from a consumable pack purchase.
-  /// Calls the Supabase RPC to atomically add credits, then clears cache.
-  Future<void> addPurchasedCredits(int amount) async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) {
-      debugPrint('[CreditService] addPurchasedCredits: no authenticated user');
-      return;
-    }
-
-    try {
-      await Supabase.instance.client.rpc('add_purchased_credits', params: {
-        'p_user_id': userId,
-        'p_amount': amount,
-      });
-
-      _cachedBalance = null;
-      debugPrint('[CreditService] Added $amount purchased credits, cache cleared');
-    } catch (e) {
-      debugPrint('[CreditService] Error adding purchased credits: $e');
-      rethrow;
-    }
-  }
-
   /// Sync credits with subscription status (call after purchase/restore)
   Future<CreditBalance> syncWithSubscription() async {
     try {

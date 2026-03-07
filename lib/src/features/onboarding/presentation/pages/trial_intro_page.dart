@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +12,6 @@ import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_reminder_page.dart';
 import 'welcome_free_analysis_page.dart';
-import 'save_progress_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -87,83 +84,58 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         // If not eligible, present paywall directly
         if (!isEligible && mounted) {
           final userId = Supabase.instance.client.auth.currentUser?.id;
-
           final didPurchase = await SuperwallService().presentPaywall(
             placement: 'onboarding_paywall',
           );
 
           if (!mounted) return;
 
-          // Prefer Superwall result, then retry RevenueCat a few times
-          // because customer info can lag briefly right after purchase.
-          var hasActiveSubscription = didPurchase;
-          if (!hasActiveSubscription) {
-            hasActiveSubscription = await RevenueCatService()
-                .waitForActiveAccess(timeout: const Duration(seconds: 10));
-          }
-          debugPrint('[TrialIntro] hasActiveSubscription=$hasActiveSubscription');
+          if (didPurchase && userId != null) {
+            // User purchased - sync subscription and navigate
+            debugPrint('[TrialIntro] Purchase completed - syncing subscription');
 
-          if (hasActiveSubscription) {
-            if (userId != null) {
-              // Authenticated user purchased - sync subscription and navigate
-              debugPrint(
-                  '[TrialIntro] Purchase completed - syncing subscription');
+            try {
+              await Future.delayed(const Duration(milliseconds: 500));
+              await SubscriptionSyncService().syncSubscriptionToSupabase();
+              await OnboardingStateService().markPaymentComplete(userId);
+            } catch (e) {
+              debugPrint('[TrialIntro] Error syncing subscription: $e');
+            }
 
-              try {
-                await Future.delayed(const Duration(milliseconds: 500));
-                await SubscriptionSyncService().syncSubscriptionToSupabase(
-                  attemptRestoreOnNoEntitlement: true,
+            if (mounted) {
+              // Check if user has completed onboarding before
+              final userResponse = await Supabase.instance.client
+                  .from('users')
+                  .select('onboarding_state')
+                  .eq('id', userId)
+                  .maybeSingle();
+
+              final hasCompletedOnboarding =
+                  userResponse?['onboarding_state'] == 'completed';
+
+              debugPrint('[TrialIntro] Has completed onboarding: $hasCompletedOnboarding');
+
+              if (hasCompletedOnboarding) {
+                // Returning user - go directly to home
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(
+                      key: ValueKey('fresh-main-nav'),
+                    ),
+                  ),
+                  (route) => false,
                 );
-                await OnboardingStateService().markPaymentComplete(userId);
-              } catch (e) {
-                debugPrint('[TrialIntro] Error syncing subscription: $e');
-              }
-
-              if (mounted) {
-                // Check if user has completed onboarding before
-                final userResponse = await Supabase.instance.client
-                    .from('users')
-                    .select('onboarding_state')
-                    .eq('id', userId)
-                    .maybeSingle();
-
-                final hasCompletedOnboarding =
-                    userResponse?['onboarding_state'] == 'completed';
-
-                debugPrint(
-                    '[TrialIntro] Has completed onboarding: $hasCompletedOnboarding');
-
-                if (hasCompletedOnboarding) {
-                  // Returning user - go directly to home
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (context) => const MainNavigation(
-                        key: ValueKey('fresh-main-nav'),
-                      ),
-                    ),
-                    (route) => false,
-                  );
-                } else {
-                  // Authenticated new user - show welcome page first
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => const WelcomeFreeAnalysisPage(),
-                    ),
-                  );
-                }
-              }
-            } else {
-              // Unauthenticated user purchased - create account before continuing
-              if (mounted) {
+              } else {
+                // New user - show welcome page first
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (context) => const SaveProgressPage(),
+                    builder: (context) => const WelcomeFreeAnalysisPage(),
                   ),
                 );
               }
             }
           } else {
-            // User dismissed paywall without purchasing - show trial page again
+            // User dismissed paywall - show trial eligibility again
             if (mounted) {
               setState(() {
                 _isEligibleForTrial = true;
@@ -219,9 +191,9 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
           iconColor: colorScheme.onSurface,
         ),
         centerTitle: true,
-        title: OnboardingProgressIndicator(
-          currentStep: Platform.isAndroid ? 3 : 4,
-          totalSteps: Platform.isAndroid ? 4 : 5,
+        title: const OnboardingProgressIndicator(
+          currentStep: 7,
+          totalSteps: 10,
         ),
       ),
       body: Padding(

@@ -192,17 +192,12 @@ class SuperwallService {
 
     try {
       final customerInfo = await Purchases.getCustomerInfo();
-      final hasActiveEntitlement = customerInfo.entitlements.active.isNotEmpty ||
-          customerInfo.activeSubscriptions.isNotEmpty;
+      final hasActiveEntitlement = customerInfo.entitlements.active.isNotEmpty;
 
       if (hasActiveEntitlement) {
         // User has active subscription - tell Superwall
         // Convert RevenueCat entitlements to Superwall entitlements
-        final entitlementIds = <String>{
-          ...customerInfo.entitlements.active.keys,
-          ...customerInfo.activeSubscriptions,
-        };
-        final entitlements = entitlementIds.map((id) {
+        final entitlements = customerInfo.entitlements.active.keys.map((id) {
           return sw.Entitlement(id: id);
         }).toSet();
 
@@ -211,7 +206,7 @@ class SuperwallService {
         );
 
         _log(
-          'Synced subscription status: active with ${entitlements.length} identifiers',
+          'Synced subscription status: active with ${entitlements.length} entitlements',
         );
       } else {
         // User has no active subscription
@@ -418,10 +413,10 @@ class SuperwallService {
       // get treated as purchases.
       try {
         final customerInfo = await Purchases.getCustomerInfo();
-        final hasActiveEntitlement = customerInfo.entitlements.active.isNotEmpty ||
-            customerInfo.activeSubscriptions.isNotEmpty;
+        final hasActiveEntitlement =
+            customerInfo.entitlements.active.isNotEmpty;
         _log(
-          'Post-placement entitlement check: hasActiveEntitlement=$hasActiveEntitlement activeSubscriptions=${customerInfo.activeSubscriptions}',
+          'Post-placement entitlement check: hasActiveEntitlement=$hasActiveEntitlement',
         );
         return hasActiveEntitlement;
       } catch (e) {

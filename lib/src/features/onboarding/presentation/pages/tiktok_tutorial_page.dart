@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,16 +24,6 @@ const double _tapMoreBottomFraction = 0.16;
 const double _tapMoreLeftFraction = 0.72;
 const double _tapMoreWidthFraction = 0.3;
 const double _tapMoreHeightFraction = 0.15;
-
-// Android-only Step 2 (share) and Step 3 (Snaplook) tap areas
-const double _androidStep2BottomFraction = 0.01;
-const double _androidStep2LeftFraction = 0.0;
-const double _androidStep2WidthFraction = 0.25;
-const double _androidStep2HeightFraction = 0.12;
-const double _androidStep3BottomFraction = 0.02;
-const double _androidStep3LeftFraction = 0.12;
-const double _androidStep3WidthFraction = 0.36;
-const double _androidStep3HeightFraction = 0.12;
 
 // Step 4 (tapEdit) - centered bottom tap area
 const double _tapEditBottomFraction = 0.82;
@@ -101,8 +90,6 @@ class TikTokTutorialPage extends ConsumerStatefulWidget {
 }
 
 class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
-  bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
-
   @override
   void initState() {
     super.initState();
@@ -122,14 +109,8 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
       case TikTokTutorialStep.step1:
         return "When you find a clothing item you love on TikTok, tap the share button.";
       case TikTokTutorialStep.step2:
-        if (_isAndroid) {
-          return "Now tap \"Share\" to open the sharing options.";
-        }
         return "Now tap \"Share to\" to open the sharing options.";
       case TikTokTutorialStep.tapMore:
-        if (_isAndroid) {
-          return "Tap Snaplook to share the image with our app.";
-        }
         return "This is a one-time setup to add Snaplook as a shortcut. Scroll to the right and tap 'More'.";
       case TikTokTutorialStep.tapEdit:
         return "Tap 'Edit'.";
@@ -145,33 +126,11 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
   }
 
   bool _isOneTimeSetupStep(TikTokTutorialStep step) {
-    if (_isAndroid) {
-      return false;
-    }
-
     return step == TikTokTutorialStep.tapMore ||
         step == TikTokTutorialStep.tapEdit ||
         step == TikTokTutorialStep.tapSnaplookShortcut ||
         step == TikTokTutorialStep.tapDone ||
         step == TikTokTutorialStep.tapDoneLast;
-  }
-
-  Future<void> _openAnalysisPage() async {
-    await precacheImage(
-      const AssetImage('assets/images/tiktok_tutorial.jpg'),
-      context,
-    );
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => TutorialImageAnalysisPage(
-          imagePath: 'assets/images/tiktok_tutorial.jpg',
-          scenario: 'TikTok',
-          returnToOnboarding: widget.returnToOnboarding,
-        ),
-        allowSnapshotting: false,
-      ),
-    );
   }
 
   void _onInstructionComplete() {
@@ -202,12 +161,6 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
-    final step2PopupAsset = _isAndroid
-        ? 'assets/images/instagram_step2_popup_android.png'
-        : 'assets/images/tiktok_step2.png';
-    final step3PopupAsset = _isAndroid
-        ? 'assets/images/instagram_step3_popup_android.png'
-        : 'assets/images/tap-more.png';
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -226,13 +179,11 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
           if (hasUserTapped &&
               (currentStep == TikTokTutorialStep.step2 ||
                   currentStep == TikTokTutorialStep.tapMore ||
-                  (!_isAndroid &&
-                      (currentStep == TikTokTutorialStep.tapEdit ||
-                          currentStep ==
-                              TikTokTutorialStep.tapSnaplookShortcut ||
-                          currentStep == TikTokTutorialStep.tapDone ||
-                          currentStep == TikTokTutorialStep.tapDoneLast ||
-                          currentStep == TikTokTutorialStep.step3))))
+                  currentStep == TikTokTutorialStep.tapEdit ||
+                  currentStep == TikTokTutorialStep.tapSnaplookShortcut ||
+                  currentStep == TikTokTutorialStep.tapDone ||
+                  currentStep == TikTokTutorialStep.tapDoneLast ||
+                  currentStep == TikTokTutorialStep.step3))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.3),
@@ -246,7 +197,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                step2PopupAsset,
+                'assets/images/tiktok_step2.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
@@ -259,16 +210,14 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                step3PopupAsset,
+                'assets/images/tap-more.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
             ),
 
           // Tap Edit overlay
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == TikTokTutorialStep.tapEdit)
+          if (hasUserTapped && currentStep == TikTokTutorialStep.tapEdit)
             Positioned(
               bottom: 0,
               left: 0,
@@ -281,8 +230,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Tap Snaplook Shortcut overlay
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentStep == TikTokTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: 0,
@@ -296,9 +244,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Tap Done overlay
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == TikTokTutorialStep.tapDone)
+          if (hasUserTapped && currentStep == TikTokTutorialStep.tapDone)
             Positioned(
               bottom: 0,
               left: 0,
@@ -311,9 +257,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Step 7 popup overlay (after tapping first Done - shows second Done button)
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == TikTokTutorialStep.tapDoneLast)
+          if (hasUserTapped && currentStep == TikTokTutorialStep.tapDoneLast)
             Positioned(
               bottom: 0,
               left: 0,
@@ -326,9 +270,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Popup overlay for step 8 (final confirmation)
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == TikTokTutorialStep.step3)
+          if (hasUserTapped && currentStep == TikTokTutorialStep.step3)
             Positioned(
               bottom: 0,
               left: 0,
@@ -371,28 +313,16 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TikTokTutorialStep.step2)
             Positioned(
-              top: _isAndroid ? null : screenHeight * _step2TapAreaTopFraction,
-              bottom: _isAndroid
-                  ? screenHeight * _androidStep2BottomFraction
-                  : null,
-              left: screenWidth *
-                  (_isAndroid
-                      ? _androidStep2LeftFraction
-                      : _step2TapAreaLeftFraction),
+              top: screenHeight * _step2TapAreaTopFraction,
+              left: screenWidth * _step2TapAreaLeftFraction,
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
                   _onActionComplete(TikTokTutorialStep.tapMore);
                 },
                 child: Container(
-                  width: screenWidth *
-                      (_isAndroid
-                          ? _androidStep2WidthFraction
-                          : _step2TapAreaWidthFraction),
-                  height: screenHeight *
-                      (_isAndroid
-                          ? _androidStep2HeightFraction
-                          : _step2TapAreaHeightFraction),
+                  width: screenWidth * _step2TapAreaWidthFraction,
+                  height: screenHeight * _step2TapAreaHeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets
                         ? Colors.red.withValues(alpha: 0.25)
@@ -410,32 +340,16 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TikTokTutorialStep.tapMore)
             Positioned(
-              bottom: screenHeight *
-                  (_isAndroid
-                      ? _androidStep3BottomFraction
-                      : _tapMoreBottomFraction),
-              left: screenWidth *
-                  (_isAndroid
-                      ? _androidStep3LeftFraction
-                      : _tapMoreLeftFraction),
+              bottom: screenHeight * _tapMoreBottomFraction,
+              left: screenWidth * _tapMoreLeftFraction,
               child: GestureDetector(
-                onTap: () async {
+                onTap: () {
                   HapticFeedback.mediumImpact();
-                  if (_isAndroid) {
-                    await _openAnalysisPage();
-                    return;
-                  }
                   _onActionComplete(TikTokTutorialStep.tapEdit);
                 },
                 child: Container(
-                  width: screenWidth *
-                      (_isAndroid
-                          ? _androidStep3WidthFraction
-                          : _tapMoreWidthFraction),
-                  height: screenHeight *
-                      (_isAndroid
-                          ? _androidStep3HeightFraction
-                          : _tapMoreHeightFraction),
+                  width: screenWidth * _tapMoreWidthFraction,
+                  height: screenHeight * _tapMoreHeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets
                         ? Colors.red.withValues(alpha: 0.25)
@@ -449,8 +363,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Tap Edit area
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TikTokTutorialStep.tapEdit)
             Positioned(
@@ -477,8 +390,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Tap Snaplook Shortcut area
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TikTokTutorialStep.tapSnaplookShortcut)
             Positioned(
@@ -505,8 +417,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Tap Done area
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TikTokTutorialStep.tapDone)
             Positioned(
@@ -533,8 +444,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TikTokTutorialStep.tapDoneLast)
             Positioned(
@@ -561,8 +471,7 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
             ),
 
           // Step 8 tap area (tap Snaplook) - only active when popup is visible
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == TikTokTutorialStep.step3)
             Positioned(
@@ -571,7 +480,22 @@ class _TikTokTutorialPageState extends ConsumerState<TikTokTutorialPage> {
               child: GestureDetector(
                 onTap: () async {
                   HapticFeedback.mediumImpact();
-                  await _openAnalysisPage();
+                  // Precache the image before navigating
+                  await precacheImage(
+                    const AssetImage('assets/images/tiktok_tutorial.jpg'),
+                    context,
+                  );
+                  if (!mounted) return;
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => TutorialImageAnalysisPage(
+                        imagePath: 'assets/images/tiktok_tutorial.jpg',
+                        scenario: 'TikTok',
+                        returnToOnboarding: widget.returnToOnboarding,
+                      ),
+                      allowSnapshotting: false,
+                    ),
+                  );
                 },
                 child: Container(
                   width: screenWidth * _step3TapAreaWidthFraction,

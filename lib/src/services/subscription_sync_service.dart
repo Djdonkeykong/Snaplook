@@ -22,9 +22,7 @@ class SubscriptionSyncService {
   /// - Successful paywall flow
   /// - User login
   /// - App startup (if authenticated)
-  Future<void> syncSubscriptionToSupabase({
-    bool attemptRestoreOnNoEntitlement = false,
-  }) async {
+  Future<void> syncSubscriptionToSupabase() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
@@ -35,9 +33,7 @@ class SubscriptionSyncService {
       debugPrint(
           '[SubscriptionSync] Starting RevenueCat sync for user ${user.id}');
 
-      // Get FRESH RevenueCat customer info (don't use cache after purchase).
-      // Fall back to the instance cached by RevenueCatService.identify() so a
-      // transient network error doesn't abort the entire sync.
+      // Get FRESH RevenueCat customer info (don't use cache after purchase)
       CustomerInfo? customerInfo;
       try {
         customerInfo = await Purchases.getCustomerInfo();
@@ -46,86 +42,29 @@ class SubscriptionSyncService {
       } catch (e) {
         debugPrint(
             '[SubscriptionSync] Error fetching RevenueCat customer info: $e');
-        customerInfo = _revenueCat.currentCustomerInfo;
-        if (customerInfo == null) {
-          if (attemptRestoreOnNoEntitlement) {
-            debugPrint(
-                '[SubscriptionSync] No cached customer info - trying restore as fallback');
-            try {
-              customerInfo = await Purchases.restorePurchases()
-                  .timeout(const Duration(seconds: 12));
-              debugPrint('[SubscriptionSync] Restore fallback completed');
-            } catch (restoreError) {
-              debugPrint(
-                  '[SubscriptionSync] Restore fallback failed: $restoreError');
-            }
-          }
-        }
-        if (customerInfo == null) {
-          debugPrint(
-              '[SubscriptionSync] No cached customer info available - skipping sync');
-          await _syncShareExtensionAuthSnapshot(userId: user.id);
-          return;
-        }
-        debugPrint(
-            '[SubscriptionSync] Using cached customer info as fallback');
-      }
-
-      if (customerInfo == null) {
-        debugPrint(
-            '[SubscriptionSync] customerInfo is null after fetch/fallback - skipping sync');
         await _syncShareExtensionAuthSnapshot(userId: user.id);
         return;
       }
 
       // Parse RevenueCat subscription data
-      var activeEntitlements = customerInfo.entitlements.active.values;
-      var entitlement =
+      final activeEntitlements = customerInfo.entitlements.active.values;
+      final entitlement =
           (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
-      var hasActiveRevenueCat = entitlement != null ||
-          customerInfo.activeSubscriptions.isNotEmpty;
-
-      if (!hasActiveRevenueCat && attemptRestoreOnNoEntitlement) {
-        debugPrint(
-            '[SubscriptionSync] No active entitlements from getCustomerInfo - trying restore');
-        try {
-          final restoredInfo =
-              await Purchases.restorePurchases().timeout(const Duration(seconds: 12));
-          customerInfo = restoredInfo;
-          activeEntitlements = customerInfo.entitlements.active.values;
-          entitlement =
-              (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
-          hasActiveRevenueCat = entitlement != null ||
-              customerInfo.activeSubscriptions.isNotEmpty;
-          debugPrint(
-              '[SubscriptionSync] Restore completed. hasActive=$hasActiveRevenueCat activeSubscriptions=${customerInfo.activeSubscriptions}');
-        } catch (restoreError) {
-          debugPrint(
-              '[SubscriptionSync] Restore-on-no-entitlement failed: $restoreError');
-        }
-      }
-
-      final isTrialFromEntitlement = entitlement?.periodType == PeriodType.trial ||
+      final hasActiveRevenueCat = entitlement != null;
+      final isTrial = entitlement?.periodType == PeriodType.trial ||
           entitlement?.periodType == PeriodType.intro;
       final expirationDateIso = entitlement?.expirationDate != null
           ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
-          : (customerInfo?.latestExpirationDate != null
-              ? DateTime.tryParse(customerInfo!.latestExpirationDate!)
-                  ?.toIso8601String()
-              : null);
-      final productId = entitlement?.productIdentifier ??
-          (customerInfo?.activeSubscriptions.isNotEmpty == true
-              ? customerInfo!.activeSubscriptions.first
-              : null);
-      final revenueCatUserId = customerInfo?.originalAppUserId;
+          : null;
+      final productId = entitlement?.productIdentifier;
+      final revenueCatUserId = customerInfo.originalAppUserId;
 
       debugPrint('[SubscriptionSync] RevenueCat data:');
       debugPrint('  - originalAppUserId: $revenueCatUserId');
       debugPrint('  - hasActiveSubscription: $hasActiveRevenueCat');
-      debugPrint('  - isTrialFromEntitlement: $isTrialFromEntitlement');
+      debugPrint('  - isTrial: $isTrial');
       debugPrint('  - productId: $productId');
       debugPrint('  - expiresAt: $expirationDateIso');
-      debugPrint('  - activeSubscriptions: ${customerInfo?.activeSubscriptions}');
 
       // Check if user has credits (users with credits should not have their status overwritten to 'free')
       final userResponse = await _supabase
@@ -137,8 +76,6 @@ class SubscriptionSyncService {
 
       final hasCredits = (userResponse?['paid_credits_remaining'] ?? 0) > 0;
       final currentStatus = userResponse?['subscription_status'] ?? 'free';
-      final currentIsTrial = userResponse?['is_trial'] == true;
-      final isTrial = entitlement == null ? currentIsTrial : isTrialFromEntitlement;
 
       // Determine what to sync
       if (hasActiveRevenueCat) {
@@ -161,17 +98,18 @@ class SubscriptionSyncService {
 
         // Also sync status to Superwall so it knows about the subscription
         await _superwall.syncSubscriptionStatus();
-      } else if (currentStatus == 'active' || currentStatus == 'expired' || currentIsTrial) {
-        // RevenueCat may briefly report no active entitlements immediately after
-        // paywall/auth transitions. Preserve known non-free state to avoid
-        // false downgrades to `free`.
+      } else if (hasCredits &&
+          (currentStatus == 'active' || currentStatus == 'expired')) {
+        // User has credits but no active RevenueCat subscription
+        // Preserve their existing subscription data entirely (don't overwrite with nulls)
+        // Only update the sync timestamp
         await _supabase.from('users').update({
           'subscription_last_synced_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('id', user.id);
 
         debugPrint(
-            '[SubscriptionSync] Preserving existing subscription state. Status: $currentStatus, isTrial: $currentIsTrial, hasCredits: $hasCredits');
+            '[SubscriptionSync] User has credits - preserving existing subscription data. Status: $currentStatus');
 
         // Sync status to Superwall
         await _superwall.syncSubscriptionStatus();
@@ -293,9 +231,7 @@ class SubscriptionSyncService {
     await _superwall.identify(userId);
 
     // Sync subscription data to Supabase
-    await syncSubscriptionToSupabase(
-      attemptRestoreOnNoEntitlement: true,
-    );
+    await syncSubscriptionToSupabase();
   }
 
   /// Identify user with Superwall (deprecated - use identify() instead).

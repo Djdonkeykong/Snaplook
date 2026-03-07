@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -9,7 +8,6 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
-import 'trial_intro_page.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/analytics_service.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -47,9 +45,9 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
           iconColor: colorScheme.onSurface,
         ),
         centerTitle: true,
-        title: OnboardingProgressIndicator(
+        title: const OnboardingProgressIndicator(
           currentStep: 2,
-          totalSteps: Platform.isAndroid ? 4 : 5,
+          totalSteps: 6,
         ),
       ),
       body: Padding(
@@ -123,19 +121,11 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
               }
 
               if (!context.mounted) return;
-              if (Platform.isAndroid) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const TrialIntroPage(),
-                  ),
-                );
-              } else {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const AddFirstStylePage(),
-                  ),
-                );
-              }
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const AddFirstStylePage(),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFf2003c),

@@ -13,7 +13,7 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import '../widgets/progress_indicator.dart';
 import '../mixins/screen_tracking_mixin.dart';
-import 'trial_intro_page.dart';
+import 'discovery_source_page.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 
@@ -359,7 +359,7 @@ class _GenderSelectionPageState extends ConsumerState<GenderSelectionPage>
                     // Navigate to next page immediately
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const TrialIntroPage(),
+                        builder: (context) => const DiscoverySourcePage(),
                       ),
                     );
                   }

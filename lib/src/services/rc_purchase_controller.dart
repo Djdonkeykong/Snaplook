@@ -3,9 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:superwallkit_flutter/superwallkit_flutter.dart' as sw;
-import '../features/paywall/models/credit_pack.dart';
-import 'credit_service.dart';
-import 'subscription_sync_service.dart';
 
 /// RevenueCat purchase controller for Superwall
 /// This allows Superwall to use RevenueCat for purchases and access trial eligibility
@@ -44,36 +41,10 @@ class RCPurchaseController extends sw.PurchaseController {
       }
 
       if (matchingPackage == null) {
-        // Not in the current offering — try as a consumable product
         if (kDebugMode) {
-          debugPrint('[RCPurchaseController] Not in offerings, trying as consumable: $productId');
+          debugPrint('[RCPurchaseController] No matching package found for $productId');
         }
-        final products = await Purchases.getProducts(
-          [productId],
-          productCategory: ProductCategory.nonSubscription,
-        ).timeout(const Duration(seconds: 8));
-
-        if (products.isEmpty) {
-          if (kDebugMode) {
-            debugPrint('[RCPurchaseController] No product found for $productId');
-          }
-          return sw.PurchaseResult.failed('Product not found');
-        }
-
-        await Purchases.purchaseStoreProduct(products.first);
-
-        final pack = CreditPack.byProductId(productId);
-        if (pack != null) {
-          await CreditService().addPurchasedCredits(pack.credits);
-          await SubscriptionSyncService().syncSubscriptionToSupabase(
-            attemptRestoreOnNoEntitlement: true,
-          );
-        }
-
-        if (kDebugMode) {
-          debugPrint('[RCPurchaseController] Consumable purchase successful: $productId');
-        }
-        return sw.PurchaseResult.purchased;
+        return sw.PurchaseResult.failed('Product not found in offerings');
       }
 
       if (kDebugMode) {
@@ -143,20 +114,15 @@ class RCPurchaseController extends sw.PurchaseController {
               '[RCPurchaseController] Attempting direct purchaseProduct path');
         }
         // ignore: deprecated_member_use
-        await Purchases.purchaseProduct(
+        final customerInfo = await Purchases.purchaseProduct(
           productId,
         ).timeout(const Duration(seconds: 20));
 
-        final pack = CreditPack.byProductId(productId);
-        if (pack != null) {
-          await CreditService().addPurchasedCredits(pack.credits);
-          await SubscriptionSyncService().syncSubscriptionToSupabase(
-            attemptRestoreOnNoEntitlement: true,
-          );
-        }
-
         if (kDebugMode) {
-          debugPrint('[RCPurchaseController] Purchase successful (direct product)');
+          debugPrint(
+              '[RCPurchaseController] Purchase successful (direct product)');
+          debugPrint(
+              '[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}');
         }
         return sw.PurchaseResult.purchased;
       } on PlatformException catch (e) {

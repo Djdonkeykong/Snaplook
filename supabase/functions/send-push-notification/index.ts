@@ -12,15 +12,9 @@ interface NotificationRequest {
   data?: Record<string, string>  // Custom data payload
 }
 
-// JWT requires base64url encoding (not standard base64)
-function toBase64Url(data: string | Uint8Array): string {
-  const str = typeof data === 'string' ? btoa(data) : btoa(String.fromCharCode(...data))
-  return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-}
-
 // Get OAuth2 access token for FCM V1 API
 async function getAccessToken(serviceAccount: any): Promise<string> {
-  const jwtHeader = toBase64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
+  const jwtHeader = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
 
   const now = Math.floor(Date.now() / 1000)
   const jwtClaimSet = {
@@ -31,15 +25,14 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
     iat: now
   }
 
-  const jwtClaimSetEncoded = toBase64Url(JSON.stringify(jwtClaimSet))
+  const jwtClaimSetEncoded = btoa(JSON.stringify(jwtClaimSet))
   const signatureInput = `${jwtHeader}.${jwtClaimSetEncoded}`
 
-  // Import private key -- strip headers, footers, and all whitespace/newline variants
+  // Import private key
   const privateKey = serviceAccount.private_key
-  const pemContents = privateKey
-    .replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----/g, '')
-    .replace(/\\n/g, '')   // literal backslash-n (double-escaped secrets)
-    .replace(/\s/g, '')    // actual whitespace and newlines
+  const pemHeader = '-----BEGIN PRIVATE KEY-----'
+  const pemFooter = '-----END PRIVATE KEY-----'
+  const pemContents = privateKey.substring(pemHeader.length, privateKey.length - pemFooter.length).trim()
   const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0))
 
   const key = await crypto.subtle.importKey(
@@ -51,13 +44,14 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
   )
 
   // Sign the JWT
-  const signatureBytes = await crypto.subtle.sign(
+  const signature = await crypto.subtle.sign(
     'RSASSA-PKCS1-v1_5',
     key,
     new TextEncoder().encode(signatureInput)
   )
 
-  const jwt = `${signatureInput}.${toBase64Url(new Uint8Array(signatureBytes))}`
+  const signatureEncoded = btoa(String.fromCharCode(...new Uint8Array(signature)))
+  const jwt = `${signatureInput}.${signatureEncoded}`
 
   // Exchange JWT for access token
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -67,9 +61,6 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
   })
 
   const tokenData = await tokenResponse.json()
-  if (!tokenData.access_token) {
-    throw new Error(`Failed to get access token: ${JSON.stringify(tokenData)}`)
-  }
   return tokenData.access_token
 }
 

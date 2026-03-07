@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,16 +24,6 @@ const double _tapMoreBottomFraction = 0.16;
 const double _tapMoreLeftFraction = 0.72;
 const double _tapMoreWidthFraction = 0.3;
 const double _tapMoreHeightFraction = 0.15;
-
-// Android-only Step 2 (share) and Step 3 (Snaplook) tap areas
-const double _androidStep2BottomFraction = 0.01;
-const double _androidStep2LeftFraction = 0.0;
-const double _androidStep2WidthFraction = 0.25;
-const double _androidStep2HeightFraction = 0.12;
-const double _androidStep3BottomFraction = 0.02;
-const double _androidStep3LeftFraction = 0.12;
-const double _androidStep3WidthFraction = 0.36;
-const double _androidStep3HeightFraction = 0.12;
 
 // Step 4 (tapEdit) - centered bottom tap area
 const double _tapEditBottomFraction = 0.82;
@@ -94,8 +83,6 @@ class PhotosTutorialPage extends ConsumerStatefulWidget {
 }
 
 class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
-  bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
-
   @override
   void initState() {
     super.initState();
@@ -115,14 +102,8 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
       case PhotosTutorialStep.step1:
         return "When you find a clothing item you love in your Photos, tap the share icon.";
       case PhotosTutorialStep.tapMore:
-        if (_isAndroid) {
-          return "Now tap \"Share\" to open the sharing options.";
-        }
         return "This is a one-time setup to add Snaplook as a shortcut. Scroll to the right and tap 'More'.";
       case PhotosTutorialStep.tapEdit:
-        if (_isAndroid) {
-          return "Tap Snaplook to share the image with our app.";
-        }
         return "Tap 'Edit'.";
       case PhotosTutorialStep.tapSnaplookShortcut:
         return "Find Snaplook and tap the '+' button to add it.";
@@ -136,33 +117,11 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
   }
 
   bool _isOneTimeSetupStep(PhotosTutorialStep step) {
-    if (_isAndroid) {
-      return false;
-    }
-
     return step == PhotosTutorialStep.tapMore ||
         step == PhotosTutorialStep.tapEdit ||
         step == PhotosTutorialStep.tapSnaplookShortcut ||
         step == PhotosTutorialStep.tapDone ||
         step == PhotosTutorialStep.tapDoneLast;
-  }
-
-  Future<void> _openAnalysisPage() async {
-    await precacheImage(
-      const AssetImage('assets/images/photos_tutorial.jpg'),
-      context,
-    );
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => TutorialImageAnalysisPage(
-          imagePath: 'assets/images/photos_tutorial.jpg',
-          scenario: 'Photos',
-          returnToOnboarding: widget.returnToOnboarding,
-        ),
-        allowSnapshotting: false,
-      ),
-    );
   }
 
   void _onInstructionComplete() {
@@ -193,12 +152,6 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
     final screenSize = MediaQuery.of(context).size;
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
-    final step2PopupAsset = _isAndroid
-        ? 'assets/images/instagram_step2_popup_android.png'
-        : 'assets/images/tap-more.png';
-    final step3PopupAsset = _isAndroid
-        ? 'assets/images/instagram_step3_popup_android.png'
-        : 'assets/images/tap_edit.png';
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -217,11 +170,10 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
           if (hasUserTapped &&
               (currentStep == PhotosTutorialStep.tapMore ||
                   currentStep == PhotosTutorialStep.tapEdit ||
-                  (!_isAndroid &&
-                      (currentStep == PhotosTutorialStep.tapSnaplookShortcut ||
-                          currentStep == PhotosTutorialStep.tapDone ||
-                          currentStep == PhotosTutorialStep.tapDoneLast ||
-                          currentStep == PhotosTutorialStep.step2))))
+                  currentStep == PhotosTutorialStep.tapSnaplookShortcut ||
+                  currentStep == PhotosTutorialStep.tapDone ||
+                  currentStep == PhotosTutorialStep.tapDoneLast ||
+                  currentStep == PhotosTutorialStep.step2))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withValues(alpha: 0.3),
@@ -235,7 +187,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                step2PopupAsset,
+                'assets/images/tap-more.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
@@ -248,15 +200,14 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               left: 0,
               right: 0,
               child: Image.asset(
-                step3PopupAsset,
+                'assets/images/tap_edit.png',
                 fit: BoxFit.fitWidth,
                 gaplessPlayback: true,
               ),
             ),
 
           // Step 4 popup overlay (after tapping Edit - shows Snaplook shortcut)
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentStep == PhotosTutorialStep.tapSnaplookShortcut)
             Positioned(
               bottom: 0,
@@ -270,9 +221,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
             ),
 
           // Step 5 popup overlay (after tapping Snaplook shortcut - shows Done button)
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == PhotosTutorialStep.tapDone)
+          if (hasUserTapped && currentStep == PhotosTutorialStep.tapDone)
             Positioned(
               bottom: 0,
               left: 0,
@@ -285,9 +234,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
             ),
 
           // Step 7 popup overlay (after tapping first Done - shows second Done button)
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == PhotosTutorialStep.tapDoneLast)
+          if (hasUserTapped && currentStep == PhotosTutorialStep.tapDoneLast)
             Positioned(
               bottom: 0,
               left: 0,
@@ -300,9 +247,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
             ),
 
           // Step 8 popup overlay (after tapping second Done - final confirmation)
-          if (!_isAndroid &&
-              hasUserTapped &&
-              currentStep == PhotosTutorialStep.step2)
+          if (hasUserTapped && currentStep == PhotosTutorialStep.step2)
             Positioned(
               bottom: 0,
               left: 0,
@@ -345,28 +290,16 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == PhotosTutorialStep.tapMore)
             Positioned(
-              bottom: screenHeight *
-                  (_isAndroid
-                      ? _androidStep2BottomFraction
-                      : _tapMoreBottomFraction),
-              left: screenWidth *
-                  (_isAndroid
-                      ? _androidStep2LeftFraction
-                      : _tapMoreLeftFraction),
+              bottom: screenHeight * _tapMoreBottomFraction,
+              left: screenWidth * _tapMoreLeftFraction,
               child: GestureDetector(
                 onTap: () {
                   HapticFeedback.mediumImpact();
                   _onActionComplete(PhotosTutorialStep.tapEdit);
                 },
                 child: Container(
-                  width: screenWidth *
-                      (_isAndroid
-                          ? _androidStep2WidthFraction
-                          : _tapMoreWidthFraction),
-                  height: screenHeight *
-                      (_isAndroid
-                          ? _androidStep2HeightFraction
-                          : _tapMoreHeightFraction),
+                  width: screenWidth * _tapMoreWidthFraction,
+                  height: screenHeight * _tapMoreHeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets
                         ? Colors.red.withValues(alpha: 0.25)
@@ -384,32 +317,16 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == PhotosTutorialStep.tapEdit)
             Positioned(
-              bottom: screenHeight *
-                  (_isAndroid
-                      ? _androidStep3BottomFraction
-                      : _tapEditBottomFraction),
-              left: screenWidth *
-                  (_isAndroid
-                      ? _androidStep3LeftFraction
-                      : _tapEditLeftFraction),
+              bottom: screenHeight * _tapEditBottomFraction,
+              left: screenWidth * _tapEditLeftFraction,
               child: GestureDetector(
-                onTap: () async {
+                onTap: () {
                   HapticFeedback.mediumImpact();
-                  if (_isAndroid) {
-                    await _openAnalysisPage();
-                    return;
-                  }
                   _onActionComplete(PhotosTutorialStep.tapSnaplookShortcut);
                 },
                 child: Container(
-                  width: screenWidth *
-                      (_isAndroid
-                          ? _androidStep3WidthFraction
-                          : _tapEditWidthFraction),
-                  height: screenHeight *
-                      (_isAndroid
-                          ? _androidStep3HeightFraction
-                          : _tapEditHeightFraction),
+                  width: screenWidth * _tapEditWidthFraction,
+                  height: screenHeight * _tapEditHeightFraction,
                   decoration: BoxDecoration(
                     color: _kShowTouchTargets
                         ? Colors.red.withValues(alpha: 0.25)
@@ -423,8 +340,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
             ),
 
           // Tap Snaplook Shortcut area (tapSnaplookShortcut step) - centered tap area
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == PhotosTutorialStep.tapSnaplookShortcut)
             Positioned(
@@ -451,8 +367,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
             ),
 
           // Tap Done area (tapDone step) - top right
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == PhotosTutorialStep.tapDone)
             Positioned(
@@ -479,8 +394,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
             ),
 
           // Tap Done Last area (tapDoneLast step) - top right, second Done button
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == PhotosTutorialStep.tapDoneLast)
             Positioned(
@@ -507,8 +421,7 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
             ),
 
           // Step 8 tap area (tap share button) - only active when popup is visible
-          if (!_isAndroid &&
-              hasUserTapped &&
+          if (hasUserTapped &&
               currentPhase == TutorialPhase.waitingForAction &&
               currentStep == PhotosTutorialStep.step2)
             Positioned(
@@ -517,7 +430,22 @@ class _PhotosTutorialPageState extends ConsumerState<PhotosTutorialPage> {
               child: GestureDetector(
                 onTap: () async {
                   HapticFeedback.mediumImpact();
-                  await _openAnalysisPage();
+                  // Precache the image before navigating
+                  await precacheImage(
+                    const AssetImage('assets/images/photos_tutorial.jpg'),
+                    context,
+                  );
+                  if (!mounted) return;
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => TutorialImageAnalysisPage(
+                        imagePath: 'assets/images/photos_tutorial.jpg',
+                        scenario: 'Photos',
+                        returnToOnboarding: widget.returnToOnboarding,
+                      ),
+                      allowSnapshotting: false,
+                    ),
+                  );
                 },
                 child: Container(
                   width: screenWidth * _step2TapAreaWidthFraction,

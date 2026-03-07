@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -18,7 +17,6 @@ import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'welcome_free_analysis_page.dart';
-import 'save_progress_page.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
   const TrialReminderPage({super.key});
@@ -80,9 +78,9 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
               iconColor: colorScheme.onSurface,
             ),
             centerTitle: true,
-            title: OnboardingProgressIndicator(
-              currentStep: Platform.isAndroid ? 4 : 5,
-              totalSteps: Platform.isAndroid ? 4 : 5,
+            title: const OnboardingProgressIndicator(
+              currentStep: 8,
+              totalSteps: 10,
             ),
             actions: [
               TextButton(
@@ -209,8 +207,8 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                       try {
                         final userId =
                             Supabase.instance.client.auth.currentUser?.id;
-
-                        final didPurchase = await SuperwallService().presentPaywall(
+                        final didPurchase =
+                            await SuperwallService().presentPaywall(
                           placement: 'onboarding_paywall',
                           params: const {
                             'occurrence': 1,
@@ -224,20 +222,8 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                           _isPresenting = false;
                         });
 
-                        // Prefer Superwall result, then retry RevenueCat a few times
-                        // because customer info can lag briefly right after purchase.
-                        var hasActiveSubscription = didPurchase;
-                        if (!hasActiveSubscription) {
-                          hasActiveSubscription = await RevenueCatService()
-                              .waitForActiveAccess(timeout: const Duration(seconds: 10));
-                        }
-                        debugPrint(
-                            '[TrialReminder] hasActiveSubscription=$hasActiveSubscription');
-
-                        if (!hasActiveSubscription) return;
-
-                        if (userId != null) {
-                          // Authenticated user purchased - sync and navigate
+                        if (didPurchase && userId != null) {
+                          // User purchased - sync subscription and navigate to welcome or home
                           debugPrint(
                               '[TrialReminder] Purchase completed - syncing subscription');
 
@@ -245,9 +231,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                             await Future.delayed(
                                 const Duration(milliseconds: 500));
                             await SubscriptionSyncService()
-                                .syncSubscriptionToSupabase(
-                              attemptRestoreOnNoEntitlement: true,
-                            );
+                                .syncSubscriptionToSupabase();
                             await OnboardingStateService()
                                 .markPaymentComplete(userId);
                           } catch (e) {
@@ -280,7 +264,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                                 (route) => false,
                               );
                             } else {
-                              // Authenticated new user - show welcome page
+                              // New user - show welcome page first
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
                                   builder: (context) =>
@@ -288,15 +272,6 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                                 ),
                               );
                             }
-                          }
-                        } else {
-                          // Unauthenticated user purchased - create account
-                          if (mounted) {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (context) => const SaveProgressPage(),
-                              ),
-                            );
                           }
                         }
                         // If user dismissed without purchasing, stay on this page.

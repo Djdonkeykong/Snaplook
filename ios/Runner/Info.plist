@@ -100,8 +100,6 @@
 		<string>audio</string>
 		<string>remote-notification</string>
 	</array>
-	<key>SKIncludeConsumableInAppPurchaseHistory</key>
-	<true/>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<false/>
 	<key>UILaunchStoryboardName</key>

@@ -418,7 +418,7 @@ class _HomePageState extends ConsumerState<HomePage>
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.transparent,
+                  color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -1747,10 +1747,10 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                           ? 'Premium (Trial)'
                           : 'Premium')
                       : 'Free';
-                  final creditsRemaining = balance.availableCredits;
-                  final isSubscriber = balance.hasActiveSubscription;
                   final maxCredits = SubscriptionPlan.monthly.creditsPerMonth;
-                  final creditsPercentage = isSubscriber && maxCredits > 0
+                  final creditsRemaining =
+                      balance.availableCredits.clamp(0, maxCredits).toInt();
+                  final creditsPercentage = maxCredits > 0
                       ? (creditsRemaining / maxCredits).clamp(0.0, 1.0)
                       : 0.0;
 
@@ -1799,16 +1799,15 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               letterSpacing: -2,
                             ),
                           ),
-                          if (isSubscriber)
-                            Text(
-                              ' / $maxCredits',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w500,
-                                color: colorScheme.onSurfaceVariant,
-                                fontFamily: 'PlusJakartaSans',
-                              ),
+                          Text(
+                            ' / $maxCredits',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurfaceVariant,
+                              fontFamily: 'PlusJakartaSans',
                             ),
+                          ),
                         ],
                       ),
                       SizedBox(height: spacing.xs),
@@ -1821,38 +1820,28 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                         ),
                       ),
                       SizedBox(height: spacing.l),
-                      if (isSubscriber) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: creditsPercentage,
-                            minHeight: 6,
-                            backgroundColor: colorScheme.surfaceContainerHighest,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? colorScheme.onSurface
-                                  : AppColors.secondary,
-                            ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: creditsPercentage,
+                          minHeight: 6,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? colorScheme.onSurface
+                                : AppColors.secondary,
                           ),
                         ),
-                        SizedBox(height: spacing.m),
-                        Text(
-                          'Resets monthly on the 1st',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSurfaceVariant,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
+                      ),
+                      SizedBox(height: spacing.m),
+                      Text(
+                        'Resets monthly on the 1st',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurfaceVariant,
+                          fontFamily: 'PlusJakartaSans',
                         ),
-                      ] else
-                        Text(
-                          'Credits never expire',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colorScheme.onSurfaceVariant,
-                            fontFamily: 'PlusJakartaSans',
-                          ),
-                        ),
+                      ),
                       SizedBox(height: spacing.l),
                       Container(
                         width: double.infinity,

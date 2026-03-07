@@ -15,7 +15,8 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
-import 'welcome_free_analysis_page.dart';
+import '../widgets/progress_indicator.dart';
+import 'trial_intro_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
@@ -24,6 +25,8 @@ import '../../../../services/revenuecat_service.dart';
 import '../../../../services/superwall_service.dart';
 import '../../domain/providers/gender_provider.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
+import 'notification_permission_page.dart';
+import 'discovery_source_page.dart';
 
 class SaveProgressPage extends ConsumerStatefulWidget {
   const SaveProgressPage({super.key});
@@ -151,8 +154,9 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           }
         }
 
+        final activeEntitlements = customerInfo?.entitlements.active.values;
         final hasActiveSubscription =
-            RevenueCatService().hasActiveAccess(customerInfo);
+            activeEntitlements != null && activeEntitlements.isNotEmpty;
 
         debugPrint(
             '[SaveProgress] Has active subscription: $hasActiveSubscription');
@@ -164,9 +168,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           // Sync subscription to Supabase
           try {
             await SubscriptionSyncService()
-                .syncSubscriptionToSupabase(
-                  attemptRestoreOnNoEntitlement: true,
-                )
+                .syncSubscriptionToSupabase()
                 .timeout(const Duration(seconds: 10));
           } catch (e) {
             debugPrint('[SaveProgress] Error syncing subscription: $e');
@@ -187,14 +189,9 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           // Completed onboarding + NO subscription → Present paywall
           debugPrint('[SaveProgress] User has no subscription - presenting paywall');
           if (mounted) {
-            var didPurchase = await SuperwallService().presentPaywall(
+            final didPurchase = await SuperwallService().presentPaywall(
               placement: 'onboarding_paywall',
             );
-
-            if (!didPurchase) {
-              didPurchase = await RevenueCatService()
-                  .waitForActiveAccess(timeout: const Duration(seconds: 10));
-            }
 
             if (!mounted) return;
 
@@ -204,9 +201,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
               try {
                 await Future.delayed(const Duration(milliseconds: 500));
-                await SubscriptionSyncService().syncSubscriptionToSupabase(
-                  attemptRestoreOnNoEntitlement: true,
-                );
+                await SubscriptionSyncService().syncSubscriptionToSupabase();
                 await OnboardingStateService().markPaymentComplete(userId);
               } catch (e) {
                 debugPrint('[SaveProgress] Error syncing subscription: $e');
@@ -228,13 +223,11 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           }
         }
       } else {
-        // New user (hasn't completed onboarding) → WelcomeFreeAnalysisPage
-        // User already went through paywall, no need to send them back to it
-        debugPrint('[SaveProgress] New user - navigating to welcome page');
+        // New user (hasn't completed onboarding) → TrialIntroPage
+        debugPrint('[SaveProgress] New user - navigating to trial intro');
         if (mounted) {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-                builder: (context) => const WelcomeFreeAnalysisPage()),
+            MaterialPageRoute(builder: (context) => const TrialIntroPage()),
           );
         }
       }
@@ -243,10 +236,9 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
       debugPrint('[SaveProgress] Stack trace: $stackTrace');
 
       if (mounted) {
-        // On error, go to welcome page (user has already completed paywall)
+        // On error, default to trial flow
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-              builder: (context) => const WelcomeFreeAnalysisPage()),
+          MaterialPageRoute(builder: (context) => const TrialIntroPage()),
         );
       }
     }
@@ -357,6 +349,11 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
+        centerTitle: true,
+        title: const OnboardingProgressIndicator(
+          currentStep: 6,
+          totalSteps: 6,
+        ),
       ),
       body: SafeArea(
         child: NotificationListener<ScrollNotification>(

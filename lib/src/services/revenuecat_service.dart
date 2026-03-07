@@ -14,16 +14,6 @@ class RevenueCatService {
   CustomerInfo? _customerInfo;
   Offerings? _cachedOfferings;
 
-  /// Returns true when RevenueCat indicates an active paid/trial state.
-  /// We consider both entitlements and activeSubscriptions because some
-  /// projects can have temporary entitlement lag while subscriptions are active.
-  bool hasActiveAccess(CustomerInfo? customerInfo) {
-    if (customerInfo == null) return false;
-    final hasEntitlements = customerInfo.entitlements.active.isNotEmpty;
-    final hasActiveSubscriptions = customerInfo.activeSubscriptions.isNotEmpty;
-    return hasEntitlements || hasActiveSubscriptions;
-  }
-
   /// Initialize RevenueCat with API key
   Future<void> initialize({required String apiKey, String? userId}) async {
     if (_configured) return;
@@ -90,51 +80,16 @@ class RevenueCatService {
     }
 
     try {
-      final previousInfo = _customerInfo;
-      final loginResult = await Purchases.logIn(userId);
-      _customerInfo = loginResult.customerInfo;
-
-      if (kDebugMode) {
-        debugPrint('[RevenueCat] logIn complete for user: $userId');
-        debugPrint('[RevenueCat] logIn created new customer: ${loginResult.created}');
-        debugPrint(
-          '[RevenueCat] Previous originalAppUserId: ${previousInfo?.originalAppUserId}',
-        );
-        debugPrint(
-          '[RevenueCat] Post-login originalAppUserId: ${_customerInfo?.originalAppUserId}',
-        );
-      }
-
-      // Force a receipt sync immediately after logIn to reduce timing races
-      // where getCustomerInfo returns stale/no entitlements right after auth.
-      try {
-        await Purchases.syncPurchases();
-        _customerInfo = await Purchases.getCustomerInfo();
-      } catch (_) {
-        // Non-fatal: we still run restore fallback below.
-      }
-
-      // Restore as final fallback if still no active access after syncPurchases.
-      if (!hasActiveAccess(_customerInfo)) {
-        try {
-          _customerInfo = await Purchases.restorePurchases();
-        } catch (_) {
-          _customerInfo = await Purchases.getCustomerInfo();
-        }
-      }
+      await Purchases.logIn(userId);
+      _customerInfo = await Purchases.getCustomerInfo();
 
       if (kDebugMode) {
         debugPrint('[RevenueCat] User identified: $userId');
-        debugPrint(
-            '[RevenueCat] Active entitlements: ${_customerInfo?.entitlements.active.keys.toList()}');
-        debugPrint(
-            '[RevenueCat] Active subscriptions: ${_customerInfo?.activeSubscriptions}');
       }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('[RevenueCat] Error identifying user: $e');
       }
-      rethrow;
     }
   }
 
@@ -231,7 +186,8 @@ class RevenueCatService {
       final customerInfo = await Purchases.purchasePackage(package);
       _customerInfo = customerInfo;
 
-      final hasActiveEntitlement = hasActiveAccess(_customerInfo);
+      final hasActiveEntitlement =
+          _customerInfo?.entitlements.active.isNotEmpty ?? false;
 
       if (kDebugMode) {
         debugPrint(
@@ -274,7 +230,8 @@ class RevenueCatService {
       }
 
       _customerInfo = await Purchases.restorePurchases();
-      final hasActiveEntitlement = hasActiveAccess(_customerInfo);
+      final hasActiveEntitlement =
+          _customerInfo?.entitlements.active.isNotEmpty ?? false;
 
       if (kDebugMode) {
         debugPrint(
@@ -290,75 +247,6 @@ class RevenueCatService {
     }
   }
 
-  /// Wait for RevenueCat to reflect an active purchase.
-  /// Useful immediately after paywall completion where entitlements can lag.
-  Future<bool> waitForActiveAccess({
-    Duration timeout = const Duration(seconds: 12),
-    bool allowRestoreFallback = false,
-  }) async {
-    if (!_configured) return false;
-
-    final startedAt = DateTime.now();
-    var attempt = 0;
-
-    while (DateTime.now().difference(startedAt) < timeout) {
-      attempt++;
-      try {
-        final customerInfo =
-            await Purchases.getCustomerInfo().timeout(const Duration(seconds: 5));
-        _customerInfo = customerInfo;
-        if (hasActiveAccess(customerInfo)) {
-          if (kDebugMode) {
-            debugPrint(
-                '[RevenueCat] waitForActiveAccess succeeded on attempt $attempt');
-          }
-          return true;
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('[RevenueCat] waitForActiveAccess getCustomerInfo error: $e');
-        }
-      }
-
-      if (attempt == 2 || attempt == 4) {
-        try {
-          await Purchases.syncPurchases().timeout(const Duration(seconds: 5));
-          final synced = await Purchases.getCustomerInfo()
-              .timeout(const Duration(seconds: 5));
-          _customerInfo = synced;
-          if (hasActiveAccess(synced)) {
-            if (kDebugMode) {
-              debugPrint(
-                  '[RevenueCat] waitForActiveAccess succeeded after syncPurchases');
-            }
-            return true;
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint(
-                '[RevenueCat] waitForActiveAccess syncPurchases fallback error: $e');
-          }
-        }
-      }
-
-      await Future.delayed(Duration(milliseconds: 500 * (attempt <= 4 ? attempt : 4)));
-    }
-
-    if (!allowRestoreFallback) {
-      return false;
-    }
-
-    try {
-      _customerInfo = await Purchases.restorePurchases();
-      return hasActiveAccess(_customerInfo);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[RevenueCat] waitForActiveAccess restore fallback error: $e');
-      }
-      return false;
-    }
-  }
-
   /// Check if user has active subscription
   Future<bool> hasActiveSubscription() async {
     if (!_configured) return false;
@@ -367,7 +255,7 @@ class RevenueCatService {
       final customerInfo = await Purchases.getCustomerInfo();
       _customerInfo = customerInfo;
 
-      return hasActiveAccess(customerInfo);
+      return customerInfo.entitlements.active.containsKey('premium');
     } catch (e) {
       if (kDebugMode) {
         debugPrint('[RevenueCat] Error checking subscription: $e');
@@ -457,80 +345,6 @@ class RevenueCatService {
     } catch (e) {
       if (kDebugMode) {
         debugPrint('[RevenueCat] Error checking trial history: $e');
-      }
-      return false;
-    }
-  }
-
-  /// Fetch StoreProduct objects for the given product IDs (consumables / non-subscriptions)
-  Future<List<StoreProduct>> getStoreProducts(List<String> productIds) async {
-    if (!_configured) {
-      if (kDebugMode) {
-        debugPrint('[RevenueCat] getStoreProducts called but not configured');
-      }
-      return [];
-    }
-
-    try {
-      final products = await Purchases.getProducts(
-        productIds,
-        productCategory: ProductCategory.nonSubscription,
-      );
-
-      if (kDebugMode) {
-        debugPrint('[RevenueCat] Fetched ${products.length} store products');
-        for (final p in products) {
-          debugPrint('[RevenueCat] Product ${p.identifier} price=${p.priceString}');
-        }
-      }
-
-      return products;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[RevenueCat] Error fetching store products: $e');
-      }
-      return [];
-    }
-  }
-
-  /// Purchase a consumable StoreProduct (credit pack).
-  /// Returns true if the purchase completed without throwing.
-  Future<bool> purchaseStoreProduct(StoreProduct product) async {
-    if (!_configured) {
-      if (kDebugMode) {
-        debugPrint('[RevenueCat] purchaseStoreProduct called but not configured');
-      }
-      return false;
-    }
-
-    try {
-      if (kDebugMode) {
-        debugPrint('[RevenueCat] Purchasing product: ${product.identifier}');
-      }
-
-      final customerInfo = await Purchases.purchaseStoreProduct(product);
-      _customerInfo = customerInfo;
-
-      if (kDebugMode) {
-        debugPrint('[RevenueCat] Consumable purchase completed: ${product.identifier}');
-      }
-
-      return true;
-    } on PlatformException catch (e) {
-      final errorCode = PurchasesErrorHelper.getErrorCode(e);
-      if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
-        if (kDebugMode) {
-          debugPrint('[RevenueCat] Consumable purchase cancelled');
-        }
-        return false;
-      }
-      if (kDebugMode) {
-        debugPrint('[RevenueCat] Consumable purchase error: ${e.message}');
-      }
-      return false;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[RevenueCat] Consumable purchase error: $e');
       }
       return false;
     }

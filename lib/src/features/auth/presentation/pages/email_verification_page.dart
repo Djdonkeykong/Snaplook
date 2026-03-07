@@ -11,6 +11,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
+import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../../services/paywall_helper.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
@@ -22,9 +23,9 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
-import '../../../../services/revenuecat_service.dart';
 import '../../../onboarding/domain/providers/gender_provider.dart';
 import '../../../onboarding/domain/providers/onboarding_preferences_provider.dart';
+import '../../../onboarding/presentation/pages/discovery_source_page.dart';
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
@@ -284,8 +285,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                   '[EmailVerification] Error fetching RevenueCat customer info: $e');
             }
 
+            final activeEntitlements = customerInfo?.entitlements.active.values;
             final hasActiveSubscription =
-                RevenueCatService().hasActiveAccess(customerInfo);
+                activeEntitlements != null && activeEntitlements.isNotEmpty;
             print(
                 '[EmailVerification] Has active subscription (RevenueCat): $hasActiveSubscription');
 
@@ -315,7 +317,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 userId: userId,
               );
             } else {
-              // New user
+              // New user - check onboarding progress
+              final hasOnboardingData = discoverySource != null;
+
               if (hasActiveSubscription) {
                 // User purchased subscription - go straight to home
                 print(
@@ -331,14 +335,23 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                   ),
                   (route) => false,
                 );
-              } else {
-                // New user without active subscription - present Superwall paywall.
-                // Do not rely on discovery_source since that page is no longer in flow.
+              } else if (hasOnboardingData) {
+                // User went through onboarding but no subscription - present Superwall paywall
                 print(
-                    '[EmailVerification] New user without subscription - presenting Superwall paywall');
+                    '[EmailVerification] New user with onboarding data but no subscription - presenting Superwall paywall');
                 await PaywallHelper.presentPaywallAndNavigate(
                   context: context,
                   userId: userId,
+                );
+              } else {
+                // New user without onboarding data - start from beginning
+                print(
+                    '[EmailVerification] New user without onboarding data - navigating to HowItWorksPage');
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const HowItWorksPage(),
+                  ),
+                  (route) => false,
                 );
               }
             }

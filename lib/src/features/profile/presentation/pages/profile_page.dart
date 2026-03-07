@@ -13,7 +13,6 @@ import 'edit_profile_page.dart';
 import 'appearance_preferences_page.dart';
 import 'manage_subscription_page.dart';
 import 'notification_settings_page.dart';
-import '../../../../services/superwall_service.dart';
 import '../widgets/profile_webview_bottom_sheet.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 
@@ -450,12 +449,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               _SimpleSettingItem(
                 title: 'Manage Subscription',
                 onTap: _handleManageSubscription,
-              ),
-              _SimpleSettingItem(
-                title: 'Buy Credits',
-                onTap: () => SuperwallService().presentPaywall(
-                  placement: 'scan_pack_paywall',
-                ),
               ),
 
               SizedBox(height: spacing.l),

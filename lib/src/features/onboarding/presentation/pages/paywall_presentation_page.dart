@@ -7,7 +7,6 @@ import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/superwall_service.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/onboarding_state_service.dart';
-import '../../../../services/revenuecat_service.dart';
 
 /// A dedicated page that presents the paywall and handles navigation
 /// This prevents the previous page from being visible when the paywall closes
@@ -51,14 +50,9 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Present Superwall paywall (this will show Superwall's UI over our page)
-      var didPurchase = await SuperwallService().presentPaywall(
+      final didPurchase = await SuperwallService().presentPaywall(
         placement: widget.placement,
       );
-
-      if (!didPurchase) {
-        didPurchase = await RevenueCatService()
-            .waitForActiveAccess(timeout: const Duration(seconds: 10));
-      }
 
       // Paywall has been dismissed - hide loading overlay
       if (mounted) {
@@ -89,9 +83,7 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
           debugPrint(
               '[PaywallPresentationPage] Syncing subscription to Supabase...');
-          await SubscriptionSyncService().syncSubscriptionToSupabase(
-            attemptRestoreOnNoEntitlement: true,
-          );
+          await SubscriptionSyncService().syncSubscriptionToSupabase();
           await OnboardingStateService().markPaymentComplete(widget.userId!);
           debugPrint(
               '[PaywallPresentationPage] Subscription synced successfully');
