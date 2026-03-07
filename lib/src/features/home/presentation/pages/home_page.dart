@@ -1764,15 +1764,17 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                       SubscriptionPlan.monthly.creditsPerMonth;
                   final creditsRemaining =
                       balance.availableCredits.clamp(0, 999999).toInt();
+                  final hasExtraPurchasedCredits = balance.hasActiveSubscription &&
+                      creditsRemaining > monthlyAllowance;
                   final creditsPercentage =
                       balance.hasActiveSubscription && monthlyAllowance > 0
                           ? (creditsRemaining / monthlyAllowance)
                               .clamp(0.0, 1.0)
                           : 1.0;
                   final resetLabel = balance.hasActiveSubscription
-                      ? (creditsRemaining > monthlyAllowance
-                          ? 'Includes extra purchased credits'
-                          : 'Resets monthly on the 1st')
+                      ? (hasExtraPurchasedCredits
+                          ? 'Monthly allowance: $monthlyAllowance + extra purchased credits'
+                          : 'Monthly allowance: $monthlyAllowance (resets on the 1st)')
                       : 'Purchased credits do not expire';
 
                   return Column(
@@ -1820,16 +1822,6 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               letterSpacing: -2,
                             ),
                           ),
-                          if (balance.hasActiveSubscription)
-                            Text(
-                              ' / $monthlyAllowance',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w500,
-                                color: colorScheme.onSurfaceVariant,
-                                fontFamily: 'PlusJakartaSans',
-                              ),
-                            ),
                         ],
                       ),
                       SizedBox(height: spacing.xs),
