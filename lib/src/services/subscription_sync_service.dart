@@ -22,7 +22,9 @@ class SubscriptionSyncService {
   /// - Successful paywall flow
   /// - User login
   /// - App startup (if authenticated)
-  Future<void> syncSubscriptionToSupabase() async {
+  Future<void> syncSubscriptionToSupabase({
+    bool attemptRestoreOnNoEntitlement = false,
+  }) async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
@@ -46,6 +48,20 @@ class SubscriptionSyncService {
             '[SubscriptionSync] Error fetching RevenueCat customer info: $e');
         customerInfo = _revenueCat.currentCustomerInfo;
         if (customerInfo == null) {
+          if (attemptRestoreOnNoEntitlement) {
+            debugPrint(
+                '[SubscriptionSync] No cached customer info - trying restore as fallback');
+            try {
+              customerInfo = await Purchases.restorePurchases()
+                  .timeout(const Duration(seconds: 12));
+              debugPrint('[SubscriptionSync] Restore fallback completed');
+            } catch (restoreError) {
+              debugPrint(
+                  '[SubscriptionSync] Restore fallback failed: $restoreError');
+            }
+          }
+        }
+        if (customerInfo == null) {
           debugPrint(
               '[SubscriptionSync] No cached customer info available - skipping sync');
           await _syncShareExtensionAuthSnapshot(userId: user.id);
@@ -56,10 +72,35 @@ class SubscriptionSyncService {
       }
 
       // Parse RevenueCat subscription data
-      final activeEntitlements = customerInfo.entitlements.active.values;
-      final entitlement =
+      var activeEntitlements = customerInfo.entitlements.active.values;
+      var entitlement =
           (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
-      final hasActiveRevenueCat = entitlement != null;
+      var hasActiveRevenueCat = entitlement != null;
+
+      if (!hasActiveRevenueCat && attemptRestoreOnNoEntitlement) {
+        debugPrint(
+            '[SubscriptionSync] No active entitlements from getCustomerInfo - trying restore');
+        try {
+          final restoredInfo =
+              await Purchases.restorePurchases().timeout(const Duration(seconds: 12));
+          if (restoredInfo.entitlements.active.isNotEmpty) {
+            customerInfo = restoredInfo;
+            activeEntitlements = customerInfo.entitlements.active.values;
+            entitlement =
+                (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
+            hasActiveRevenueCat = entitlement != null;
+            debugPrint(
+                '[SubscriptionSync] Restore found active entitlements - using restored data');
+          } else {
+            debugPrint(
+                '[SubscriptionSync] Restore completed but still no active entitlements');
+          }
+        } catch (restoreError) {
+          debugPrint(
+              '[SubscriptionSync] Restore-on-no-entitlement failed: $restoreError');
+        }
+      }
+
       final isTrial = entitlement?.periodType == PeriodType.trial ||
           entitlement?.periodType == PeriodType.intro;
       final expirationDateIso = entitlement?.expirationDate != null
@@ -240,7 +281,9 @@ class SubscriptionSyncService {
     await _superwall.identify(userId);
 
     // Sync subscription data to Supabase
-    await syncSubscriptionToSupabase();
+    await syncSubscriptionToSupabase(
+      attemptRestoreOnNoEntitlement: true,
+    );
   }
 
   /// Identify user with Superwall (deprecated - use identify() instead).

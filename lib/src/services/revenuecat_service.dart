@@ -80,16 +80,24 @@ class RevenueCatService {
     }
 
     try {
-      await Purchases.logIn(userId);
+      final loginResult = await Purchases.logIn(userId);
+      _customerInfo = loginResult.customerInfo;
+
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] logIn complete for user: $userId');
+        debugPrint('[RevenueCat] logIn created new customer: ${loginResult.created}');
+      }
 
       // Restore purchases after logIn so that any receipts from anonymous
       // purchases (e.g. user bought trial before creating account) are
       // transferred to the identified user. Without this, the new RC user
       // has no entitlements and syncSubscriptionToSupabase sets status 'free'.
-      try {
-        _customerInfo = await Purchases.restorePurchases();
-      } catch (_) {
-        _customerInfo = await Purchases.getCustomerInfo();
+      if (_customerInfo?.entitlements.active.isEmpty ?? true) {
+        try {
+          _customerInfo = await Purchases.restorePurchases();
+        } catch (_) {
+          _customerInfo = await Purchases.getCustomerInfo();
+        }
       }
 
       if (kDebugMode) {
@@ -101,6 +109,7 @@ class RevenueCatService {
       if (kDebugMode) {
         debugPrint('[RevenueCat] Error identifying user: $e');
       }
+      rethrow;
     }
   }
 
