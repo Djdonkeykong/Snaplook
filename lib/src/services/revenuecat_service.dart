@@ -290,6 +290,75 @@ class RevenueCatService {
     }
   }
 
+  /// Wait for RevenueCat to reflect an active purchase.
+  /// Useful immediately after paywall completion where entitlements can lag.
+  Future<bool> waitForActiveAccess({
+    Duration timeout = const Duration(seconds: 12),
+    bool allowRestoreFallback = false,
+  }) async {
+    if (!_configured) return false;
+
+    final startedAt = DateTime.now();
+    var attempt = 0;
+
+    while (DateTime.now().difference(startedAt) < timeout) {
+      attempt++;
+      try {
+        final customerInfo =
+            await Purchases.getCustomerInfo().timeout(const Duration(seconds: 5));
+        _customerInfo = customerInfo;
+        if (hasActiveAccess(customerInfo)) {
+          if (kDebugMode) {
+            debugPrint(
+                '[RevenueCat] waitForActiveAccess succeeded on attempt $attempt');
+          }
+          return true;
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[RevenueCat] waitForActiveAccess getCustomerInfo error: $e');
+        }
+      }
+
+      if (attempt == 2 || attempt == 4) {
+        try {
+          await Purchases.syncPurchases().timeout(const Duration(seconds: 5));
+          final synced = await Purchases.getCustomerInfo()
+              .timeout(const Duration(seconds: 5));
+          _customerInfo = synced;
+          if (hasActiveAccess(synced)) {
+            if (kDebugMode) {
+              debugPrint(
+                  '[RevenueCat] waitForActiveAccess succeeded after syncPurchases');
+            }
+            return true;
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+                '[RevenueCat] waitForActiveAccess syncPurchases fallback error: $e');
+          }
+        }
+      }
+
+      await Future.delayed(Duration(milliseconds: 500 * (attempt <= 4 ? attempt : 4)));
+    }
+
+    if (!allowRestoreFallback) {
+      return false;
+    }
+
+    try {
+      _customerInfo = await Purchases.restorePurchases();
+      return hasActiveAccess(_customerInfo);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] waitForActiveAccess restore fallback error: $e');
+      }
+      return false;
+    }
+  }
+
   /// Check if user has active subscription
   Future<bool> hasActiveSubscription() async {
     if (!_configured) return false;

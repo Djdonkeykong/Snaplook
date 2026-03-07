@@ -187,9 +187,14 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           // Completed onboarding + NO subscription → Present paywall
           debugPrint('[SaveProgress] User has no subscription - presenting paywall');
           if (mounted) {
-            final didPurchase = await SuperwallService().presentPaywall(
+            var didPurchase = await SuperwallService().presentPaywall(
               placement: 'onboarding_paywall',
             );
+
+            if (!didPurchase) {
+              didPurchase = await RevenueCatService()
+                  .waitForActiveAccess(timeout: const Duration(seconds: 10));
+            }
 
             if (!mounted) return;
 

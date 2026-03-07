@@ -5,6 +5,7 @@ import '../../shared/navigation/main_navigation.dart';
 import 'superwall_service.dart';
 import 'subscription_sync_service.dart';
 import 'onboarding_state_service.dart';
+import 'revenuecat_service.dart';
 
 /// Helper to present Superwall paywall and handle post-purchase navigation
 class PaywallHelper {
@@ -19,9 +20,14 @@ class PaywallHelper {
       debugPrint('[PaywallHelper] Presenting Superwall paywall...');
 
       // Present Superwall paywall
-      final didPurchase = await SuperwallService().presentPaywall(
+      var didPurchase = await SuperwallService().presentPaywall(
         placement: placement,
       );
+
+      if (!didPurchase) {
+        didPurchase = await RevenueCatService()
+            .waitForActiveAccess(timeout: const Duration(seconds: 10));
+      }
 
       if (!context.mounted) return didPurchase;
 

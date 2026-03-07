@@ -16,7 +16,6 @@ import 'trial_reminder_page.dart';
 import 'welcome_free_analysis_page.dart';
 import 'save_progress_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/superwall_service.dart';
@@ -89,25 +88,20 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         if (!isEligible && mounted) {
           final userId = Supabase.instance.client.auth.currentUser?.id;
 
-          await SuperwallService().presentPaywall(
+          final didPurchase = await SuperwallService().presentPaywall(
             placement: 'onboarding_paywall',
           );
 
           if (!mounted) return;
 
-          // Validate actual subscription state from RevenueCat.
-          // Superwall can return false when it skips the paywall for
-          // already-subscribed users, so we check RC directly.
-          bool hasActiveSubscription = false;
-          try {
-            final customerInfo = await Purchases.getCustomerInfo();
-            hasActiveSubscription =
-                RevenueCatService().hasActiveAccess(customerInfo);
-            debugPrint(
-                '[TrialIntro] hasActiveSubscription=$hasActiveSubscription');
-          } catch (e) {
-            debugPrint('[TrialIntro] Error checking subscription state: $e');
+          // Prefer Superwall result, then retry RevenueCat a few times
+          // because customer info can lag briefly right after purchase.
+          var hasActiveSubscription = didPurchase;
+          if (!hasActiveSubscription) {
+            hasActiveSubscription = await RevenueCatService()
+                .waitForActiveAccess(timeout: const Duration(seconds: 10));
           }
+          debugPrint('[TrialIntro] hasActiveSubscription=$hasActiveSubscription');
 
           if (hasActiveSubscription) {
             if (userId != null) {

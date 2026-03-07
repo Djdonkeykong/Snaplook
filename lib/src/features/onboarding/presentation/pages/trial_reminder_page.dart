@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../services/analytics_service.dart';
@@ -211,7 +210,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                         final userId =
                             Supabase.instance.client.auth.currentUser?.id;
 
-                        await SuperwallService().presentPaywall(
+                        final didPurchase = await SuperwallService().presentPaywall(
                           placement: 'onboarding_paywall',
                           params: const {
                             'occurrence': 1,
@@ -225,21 +224,15 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                           _isPresenting = false;
                         });
 
-                        // Validate actual subscription state from RevenueCat.
-                        // Superwall can return false when it skips the paywall for
-                        // already-subscribed users, so we check RC directly.
-                        bool hasActiveSubscription = false;
-                        try {
-                          final customerInfo =
-                              await Purchases.getCustomerInfo();
-                          hasActiveSubscription =
-                              RevenueCatService().hasActiveAccess(customerInfo);
-                          debugPrint(
-                              '[TrialReminder] hasActiveSubscription=$hasActiveSubscription');
-                        } catch (e) {
-                          debugPrint(
-                              '[TrialReminder] Error checking subscription state: $e');
+                        // Prefer Superwall result, then retry RevenueCat a few times
+                        // because customer info can lag briefly right after purchase.
+                        var hasActiveSubscription = didPurchase;
+                        if (!hasActiveSubscription) {
+                          hasActiveSubscription = await RevenueCatService()
+                              .waitForActiveAccess(timeout: const Duration(seconds: 10));
                         }
+                        debugPrint(
+                            '[TrialReminder] hasActiveSubscription=$hasActiveSubscription');
 
                         if (!hasActiveSubscription) return;
 
