@@ -71,6 +71,13 @@ class SubscriptionSyncService {
             '[SubscriptionSync] Using cached customer info as fallback');
       }
 
+      if (customerInfo == null) {
+        debugPrint(
+            '[SubscriptionSync] customerInfo is null after fetch/fallback - skipping sync');
+        await _syncShareExtensionAuthSnapshot(userId: user.id);
+        return;
+      }
+
       // Parse RevenueCat subscription data
       var activeEntitlements = customerInfo.entitlements.active.values;
       var entitlement =
@@ -107,7 +114,7 @@ class SubscriptionSyncService {
           ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
           : null;
       final productId = entitlement?.productIdentifier;
-      final revenueCatUserId = customerInfo.originalAppUserId;
+      final revenueCatUserId = customerInfo?.originalAppUserId;
 
       debugPrint('[SubscriptionSync] RevenueCat data:');
       debugPrint('  - originalAppUserId: $revenueCatUserId');
