@@ -82,7 +82,8 @@ class SubscriptionSyncService {
       var activeEntitlements = customerInfo.entitlements.active.values;
       var entitlement =
           (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
-      var hasActiveRevenueCat = entitlement != null;
+      var hasActiveRevenueCat = entitlement != null ||
+          customerInfo.activeSubscriptions.isNotEmpty;
 
       if (!hasActiveRevenueCat && attemptRestoreOnNoEntitlement) {
         debugPrint(
@@ -90,38 +91,41 @@ class SubscriptionSyncService {
         try {
           final restoredInfo =
               await Purchases.restorePurchases().timeout(const Duration(seconds: 12));
-          if (restoredInfo.entitlements.active.isNotEmpty) {
-            customerInfo = restoredInfo;
-            activeEntitlements = customerInfo.entitlements.active.values;
-            entitlement =
-                (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
-            hasActiveRevenueCat = entitlement != null;
-            debugPrint(
-                '[SubscriptionSync] Restore found active entitlements - using restored data');
-          } else {
-            debugPrint(
-                '[SubscriptionSync] Restore completed but still no active entitlements');
-          }
+          customerInfo = restoredInfo;
+          activeEntitlements = customerInfo.entitlements.active.values;
+          entitlement =
+              (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
+          hasActiveRevenueCat = entitlement != null ||
+              customerInfo.activeSubscriptions.isNotEmpty;
+          debugPrint(
+              '[SubscriptionSync] Restore completed. hasActive=$hasActiveRevenueCat activeSubscriptions=${customerInfo.activeSubscriptions}');
         } catch (restoreError) {
           debugPrint(
               '[SubscriptionSync] Restore-on-no-entitlement failed: $restoreError');
         }
       }
 
-      final isTrial = entitlement?.periodType == PeriodType.trial ||
+      final isTrialFromEntitlement = entitlement?.periodType == PeriodType.trial ||
           entitlement?.periodType == PeriodType.intro;
       final expirationDateIso = entitlement?.expirationDate != null
           ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
-          : null;
-      final productId = entitlement?.productIdentifier;
+          : (customerInfo?.latestExpirationDate != null
+              ? DateTime.tryParse(customerInfo!.latestExpirationDate!)
+                  ?.toIso8601String()
+              : null);
+      final productId = entitlement?.productIdentifier ??
+          (customerInfo?.activeSubscriptions.isNotEmpty == true
+              ? customerInfo!.activeSubscriptions.first
+              : null);
       final revenueCatUserId = customerInfo?.originalAppUserId;
 
       debugPrint('[SubscriptionSync] RevenueCat data:');
       debugPrint('  - originalAppUserId: $revenueCatUserId');
       debugPrint('  - hasActiveSubscription: $hasActiveRevenueCat');
-      debugPrint('  - isTrial: $isTrial');
+      debugPrint('  - isTrialFromEntitlement: $isTrialFromEntitlement');
       debugPrint('  - productId: $productId');
       debugPrint('  - expiresAt: $expirationDateIso');
+      debugPrint('  - activeSubscriptions: ${customerInfo?.activeSubscriptions}');
 
       // Check if user has credits (users with credits should not have their status overwritten to 'free')
       final userResponse = await _supabase
@@ -133,6 +137,8 @@ class SubscriptionSyncService {
 
       final hasCredits = (userResponse?['paid_credits_remaining'] ?? 0) > 0;
       final currentStatus = userResponse?['subscription_status'] ?? 'free';
+      final currentIsTrial = userResponse?['is_trial'] == true;
+      final isTrial = entitlement == null ? currentIsTrial : isTrialFromEntitlement;
 
       // Determine what to sync
       if (hasActiveRevenueCat) {
@@ -155,18 +161,17 @@ class SubscriptionSyncService {
 
         // Also sync status to Superwall so it knows about the subscription
         await _superwall.syncSubscriptionStatus();
-      } else if (hasCredits &&
-          (currentStatus == 'active' || currentStatus == 'expired')) {
-        // User has credits but no active RevenueCat subscription
-        // Preserve their existing subscription data entirely (don't overwrite with nulls)
-        // Only update the sync timestamp
+      } else if (currentStatus == 'active' || currentStatus == 'expired' || currentIsTrial) {
+        // RevenueCat may briefly report no active entitlements immediately after
+        // paywall/auth transitions. Preserve known non-free state to avoid
+        // false downgrades to `free`.
         await _supabase.from('users').update({
           'subscription_last_synced_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('id', user.id);
 
         debugPrint(
-            '[SubscriptionSync] User has credits - preserving existing subscription data. Status: $currentStatus');
+            '[SubscriptionSync] Preserving existing subscription state. Status: $currentStatus, isTrial: $currentIsTrial, hasCredits: $hasCredits');
 
         // Sync status to Superwall
         await _superwall.syncSubscriptionStatus();

@@ -62,9 +62,8 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
           return;
         }
 
-        final activeEntitlements = customerInfo?.entitlements.active.values;
         final hasActiveSubscription =
-            activeEntitlements != null && activeEntitlements.isNotEmpty;
+            RevenueCatService().hasActiveAccess(customerInfo);
 
         if (hasActiveSubscription) {
           debugPrint(
@@ -238,7 +237,9 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
       if (didPurchase && isAuthenticated) {
         try {
           debugPrint('[RevenueCatPaywall] Syncing subscription to Supabase...');
-          await SubscriptionSyncService().syncSubscriptionToSupabase();
+          await SubscriptionSyncService().syncSubscriptionToSupabase(
+            attemptRestoreOnNoEntitlement: true,
+          );
           await OnboardingStateService()
               .markPaymentComplete(authService.currentUser!.id);
           debugPrint('[RevenueCatPaywall] Subscription synced successfully');
@@ -371,7 +372,9 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
 
                   if (isAuthenticated) {
                     try {
-                      await SubscriptionSyncService().syncSubscriptionToSupabase();
+                      await SubscriptionSyncService().syncSubscriptionToSupabase(
+                        attemptRestoreOnNoEntitlement: true,
+                      );
                       await OnboardingStateService()
                           .markPaymentComplete(authService.currentUser!.id);
                       debugPrint('[RevenueCatPaywall] Subscription synced after restore');

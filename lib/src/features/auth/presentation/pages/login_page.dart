@@ -358,11 +358,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                       '[LoginPage] Error fetching RevenueCat customer info: $e');
                                 }
 
-                                final activeEntitlements =
-                                    customerInfo?.entitlements.active.values;
                                 final hasActiveSubscription =
-                                    activeEntitlements != null &&
-                                        activeEntitlements.isNotEmpty;
+                                    RevenueCatService()
+                                        .hasActiveAccess(customerInfo);
 
                                 print(
                                     '[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');
@@ -612,11 +610,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     '[LoginPage] Error fetching RevenueCat customer info: $e');
                               }
 
-                              final activeEntitlements =
-                                  customerInfo?.entitlements.active.values;
                               final hasActiveSubscription =
-                                  activeEntitlements != null &&
-                                      activeEntitlements.isNotEmpty;
+                                  RevenueCatService()
+                                      .hasActiveAccess(customerInfo);
 
                               print(
                                   '[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');

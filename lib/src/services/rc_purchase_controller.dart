@@ -65,7 +65,9 @@ class RCPurchaseController extends sw.PurchaseController {
         final pack = CreditPack.byProductId(productId);
         if (pack != null) {
           await CreditService().addPurchasedCredits(pack.credits);
-          await SubscriptionSyncService().syncSubscriptionToSupabase();
+          await SubscriptionSyncService().syncSubscriptionToSupabase(
+            attemptRestoreOnNoEntitlement: true,
+          );
         }
 
         if (kDebugMode) {
@@ -148,7 +150,9 @@ class RCPurchaseController extends sw.PurchaseController {
         final pack = CreditPack.byProductId(productId);
         if (pack != null) {
           await CreditService().addPurchasedCredits(pack.credits);
-          await SubscriptionSyncService().syncSubscriptionToSupabase();
+          await SubscriptionSyncService().syncSubscriptionToSupabase(
+            attemptRestoreOnNoEntitlement: true,
+          );
         }
 
         if (kDebugMode) {

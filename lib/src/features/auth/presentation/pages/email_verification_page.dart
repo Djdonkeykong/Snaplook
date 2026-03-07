@@ -22,6 +22,7 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
+import '../../../../services/revenuecat_service.dart';
 import '../../../onboarding/domain/providers/gender_provider.dart';
 import '../../../onboarding/domain/providers/onboarding_preferences_provider.dart';
 
@@ -283,9 +284,8 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                   '[EmailVerification] Error fetching RevenueCat customer info: $e');
             }
 
-            final activeEntitlements = customerInfo?.entitlements.active.values;
             final hasActiveSubscription =
-                activeEntitlements != null && activeEntitlements.isNotEmpty;
+                RevenueCatService().hasActiveAccess(customerInfo);
             print(
                 '[EmailVerification] Has active subscription (RevenueCat): $hasActiveSubscription');
 

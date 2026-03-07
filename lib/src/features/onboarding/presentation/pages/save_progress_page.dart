@@ -151,9 +151,8 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           }
         }
 
-        final activeEntitlements = customerInfo?.entitlements.active.values;
         final hasActiveSubscription =
-            activeEntitlements != null && activeEntitlements.isNotEmpty;
+            RevenueCatService().hasActiveAccess(customerInfo);
 
         debugPrint(
             '[SaveProgress] Has active subscription: $hasActiveSubscription');
@@ -165,7 +164,9 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           // Sync subscription to Supabase
           try {
             await SubscriptionSyncService()
-                .syncSubscriptionToSupabase()
+                .syncSubscriptionToSupabase(
+                  attemptRestoreOnNoEntitlement: true,
+                )
                 .timeout(const Duration(seconds: 10));
           } catch (e) {
             debugPrint('[SaveProgress] Error syncing subscription: $e');
@@ -198,7 +199,9 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
               try {
                 await Future.delayed(const Duration(milliseconds: 500));
-                await SubscriptionSyncService().syncSubscriptionToSupabase();
+                await SubscriptionSyncService().syncSubscriptionToSupabase(
+                  attemptRestoreOnNoEntitlement: true,
+                );
                 await OnboardingStateService().markPaymentComplete(userId);
               } catch (e) {
                 debugPrint('[SaveProgress] Error syncing subscription: $e');

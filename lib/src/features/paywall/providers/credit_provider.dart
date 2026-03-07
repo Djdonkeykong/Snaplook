@@ -173,7 +173,9 @@ class PurchaseController {
         await _subscriptionNotifier.refresh();
 
         // Sync subscription data to Supabase
-        await _subscriptionSyncService.syncSubscriptionToSupabase();
+        await _subscriptionSyncService.syncSubscriptionToSupabase(
+          attemptRestoreOnNoEntitlement: true,
+        );
 
         return true;
       }

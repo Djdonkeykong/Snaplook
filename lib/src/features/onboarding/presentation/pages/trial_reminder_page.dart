@@ -233,7 +233,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                           final customerInfo =
                               await Purchases.getCustomerInfo();
                           hasActiveSubscription =
-                              customerInfo.entitlements.active.isNotEmpty;
+                              RevenueCatService().hasActiveAccess(customerInfo);
                           debugPrint(
                               '[TrialReminder] hasActiveSubscription=$hasActiveSubscription');
                         } catch (e) {
@@ -252,7 +252,9 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                             await Future.delayed(
                                 const Duration(milliseconds: 500));
                             await SubscriptionSyncService()
-                                .syncSubscriptionToSupabase();
+                                .syncSubscriptionToSupabase(
+                              attemptRestoreOnNoEntitlement: true,
+                            );
                             await OnboardingStateService()
                                 .markPaymentComplete(userId);
                           } catch (e) {
