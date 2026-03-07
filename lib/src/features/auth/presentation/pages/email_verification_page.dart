@@ -315,9 +315,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 userId: userId,
               );
             } else {
-              // New user - check onboarding progress
-              final hasOnboardingData = discoverySource != null;
-
+              // New user
               if (hasActiveSubscription) {
                 // User purchased subscription - go straight to home
                 print(
@@ -333,23 +331,14 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                   ),
                   (route) => false,
                 );
-              } else if (hasOnboardingData) {
-                // User went through onboarding but no subscription - present Superwall paywall
+              } else {
+                // New user without active subscription - present Superwall paywall.
+                // Do not rely on discovery_source since that page is no longer in flow.
                 print(
-                    '[EmailVerification] New user with onboarding data but no subscription - presenting Superwall paywall');
+                    '[EmailVerification] New user without subscription - presenting Superwall paywall');
                 await PaywallHelper.presentPaywallAndNavigate(
                   context: context,
                   userId: userId,
-                );
-              } else {
-                // New user without onboarding data - start from beginning
-                print(
-                    '[EmailVerification] New user without onboarding data - navigating to HowItWorksPage');
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (context) => const HowItWorksPage(),
-                  ),
-                  (route) => false,
                 );
               }
             }
