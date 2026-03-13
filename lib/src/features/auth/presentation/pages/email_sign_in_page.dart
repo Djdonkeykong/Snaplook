@@ -9,8 +9,18 @@ import '../../domain/providers/auth_provider.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import 'email_verification_page.dart';
 
+enum EmailAuthEntryPoint {
+  login,
+  onboarding,
+}
+
 class EmailSignInPage extends ConsumerStatefulWidget {
-  const EmailSignInPage({super.key});
+  const EmailSignInPage({
+    super.key,
+    this.entryPoint = EmailAuthEntryPoint.login,
+  });
+
+  final EmailAuthEntryPoint entryPoint;
 
   @override
   ConsumerState<EmailSignInPage> createState() => _EmailSignInPageState();
@@ -68,13 +78,18 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
       await authService.signInWithOtp(_emailController.text);
 
       if (mounted) {
-        Navigator.of(context).push(
+        final didVerify = await Navigator.of(context).push<bool>(
           MaterialPageRoute(
             builder: (context) => EmailVerificationPage(
               email: _emailController.text,
+              entryPoint: widget.entryPoint,
             ),
           ),
         );
+
+        if (didVerify == true && mounted) {
+          Navigator.of(context).pop(true);
+        }
       }
     } catch (e) {
       if (mounted) {

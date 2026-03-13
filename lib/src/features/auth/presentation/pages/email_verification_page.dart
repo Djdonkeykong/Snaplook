@@ -12,6 +12,7 @@ import '../../domain/providers/auth_provider.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../../services/paywall_helper.dart';
+import 'email_sign_in_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
         MainNavigation,
@@ -31,11 +32,14 @@ class EmailVerificationPage extends ConsumerStatefulWidget {
   const EmailVerificationPage({
     super.key,
     required this.email,
+    required this.entryPoint,
   });
 
   @override
   ConsumerState<EmailVerificationPage> createState() =>
       _EmailVerificationPageState();
+
+  final EmailAuthEntryPoint entryPoint;
 }
 
 class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
@@ -118,6 +122,11 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
         TextSelection.collapsed(offset: _otpController.text.length);
   }
 
+  void _completeOnboardingEmailFlow() {
+    if (!mounted) return;
+    Navigator.of(context).pop(true);
+  }
+
   Future<void> _verifyCode(String code) async {
     if (_isVerifying) return;
     setState(() => _isVerifying = true);
@@ -137,6 +146,10 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
         if (AuthService.reviewerEmails.contains(normalizedEmail)) {
           print(
               '[EmailVerification] Reviewer account detected - navigating directly to home');
+          if (widget.entryPoint == EmailAuthEntryPoint.onboarding) {
+            _completeOnboardingEmailFlow();
+            return;
+          }
           ref.read(selectedIndexProvider.notifier).state = 0;
           ref.invalidate(selectedIndexProvider);
           ref.invalidate(scrollToTopTriggerProvider);
@@ -315,8 +328,13 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 userId: userId,
               );
             } else {
-              // New user - check onboarding progress
-              final hasOnboardingData = discoverySource != null;
+              // New user - route based on where email auth started.
+              if (widget.entryPoint == EmailAuthEntryPoint.onboarding) {
+                print(
+                    '[EmailVerification] New user from onboarding flow - returning to SaveProgressPage');
+                _completeOnboardingEmailFlow();
+                return;
+              }
 
               if (hasActiveSubscription) {
                 // User purchased subscription - go straight to home
@@ -333,16 +351,8 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                   ),
                   (route) => false,
                 );
-              } else if (hasOnboardingData) {
-                // User went through onboarding but no subscription - present Superwall paywall
-                print(
-                    '[EmailVerification] New user with onboarding data but no subscription - presenting Superwall paywall');
-                await PaywallHelper.presentPaywallAndNavigate(
-                  context: context,
-                  userId: userId,
-                );
               } else {
-                // New user without onboarding data - start from beginning
+                // New user without onboarding context should start from the beginning.
                 print(
                     '[EmailVerification] New user without onboarding data - navigating to HowItWorksPage');
                 Navigator.of(context).pushAndRemoveUntil(
@@ -354,9 +364,13 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               }
             }
           } catch (e) {
-            // If check fails, assume new user and route into onboarding entry
+            // If check fails, assume new user and route based on entry point.
             print('[EmailVerification] Check error, assuming new user: $e');
             if (mounted) {
+              if (widget.entryPoint == EmailAuthEntryPoint.onboarding) {
+                _completeOnboardingEmailFlow();
+                return;
+              }
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                   builder: (context) => const HowItWorksPage(),

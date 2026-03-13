@@ -37,6 +37,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   final ScrollController _scrollController = ScrollController();
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
+  bool _isSkippingAuthenticatedUser = false;
 
   void _resetMainNavigationState() {
     ref.read(selectedIndexProvider.notifier).state = 0;
@@ -65,6 +66,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
       if (_scrollController.hasClients) {
         _anchorOffset = _scrollController.offset;
       }
+      _skipAccountCreationIfAuthenticated();
     });
   }
 
@@ -90,6 +92,21 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         .whenComplete(() {
       _isSnapping = false;
     });
+  }
+
+  Future<void> _skipAccountCreationIfAuthenticated() async {
+    if (!mounted || _isSkippingAuthenticatedUser) return;
+
+    final authService = ref.read(authServiceProvider);
+    if (authService.currentUser == null) {
+      return;
+    }
+
+    _isSkippingAuthenticatedUser = true;
+    debugPrint(
+        '[SaveProgress] Authenticated user reached account page - skipping account creation');
+
+    await _handleAuthSuccess(context);
   }
 
   Future<void> _navigateBasedOnSubscriptionStatus() async {
@@ -539,7 +556,10 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                 final result = await Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (context) =>
-                                        const EmailSignInPage(),
+                                        const EmailSignInPage(
+                                          entryPoint:
+                                              EmailAuthEntryPoint.onboarding,
+                                        ),
                                   ),
                                 );
 

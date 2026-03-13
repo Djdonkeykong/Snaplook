@@ -814,10 +814,12 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         if (!context.mounted) return;
 
                         navigator.push(
-                          MaterialPageRoute(
-                            builder: (context) => const EmailSignInPage(),
+                        MaterialPageRoute(
+                          builder: (context) => const EmailSignInPage(
+                            entryPoint: EmailAuthEntryPoint.login,
                           ),
-                        );
+                        ),
+                      );
                       },
                     ),
                     SizedBox(height: spacing.l),
