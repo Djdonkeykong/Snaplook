@@ -6,7 +6,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../../shared/navigation/main_navigation.dart';
-import '../../../../auth/domain/providers/auth_provider.dart';
+import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/revenuecat_service.dart';
