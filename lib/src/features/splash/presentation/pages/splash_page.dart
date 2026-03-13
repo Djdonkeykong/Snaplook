@@ -111,12 +111,18 @@ class _SplashPageState extends ConsumerState<SplashPage> {
             // Payment complete but need to finish onboarding
             debugPrint('[Splash] User paid but needs to complete onboarding - routing to welcome');
             nextPage = const WelcomeFreeAnalysisPage();
-          } else if (onboardingRoute == 'paywall' ||
-              onboardingRoute == 'resubscribe_paywall') {
-            // User abandoned at paywall - send them back to complete payment
+          } else if (onboardingRoute == 'paywall') {
+            // User abandoned at paywall during onboarding - send them back to complete payment
             debugPrint(
                 '[Splash] User needs paywall access - routing to paywall');
             nextPage = PaywallPresentationPage(userId: user.id);
+          } else if (onboardingRoute == 'resubscribe_paywall') {
+            debugPrint(
+                '[Splash] Completed user needs paywall access - routing to home shell');
+            await _bootstrapHistoryUiState();
+            nextPage = const MainNavigation(
+              shouldPresentPaywallOnLoad: true,
+            );
           } else {
             // Onboarding not started or abandoned before account creation - send to login
             debugPrint('[Splash] User onboarding not started or incomplete - routing to login');
