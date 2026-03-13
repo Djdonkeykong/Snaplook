@@ -37,6 +37,8 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   final ScrollController _scrollController = ScrollController();
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
+  bool _isAutoContinuingAuthenticatedUser = false;
+  bool _hasTriggeredAutoContinue = false;
 
   void _resetMainNavigationState() {
     ref.read(selectedIndexProvider.notifier).state = 0;
@@ -59,11 +61,16 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   @override
   void initState() {
     super.initState();
+    _isAutoContinuingAuthenticatedUser =
+        ref.read(authServiceProvider).currentUser != null;
     AnalyticsService().trackOnboardingScreen('onboarding_save_progress');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_scrollController.hasClients) {
         _anchorOffset = _scrollController.offset;
+      }
+      if (_isAutoContinuingAuthenticatedUser) {
+        unawaited(_autoContinueAuthenticatedUser());
       }
     });
   }
@@ -90,6 +97,25 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         .whenComplete(() {
       _isSnapping = false;
     });
+  }
+
+  Future<void> _autoContinueAuthenticatedUser() async {
+    if (!mounted || _hasTriggeredAutoContinue) return;
+    _hasTriggeredAutoContinue = true;
+
+    final authService = ref.read(authServiceProvider);
+    if (authService.currentUser == null) {
+      if (mounted) {
+        setState(() {
+          _isAutoContinuingAuthenticatedUser = false;
+        });
+      }
+      return;
+    }
+
+    debugPrint(
+        '[SaveProgress] User already authenticated - skipping account creation UI');
+    await _handleAuthSuccess(context);
   }
 
   Future<void> _navigateBasedOnSubscriptionStatus() async {
@@ -341,6 +367,17 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isAutoContinuingAuthenticatedUser) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFf2003c)),
+          ),
+        ),
+      );
+    }
+
     final spacing = context.spacing;
     final targetPlatform = Theme.of(context).platform;
     final isAppleSignInAvailable = targetPlatform == TargetPlatform.iOS ||
