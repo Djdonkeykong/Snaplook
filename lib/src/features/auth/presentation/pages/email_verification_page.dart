@@ -294,13 +294,23 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
             final activeEntitlements = customerInfo?.entitlements.active.values;
             final hasActiveSubscription =
                 activeEntitlements != null && activeEntitlements.isNotEmpty;
+            final userCreditsResponse = await supabase
+                .from('users')
+                .select('paid_credits_remaining')
+                .eq('id', userId)
+                .maybeSingle();
+            final hasCredits =
+                (userCreditsResponse?['paid_credits_remaining'] ?? 0) > 0;
             print(
                 '[EmailVerification] Has active subscription (RevenueCat): $hasActiveSubscription');
+            print(
+                '[EmailVerification] User has credits: $hasCredits (${userCreditsResponse?['paid_credits_remaining']} remaining)');
 
-            if (hasCompletedOnboarding && hasActiveSubscription) {
+            if (hasCompletedOnboarding &&
+                (hasActiveSubscription || hasCredits)) {
               // Existing user who completed onboarding and has active subscription - go to main app
               print(
-                  '[EmailVerification] Existing user with subscription - navigating to main app');
+                  '[EmailVerification] Existing user with access - navigating to main app');
               // Reset to home tab
               ref.read(selectedIndexProvider.notifier).state = 0;
               // Invalidate all providers to refresh state
@@ -314,10 +324,12 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 ),
                 (route) => false,
               );
-            } else if (hasCompletedOnboarding && !hasActiveSubscription) {
+            } else if (hasCompletedOnboarding &&
+                !hasActiveSubscription &&
+                !hasCredits) {
               // Existing user who completed onboarding but NO subscription - present Superwall paywall
               print(
-                  '[EmailVerification] Existing user without subscription - presenting Superwall paywall');
+                  '[EmailVerification] Existing user without access - presenting Superwall paywall');
               await PaywallHelper.presentPaywallAndNavigate(
                 context: context,
                 userId: userId,
