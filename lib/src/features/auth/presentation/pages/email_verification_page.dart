@@ -25,6 +25,7 @@ import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../onboarding/domain/providers/gender_provider.dart';
 import '../../../onboarding/domain/providers/onboarding_preferences_provider.dart';
+import '../../../onboarding/presentation/services/post_account_navigation.dart';
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
@@ -122,11 +123,6 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
         TextSelection.collapsed(offset: _otpController.text.length);
   }
 
-  void _completeOnboardingEmailFlow() {
-    if (!mounted) return;
-    Navigator.of(context).pop(true);
-  }
-
   Future<void> _verifyCode(String code) async {
     if (_isVerifying) return;
     setState(() => _isVerifying = true);
@@ -142,14 +138,15 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
+        if (widget.entryPoint == EmailAuthEntryPoint.onboarding) {
+          await PostAccountNavigation.route(context: context, ref: ref);
+          return;
+        }
+
         final normalizedEmail = widget.email.trim().toLowerCase();
         if (AuthService.reviewerEmails.contains(normalizedEmail)) {
           print(
               '[EmailVerification] Reviewer account detected - navigating directly to home');
-          if (widget.entryPoint == EmailAuthEntryPoint.onboarding) {
-            _completeOnboardingEmailFlow();
-            return;
-          }
           ref.read(selectedIndexProvider.notifier).state = 0;
           ref.invalidate(selectedIndexProvider);
           ref.invalidate(scrollToTopTriggerProvider);
@@ -328,14 +325,6 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 userId: userId,
               );
             } else {
-              // New user - route based on where email auth started.
-              if (widget.entryPoint == EmailAuthEntryPoint.onboarding) {
-                print(
-                    '[EmailVerification] New user from onboarding flow - returning to SaveProgressPage');
-                _completeOnboardingEmailFlow();
-                return;
-              }
-
               if (hasActiveSubscription) {
                 // User purchased subscription - go straight to home
                 print(
@@ -364,13 +353,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               }
             }
           } catch (e) {
-            // If check fails, assume new user and route based on entry point.
+            // If check fails, assume new user and route into onboarding entry.
             print('[EmailVerification] Check error, assuming new user: $e');
             if (mounted) {
-              if (widget.entryPoint == EmailAuthEntryPoint.onboarding) {
-                _completeOnboardingEmailFlow();
-                return;
-              }
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                   builder: (context) => const HowItWorksPage(),
