@@ -25,7 +25,6 @@ import '../../../../services/revenuecat_service.dart';
 import '../../../../services/superwall_service.dart';
 import '../../domain/providers/gender_provider.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
-import '../services/post_account_navigation.dart';
 
 class SaveProgressPage extends ConsumerStatefulWidget {
   const SaveProgressPage({super.key});
@@ -38,8 +37,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   final ScrollController _scrollController = ScrollController();
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
-  bool _isSkippingAuthenticatedUser = false;
-  bool _hasTriggeredAuthenticatedSkip = false;
 
   void _resetMainNavigationState() {
     ref.read(selectedIndexProvider.notifier).state = 0;
@@ -62,15 +59,12 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   @override
   void initState() {
     super.initState();
-    _isSkippingAuthenticatedUser =
-        ref.read(authServiceProvider).currentUser != null;
     AnalyticsService().trackOnboardingScreen('onboarding_save_progress');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_scrollController.hasClients) {
         _anchorOffset = _scrollController.offset;
       }
-      _skipAccountCreationIfAuthenticated();
     });
   }
 
@@ -96,23 +90,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         .whenComplete(() {
       _isSnapping = false;
     });
-  }
-
-  Future<void> _skipAccountCreationIfAuthenticated() async {
-    if (!mounted || _hasTriggeredAuthenticatedSkip) return;
-
-    final authService = ref.read(authServiceProvider);
-    if (authService.currentUser == null) {
-      _isSkippingAuthenticatedUser = false;
-      return;
-    }
-
-    _hasTriggeredAuthenticatedSkip = true;
-    _isSkippingAuthenticatedUser = true;
-    debugPrint(
-        '[SaveProgress] Authenticated user reached account page - skipping account creation');
-
-    await PostAccountNavigation.route(context: context, ref: ref);
   }
 
   Future<void> _navigateBasedOnSubscriptionStatus() async {
@@ -324,22 +301,46 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   }
 
   Future<void> _handleAuthSuccess(BuildContext context) async {
-    await PostAccountNavigation.route(context: context, ref: ref);
+    final authService = ref.read(authServiceProvider);
+    final userId = authService.currentUser?.id;
+
+    if (userId == null) {
+      debugPrint('[SaveProgress] No user ID after auth');
+      return;
+    }
+
+    debugPrint('[SaveProgress] Auth successful for user $userId');
+
+    try {
+      unawaited(OnboardingStateService().updateCheckpoint(
+        userId,
+        OnboardingCheckpoint.saveProgress,
+      ));
+    } catch (e) {
+      debugPrint('[SaveProgress] Error updating checkpoint: $e');
+    }
+
+    try {
+      await SubscriptionSyncService().identify(userId);
+      await FraudPreventionService.updateUserDeviceFingerprint(userId);
+
+      final email = authService.currentUser?.email;
+      if (email != null) {
+        await FraudPreventionService.calculateFraudScore(
+          userId,
+          email: email,
+        );
+      }
+    } catch (e) {
+      debugPrint('[SaveProgress] Error syncing subscription data: $e');
+    }
+
+    await _persistOnboardingSelections(userId);
+    await _navigateBasedOnSubscriptionStatus();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isSkippingAuthenticatedUser) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFf2003c)),
-          ),
-        ),
-      );
-    }
-
     final spacing = context.spacing;
     final targetPlatform = Theme.of(context).platform;
     final isAppleSignInAvailable = targetPlatform == TargetPlatform.iOS ||
@@ -538,8 +539,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                   MaterialPageRoute(
                                     builder: (context) =>
                                         const EmailSignInPage(
-                                          entryPoint:
-                                              EmailAuthEntryPoint.onboarding,
+                                          returnResultOnSuccess: true,
                                         ),
                                   ),
                                 );

@@ -815,9 +815,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
                         navigator.push(
                         MaterialPageRoute(
-                          builder: (context) => const EmailSignInPage(
-                            entryPoint: EmailAuthEntryPoint.login,
-                          ),
+                          builder: (context) => const EmailSignInPage(),
                         ),
                       );
                       },

@@ -12,7 +12,6 @@ import '../../domain/providers/auth_provider.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../../services/paywall_helper.dart';
-import 'email_sign_in_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
         MainNavigation,
@@ -25,7 +24,6 @@ import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../onboarding/domain/providers/gender_provider.dart';
 import '../../../onboarding/domain/providers/onboarding_preferences_provider.dart';
-import '../../../onboarding/presentation/services/post_account_navigation.dart';
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
@@ -33,14 +31,14 @@ class EmailVerificationPage extends ConsumerStatefulWidget {
   const EmailVerificationPage({
     super.key,
     required this.email,
-    required this.entryPoint,
+    this.returnResultOnSuccess = false,
   });
 
   @override
   ConsumerState<EmailVerificationPage> createState() =>
       _EmailVerificationPageState();
 
-  final EmailAuthEntryPoint entryPoint;
+  final bool returnResultOnSuccess;
 }
 
 class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
@@ -138,8 +136,8 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
-        if (widget.entryPoint == EmailAuthEntryPoint.onboarding) {
-          await PostAccountNavigation.route(context: context, ref: ref);
+        if (widget.returnResultOnSuccess) {
+          Navigator.of(context).pop(true);
           return;
         }
 
@@ -325,6 +323,9 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 userId: userId,
               );
             } else {
+              // New user - check onboarding progress
+              final hasOnboardingData = discoverySource != null;
+
               if (hasActiveSubscription) {
                 // User purchased subscription - go straight to home
                 print(
@@ -340,8 +341,16 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                   ),
                   (route) => false,
                 );
+              } else if (hasOnboardingData) {
+                // User went through onboarding but no subscription - present Superwall paywall
+                print(
+                    '[EmailVerification] New user with onboarding data but no subscription - presenting Superwall paywall');
+                await PaywallHelper.presentPaywallAndNavigate(
+                  context: context,
+                  userId: userId,
+                );
               } else {
-                // New user without onboarding context should start from the beginning.
+                // New user without onboarding data - start from beginning
                 print(
                     '[EmailVerification] New user without onboarding data - navigating to HowItWorksPage');
                 Navigator.of(context).pushAndRemoveUntil(
@@ -353,7 +362,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
               }
             }
           } catch (e) {
-            // If check fails, assume new user and route into onboarding entry.
+            // If check fails, assume new user and route into onboarding entry
             print('[EmailVerification] Check error, assuming new user: $e');
             if (mounted) {
               Navigator.of(context).pushAndRemoveUntil(
