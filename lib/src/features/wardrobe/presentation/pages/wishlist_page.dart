@@ -266,7 +266,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage> {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: colorScheme.onSurface,
-                  width: 1.5,
+                  width: 2.5,
                 ),
               ),
               child: Transform.translate(
