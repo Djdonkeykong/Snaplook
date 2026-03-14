@@ -15,10 +15,12 @@ class PaywallPresentationPage extends StatefulWidget {
     super.key,
     required this.userId,
     this.placement = 'onboarding_paywall',
+    this.params,
   });
 
   final String? userId;
   final String placement;
+  final Map<String, Object>? params;
 
   @override
   State<PaywallPresentationPage> createState() =>
@@ -52,6 +54,7 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       // Present Superwall paywall (this will show Superwall's UI over our page)
       final didPurchase = await SuperwallService().presentPaywall(
         placement: widget.placement,
+        params: widget.params,
       );
 
       if (!mounted) return;
@@ -61,22 +64,16 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       if (!didPurchase) {
         debugPrint(
             '[PaywallPresentationPage] User dismissed paywall without purchasing - going back');
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        if (!mounted) return;
         Navigator.of(context).pop();
         return;
       }
 
       if (widget.userId == null) {
         debugPrint('[PaywallPresentationPage] WARNING: No user found after paywall');
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        if (!mounted) return;
         Navigator.of(context).pop();
         return;
       }
@@ -132,8 +129,9 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
           : const WelcomeFreeAnalysisPage();
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => nextPage),
+          (route) => false,
         );
       }
     } catch (e) {
