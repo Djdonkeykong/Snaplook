@@ -16,6 +16,7 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../widgets/progress_indicator.dart';
+import 'paywall_presentation_page.dart';
 import 'trial_intro_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/subscription_sync_service.dart';
@@ -262,12 +263,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         }
       } else {
         // New user (hasn't completed onboarding) → TrialIntroPage
-        debugPrint('[SaveProgress] New user - navigating to trial intro');
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const TrialIntroPage()),
-          );
-        }
+        await _navigateNewUserOfferFlow(userId);
       }
     } catch (e, stackTrace) {
       debugPrint('[SaveProgress] Error checking status: $e');
@@ -279,6 +275,55 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           MaterialPageRoute(builder: (context) => const TrialIntroPage()),
         );
       }
+    }
+  }
+
+  Future<void> _navigateNewUserOfferFlow(String userId) async {
+    debugPrint('[SaveProgress] New user - checking trial eligibility');
+
+    try {
+      final isEligibleForTrial =
+          await RevenueCatService().isEligibleForTrial().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint(
+              '[SaveProgress] Trial eligibility check timed out - defaulting to trial intro');
+          return true;
+        },
+      );
+
+      if (!mounted) return;
+
+      if (isEligibleForTrial) {
+        debugPrint(
+            '[SaveProgress] New user is eligible for trial - navigating to trial intro');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const TrialIntroPage()),
+        );
+        return;
+      }
+
+      debugPrint(
+          '[SaveProgress] New user is not eligible for trial - navigating directly to paywall');
+      unawaited(OnboardingStateService().updateCheckpoint(
+        userId,
+        OnboardingCheckpoint.paywall,
+      ));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => PaywallPresentationPage(
+            userId: userId,
+            placement: 'onboarding_paywall',
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('[SaveProgress] Error checking trial eligibility: $e');
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const TrialIntroPage()),
+      );
     }
   }
 
