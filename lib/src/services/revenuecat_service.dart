@@ -81,10 +81,19 @@ class RevenueCatService {
 
     try {
       await Purchases.logIn(userId);
-      _customerInfo = await Purchases.getCustomerInfo();
+
+      // Restore purchases after logIn so any anonymous purchase made before
+      // account creation is transferred to the identified RevenueCat user.
+      try {
+        _customerInfo = await Purchases.restorePurchases();
+      } catch (_) {
+        _customerInfo = await Purchases.getCustomerInfo();
+      }
 
       if (kDebugMode) {
         debugPrint('[RevenueCat] User identified: $userId');
+        debugPrint(
+            '[RevenueCat] Active entitlements: ${_customerInfo?.entitlements.active.keys.toList()}');
       }
     } catch (e) {
       if (kDebugMode) {
