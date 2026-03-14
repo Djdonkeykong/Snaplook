@@ -83,7 +83,9 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
           debugPrint(
               '[PaywallPresentationPage] Syncing subscription to Supabase...');
-          await SubscriptionSyncService().syncSubscriptionToSupabase();
+          await SubscriptionSyncService().syncSubscriptionToSupabase(
+            attemptRestoreOnNoEntitlement: true,
+          );
           await OnboardingStateService().markPaymentComplete(widget.userId!);
           debugPrint(
               '[PaywallPresentationPage] Subscription synced successfully');

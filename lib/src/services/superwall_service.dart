@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:superwallkit_flutter/superwallkit_flutter.dart' as sw;
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'revenuecat_service.dart';
 import 'rc_purchase_controller.dart';
 import 'debug_log_service.dart';
 
@@ -195,7 +196,8 @@ class SuperwallService {
 
     try {
       final customerInfo = await Purchases.getCustomerInfo();
-      final hasActiveEntitlement = customerInfo.entitlements.active.isNotEmpty;
+      final hasActiveEntitlement =
+          RevenueCatService().hasActiveAccess(customerInfo);
 
       if (hasActiveEntitlement) {
         // User has active subscription - tell Superwall
@@ -432,7 +434,7 @@ class SuperwallService {
       try {
         final customerInfo = await Purchases.getCustomerInfo();
         final hasActiveEntitlement =
-            customerInfo.entitlements.active.isNotEmpty;
+            RevenueCatService().hasActiveAccess(customerInfo);
         final didCompletePurchase =
             didPurchaseThroughPaywall || hasActiveEntitlement;
         _log(

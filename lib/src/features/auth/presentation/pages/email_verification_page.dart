@@ -12,6 +12,7 @@ import '../../domain/providers/auth_provider.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../../services/paywall_helper.dart';
+import '../../../../services/revenuecat_service.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
         MainNavigation,
@@ -291,9 +292,8 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                   '[EmailVerification] Error fetching RevenueCat customer info: $e');
             }
 
-            final activeEntitlements = customerInfo?.entitlements.active.values;
             final hasActiveSubscription =
-                activeEntitlements != null && activeEntitlements.isNotEmpty;
+                RevenueCatService().hasActiveAccess(customerInfo);
             final userCreditsResponse = await supabase
                 .from('users')
                 .select('paid_credits_remaining')

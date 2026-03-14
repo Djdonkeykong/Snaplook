@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'credit_service.dart';
 import 'superwall_service.dart';
 import 'revenuecat_service.dart';
 
@@ -27,7 +28,9 @@ class SubscriptionSyncService {
   /// - Successful paywall flow
   /// - User login
   /// - App startup (if authenticated)
-  Future<void> syncSubscriptionToSupabase() async {
+  Future<void> syncSubscriptionToSupabase({
+    bool attemptRestoreOnNoEntitlement = false,
+  }) async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
@@ -59,24 +62,53 @@ class SubscriptionSyncService {
       }
 
       // Parse RevenueCat subscription data
-      final activeEntitlements = customerInfo.entitlements.active.values;
-      final entitlement =
+      var activeEntitlements = customerInfo.entitlements.active.values;
+      var entitlement =
           (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
-      final hasActiveRevenueCat = entitlement != null;
-      final isTrial = entitlement?.periodType == PeriodType.trial ||
+      var hasActiveRevenueCat =
+          entitlement != null || customerInfo.activeSubscriptions.isNotEmpty;
+
+      if (!hasActiveRevenueCat && attemptRestoreOnNoEntitlement) {
+        debugPrint(
+            '[SubscriptionSync] No active entitlement from getCustomerInfo - attempting restore');
+        try {
+          final restoredInfo =
+              await Purchases.restorePurchases().timeout(const Duration(seconds: 12));
+          customerInfo = restoredInfo;
+          activeEntitlements = customerInfo.entitlements.active.values;
+          entitlement =
+              (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
+          hasActiveRevenueCat =
+              entitlement != null || customerInfo.activeSubscriptions.isNotEmpty;
+          debugPrint(
+              '[SubscriptionSync] Restore completed. hasActive=$hasActiveRevenueCat activeSubscriptions=${customerInfo.activeSubscriptions}');
+        } catch (restoreError) {
+          debugPrint(
+              '[SubscriptionSync] Restore-on-no-entitlement failed: $restoreError');
+        }
+      }
+
+      final isTrialFromEntitlement = entitlement?.periodType == PeriodType.trial ||
           entitlement?.periodType == PeriodType.intro;
       final expirationDateIso = entitlement?.expirationDate != null
           ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
-          : null;
-      final productId = entitlement?.productIdentifier;
+          : (customerInfo.latestExpirationDate != null
+              ? DateTime.tryParse(customerInfo.latestExpirationDate!)
+                  ?.toIso8601String()
+              : null);
+      final productId = entitlement?.productIdentifier ??
+          (customerInfo.activeSubscriptions.isNotEmpty
+              ? customerInfo.activeSubscriptions.first
+              : null);
       final revenueCatUserId = customerInfo.originalAppUserId;
 
       debugPrint('[SubscriptionSync] RevenueCat data:');
       debugPrint('  - originalAppUserId: $revenueCatUserId');
       debugPrint('  - hasActiveSubscription: $hasActiveRevenueCat');
-      debugPrint('  - isTrial: $isTrial');
+      debugPrint('  - isTrialFromEntitlement: $isTrialFromEntitlement');
       debugPrint('  - productId: $productId');
       debugPrint('  - expiresAt: $expirationDateIso');
+      debugPrint('  - activeSubscriptions: ${customerInfo.activeSubscriptions}');
 
       await _syncCreditPackPurchases(
         userId: user.id,
@@ -94,6 +126,8 @@ class SubscriptionSyncService {
 
       final hasCredits = (userResponse?['paid_credits_remaining'] ?? 0) > 0;
       final currentStatus = userResponse?['subscription_status'] ?? 'free';
+      final currentIsTrial = userResponse?['is_trial'] == true;
+      final isTrial = entitlement == null ? currentIsTrial : isTrialFromEntitlement;
 
       // Determine what to sync
       if (hasActiveRevenueCat) {
@@ -116,18 +150,19 @@ class SubscriptionSyncService {
 
         // Also sync status to Superwall so it knows about the subscription
         await _superwall.syncSubscriptionStatus();
-      } else if (hasCredits &&
-          (currentStatus == 'active' || currentStatus == 'expired')) {
-        // User has credits but no active RevenueCat subscription
-        // Preserve their existing subscription data entirely (don't overwrite with nulls)
-        // Only update the sync timestamp
+      } else if (currentStatus == 'active' ||
+          currentStatus == 'expired' ||
+          currentIsTrial) {
+        // RevenueCat can briefly report no active entitlement immediately
+        // after auth or purchase transitions. Preserve known non-free state
+        // instead of downgrading the user to free.
         await _supabase.from('users').update({
           'subscription_last_synced_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('id', user.id);
 
         debugPrint(
-            '[SubscriptionSync] User has credits - preserving existing subscription data. Status: $currentStatus');
+            '[SubscriptionSync] Preserving existing subscription state. Status: $currentStatus, isTrial: $currentIsTrial, hasCredits: $hasCredits');
 
         // Sync status to Superwall
         await _superwall.syncSubscriptionStatus();
@@ -156,6 +191,7 @@ class SubscriptionSyncService {
         await _superwall.syncSubscriptionStatus();
       }
 
+      CreditService().clearCache();
       await _syncShareExtensionAuthSnapshot(userId: user.id);
     } catch (e, stackTrace) {
       debugPrint('[SubscriptionSync] Error syncing subscription: $e');
@@ -306,7 +342,9 @@ class SubscriptionSyncService {
     await _superwall.identify(userId);
 
     // Sync subscription data to Supabase
-    await syncSubscriptionToSupabase();
+    await syncSubscriptionToSupabase(
+      attemptRestoreOnNoEntitlement: true,
+    );
   }
 
   /// Identify user with Superwall (deprecated - use identify() instead).

@@ -178,7 +178,9 @@ class PurchaseController {
         await Future.delayed(const Duration(milliseconds: 600));
 
         // Sync subscription/credit purchases data to Supabase.
-        await _subscriptionSyncService.syncSubscriptionToSupabase();
+        await _subscriptionSyncService.syncSubscriptionToSupabase(
+          attemptRestoreOnNoEntitlement: true,
+        );
 
         // Refresh local state from Supabase.
         await _creditNotifier.syncWithSubscription();

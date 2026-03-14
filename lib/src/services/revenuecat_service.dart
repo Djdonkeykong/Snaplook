@@ -14,6 +14,14 @@ class RevenueCatService {
   CustomerInfo? _customerInfo;
   Offerings? _cachedOfferings;
 
+  /// Returns true when RevenueCat indicates an active paid or trial state.
+  bool hasActiveAccess(CustomerInfo? customerInfo) {
+    if (customerInfo == null) return false;
+    final hasEntitlements = customerInfo.entitlements.active.isNotEmpty;
+    final hasActiveSubscriptions = customerInfo.activeSubscriptions.isNotEmpty;
+    return hasEntitlements || hasActiveSubscriptions;
+  }
+
   /// Initialize RevenueCat with API key
   Future<void> initialize({required String apiKey, String? userId}) async {
     if (_configured) return;
@@ -80,11 +88,43 @@ class RevenueCatService {
     }
 
     try {
-      await Purchases.logIn(userId);
-      _customerInfo = await Purchases.getCustomerInfo();
+      final previousInfo = _customerInfo;
+      final loginResult = await Purchases.logIn(userId);
+      _customerInfo = loginResult.customerInfo;
+
+      if (kDebugMode) {
+        debugPrint('[RevenueCat] logIn complete for user: $userId');
+        debugPrint(
+            '[RevenueCat] logIn created new customer: ${loginResult.created}');
+        debugPrint(
+            '[RevenueCat] Previous originalAppUserId: ${previousInfo?.originalAppUserId}');
+        debugPrint(
+            '[RevenueCat] Post-login originalAppUserId: ${_customerInfo?.originalAppUserId}');
+      }
+
+      // Force a receipt sync immediately after logIn to reduce timing races
+      // where getCustomerInfo returns stale or empty entitlements.
+      try {
+        await Purchases.syncPurchases();
+        _customerInfo = await Purchases.getCustomerInfo();
+      } catch (_) {
+        // Non-fatal. We still try restore as a final fallback below.
+      }
+
+      if (!hasActiveAccess(_customerInfo)) {
+        try {
+          _customerInfo = await Purchases.restorePurchases();
+        } catch (_) {
+          _customerInfo = await Purchases.getCustomerInfo();
+        }
+      }
 
       if (kDebugMode) {
         debugPrint('[RevenueCat] User identified: $userId');
+        debugPrint(
+            '[RevenueCat] Active entitlements: ${_customerInfo?.entitlements.active.keys.toList()}');
+        debugPrint(
+            '[RevenueCat] Active subscriptions: ${_customerInfo?.activeSubscriptions}');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -186,8 +226,7 @@ class RevenueCatService {
       final customerInfo = await Purchases.purchasePackage(package);
       _customerInfo = customerInfo;
 
-      final hasActiveEntitlement =
-          _customerInfo?.entitlements.active.isNotEmpty ?? false;
+      final hasActiveEntitlement = hasActiveAccess(_customerInfo);
 
       if (kDebugMode) {
         debugPrint(
@@ -230,8 +269,7 @@ class RevenueCatService {
       }
 
       _customerInfo = await Purchases.restorePurchases();
-      final hasActiveEntitlement =
-          _customerInfo?.entitlements.active.isNotEmpty ?? false;
+      final hasActiveEntitlement = hasActiveAccess(_customerInfo);
 
       if (kDebugMode) {
         debugPrint(
@@ -255,7 +293,7 @@ class RevenueCatService {
       final customerInfo = await Purchases.getCustomerInfo();
       _customerInfo = customerInfo;
 
-      return customerInfo.entitlements.active.containsKey('premium');
+      return hasActiveAccess(customerInfo);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('[RevenueCat] Error checking subscription: $e');

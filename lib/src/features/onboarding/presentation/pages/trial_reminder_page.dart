@@ -231,7 +231,9 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                             await Future.delayed(
                                 const Duration(milliseconds: 500));
                             await SubscriptionSyncService()
-                                .syncSubscriptionToSupabase();
+                                .syncSubscriptionToSupabase(
+                                  attemptRestoreOnNoEntitlement: true,
+                                );
                             await OnboardingStateService()
                                 .markPaymentComplete(userId);
                           } catch (e) {

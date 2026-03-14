@@ -96,7 +96,9 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
 
             try {
               await Future.delayed(const Duration(milliseconds: 500));
-              await SubscriptionSyncService().syncSubscriptionToSupabase();
+              await SubscriptionSyncService().syncSubscriptionToSupabase(
+                attemptRestoreOnNoEntitlement: true,
+              );
               await OnboardingStateService().markPaymentComplete(userId);
             } catch (e) {
               debugPrint('[TrialIntro] Error syncing subscription: $e');
