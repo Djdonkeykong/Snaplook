@@ -23,12 +23,7 @@ final profileNavigatorKey = GlobalKey<NavigatorState>();
 final homeScrollControllerProvider = Provider<ScrollController?>((ref) => null);
 
 class MainNavigation extends ConsumerStatefulWidget {
-  const MainNavigation({
-    super.key,
-    this.shouldPresentPaywallOnLoad = false,
-  });
-
-  final bool shouldPresentPaywallOnLoad;
+  const MainNavigation({super.key});
 
   @override
   ConsumerState<MainNavigation> createState() => _MainNavigationState();
@@ -42,33 +37,12 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     systemNavigationBarColor: Colors.white,
     systemNavigationBarIconBrightness: Brightness.dark,
   );
-  bool _hasHandledLaunchPaywall = false;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() => ref.read(creditBalanceProvider));
     SystemChrome.setSystemUIOverlayStyle(_mainOverlayStyle);
-
-    if (widget.shouldPresentPaywallOnLoad) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _presentLaunchPaywallIfNeeded();
-      });
-    }
-  }
-
-  Future<void> _presentLaunchPaywallIfNeeded() async {
-    if (_hasHandledLaunchPaywall || !mounted || !widget.shouldPresentPaywallOnLoad) {
-      return;
-    }
-
-    _hasHandledLaunchPaywall = true;
-
-    // Let the shell render first so the paywall presents over the home context.
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    if (!mounted) return;
-
-    await ref.read(purchaseControllerProvider).showPaywall();
   }
 
   void _handleTabTap(int index) {

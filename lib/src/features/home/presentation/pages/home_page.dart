@@ -28,7 +28,6 @@ import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../services/pip_tutorial_service.dart';
 import '../../../../shared/services/review_prompt_logs_service.dart';
-import '../../../../services/notification_service.dart';
 import '../../../../../core/theme/snaplook_icons.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 
@@ -113,14 +112,6 @@ class _HomePageState extends ConsumerState<HomePage>
       Future.delayed(const Duration(milliseconds: 1000), () {
         _checkPendingSharedImage();
       });
-
-      // Ask for notification permission from home instead of onboarding.
-      unawaited(
-        Future.delayed(const Duration(seconds: 2), () async {
-          if (!mounted) return;
-          await NotificationService().initialize();
-        }),
-      );
 
       unawaited(_maybeRequestReviewFromExistingFirstAnalysis());
     });
@@ -600,8 +591,7 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   void _showTutorialOptionsSheet() {
-    final isIOS = Platform.isIOS;
-    var isTutorialEnabled = isIOS ? _isTutorialEnabled : false;
+    var isTutorialEnabled = _isTutorialEnabled;
     final options = [
       _TutorialOptionData(
         label: 'Instagram',
@@ -763,21 +753,20 @@ class _HomePageState extends ConsumerState<HomePage>
                               ),
                             ),
                           ),
-                          if (isIOS)
-                            _TutorialToggleCard(
-                              value: isTutorialEnabled,
-                              onChanged: (enabled) {
-                                HapticFeedback.selectionClick();
-                                sheetSetState(() {
-                                  isTutorialEnabled = enabled;
+                          _TutorialToggleCard(
+                            value: isTutorialEnabled,
+                            onChanged: (enabled) {
+                              HapticFeedback.selectionClick();
+                              sheetSetState(() {
+                                isTutorialEnabled = enabled;
+                              });
+                              if (mounted) {
+                                setState(() {
+                                  _isTutorialEnabled = enabled;
                                 });
-                                if (mounted) {
-                                  setState(() {
-                                    _isTutorialEnabled = enabled;
-                                  });
-                                }
-                              },
-                            ),
+                              }
+                            },
+                          ),
                         ],
                       ),
                       Positioned(
@@ -1753,29 +1742,17 @@ class _InfoBottomSheetContent extends ConsumerWidget {
               padding: EdgeInsets.all(spacing.l),
               child: creditBalance.when(
                 data: (balance) {
-                  final hasPurchasedCreditsOnly = !balance.hasActiveSubscription &&
-                      balance.availableCredits > 0;
                   final membershipType = balance.hasActiveSubscription
                       ? (balance.isTrialSubscription
                           ? 'Premium (Trial)'
                           : 'Premium')
-                      : (hasPurchasedCreditsOnly ? 'Credit Packs' : 'Free');
-                  final monthlyAllowance =
-                      SubscriptionPlan.monthly.creditsPerMonth;
+                      : 'Free';
+                  final maxCredits = SubscriptionPlan.monthly.creditsPerMonth;
                   final creditsRemaining =
-                      balance.availableCredits.clamp(0, 999999).toInt();
-                  final hasExtraPurchasedCredits = balance.hasActiveSubscription &&
-                      creditsRemaining > monthlyAllowance;
-                  final creditsPercentage =
-                      balance.hasActiveSubscription && monthlyAllowance > 0
-                          ? (creditsRemaining / monthlyAllowance)
-                              .clamp(0.0, 1.0)
-                          : 1.0;
-                  final resetLabel = balance.hasActiveSubscription
-                      ? (hasExtraPurchasedCredits
-                          ? 'Monthly allowance: $monthlyAllowance + extra purchased credits'
-                          : 'Monthly allowance: $monthlyAllowance (resets on the 1st)')
-                      : 'Purchased credits do not expire';
+                      balance.availableCredits.clamp(0, maxCredits).toInt();
+                  final creditsPercentage = maxCredits > 0
+                      ? (creditsRemaining / maxCredits).clamp(0.0, 1.0)
+                      : 0.0;
 
                   return Column(
                     mainAxisSize: MainAxisSize.min,
@@ -1822,6 +1799,15 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               letterSpacing: -2,
                             ),
                           ),
+                          Text(
+                            ' / $maxCredits',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurfaceVariant,
+                              fontFamily: 'PlusJakartaSans',
+                            ),
+                          ),
                         ],
                       ),
                       SizedBox(height: spacing.xs),
@@ -1849,7 +1835,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                       ),
                       SizedBox(height: spacing.m),
                       Text(
-                        resetLabel,
+                        'Resets monthly on the 1st',
                         style: TextStyle(
                           fontSize: 12,
                           color: colorScheme.onSurfaceVariant,

@@ -8,7 +8,6 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
-import 'save_progress_page.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/analytics_service.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -22,33 +21,10 @@ class AwesomeIntroPage extends ConsumerStatefulWidget {
 }
 
 class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
-  bool _hasRedirectedForAndroid = false;
-
   @override
   void initState() {
     super.initState();
     AnalyticsService().trackOnboardingScreen('onboarding_share_your_style');
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _maybeSkipForAndroid();
-  }
-
-  void _maybeSkipForAndroid() {
-    if (_hasRedirectedForAndroid) return;
-    if (Theme.of(context).platform != TargetPlatform.android) return;
-
-    _hasRedirectedForAndroid = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const SaveProgressPage(),
-        ),
-      );
-    });
   }
 
   @override
@@ -145,13 +121,9 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
               }
 
               if (!context.mounted) return;
-              final platform = Theme.of(context).platform;
-              final nextPage = platform == TargetPlatform.android
-                  ? const SaveProgressPage()
-                  : const AddFirstStylePage();
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => nextPage,
+                  builder: (context) => const AddFirstStylePage(),
                 ),
               );
             },

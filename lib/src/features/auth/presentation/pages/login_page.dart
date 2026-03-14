@@ -14,12 +14,15 @@ import '../../../../../src/shared/services/video_preloader.dart';
 import '../../../../shared/widgets/bottom_sheet_handle.dart';
 import '../../../../shared/widgets/snaplook_circular_icon_button.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
+import '../../../onboarding/presentation/pages/discovery_source_page.dart';
 import '../../../onboarding/presentation/pages/tutorial_image_analysis_page.dart';
+import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../onboarding/presentation/pages/trial_intro_page.dart';
 import '../../../onboarding/presentation/pages/save_progress_page.dart';
 import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../../services/paywall_helper.dart';
 import '../../domain/providers/auth_provider.dart';
+import '../../../user/repositories/user_profile_repository.dart';
 import 'email_sign_in_page.dart';
 import '../../../home/domain/providers/inspiration_provider.dart';
 import '../../domain/services/auth_service.dart';
@@ -37,196 +40,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
     with WidgetsBindingObserver {
   VideoPlayerController? get _controller =>
       VideoPreloader.instance.loginVideoController;
-
-  Future<void> _handleAuthenticatedSignInSuccess({
-    required NavigatorState navigator,
-    required String providerLabel,
-  }) async {
-    final supabase = Supabase.instance.client;
-    final userId = supabase.auth.currentUser?.id;
-    print('[LoginPage] $providerLabel sign-in - current user ID: $userId');
-
-    if (userId == null) {
-      return;
-    }
-
-    final userResponse = await supabase
-        .from('users')
-        .select('onboarding_state, onboarding_checkpoint')
-        .eq('id', userId)
-        .maybeSingle();
-
-    final onboardingState = userResponse?['onboarding_state'] as String?;
-    final checkpoint = userResponse?['onboarding_checkpoint'] as String?;
-    final hasOnboardingHistory =
-        (onboardingState != null && onboardingState != 'not_started') ||
-            checkpoint != null;
-
-    print(
-        '[LoginPage] Linking RevenueCat subscription to $providerLabel account...');
-    print(
-        '[LoginPage] Auto-restore on sign-in: $hasOnboardingHistory (onboardingState=$onboardingState checkpoint=$checkpoint)');
-    try {
-      await SubscriptionSyncService().identify(
-        userId,
-        attemptRestoreOnNoEntitlement: hasOnboardingHistory,
-      );
-      print('[LoginPage] RevenueCat subscription linked and synced');
-    } catch (linkError) {
-      print('[LoginPage] Error linking RevenueCat subscription: $linkError');
-    }
-
-    print('[LoginPage] Database response: $userResponse');
-    print(
-        '[LoginPage] Onboarding state from DB: ${userResponse?['onboarding_state']}');
-    print(
-        '[LoginPage] Onboarding checkpoint from DB: ${userResponse?['onboarding_checkpoint']}');
-
-    final hasCompletedOnboarding =
-        userResponse != null && userResponse['onboarding_state'] == 'completed';
-
-    print('[LoginPage] Has completed onboarding: $hasCompletedOnboarding');
-
-    CustomerInfo? customerInfo;
-    try {
-      customerInfo = await Purchases.getCustomerInfo();
-      print('[LoginPage] RevenueCat customer info fetched successfully');
-      print(
-          '[LoginPage] All entitlements: ${customerInfo.entitlements.all.keys.toList()}');
-      print(
-          '[LoginPage] Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
-    } catch (e) {
-      debugPrint('[LoginPage] Error fetching RevenueCat customer info: $e');
-    }
-
-    final hasActiveSubscription =
-        RevenueCatService().hasActiveAccess(customerInfo);
-
-    print(
-        '[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');
-
-    final userCreditsResponse = await supabase
-        .from('users')
-        .select('paid_credits_remaining')
-        .eq('id', userId)
-        .maybeSingle();
-
-    final hasCredits =
-        (userCreditsResponse?['paid_credits_remaining'] ?? 0) > 0;
-
-    print(
-        '[LoginPage] User has credits: $hasCredits (${userCreditsResponse?['paid_credits_remaining']} remaining)');
-
-    if (hasCompletedOnboarding && (hasActiveSubscription || hasCredits)) {
-      debugPrint(
-          '[LoginPage] User has completed onboarding and has access (subscription: $hasActiveSubscription, credits: $hasCredits) - going to home');
-      debugPrint(
-          '[LoginPage] Skipping device locale setup (user_profiles table not configured)');
-
-      ref.read(selectedIndexProvider.notifier).state = 0;
-      ref.invalidate(inspirationProvider);
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const MainNavigation(
-            key: ValueKey('fresh-main-nav'),
-          ),
-        ),
-        (route) => false,
-      );
-      return;
-    }
-
-    if (hasCompletedOnboarding && !hasActiveSubscription && !hasCredits) {
-      debugPrint(
-          '[LoginPage] User completed onboarding but no subscription or credits - presenting Superwall paywall');
-      await PaywallHelper.presentPaywallAndNavigate(
-        context: navigator.context,
-        userId: userId,
-        isReturningUser: true,
-      );
-      return;
-    }
-
-    debugPrint(
-        '[LoginPage] User hasn\'t completed onboarding - checkpoint: $checkpoint');
-
-    if (checkpoint == 'trial' ||
-        checkpoint == 'paywall' ||
-        checkpoint == 'save_progress' ||
-        checkpoint == 'account' ||
-        checkpoint == 'welcome') {
-      try {
-        final isEligibleForTrial =
-            await RevenueCatService().isEligibleForTrial();
-        debugPrint(
-            '[LoginPage] Trial eligibility check: $isEligibleForTrial');
-      } catch (e) {
-        debugPrint('[LoginPage] Error checking trial eligibility: $e');
-      }
-    }
-
-    Widget nextPage;
-    switch (checkpoint) {
-      case 'gender':
-        debugPrint(
-            '[LoginPage] Resuming from legacy gender checkpoint to save progress');
-        nextPage = const SaveProgressPage();
-        break;
-      case 'discovery':
-        debugPrint('[LoginPage] Resuming at save progress');
-        nextPage = const SaveProgressPage();
-        break;
-      case 'tutorial':
-        debugPrint('[LoginPage] Resuming at tutorial');
-        nextPage = const TutorialImageAnalysisPage();
-        break;
-      case 'notification':
-        debugPrint('[LoginPage] Resuming at save progress');
-        nextPage = const SaveProgressPage();
-        break;
-      case 'trial':
-        debugPrint('[LoginPage] Resuming at trial');
-        nextPage = const TrialIntroPage();
-        break;
-      case 'save_progress':
-        debugPrint(
-            '[LoginPage] Already authenticated - checking trial/subscription');
-        nextPage = hasActiveSubscription
-            ? const MainNavigation(key: ValueKey('fresh-main-nav'))
-            : const TrialIntroPage();
-        break;
-      case 'paywall':
-      case 'account':
-        debugPrint(
-            '[LoginPage] Resuming at paywall/account - has subscription: $hasActiveSubscription');
-        nextPage = hasActiveSubscription
-            ? const MainNavigation(key: ValueKey('fresh-main-nav'))
-            : const TrialIntroPage();
-        break;
-      case 'welcome':
-        debugPrint('[LoginPage] Resuming at welcome');
-        nextPage = const WelcomeFreeAnalysisPage();
-        break;
-      default:
-        debugPrint(
-            '[LoginPage] No checkpoint or unknown - starting from beginning');
-        nextPage = const HowItWorksPage();
-    }
-
-    if (nextPage is MainNavigation) {
-      ref.read(selectedIndexProvider.notifier).state = 0;
-      ref.invalidate(inspirationProvider);
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => nextPage),
-        (route) => false,
-      );
-      return;
-    }
-
-    navigator.push(
-      MaterialPageRoute(builder: (context) => nextPage),
-    );
-  }
 
   Future<void> _openLegalLink({
     required String url,
@@ -488,10 +301,222 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               print(
                                   '[LoginPage] Context is mounted, closing bottom sheet');
                               Navigator.pop(context);
-                              await _handleAuthenticatedSignInSuccess(
-                                navigator: navigator,
-                                providerLabel: 'Apple',
-                              );
+
+                              final supabase = Supabase.instance.client;
+                              final userId = supabase.auth.currentUser?.id;
+                              print('[LoginPage] Current user ID: $userId');
+
+                              if (userId != null) {
+                                // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
+                                print(
+                                    '[LoginPage] Linking RevenueCat subscription to Apple account...');
+                                try {
+                                  await SubscriptionSyncService()
+                                      .identify(userId);
+                                  print(
+                                      '[LoginPage] RevenueCat subscription linked and synced');
+                                } catch (linkError) {
+                                  print(
+                                      '[LoginPage] Error linking RevenueCat subscription: $linkError');
+                                }
+
+                                // Check onboarding status from database
+                                final userResponse = await supabase
+                                    .from('users')
+                                    .select(
+                                        'onboarding_state, onboarding_checkpoint')
+                                    .eq('id', userId)
+                                    .maybeSingle();
+
+                                print(
+                                    '[LoginPage] Apple sign-in - user ID: $userId');
+                                print(
+                                    '[LoginPage] Database response: $userResponse');
+                                print(
+                                    '[LoginPage] Onboarding state from DB: ${userResponse?['onboarding_state']}');
+                                print(
+                                    '[LoginPage] Onboarding checkpoint from DB: ${userResponse?['onboarding_checkpoint']}');
+
+                                final hasCompletedOnboarding =
+                                    userResponse != null &&
+                                        userResponse['onboarding_state'] ==
+                                            'completed';
+
+                                print(
+                                    '[LoginPage] Has completed onboarding: $hasCompletedOnboarding');
+
+                                // Check subscription status from RevenueCat (source of truth)
+                                CustomerInfo? customerInfo;
+                                try {
+                                  customerInfo =
+                                      await Purchases.getCustomerInfo();
+                                  print(
+                                      '[LoginPage] RevenueCat customer info fetched successfully');
+                                  print(
+                                      '[LoginPage] All entitlements: ${customerInfo.entitlements.all.keys.toList()}');
+                                  print(
+                                      '[LoginPage] Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
+                                } catch (e) {
+                                  debugPrint(
+                                      '[LoginPage] Error fetching RevenueCat customer info: $e');
+                                }
+
+                                final activeEntitlements =
+                                    customerInfo?.entitlements.active.values;
+                                final hasActiveSubscription =
+                                    activeEntitlements != null &&
+                                        activeEntitlements.isNotEmpty;
+
+                                print(
+                                    '[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');
+
+                                // Check if user has credits (even without subscription)
+                                final userCreditsResponse = await supabase
+                                    .from('users')
+                                    .select('paid_credits_remaining')
+                                    .eq('id', userId)
+                                    .maybeSingle();
+
+                                final hasCredits =
+                                    (userCreditsResponse?['paid_credits_remaining'] ?? 0) > 0;
+
+                                print(
+                                    '[LoginPage] User has credits: $hasCredits (${userCreditsResponse?['paid_credits_remaining']} remaining)');
+
+                                if (hasCompletedOnboarding &&
+                                    (hasActiveSubscription || hasCredits)) {
+                                  // User completed onboarding and has active subscription OR credits - go to home
+                                  debugPrint(
+                                      '[LoginPage] User has completed onboarding and has access (subscription: $hasActiveSubscription, credits: $hasCredits) - going to home');
+                                  debugPrint(
+                                      '[LoginPage] Skipping device locale setup (user_profiles table not configured)');
+
+                                  ref
+                                      .read(selectedIndexProvider.notifier)
+                                      .state = 0;
+                                  ref.invalidate(inspirationProvider);
+                                  navigator.pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const MainNavigation(
+                                        key: ValueKey('fresh-main-nav'),
+                                      ),
+                                    ),
+                                    (route) => false,
+                                  );
+                                } else if (hasCompletedOnboarding &&
+                                    !hasActiveSubscription && !hasCredits) {
+                                  // User completed onboarding but NO subscription and NO credits - present Superwall paywall
+                                  debugPrint(
+                                      '[LoginPage] User completed onboarding but no subscription or credits - presenting Superwall paywall');
+                                  await PaywallHelper.presentPaywallAndNavigate(
+                                    context: navigator.context,
+                                    userId: userId,
+                                    isReturningUser: true,  // Skip onboarding check - we know they completed it
+                                  );
+                                } else {
+                                  // User hasn't completed onboarding - resume where they left off
+                                  final checkpoint =
+                                      userResponse?['onboarding_checkpoint'];
+                                  debugPrint(
+                                      '[LoginPage] User hasn\'t completed onboarding - checkpoint: $checkpoint');
+
+                                  // Check trial eligibility for trial/paywall checkpoints
+                                  bool isEligibleForTrial = true;
+                                  if (checkpoint == 'trial' ||
+                                      checkpoint == 'paywall' ||
+                                      checkpoint == 'save_progress' ||
+                                      checkpoint == 'account' ||
+                                      checkpoint == 'welcome') {
+                                    try {
+                                      isEligibleForTrial =
+                                          await RevenueCatService()
+                                              .isEligibleForTrial();
+                                      debugPrint(
+                                          '[LoginPage] Trial eligibility check: $isEligibleForTrial');
+                                    } catch (e) {
+                                      debugPrint(
+                                          '[LoginPage] Error checking trial eligibility: $e');
+                                    }
+                                  }
+
+                                  // Route to the appropriate page based on checkpoint
+                                  Widget nextPage;
+                                  switch (checkpoint) {
+                                    case 'gender':
+                                      debugPrint(
+                                          '[LoginPage] Resuming from legacy gender checkpoint to discovery source');
+                                      nextPage = const DiscoverySourcePage();
+                                      break;
+                                    case 'discovery':
+                                      debugPrint(
+                                          '[LoginPage] Resuming at discovery source');
+                                      nextPage = const DiscoverySourcePage();
+                                      break;
+                                    case 'tutorial':
+                                      debugPrint(
+                                          '[LoginPage] Resuming at tutorial');
+                                      nextPage =
+                                          const TutorialImageAnalysisPage();
+                                      break;
+                                    case 'notification':
+                                      debugPrint(
+                                          '[LoginPage] Resuming at notification permission');
+                                      nextPage =
+                                          const NotificationPermissionPage();
+                                      break;
+                                    case 'trial':
+                                      debugPrint(
+                                          '[LoginPage] Resuming at trial');
+                                      nextPage = const TrialIntroPage();
+                                      break;
+                                    case 'save_progress':
+                                      debugPrint(
+                                          '[LoginPage] Already authenticated - checking trial/subscription');
+                                      nextPage = hasActiveSubscription
+                                          ? const MainNavigation(
+                                              key: ValueKey('fresh-main-nav'))
+                                          : const TrialIntroPage();
+                                      break;
+                                    case 'paywall':
+                                    case 'account':
+                                      debugPrint(
+                                          '[LoginPage] Resuming at paywall/account - has subscription: $hasActiveSubscription');
+                                      nextPage = hasActiveSubscription
+                                          ? const MainNavigation(
+                                              key: ValueKey('fresh-main-nav'))
+                                          : const TrialIntroPage();
+                                      break;
+                                    case 'welcome':
+                                      debugPrint(
+                                          '[LoginPage] Resuming at welcome');
+                                      nextPage =
+                                          const WelcomeFreeAnalysisPage();
+                                      break;
+                                    default:
+                                      debugPrint(
+                                          '[LoginPage] No checkpoint or unknown - starting from beginning');
+                                      nextPage = const HowItWorksPage();
+                                  }
+
+                                  if (nextPage is MainNavigation) {
+                                    ref
+                                        .read(selectedIndexProvider.notifier)
+                                        .state = 0;
+                                    ref.invalidate(inspirationProvider);
+                                    navigator.pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                          builder: (context) => nextPage),
+                                      (route) => false,
+                                    );
+                                  } else {
+                                    navigator.push(
+                                      MaterialPageRoute(
+                                          builder: (context) => nextPage),
+                                    );
+                                  }
+                                }
+                              }
                             }
                           } catch (e) {
                             print('[LoginPage] Apple sign-in error caught: $e');
@@ -539,10 +564,219 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             print(
                                 '[LoginPage] Context is mounted, closing bottom sheet');
                             Navigator.pop(context);
-                            await _handleAuthenticatedSignInSuccess(
-                              navigator: navigator,
-                              providerLabel: 'Google',
-                            );
+
+                            final supabase = Supabase.instance.client;
+                            final userId = supabase.auth.currentUser?.id;
+                            print('[LoginPage] Current user ID: $userId');
+
+                            if (userId != null) {
+                              // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
+                              print(
+                                  '[LoginPage] Linking RevenueCat subscription to Google account...');
+                              try {
+                                await SubscriptionSyncService()
+                                    .identify(userId);
+                                print(
+                                    '[LoginPage] RevenueCat subscription linked and synced');
+                              } catch (linkError) {
+                                print(
+                                    '[LoginPage] Error linking RevenueCat subscription: $linkError');
+                              }
+
+                              // Check onboarding status from database
+                              final userResponse = await supabase
+                                  .from('users')
+                                  .select(
+                                      'onboarding_state, onboarding_checkpoint')
+                                  .eq('id', userId)
+                                  .maybeSingle();
+
+                              print(
+                                  '[LoginPage] Google sign-in - user ID: $userId');
+                              print(
+                                  '[LoginPage] Database response: $userResponse');
+                              print(
+                                  '[LoginPage] Onboarding state from DB: ${userResponse?['onboarding_state']}');
+                              print(
+                                  '[LoginPage] Onboarding checkpoint from DB: ${userResponse?['onboarding_checkpoint']}');
+
+                              final hasCompletedOnboarding =
+                                  userResponse != null &&
+                                      userResponse['onboarding_state'] ==
+                                          'completed';
+
+                              print(
+                                  '[LoginPage] Has completed onboarding: $hasCompletedOnboarding');
+
+                              // Check subscription status from RevenueCat (source of truth)
+                              CustomerInfo? customerInfo;
+                              try {
+                                customerInfo =
+                                    await Purchases.getCustomerInfo();
+                                print(
+                                    '[LoginPage] RevenueCat customer info fetched successfully');
+                                print(
+                                    '[LoginPage] All entitlements: ${customerInfo.entitlements.all.keys.toList()}');
+                                print(
+                                    '[LoginPage] Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
+                              } catch (e) {
+                                debugPrint(
+                                    '[LoginPage] Error fetching RevenueCat customer info: $e');
+                              }
+
+                              final activeEntitlements =
+                                  customerInfo?.entitlements.active.values;
+                              final hasActiveSubscription =
+                                  activeEntitlements != null &&
+                                      activeEntitlements.isNotEmpty;
+
+                              print(
+                                  '[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');
+
+                              // Check if user has credits (even without subscription)
+                              final userCreditsResponse = await supabase
+                                  .from('users')
+                                  .select('paid_credits_remaining')
+                                  .eq('id', userId)
+                                  .maybeSingle();
+
+                              final hasCredits =
+                                  (userCreditsResponse?['paid_credits_remaining'] ?? 0) > 0;
+
+                              print(
+                                  '[LoginPage] User has credits: $hasCredits (${userCreditsResponse?['paid_credits_remaining']} remaining)');
+
+                              if (hasCompletedOnboarding &&
+                                  (hasActiveSubscription || hasCredits)) {
+                                // User completed onboarding and has active subscription OR credits - go to home
+                                debugPrint(
+                                    '[LoginPage] User has completed onboarding and has access (subscription: $hasActiveSubscription, credits: $hasCredits) - going to home');
+                                debugPrint(
+                                    '[LoginPage] Skipping device locale setup (user_profiles table not configured)');
+
+                                ref.read(selectedIndexProvider.notifier).state =
+                                    0;
+                                ref.invalidate(inspirationProvider);
+                                navigator.pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (context) => const MainNavigation(
+                                      key: ValueKey('fresh-main-nav'),
+                                    ),
+                                  ),
+                                  (route) => false,
+                                );
+                              } else if (hasCompletedOnboarding &&
+                                  !hasActiveSubscription && !hasCredits) {
+                                // User completed onboarding but NO subscription and NO credits - present Superwall paywall
+                                debugPrint(
+                                    '[LoginPage] User completed onboarding but no subscription or credits - presenting Superwall paywall');
+                                await PaywallHelper.presentPaywallAndNavigate(
+                                  context: navigator.context,
+                                  userId: userId,
+                                  isReturningUser: true,  // Skip onboarding check - we know they completed it
+                                );
+                              } else {
+                                // User hasn't completed onboarding - resume where they left off
+                                final checkpoint =
+                                    userResponse?['onboarding_checkpoint'];
+                                debugPrint(
+                                    '[LoginPage] User hasn\'t completed onboarding - checkpoint: $checkpoint');
+
+                                // Check trial eligibility for trial/paywall checkpoints
+                                bool isEligibleForTrial = true;
+                                if (checkpoint == 'trial' ||
+                                    checkpoint == 'paywall' ||
+                                    checkpoint == 'save_progress' ||
+                                    checkpoint == 'account' ||
+                                    checkpoint == 'welcome') {
+                                  try {
+                                    isEligibleForTrial =
+                                        await RevenueCatService()
+                                            .isEligibleForTrial();
+                                    debugPrint(
+                                        '[LoginPage] Trial eligibility check: $isEligibleForTrial');
+                                  } catch (e) {
+                                    debugPrint(
+                                        '[LoginPage] Error checking trial eligibility: $e');
+                                  }
+                                }
+
+                                // Route to the appropriate page based on checkpoint
+                                Widget nextPage;
+                                switch (checkpoint) {
+                                  case 'gender':
+                                    debugPrint(
+                                        '[LoginPage] Resuming from legacy gender checkpoint to discovery source');
+                                    nextPage = const DiscoverySourcePage();
+                                    break;
+                                  case 'discovery':
+                                    debugPrint(
+                                        '[LoginPage] Resuming at discovery source');
+                                    nextPage = const DiscoverySourcePage();
+                                    break;
+                                  case 'tutorial':
+                                    debugPrint(
+                                        '[LoginPage] Resuming at tutorial');
+                                    nextPage =
+                                        const TutorialImageAnalysisPage();
+                                    break;
+                                  case 'notification':
+                                    debugPrint(
+                                        '[LoginPage] Resuming at notification permission');
+                                    nextPage =
+                                        const NotificationPermissionPage();
+                                    break;
+                                  case 'trial':
+                                    debugPrint(
+                                        '[LoginPage] Resuming at trial');
+                                    nextPage = const TrialIntroPage();
+                                    break;
+                                  case 'save_progress':
+                                    debugPrint(
+                                        '[LoginPage] Already authenticated - checking trial/subscription');
+                                    nextPage = hasActiveSubscription
+                                        ? const MainNavigation(
+                                            key: ValueKey('fresh-main-nav'))
+                                        : const TrialIntroPage();
+                                    break;
+                                  case 'paywall':
+                                  case 'account':
+                                    debugPrint(
+                                        '[LoginPage] Resuming at paywall/account - has subscription: $hasActiveSubscription');
+                                    nextPage = hasActiveSubscription
+                                        ? const MainNavigation(
+                                            key: ValueKey('fresh-main-nav'))
+                                        : const TrialIntroPage();
+                                    break;
+                                  case 'welcome':
+                                    debugPrint(
+                                        '[LoginPage] Resuming at welcome');
+                                    nextPage = const WelcomeFreeAnalysisPage();
+                                    break;
+                                  default:
+                                    debugPrint(
+                                        '[LoginPage] No checkpoint or unknown - starting from beginning');
+                                    nextPage = const HowItWorksPage();
+                                }
+
+                                if (nextPage is MainNavigation) {
+                                  ref
+                                      .read(selectedIndexProvider.notifier)
+                                      .state = 0;
+                                  ref.invalidate(inspirationProvider);
+                                  navigator.pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                        builder: (context) => nextPage),
+                                    (route) => false,
+                                  );
+                                } else {
+                                  navigator.push(
+                                    MaterialPageRoute(
+                                        builder: (context) => nextPage),
+                                  );
+                                }
+                              }
+                            }
                           }
                         } catch (e) {
                           print('[LoginPage] Google sign-in error caught: $e');
@@ -583,20 +817,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         await Future.delayed(const Duration(milliseconds: 150));
                         if (!context.mounted) return;
 
-                        final result = await navigator.push<bool>(
+                        navigator.push(
                           MaterialPageRoute(
-                            builder: (context) => const EmailSignInPage(
-                              returnResultOnSuccess: true,
-                            ),
+                            builder: (context) => const EmailSignInPage(),
                           ),
                         );
-
-                        if (result == true && mounted) {
-                          await _handleAuthenticatedSignInSuccess(
-                            navigator: navigator,
-                            providerLabel: 'Email',
-                          );
-                        }
                       },
                     ),
                     SizedBox(height: spacing.l),

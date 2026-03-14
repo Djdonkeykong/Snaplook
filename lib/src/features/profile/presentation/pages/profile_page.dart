@@ -8,7 +8,6 @@ import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../paywall/providers/credit_provider.dart';
-import '../../../../services/superwall_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'edit_profile_page.dart';
 import 'appearance_preferences_page.dart';
@@ -321,12 +320,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  Future<void> _handleBuyCredits() async {
-    await ref.read(purchaseControllerProvider).showPaywall(
-          placement: SuperwallService.creditsPlacement,
-        );
-  }
-
   @override
   Widget build(BuildContext context) {
     // Listen to scroll to top trigger for profile tab (index 2)
@@ -457,13 +450,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 title: 'Manage Subscription',
                 onTap: _handleManageSubscription,
               ),
-              if (theme.platform == TargetPlatform.iOS)
-                _SimpleSettingItem(
-                  title: 'Buy Credits',
-                  onTap: () {
-                    _handleBuyCredits();
-                  },
-                ),
 
               SizedBox(height: spacing.l),
 

@@ -310,7 +310,6 @@ class OnboardingStateService {
           .from('users')
           .select('onboarding_state, onboarding_checkpoint, '
               'payment_completed_at, subscription_status, is_trial, '
-              'paid_credits_remaining, '
               'onboarding_started_at, preferred_gender_filter')
           .eq('id', userId)
           .maybeSingle();
@@ -357,13 +356,9 @@ class OnboardingStateService {
         debugPrint('[OnboardingState]   - Onboarding IS completed');
         // Check if subscription is active or in trial
         final hasActiveSubscription = subscriptionStatus == 'active';
-        final paidCredits = (state['paid_credits_remaining'] as num?)?.toInt() ?? 0;
-        final hasCredits = paidCredits > 0;
-        final hasAccess = hasActiveSubscription || isTrial || hasCredits;
+        final hasAccess = hasActiveSubscription || isTrial;
         debugPrint('[OnboardingState]   - hasActiveSubscription: $hasActiveSubscription');
-        debugPrint('[OnboardingState]   - paidCredits: $paidCredits');
-        debugPrint('[OnboardingState]   - hasCredits: $hasCredits');
-        debugPrint('[OnboardingState]   - hasAccess (active || trial || credits): $hasAccess');
+        debugPrint('[OnboardingState]   - hasAccess (active || trial): $hasAccess');
 
         if (hasAccess) {
           debugPrint('[OnboardingState]   - Has active subscription/trial → routing to home (return null)');
@@ -447,11 +442,9 @@ class OnboardingStateService {
       final onboardingState = OnboardingState.fromString(state['onboarding_state'] ?? 'not_started');
       final subscriptionStatus = state['subscription_status'] ?? 'free';
       final isTrial = state['is_trial'] == true;
-      final paidCredits = (state['paid_credits_remaining'] as num?)?.toInt() ?? 0;
 
-      // User must complete onboarding AND have any valid access signal.
-      return onboardingState == OnboardingState.completed &&
-          (subscriptionStatus == 'active' || isTrial || paidCredits > 0);
+      // User must complete onboarding AND have active subscription or trial
+      return onboardingState == OnboardingState.completed && (subscriptionStatus == 'active' || isTrial);
     } catch (e) {
       debugPrint('[OnboardingState] Error checking home access: $e');
       return false;

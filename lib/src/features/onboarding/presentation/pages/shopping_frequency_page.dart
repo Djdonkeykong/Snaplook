@@ -10,7 +10,6 @@ import '../widgets/progress_indicator.dart';
 import '../widgets/option_card.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
 import 'awesome_intro_page.dart';
-import 'save_progress_page.dart';
 
 class ShoppingFrequencyPage extends ConsumerStatefulWidget {
   const ShoppingFrequencyPage({super.key});
@@ -221,13 +220,9 @@ class _ShoppingFrequencyPageState extends ConsumerState<ShoppingFrequencyPage>
                 ? null
                 : () {
                     HapticFeedback.mediumImpact();
-                    final platform = Theme.of(context).platform;
-                    final nextPage = platform == TargetPlatform.android
-                        ? const SaveProgressPage()
-                        : const AwesomeIntroPage();
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => nextPage,
+                        builder: (context) => const AwesomeIntroPage(),
                       ),
                     );
                   },

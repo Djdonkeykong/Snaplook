@@ -487,7 +487,7 @@ class _FetchingOverlayState extends State<_FetchingOverlay>
     final theme = Theme.of(context);
 
     return Container(
-      color: Colors.black.withOpacity(Platform.isAndroid ? 0.75 : 0.6),
+      color: Colors.black.withOpacity(0.6),
       child: SafeArea(
         child: Center(
           child: Column(

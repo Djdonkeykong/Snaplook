@@ -17,7 +17,7 @@ import 'photos_tutorial_page.dart';
 import 'imdb_tutorial_page.dart';
 import 'x_tutorial_page.dart';
 import 'personalization_intro_page.dart';
-import 'save_progress_page.dart';
+import 'discovery_source_page.dart';
 
 class AddFirstStylePage extends ConsumerStatefulWidget {
   const AddFirstStylePage({super.key});
@@ -36,7 +36,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
 
   bool _isRouteAware = false;
   bool _hasAnimated = false;
-  bool _hasRedirectedForPlatformSkip = false;
+  bool _hasRedirectedForIpad = false;
 
   @override
   void initState() {
@@ -98,7 +98,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
       }
     }
 
-    _maybeSkipForPlatform();
+    _maybeSkipForIpad();
   }
 
   @override
@@ -139,23 +139,16 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
     return size.shortestSide >= 600;
   }
 
-  bool _shouldSkipForPlatform(BuildContext context) {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return true;
-    }
-    return _isIpad(context);
-  }
-
-  void _maybeSkipForPlatform() {
-    if (_hasRedirectedForPlatformSkip || !_shouldSkipForPlatform(context)) {
+  void _maybeSkipForIpad() {
+    if (_hasRedirectedForIpad || !_isIpad(context)) {
       return;
     }
-    _hasRedirectedForPlatformSkip = true;
+    _hasRedirectedForIpad = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const SaveProgressPage(),
+          builder: (context) => const DiscoverySourcePage(),
         ),
       );
     });
@@ -235,7 +228,7 @@ class _AddFirstStylePageState extends ConsumerState<AddFirstStylePage>
             HapticFeedback.mediumImpact();
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => const SaveProgressPage(),
+                builder: (context) => const DiscoverySourcePage(),
               ),
             );
           },

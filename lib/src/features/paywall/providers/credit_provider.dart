@@ -168,29 +168,16 @@ class PurchaseController {
   Future<bool> showPaywall({String placement = SuperwallService.defaultPlacement}) async {
     try {
       final success = await _superwallService.presentPaywall(placement: placement);
-      final didObservePurchase = _superwallService.lastPurchaseObservedAt != null;
-      final purchasedProductId = _superwallService.lastPurchasedProductId;
-      final isCreditsPlacement = placement == SuperwallService.creditsPlacement;
-      final didCompletePurchase =
-          isCreditsPlacement ? didObservePurchase : (success || didObservePurchase);
-      final shouldSync = didCompletePurchase;
-
-      if (shouldSync) {
-        // Allow RevenueCat a brief moment to flush transaction state before sync.
-        await Future.delayed(const Duration(milliseconds: 600));
-
-        // Sync subscription/credit purchases data to Supabase.
-        await _subscriptionSyncService.syncSubscriptionToSupabase(
-          attemptRestoreOnNoEntitlement: !isCreditsPlacement,
-          purchasedProductId: purchasedProductId,
-        );
-
-        // Refresh local state from Supabase.
+      if (success) {
         await _creditNotifier.syncWithSubscription();
         await _subscriptionNotifier.refresh();
-      }
 
-      return didCompletePurchase;
+        // Sync subscription data to Supabase
+        await _subscriptionSyncService.syncSubscriptionToSupabase();
+
+        return true;
+      }
+      return false;
     } catch (e) {
       return false;
     }

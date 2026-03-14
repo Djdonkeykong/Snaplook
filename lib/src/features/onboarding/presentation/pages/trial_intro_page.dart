@@ -9,11 +9,14 @@ import '../../../../services/analytics_service.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../../src/shared/services/video_preloader.dart';
 import '../widgets/progress_indicator.dart';
-import 'paywall_presentation_page.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'trial_reminder_page.dart';
+import 'welcome_free_analysis_page.dart';
+import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/onboarding_state_service.dart';
+import '../../../../services/superwall_service.dart';
+import '../../../../services/subscription_sync_service.dart';
 
 class TrialIntroPage extends ConsumerStatefulWidget {
   const TrialIntroPage({super.key});
@@ -78,18 +81,67 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
           _isCheckingEligibility = false;
         });
 
-        // If not eligible, skip the trial intro entirely and go straight to paywall.
+        // If not eligible, present paywall directly
         if (!isEligible && mounted) {
           final userId = Supabase.instance.client.auth.currentUser?.id;
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => PaywallPresentationPage(
-                userId: userId,
-                placement: 'onboarding_paywall',
-              ),
-            ),
+          final didPurchase = await SuperwallService().presentPaywall(
+            placement: 'onboarding_paywall',
           );
-          return;
+
+          if (!mounted) return;
+
+          if (didPurchase && userId != null) {
+            // User purchased - sync subscription and navigate
+            debugPrint('[TrialIntro] Purchase completed - syncing subscription');
+
+            try {
+              await Future.delayed(const Duration(milliseconds: 500));
+              await SubscriptionSyncService().syncSubscriptionToSupabase();
+              await OnboardingStateService().markPaymentComplete(userId);
+            } catch (e) {
+              debugPrint('[TrialIntro] Error syncing subscription: $e');
+            }
+
+            if (mounted) {
+              // Check if user has completed onboarding before
+              final userResponse = await Supabase.instance.client
+                  .from('users')
+                  .select('onboarding_state')
+                  .eq('id', userId)
+                  .maybeSingle();
+
+              final hasCompletedOnboarding =
+                  userResponse?['onboarding_state'] == 'completed';
+
+              debugPrint('[TrialIntro] Has completed onboarding: $hasCompletedOnboarding');
+
+              if (hasCompletedOnboarding) {
+                // Returning user - go directly to home
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(
+                      key: ValueKey('fresh-main-nav'),
+                    ),
+                  ),
+                  (route) => false,
+                );
+              } else {
+                // New user - show welcome page first
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (context) => const WelcomeFreeAnalysisPage(),
+                  ),
+                );
+              }
+            }
+          } else {
+            // User dismissed paywall - show trial eligibility again
+            if (mounted) {
+              setState(() {
+                _isEligibleForTrial = true;
+              });
+            }
+          }
         }
       }
     } catch (e) {

@@ -15,12 +15,10 @@ class PaywallPresentationPage extends StatefulWidget {
     super.key,
     required this.userId,
     this.placement = 'onboarding_paywall',
-    this.params,
   });
 
   final String? userId;
   final String placement;
-  final Map<String, Object>? params;
 
   @override
   State<PaywallPresentationPage> createState() =>
@@ -54,39 +52,28 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       // Present Superwall paywall (this will show Superwall's UI over our page)
       final didPurchase = await SuperwallService().presentPaywall(
         placement: widget.placement,
-        params: widget.params,
       );
+
+      // Paywall has been dismissed - hide loading overlay
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
 
       if (!mounted) return;
 
       debugPrint('[PaywallPresentationPage] Purchase result: $didPurchase');
 
-      if (!didPurchase) {
-        debugPrint(
-            '[PaywallPresentationPage] User dismissed paywall without purchasing - going back');
-        await Future<void>.delayed(const Duration(milliseconds: 350));
-        if (!mounted) return;
-        Navigator.of(context).pop();
-        return;
-      }
-
-      if (widget.userId == null) {
-        debugPrint('[PaywallPresentationPage] WARNING: No user found after paywall');
-        await Future<void>.delayed(const Duration(milliseconds: 350));
-        if (!mounted) return;
-        Navigator.of(context).pop();
-        return;
-      }
-
-      // Keep the loading overlay visible from purchase completion until redirect.
-      if (mounted) {
-        setState(() {
-          _isLoading = true;
-        });
-      }
-
       // If user purchased and has account, sync subscription to Supabase
-      if (didPurchase) {
+      if (didPurchase && widget.userId != null) {
+        // Show loading overlay while syncing
+        if (mounted) {
+          setState(() {
+            _isLoading = true;
+          });
+        }
+
         try {
           debugPrint(
               '[PaywallPresentationPage] Purchase completed - waiting for RevenueCat to process...');
@@ -96,10 +83,7 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
           debugPrint(
               '[PaywallPresentationPage] Syncing subscription to Supabase...');
-          await SubscriptionSyncService().syncSubscriptionToSupabase(
-            attemptRestoreOnNoEntitlement: true,
-            purchasedProductId: SuperwallService().lastPurchasedProductId,
-          );
+          await SubscriptionSyncService().syncSubscriptionToSupabase();
           await OnboardingStateService().markPaymentComplete(widget.userId!);
           debugPrint(
               '[PaywallPresentationPage] Subscription synced successfully');
@@ -110,6 +94,20 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       }
 
       if (!mounted) return;
+
+      // Only navigate forward if user purchased
+      if (!didPurchase) {
+        debugPrint(
+            '[PaywallPresentationPage] User dismissed paywall without purchasing - going back');
+        Navigator.of(context).pop();
+        return;
+      }
+
+      if (widget.userId == null) {
+        debugPrint('[PaywallPresentationPage] WARNING: No user found after paywall');
+        Navigator.of(context).pop();
+        return;
+      }
 
       // Check if user has completed onboarding before
       final supabase = Supabase.instance.client;
@@ -130,19 +128,21 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
           : const WelcomeFreeAnalysisPage();
 
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
+        Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => nextPage),
-          (route) => false,
         );
       }
     } catch (e) {
       debugPrint('[PaywallPresentationPage] Error during paywall: $e');
       // Go back on error
       if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
-        Navigator.of(context).pop();
       }
     }
   }

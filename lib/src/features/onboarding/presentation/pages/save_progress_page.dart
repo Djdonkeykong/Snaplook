@@ -16,7 +16,6 @@ import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../auth/domain/services/auth_service.dart';
 import '../../../auth/presentation/pages/email_sign_in_page.dart';
 import '../widgets/progress_indicator.dart';
-import 'paywall_presentation_page.dart';
 import 'trial_intro_page.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/subscription_sync_service.dart';
@@ -26,6 +25,8 @@ import '../../../../services/revenuecat_service.dart';
 import '../../../../services/superwall_service.dart';
 import '../../domain/providers/gender_provider.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
+import 'notification_permission_page.dart';
+import 'discovery_source_page.dart';
 
 class SaveProgressPage extends ConsumerStatefulWidget {
   const SaveProgressPage({super.key});
@@ -38,8 +39,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   final ScrollController _scrollController = ScrollController();
   double _anchorOffset = 0.0;
   bool _isSnapping = false;
-  bool _isAutoContinuingAuthenticatedUser = false;
-  bool _hasTriggeredAutoContinue = false;
 
   void _resetMainNavigationState() {
     ref.read(selectedIndexProvider.notifier).state = 0;
@@ -62,16 +61,11 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   @override
   void initState() {
     super.initState();
-    _isAutoContinuingAuthenticatedUser =
-        ref.read(authServiceProvider).currentUser != null;
     AnalyticsService().trackOnboardingScreen('onboarding_save_progress');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_scrollController.hasClients) {
         _anchorOffset = _scrollController.offset;
-      }
-      if (_isAutoContinuingAuthenticatedUser) {
-        unawaited(_autoContinueAuthenticatedUser());
       }
     });
   }
@@ -100,25 +94,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     });
   }
 
-  Future<void> _autoContinueAuthenticatedUser() async {
-    if (!mounted || _hasTriggeredAutoContinue) return;
-    _hasTriggeredAutoContinue = true;
-
-    final authService = ref.read(authServiceProvider);
-    if (authService.currentUser == null) {
-      if (mounted) {
-        setState(() {
-          _isAutoContinuingAuthenticatedUser = false;
-        });
-      }
-      return;
-    }
-
-    debugPrint(
-        '[SaveProgress] User already authenticated - skipping account creation UI');
-    await _handleAuthSuccess(context);
-  }
-
   Future<void> _navigateBasedOnSubscriptionStatus() async {
     if (!mounted) return;
 
@@ -138,17 +113,12 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
       final supabase = Supabase.instance.client;
       final userResponse = await supabase
           .from('users')
-          .select('onboarding_state, paid_credits_remaining')
+          .select('onboarding_state')
           .eq('id', userId)
           .maybeSingle();
 
       final hasCompletedOnboarding = userResponse != null &&
           userResponse['onboarding_state'] == 'completed';
-      final paidCreditsRaw = userResponse?['paid_credits_remaining'];
-      final paidCredits = paidCreditsRaw is int
-          ? paidCreditsRaw
-          : (paidCreditsRaw as num?)?.toInt() ?? 0;
-      final hasCredits = paidCredits > 0;
 
       debugPrint(
           '[SaveProgress] Has completed onboarding: $hasCompletedOnboarding');
@@ -176,7 +146,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
             if (retryCount >= maxRetries) {
               debugPrint(
-                  '[SaveProgress] Max retries reached, defaulting to no active entitlement');
+                  '[SaveProgress] Max retries reached, defaulting to paywall');
               break;
             }
 
@@ -184,30 +154,24 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           }
         }
 
+        final activeEntitlements = customerInfo?.entitlements.active.values;
         final hasActiveSubscription =
-            RevenueCatService().hasActiveAccess(customerInfo);
+            activeEntitlements != null && activeEntitlements.isNotEmpty;
 
         debugPrint(
             '[SaveProgress] Has active subscription: $hasActiveSubscription');
-        debugPrint(
-            '[SaveProgress] User has credits: $hasCredits ($paidCredits remaining)');
 
-        if (hasActiveSubscription || hasCredits) {
-          // Completed onboarding + access (subscription OR credits) -> Home
-          debugPrint(
-              '[SaveProgress] User has access - going to home (subscription: $hasActiveSubscription, credits: $hasCredits)');
+        if (hasActiveSubscription) {
+          // Completed onboarding + subscription → Home
+          debugPrint('[SaveProgress] User has subscription - going to home');
 
-          // Sync subscription to Supabase when RevenueCat entitlement is active.
-          if (hasActiveSubscription) {
-            try {
-              await SubscriptionSyncService()
-                  .syncSubscriptionToSupabase(
-                    attemptRestoreOnNoEntitlement: true,
-                  )
-                  .timeout(const Duration(seconds: 10));
-            } catch (e) {
-              debugPrint('[SaveProgress] Error syncing subscription: $e');
-            }
+          // Sync subscription to Supabase
+          try {
+            await SubscriptionSyncService()
+                .syncSubscriptionToSupabase()
+                .timeout(const Duration(seconds: 10));
+          } catch (e) {
+            debugPrint('[SaveProgress] Error syncing subscription: $e');
           }
 
           if (mounted) {
@@ -222,9 +186,8 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
             );
           }
         } else {
-          // Completed onboarding + no entitlement and no credits -> paywall
-          debugPrint(
-              '[SaveProgress] User has no subscription and no credits - presenting paywall');
+          // Completed onboarding + NO subscription → Present paywall
+          debugPrint('[SaveProgress] User has no subscription - presenting paywall');
           if (mounted) {
             final didPurchase = await SuperwallService().presentPaywall(
               placement: 'onboarding_paywall',
@@ -238,9 +201,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
 
               try {
                 await Future.delayed(const Duration(milliseconds: 500));
-                await SubscriptionSyncService().syncSubscriptionToSupabase(
-                  attemptRestoreOnNoEntitlement: true,
-                );
+                await SubscriptionSyncService().syncSubscriptionToSupabase();
                 await OnboardingStateService().markPaymentComplete(userId);
               } catch (e) {
                 debugPrint('[SaveProgress] Error syncing subscription: $e');
@@ -263,7 +224,12 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         }
       } else {
         // New user (hasn't completed onboarding) → TrialIntroPage
-        await _navigateNewUserOfferFlow(userId);
+        debugPrint('[SaveProgress] New user - navigating to trial intro');
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const TrialIntroPage()),
+          );
+        }
       }
     } catch (e, stackTrace) {
       debugPrint('[SaveProgress] Error checking status: $e');
@@ -275,56 +241,6 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           MaterialPageRoute(builder: (context) => const TrialIntroPage()),
         );
       }
-    }
-  }
-
-  Future<void> _navigateNewUserOfferFlow(String userId) async {
-    debugPrint(
-        '[SaveProgress] New user - checking whether trial intro should be skipped');
-
-    try {
-      final hasUsedFreeTrialBefore =
-          await RevenueCatService().hasUsedFreeTrialBefore().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          debugPrint(
-              '[SaveProgress] Trial history check timed out - defaulting to trial intro');
-          return false;
-        },
-      );
-
-      if (!mounted) return;
-
-      if (!hasUsedFreeTrialBefore) {
-        debugPrint(
-            '[SaveProgress] No prior trial history detected - navigating to trial intro');
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const TrialIntroPage()),
-        );
-        return;
-      }
-
-      debugPrint(
-          '[SaveProgress] Prior trial history detected - navigating directly to paywall');
-      unawaited(OnboardingStateService().updateCheckpoint(
-        userId,
-        OnboardingCheckpoint.paywall,
-      ));
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => PaywallPresentationPage(
-            userId: userId,
-            placement: 'onboarding_paywall',
-          ),
-        ),
-      );
-    } catch (e) {
-      debugPrint('[SaveProgress] Error checking trial eligibility: $e');
-      if (!mounted) return;
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const TrialIntroPage()),
-      );
     }
   }
 
@@ -396,13 +312,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     }
 
     try {
-      // This is account creation during onboarding, not a purchase-restore flow.
-      // Avoid restoring store purchases here so brand-new accounts keep the
-      // correct trial/paywall eligibility until the user actually buys.
-      await SubscriptionSyncService().identify(
-        userId,
-        attemptRestoreOnNoEntitlement: false,
-      );
+      await SubscriptionSyncService().identify(userId);
       await FraudPreventionService.updateUserDeviceFingerprint(userId);
 
       final email = authService.currentUser?.email;
@@ -417,22 +327,12 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     }
 
     await _persistOnboardingSelections(userId);
+
     await _navigateBasedOnSubscriptionStatus();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isAutoContinuingAuthenticatedUser) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFf2003c)),
-          ),
-        ),
-      );
-    }
-
     final spacing = context.spacing;
     final targetPlatform = Theme.of(context).platform;
     final isAppleSignInAvailable = targetPlatform == TargetPlatform.iOS ||
@@ -630,9 +530,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                                 final result = await Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (context) =>
-                                        const EmailSignInPage(
-                                          returnResultOnSuccess: true,
-                                        ),
+                                        const EmailSignInPage(),
                                   ),
                                 );
 

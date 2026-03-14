@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import 'credit_service.dart';
 import 'superwall_service.dart';
 import 'revenuecat_service.dart';
 
@@ -17,42 +16,13 @@ class SubscriptionSyncService {
   final _superwall = SuperwallService();
   final _revenueCat = RevenueCatService();
   static const MethodChannel _authChannel = MethodChannel('snaplook/auth');
-  static const Map<String, int> _creditPackProducts = {
-    'com.snaplook.credits20': 20,
-    'com.snaplook.credits50': 50,
-    'com.snaplook.credits100': 100,
-  };
-
-  bool isCreditPackProduct(String? productId) {
-    if (productId == null || productId.isEmpty) return false;
-    return _creditsForProduct(productId) != null;
-  }
-
-  bool _shouldAttemptRestoreOnNoEntitlement({
-    required bool requested,
-    String? purchasedProductId,
-  }) {
-    if (!requested) return false;
-
-    final effectiveProductId = purchasedProductId ?? _superwall.lastPurchasedProductId;
-    if (isCreditPackProduct(effectiveProductId)) {
-      debugPrint(
-          '[SubscriptionSync] Skipping restore-on-no-entitlement for credit-pack purchase: $effectiveProductId');
-      return false;
-    }
-
-    return true;
-  }
 
   /// Sync subscription data from RevenueCat to Supabase.
   /// Call this after:
   /// - Successful paywall flow
   /// - User login
   /// - App startup (if authenticated)
-  Future<void> syncSubscriptionToSupabase({
-    bool attemptRestoreOnNoEntitlement = false,
-    String? purchasedProductId,
-  }) async {
+  Future<void> syncSubscriptionToSupabase() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
@@ -76,82 +46,25 @@ class SubscriptionSyncService {
         return;
       }
 
-      if (customerInfo == null) {
-        debugPrint(
-            '[SubscriptionSync] Customer info was null after fetch - skipping sync');
-        await _syncShareExtensionAuthSnapshot(userId: user.id);
-        return;
-      }
-
-      final shouldAttemptRestoreOnNoEntitlement =
-          _shouldAttemptRestoreOnNoEntitlement(
-        requested: attemptRestoreOnNoEntitlement,
-        purchasedProductId: purchasedProductId,
-      );
-
       // Parse RevenueCat subscription data
-      var activeEntitlements = customerInfo.entitlements.active.values;
-      var entitlement =
+      final activeEntitlements = customerInfo.entitlements.active.values;
+      final entitlement =
           (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
-      var hasActiveRevenueCat =
-          entitlement != null || customerInfo.activeSubscriptions.isNotEmpty;
-
-      if (!hasActiveRevenueCat && shouldAttemptRestoreOnNoEntitlement) {
-        debugPrint(
-            '[SubscriptionSync] No active entitlement from getCustomerInfo - attempting restore');
-        try {
-          final restoredInfo =
-              await Purchases.restorePurchases().timeout(const Duration(seconds: 12));
-          customerInfo = restoredInfo;
-          activeEntitlements = customerInfo.entitlements.active.values;
-          entitlement =
-              (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
-          hasActiveRevenueCat =
-              entitlement != null || customerInfo.activeSubscriptions.isNotEmpty;
-          debugPrint(
-              '[SubscriptionSync] Restore completed. hasActive=$hasActiveRevenueCat activeSubscriptions=${customerInfo.activeSubscriptions}');
-        } catch (restoreError) {
-          debugPrint(
-              '[SubscriptionSync] Restore-on-no-entitlement failed: $restoreError');
-        }
-      }
-
-      final resolvedCustomerInfo = customerInfo;
-      if (resolvedCustomerInfo == null) {
-        debugPrint(
-            '[SubscriptionSync] Customer info became null after restore attempt - skipping sync');
-        await _syncShareExtensionAuthSnapshot(userId: user.id);
-        return;
-      }
-
-      final isTrialFromEntitlement = entitlement?.periodType == PeriodType.trial ||
+      final hasActiveRevenueCat = entitlement != null;
+      final isTrial = entitlement?.periodType == PeriodType.trial ||
           entitlement?.periodType == PeriodType.intro;
       final expirationDateIso = entitlement?.expirationDate != null
           ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
-          : (resolvedCustomerInfo.latestExpirationDate != null
-              ? DateTime.tryParse(resolvedCustomerInfo.latestExpirationDate!)
-                  ?.toIso8601String()
-              : null);
-      final productId = entitlement?.productIdentifier ??
-          (resolvedCustomerInfo.activeSubscriptions.isNotEmpty
-              ? resolvedCustomerInfo.activeSubscriptions.first
-              : null);
-      final revenueCatUserId = resolvedCustomerInfo.originalAppUserId;
+          : null;
+      final productId = entitlement?.productIdentifier;
+      final revenueCatUserId = customerInfo.originalAppUserId;
 
       debugPrint('[SubscriptionSync] RevenueCat data:');
       debugPrint('  - originalAppUserId: $revenueCatUserId');
       debugPrint('  - hasActiveSubscription: $hasActiveRevenueCat');
-      debugPrint('  - isTrialFromEntitlement: $isTrialFromEntitlement');
+      debugPrint('  - isTrial: $isTrial');
       debugPrint('  - productId: $productId');
       debugPrint('  - expiresAt: $expirationDateIso');
-      debugPrint(
-          '  - activeSubscriptions: ${resolvedCustomerInfo.activeSubscriptions}');
-
-      await _syncCreditPackPurchases(
-        userId: user.id,
-        revenueCatUserId: revenueCatUserId,
-        customerInfo: resolvedCustomerInfo,
-      );
 
       // Check if user has credits (users with credits should not have their status overwritten to 'free')
       final userResponse = await _supabase
@@ -163,8 +76,6 @@ class SubscriptionSyncService {
 
       final hasCredits = (userResponse?['paid_credits_remaining'] ?? 0) > 0;
       final currentStatus = userResponse?['subscription_status'] ?? 'free';
-      final currentIsTrial = userResponse?['is_trial'] == true;
-      final isTrial = entitlement == null ? currentIsTrial : isTrialFromEntitlement;
 
       // Determine what to sync
       if (hasActiveRevenueCat) {
@@ -187,19 +98,18 @@ class SubscriptionSyncService {
 
         // Also sync status to Superwall so it knows about the subscription
         await _superwall.syncSubscriptionStatus();
-      } else if (currentStatus == 'active' ||
-          currentStatus == 'expired' ||
-          currentIsTrial) {
-        // RevenueCat can briefly report no active entitlement immediately
-        // after auth or purchase transitions. Preserve known non-free state
-        // instead of downgrading the user to free.
+      } else if (hasCredits &&
+          (currentStatus == 'active' || currentStatus == 'expired')) {
+        // User has credits but no active RevenueCat subscription
+        // Preserve their existing subscription data entirely (don't overwrite with nulls)
+        // Only update the sync timestamp
         await _supabase.from('users').update({
           'subscription_last_synced_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('id', user.id);
 
         debugPrint(
-            '[SubscriptionSync] Preserving existing subscription state. Status: $currentStatus, isTrial: $currentIsTrial, hasCredits: $hasCredits');
+            '[SubscriptionSync] User has credits - preserving existing subscription data. Status: $currentStatus');
 
         // Sync status to Superwall
         await _superwall.syncSubscriptionStatus();
@@ -228,68 +138,10 @@ class SubscriptionSyncService {
         await _superwall.syncSubscriptionStatus();
       }
 
-      CreditService().clearCache();
       await _syncShareExtensionAuthSnapshot(userId: user.id);
     } catch (e, stackTrace) {
       debugPrint('[SubscriptionSync] Error syncing subscription: $e');
       debugPrint('[SubscriptionSync] Stack trace: $stackTrace');
-    }
-  }
-
-  int? _creditsForProduct(String productId) {
-    final normalized = productId.toLowerCase();
-    for (final entry in _creditPackProducts.entries) {
-      final sku = entry.key.toLowerCase();
-      if (normalized == sku || normalized.startsWith('$sku:')) {
-        return entry.value;
-      }
-    }
-    return null;
-  }
-
-  Future<void> _syncCreditPackPurchases({
-    required String userId,
-    required String revenueCatUserId,
-    required CustomerInfo customerInfo,
-  }) async {
-    final transactions = customerInfo.nonSubscriptionTransactions;
-    if (transactions.isEmpty) return;
-
-    for (final transaction in transactions) {
-      final productId = transaction.productIdentifier;
-      final credits = _creditsForProduct(productId);
-      if (credits == null) continue;
-
-      final purchaseDateIso =
-          DateTime.tryParse(transaction.purchaseDate)?.toIso8601String() ??
-              DateTime.now().toIso8601String();
-      final fallbackTransactionId =
-          '$revenueCatUserId:$productId:${transaction.purchaseDate}';
-      final transactionId = transaction.transactionIdentifier.isNotEmpty
-          ? transaction.transactionIdentifier
-          : fallbackTransactionId;
-
-      try {
-        final response = await _supabase.rpc(
-          'apply_credit_purchase',
-          params: {
-            'p_user_id': userId,
-            'p_product_id': productId,
-            'p_transaction_id': transactionId,
-            'p_purchased_at': purchaseDateIso,
-            'p_source': 'client_sync',
-          },
-        );
-        debugPrint(
-          '[SubscriptionSync] Synced credit pack purchase: '
-          'product=$productId credits=$credits tx=$transactionId response=$response',
-        );
-      } catch (e) {
-        debugPrint(
-          '[SubscriptionSync] Failed syncing credit pack purchase '
-          '(product=$productId tx=$transactionId): $e',
-        );
-      }
     }
   }
 
@@ -369,33 +221,17 @@ class SubscriptionSyncService {
 
   /// Identify user with RevenueCat and Superwall.
   /// This links any anonymous purchases to the identified user.
-  Future<void> identify(
-    String userId, {
-    bool attemptRestoreOnNoEntitlement = true,
-    String? purchasedProductId,
-  }) async {
+  Future<void> identify(String userId) async {
     debugPrint('[SubscriptionSync] Identifying user $userId with RevenueCat');
 
-    final shouldAttemptRestoreOnNoEntitlement =
-        _shouldAttemptRestoreOnNoEntitlement(
-      requested: attemptRestoreOnNoEntitlement,
-      purchasedProductId: purchasedProductId,
-    );
-
     // Identify with RevenueCat - this merges anonymous purchases with the user account
-    await _revenueCat.identify(
-      userId,
-      attemptRestoreOnNoEntitlement: shouldAttemptRestoreOnNoEntitlement,
-    );
+    await _revenueCat.identify(userId);
 
     // Also identify with Superwall (for backwards compatibility)
     await _superwall.identify(userId);
 
     // Sync subscription data to Supabase
-    await syncSubscriptionToSupabase(
-      attemptRestoreOnNoEntitlement: shouldAttemptRestoreOnNoEntitlement,
-      purchasedProductId: purchasedProductId,
-    );
+    await syncSubscriptionToSupabase();
   }
 
   /// Identify user with Superwall (deprecated - use identify() instead).

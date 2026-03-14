@@ -11,8 +11,8 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../../domain/providers/auth_provider.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
+import '../../../onboarding/presentation/pages/notification_permission_page.dart';
 import '../../../../services/paywall_helper.dart';
-import '../../../../services/revenuecat_service.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
         MainNavigation,
@@ -25,6 +25,7 @@ import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../onboarding/domain/providers/gender_provider.dart';
 import '../../../onboarding/domain/providers/onboarding_preferences_provider.dart';
+import '../../../onboarding/presentation/pages/discovery_source_page.dart';
 
 class EmailVerificationPage extends ConsumerStatefulWidget {
   final String email;
@@ -32,14 +33,11 @@ class EmailVerificationPage extends ConsumerStatefulWidget {
   const EmailVerificationPage({
     super.key,
     required this.email,
-    this.returnResultOnSuccess = false,
   });
 
   @override
   ConsumerState<EmailVerificationPage> createState() =>
       _EmailVerificationPageState();
-
-  final bool returnResultOnSuccess;
 }
 
 class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
@@ -137,11 +135,6 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
-        if (widget.returnResultOnSuccess) {
-          Navigator.of(context).pop(true);
-          return;
-        }
-
         final normalizedEmail = widget.email.trim().toLowerCase();
         if (AuthService.reviewerEmails.contains(normalizedEmail)) {
           print(
@@ -292,25 +285,16 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                   '[EmailVerification] Error fetching RevenueCat customer info: $e');
             }
 
+            final activeEntitlements = customerInfo?.entitlements.active.values;
             final hasActiveSubscription =
-                RevenueCatService().hasActiveAccess(customerInfo);
-            final userCreditsResponse = await supabase
-                .from('users')
-                .select('paid_credits_remaining')
-                .eq('id', userId)
-                .maybeSingle();
-            final hasCredits =
-                (userCreditsResponse?['paid_credits_remaining'] ?? 0) > 0;
+                activeEntitlements != null && activeEntitlements.isNotEmpty;
             print(
                 '[EmailVerification] Has active subscription (RevenueCat): $hasActiveSubscription');
-            print(
-                '[EmailVerification] User has credits: $hasCredits (${userCreditsResponse?['paid_credits_remaining']} remaining)');
 
-            if (hasCompletedOnboarding &&
-                (hasActiveSubscription || hasCredits)) {
+            if (hasCompletedOnboarding && hasActiveSubscription) {
               // Existing user who completed onboarding and has active subscription - go to main app
               print(
-                  '[EmailVerification] Existing user with access - navigating to main app');
+                  '[EmailVerification] Existing user with subscription - navigating to main app');
               // Reset to home tab
               ref.read(selectedIndexProvider.notifier).state = 0;
               // Invalidate all providers to refresh state
@@ -324,12 +308,10 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 ),
                 (route) => false,
               );
-            } else if (hasCompletedOnboarding &&
-                !hasActiveSubscription &&
-                !hasCredits) {
+            } else if (hasCompletedOnboarding && !hasActiveSubscription) {
               // Existing user who completed onboarding but NO subscription - present Superwall paywall
               print(
-                  '[EmailVerification] Existing user without access - presenting Superwall paywall');
+                  '[EmailVerification] Existing user without subscription - presenting Superwall paywall');
               await PaywallHelper.presentPaywallAndNavigate(
                 context: context,
                 userId: userId,

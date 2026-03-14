@@ -10,9 +10,13 @@ import '../../../../services/analytics_service.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
+import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/revenuecat_service.dart';
+import '../../../../services/superwall_service.dart';
+import '../../../../services/subscription_sync_service.dart';
+import '../../../../services/onboarding_state_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'paywall_presentation_page.dart';
+import 'welcome_free_analysis_page.dart';
 
 class TrialReminderPage extends ConsumerStatefulWidget {
   const TrialReminderPage({super.key});
@@ -203,17 +207,13 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                       try {
                         final userId =
                             Supabase.instance.client.auth.currentUser?.id;
-                        await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => PaywallPresentationPage(
-                              userId: userId,
-                              placement: 'onboarding_paywall',
-                              params: const {
-                                'occurrence': 1,
-                                'source': 'trial_reminder',
-                              },
-                            ),
-                          ),
+                        final didPurchase =
+                            await SuperwallService().presentPaywall(
+                          placement: 'onboarding_paywall',
+                          params: const {
+                            'occurrence': 1,
+                            'source': 'trial_reminder',
+                          },
                         );
 
                         if (!mounted) return;
@@ -221,6 +221,60 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                         setState(() {
                           _isPresenting = false;
                         });
+
+                        if (didPurchase && userId != null) {
+                          // User purchased - sync subscription and navigate to welcome or home
+                          debugPrint(
+                              '[TrialReminder] Purchase completed - syncing subscription');
+
+                          try {
+                            await Future.delayed(
+                                const Duration(milliseconds: 500));
+                            await SubscriptionSyncService()
+                                .syncSubscriptionToSupabase();
+                            await OnboardingStateService()
+                                .markPaymentComplete(userId);
+                          } catch (e) {
+                            debugPrint(
+                                '[TrialReminder] Error syncing subscription: $e');
+                          }
+
+                          if (mounted) {
+                            // Check if user has completed onboarding before
+                            final userResponse = await Supabase.instance.client
+                                .from('users')
+                                .select('onboarding_state')
+                                .eq('id', userId)
+                                .maybeSingle();
+
+                            final hasCompletedOnboarding =
+                                userResponse?['onboarding_state'] == 'completed';
+
+                            debugPrint(
+                                '[TrialReminder] Has completed onboarding: $hasCompletedOnboarding');
+
+                            if (hasCompletedOnboarding) {
+                              // Returning user - go directly to home
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (context) => const MainNavigation(
+                                    key: ValueKey('fresh-main-nav'),
+                                  ),
+                                ),
+                                (route) => false,
+                              );
+                            } else {
+                              // New user - show welcome page first
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const WelcomeFreeAnalysisPage(),
+                                ),
+                              );
+                            }
+                          }
+                        }
+                        // If user dismissed without purchasing, stay on this page.
                       } catch (e) {
                         debugPrint(
                             '[TrialReminder] Error presenting paywall: $e');

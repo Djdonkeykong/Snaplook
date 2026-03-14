@@ -50,7 +50,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage> {
     final favorites = favoritesAsync.valueOrNull ?? [];
     final isInitialLoading =
         favoritesAsync.isLoading && !favoritesAsync.hasValue;
-    final hasError = favoritesAsync.hasError;
+    final hasError = favoritesAsync.hasError && !favoritesAsync.hasValue;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -127,10 +127,6 @@ class _WishlistPageState extends ConsumerState<WishlistPage> {
       );
     }
 
-    if (favorites.isEmpty) {
-      return _buildEmptyState(context, spacing);
-    }
-
     if (hasError) {
       final favoritesAsync = ref.watch(favoritesProvider);
       return Center(
@@ -161,6 +157,10 @@ class _WishlistPageState extends ConsumerState<WishlistPage> {
           ],
         ),
       );
+    }
+
+    if (favorites.isEmpty) {
+      return _buildEmptyState(context, spacing);
     }
 
     return EasyRefresh(
@@ -266,7 +266,7 @@ class _WishlistPageState extends ConsumerState<WishlistPage> {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: colorScheme.onSurface,
-                  width: 2.5,
+                  width: 1.5,
                 ),
               ),
               child: Transform.translate(
@@ -279,18 +279,15 @@ class _WishlistPageState extends ConsumerState<WishlistPage> {
               ),
             ),
             SizedBox(height: spacing.l),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: spacing.m),
-              child: Text(
-                'Tap the heart on pieces you love to build your personal shortlist.',
-                style: textTheme.bodyMedium?.copyWith(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: colorScheme.onSurface,
-                  height: 1.35,
-                ),
-                textAlign: TextAlign.center,
+            Text(
+              'Tap the heart on pieces you love to build your personal shortlist.',
+              style: textTheme.bodyMedium?.copyWith(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: colorScheme.onSurface,
+                height: 1.35,
               ),
+              textAlign: TextAlign.center,
             ),
             SizedBox(height: spacing.xl),
             GestureDetector(
