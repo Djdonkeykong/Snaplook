@@ -78,7 +78,10 @@ class RevenueCatService {
   }
 
   /// Identify a user
-  Future<void> identify(String userId) async {
+  Future<void> identify(
+    String userId, {
+    bool attemptRestoreOnNoEntitlement = true,
+  }) async {
     if (!_configured) {
       if (kDebugMode) {
         debugPrint(
@@ -111,7 +114,7 @@ class RevenueCatService {
         // Non-fatal. We still try restore as a final fallback below.
       }
 
-      if (!hasActiveAccess(_customerInfo)) {
+      if (attemptRestoreOnNoEntitlement && !hasActiveAccess(_customerInfo)) {
         try {
           _customerInfo = await Purchases.restorePurchases();
         } catch (_) {

@@ -32,7 +32,10 @@ class PaywallHelper {
         try {
           debugPrint('[PaywallHelper] Identifying user and syncing subscription...');
           // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
-          await SubscriptionSyncService().identify(userId);
+          await SubscriptionSyncService().identify(
+            userId,
+            purchasedProductId: SuperwallService().lastPurchasedProductId,
+          );
           await OnboardingStateService().markPaymentComplete(userId);
           debugPrint('[PaywallHelper] User identified and subscription synced successfully');
         } catch (e) {

@@ -23,6 +23,27 @@ class SubscriptionSyncService {
     'com.snaplook.credits100': 100,
   };
 
+  bool isCreditPackProduct(String? productId) {
+    if (productId == null || productId.isEmpty) return false;
+    return _creditsForProduct(productId) != null;
+  }
+
+  bool _shouldAttemptRestoreOnNoEntitlement({
+    required bool requested,
+    String? purchasedProductId,
+  }) {
+    if (!requested) return false;
+
+    final effectiveProductId = purchasedProductId ?? _superwall.lastPurchasedProductId;
+    if (isCreditPackProduct(effectiveProductId)) {
+      debugPrint(
+          '[SubscriptionSync] Skipping restore-on-no-entitlement for credit-pack purchase: $effectiveProductId');
+      return false;
+    }
+
+    return true;
+  }
+
   /// Sync subscription data from RevenueCat to Supabase.
   /// Call this after:
   /// - Successful paywall flow
@@ -30,6 +51,7 @@ class SubscriptionSyncService {
   /// - App startup (if authenticated)
   Future<void> syncSubscriptionToSupabase({
     bool attemptRestoreOnNoEntitlement = false,
+    String? purchasedProductId,
   }) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -61,6 +83,12 @@ class SubscriptionSyncService {
         return;
       }
 
+      final shouldAttemptRestoreOnNoEntitlement =
+          _shouldAttemptRestoreOnNoEntitlement(
+        requested: attemptRestoreOnNoEntitlement,
+        purchasedProductId: purchasedProductId,
+      );
+
       // Parse RevenueCat subscription data
       var activeEntitlements = customerInfo.entitlements.active.values;
       var entitlement =
@@ -68,7 +96,7 @@ class SubscriptionSyncService {
       var hasActiveRevenueCat =
           entitlement != null || customerInfo.activeSubscriptions.isNotEmpty;
 
-      if (!hasActiveRevenueCat && attemptRestoreOnNoEntitlement) {
+      if (!hasActiveRevenueCat && shouldAttemptRestoreOnNoEntitlement) {
         debugPrint(
             '[SubscriptionSync] No active entitlement from getCustomerInfo - attempting restore');
         try {
@@ -341,18 +369,32 @@ class SubscriptionSyncService {
 
   /// Identify user with RevenueCat and Superwall.
   /// This links any anonymous purchases to the identified user.
-  Future<void> identify(String userId) async {
+  Future<void> identify(
+    String userId, {
+    bool attemptRestoreOnNoEntitlement = true,
+    String? purchasedProductId,
+  }) async {
     debugPrint('[SubscriptionSync] Identifying user $userId with RevenueCat');
 
+    final shouldAttemptRestoreOnNoEntitlement =
+        _shouldAttemptRestoreOnNoEntitlement(
+      requested: attemptRestoreOnNoEntitlement,
+      purchasedProductId: purchasedProductId,
+    );
+
     // Identify with RevenueCat - this merges anonymous purchases with the user account
-    await _revenueCat.identify(userId);
+    await _revenueCat.identify(
+      userId,
+      attemptRestoreOnNoEntitlement: shouldAttemptRestoreOnNoEntitlement,
+    );
 
     // Also identify with Superwall (for backwards compatibility)
     await _superwall.identify(userId);
 
     // Sync subscription data to Supabase
     await syncSubscriptionToSupabase(
-      attemptRestoreOnNoEntitlement: true,
+      attemptRestoreOnNoEntitlement: shouldAttemptRestoreOnNoEntitlement,
+      purchasedProductId: purchasedProductId,
     );
   }
 
