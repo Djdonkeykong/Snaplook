@@ -22,23 +22,6 @@ interface RevenueCatWebhookEvent {
   }
 }
 
-const normalizeProductId = (productId: string | null | undefined): string =>
-  (productId ?? '').trim().toLowerCase()
-
-const creditPackAmountForProduct = (productId: string | null | undefined): number => {
-  const normalized = normalizeProductId(productId)
-  if (normalized === 'com.snaplook.credits20' || normalized.startsWith('com.snaplook.credits20:')) {
-    return 20
-  }
-  if (normalized === 'com.snaplook.credits50' || normalized.startsWith('com.snaplook.credits50:')) {
-    return 50
-  }
-  if (normalized === 'com.snaplook.credits100' || normalized.startsWith('com.snaplook.credits100:')) {
-    return 100
-  }
-  return 0
-}
-
 serve(async (req) => {
   try {
     // Verify Authorization header for security
@@ -88,59 +71,27 @@ serve(async (req) => {
     const expiresAt = expirationAtMs
       ? new Date(expirationAtMs).toISOString()
       : null
-    const purchasedAtIso = webhookData.event.purchased_at_ms
-      ? new Date(webhookData.event.purchased_at_ms).toISOString()
-      : new Date().toISOString()
-    const creditPackAmount = creditPackAmountForProduct(productId)
-    const transactionId = webhookData.event.transaction_id
-      || webhookData.event.original_transaction_id
-      || `${eventType}:${userId}:${productId}:${webhookData.event.purchased_at_ms ?? Date.now()}`
 
     console.log(`[RevenueCat Webhook] Is Trial: ${isTrial}, Expires At: ${expiresAt}`)
-    console.log(`[RevenueCat Webhook] Credit pack amount: ${creditPackAmount}`)
 
     // Handle different event types
     switch (eventType) {
       case 'INITIAL_PURCHASE':
       case 'RENEWAL':
       case 'NON_RENEWING_PURCHASE':
-        if (creditPackAmount > 0) {
-          const { data, error } = await supabase.rpc('apply_credit_purchase', {
-            p_user_id: userId,
-            p_product_id: productId,
-            p_transaction_id: transactionId,
-            p_purchased_at: purchasedAtIso,
-            p_source: 'revenuecat_webhook',
-          })
+        // User has an active subscription
+        await supabase.from('users').upsert({
+          id: userId,
+          subscription_status: 'active',
+          subscription_product_id: productId,
+          subscription_expires_at: expiresAt,
+          is_trial: isTrial,
+          revenue_cat_user_id: userId,
+          subscription_last_synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' })
 
-          if (error) {
-            console.error(`[RevenueCat Webhook] Failed to apply credit purchase for user ${userId}:`, error)
-            throw error
-          }
-
-          await supabase.from('users').upsert({
-            id: userId,
-            revenue_cat_user_id: userId,
-            subscription_last_synced_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' })
-
-          console.log(`[RevenueCat Webhook] Applied credit pack for user ${userId}. Product=${productId}, tx=${transactionId}, response=${JSON.stringify(data)}`)
-        } else {
-          // User has an active subscription
-          await supabase.from('users').upsert({
-            id: userId,
-            subscription_status: 'active',
-            subscription_product_id: productId,
-            subscription_expires_at: expiresAt,
-            is_trial: isTrial,
-            revenue_cat_user_id: userId,
-            subscription_last_synced_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' })
-
-          console.log(`[RevenueCat Webhook] Updated user ${userId} to active subscription (trial: ${isTrial})`)
-        }
+        console.log(`[RevenueCat Webhook] Updated user ${userId} to active subscription (trial: ${isTrial})`)
         break
 
       case 'CANCELLATION':

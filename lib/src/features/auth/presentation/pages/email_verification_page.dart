@@ -264,8 +264,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
             final supabase = Supabase.instance.client;
             final userResponse = await supabase
                 .from('users')
-                .select(
-                    'onboarding_state, subscription_status, is_trial, paid_credits_remaining')
+                .select('onboarding_state')
                 .eq('id', userId)
                 .maybeSingle();
 
@@ -274,19 +273,8 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
 
             final hasCompletedOnboarding = userResponse != null &&
                 userResponse['onboarding_state'] == 'completed';
-            final subscriptionStatus = userResponse?['subscription_status'] ?? 'free';
-            final isTrial = userResponse?['is_trial'] == true;
-            final paidCreditsRaw = userResponse?['paid_credits_remaining'];
-            final paidCredits = paidCreditsRaw is int
-                ? paidCreditsRaw
-                : (paidCreditsRaw as num?)?.toInt() ?? 0;
-            final hasCredits = paidCredits > 0;
-            final hasSupabaseAccess =
-                subscriptionStatus == 'active' || isTrial || hasCredits;
             print(
                 '[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
-            print(
-                '[EmailVerification] Supabase access snapshot: status=$subscriptionStatus isTrial=$isTrial paidCredits=$paidCredits');
 
             // Check subscription status from RevenueCat (source of truth)
             CustomerInfo? customerInfo;
@@ -300,16 +288,13 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
             final activeEntitlements = customerInfo?.entitlements.active.values;
             final hasActiveSubscription =
                 activeEntitlements != null && activeEntitlements.isNotEmpty;
-            final hasAccess = hasActiveSubscription || hasSupabaseAccess;
             print(
                 '[EmailVerification] Has active subscription (RevenueCat): $hasActiveSubscription');
-            print(
-                '[EmailVerification] Has credits: $hasCredits, hasSupabaseAccess: $hasSupabaseAccess, hasAccess: $hasAccess');
 
-            if (hasCompletedOnboarding && hasAccess) {
-              // Existing user who completed onboarding and has access - go to main app
+            if (hasCompletedOnboarding && hasActiveSubscription) {
+              // Existing user who completed onboarding and has active subscription - go to main app
               print(
-                  '[EmailVerification] Existing user with access - navigating to main app');
+                  '[EmailVerification] Existing user with subscription - navigating to main app');
               // Reset to home tab
               ref.read(selectedIndexProvider.notifier).state = 0;
               // Invalidate all providers to refresh state
@@ -323,10 +308,10 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                 ),
                 (route) => false,
               );
-            } else if (hasCompletedOnboarding && !hasAccess) {
-              // Existing user who completed onboarding but no access - present paywall
+            } else if (hasCompletedOnboarding && !hasActiveSubscription) {
+              // Existing user who completed onboarding but NO subscription - present Superwall paywall
               print(
-                  '[EmailVerification] Existing user without access - presenting Superwall paywall');
+                  '[EmailVerification] Existing user without subscription - presenting Superwall paywall');
               await PaywallHelper.presentPaywallAndNavigate(
                 context: context,
                 userId: userId,

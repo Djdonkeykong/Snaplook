@@ -113,27 +113,15 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
       final supabase = Supabase.instance.client;
       final userResponse = await supabase
           .from('users')
-          .select(
-              'onboarding_state, subscription_status, is_trial, paid_credits_remaining')
+          .select('onboarding_state')
           .eq('id', userId)
           .maybeSingle();
 
       final hasCompletedOnboarding = userResponse != null &&
           userResponse['onboarding_state'] == 'completed';
-      final subscriptionStatus = userResponse?['subscription_status'] ?? 'free';
-      final isTrial = userResponse?['is_trial'] == true;
-      final paidCreditsRaw = userResponse?['paid_credits_remaining'];
-      final paidCredits = paidCreditsRaw is int
-          ? paidCreditsRaw
-          : (paidCreditsRaw as num?)?.toInt() ?? 0;
-      final hasCredits = paidCredits > 0;
-      final hasSupabaseAccess =
-          subscriptionStatus == 'active' || isTrial || hasCredits;
 
       debugPrint(
           '[SaveProgress] Has completed onboarding: $hasCompletedOnboarding');
-      debugPrint(
-          '[SaveProgress] Supabase access snapshot: status=$subscriptionStatus isTrial=$isTrial paidCredits=$paidCredits');
 
       if (hasCompletedOnboarding) {
         // Existing user who completed onboarding - check subscription
@@ -169,25 +157,21 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         final activeEntitlements = customerInfo?.entitlements.active.values;
         final hasActiveSubscription =
             activeEntitlements != null && activeEntitlements.isNotEmpty;
-        final hasAccess = hasActiveSubscription || hasSupabaseAccess;
 
         debugPrint(
             '[SaveProgress] Has active subscription: $hasActiveSubscription');
-        debugPrint(
-            '[SaveProgress] Has credits: $hasCredits, hasSupabaseAccess: $hasSupabaseAccess, hasAccess: $hasAccess');
 
-        if (hasAccess) {
+        if (hasActiveSubscription) {
           // Completed onboarding + subscription → Home
-          debugPrint('[SaveProgress] User has access - going to home');
+          debugPrint('[SaveProgress] User has subscription - going to home');
 
-          if (hasActiveSubscription) {
-            try {
-              await SubscriptionSyncService()
-                  .syncSubscriptionToSupabase()
-                  .timeout(const Duration(seconds: 10));
-            } catch (e) {
-              debugPrint('[SaveProgress] Error syncing subscription: $e');
-            }
+          // Sync subscription to Supabase
+          try {
+            await SubscriptionSyncService()
+                .syncSubscriptionToSupabase()
+                .timeout(const Duration(seconds: 10));
+          } catch (e) {
+            debugPrint('[SaveProgress] Error syncing subscription: $e');
           }
 
           if (mounted) {
