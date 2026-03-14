@@ -54,26 +54,42 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
         placement: widget.placement,
       );
 
-      // Paywall has been dismissed - hide loading overlay
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-
       if (!mounted) return;
 
       debugPrint('[PaywallPresentationPage] Purchase result: $didPurchase');
 
-      // If user purchased and has account, sync subscription to Supabase
-      if (didPurchase && widget.userId != null) {
-        // Show loading overlay while syncing
+      if (!didPurchase) {
+        debugPrint(
+            '[PaywallPresentationPage] User dismissed paywall without purchasing - going back');
         if (mounted) {
           setState(() {
-            _isLoading = true;
+            _isLoading = false;
           });
         }
+        Navigator.of(context).pop();
+        return;
+      }
 
+      if (widget.userId == null) {
+        debugPrint('[PaywallPresentationPage] WARNING: No user found after paywall');
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        Navigator.of(context).pop();
+        return;
+      }
+
+      // Keep the loading overlay visible from purchase completion until redirect.
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
+
+      // If user purchased and has account, sync subscription to Supabase
+      if (didPurchase) {
         try {
           debugPrint(
               '[PaywallPresentationPage] Purchase completed - waiting for RevenueCat to process...');
@@ -96,20 +112,6 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       }
 
       if (!mounted) return;
-
-      // Only navigate forward if user purchased
-      if (!didPurchase) {
-        debugPrint(
-            '[PaywallPresentationPage] User dismissed paywall without purchasing - going back');
-        Navigator.of(context).pop();
-        return;
-      }
-
-      if (widget.userId == null) {
-        debugPrint('[PaywallPresentationPage] WARNING: No user found after paywall');
-        Navigator.of(context).pop();
-        return;
-      }
 
       // Check if user has completed onboarding before
       final supabase = Supabase.instance.client;
@@ -138,13 +140,10 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       debugPrint('[PaywallPresentationPage] Error during paywall: $e');
       // Go back on error
       if (mounted) {
-        Navigator.of(context).pop();
-      }
-    } finally {
-      if (mounted) {
         setState(() {
           _isLoading = false;
         });
+        Navigator.of(context).pop();
       }
     }
   }
