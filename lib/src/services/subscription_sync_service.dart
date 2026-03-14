@@ -88,19 +88,27 @@ class SubscriptionSyncService {
         }
       }
 
+      final resolvedCustomerInfo = customerInfo;
+      if (resolvedCustomerInfo == null) {
+        debugPrint(
+            '[SubscriptionSync] Customer info became null after restore attempt - skipping sync');
+        await _syncShareExtensionAuthSnapshot(userId: user.id);
+        return;
+      }
+
       final isTrialFromEntitlement = entitlement?.periodType == PeriodType.trial ||
           entitlement?.periodType == PeriodType.intro;
       final expirationDateIso = entitlement?.expirationDate != null
           ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
-          : (customerInfo.latestExpirationDate != null
-              ? DateTime.tryParse(customerInfo.latestExpirationDate!)
+          : (resolvedCustomerInfo.latestExpirationDate != null
+              ? DateTime.tryParse(resolvedCustomerInfo.latestExpirationDate!)
                   ?.toIso8601String()
               : null);
       final productId = entitlement?.productIdentifier ??
-          (customerInfo.activeSubscriptions.isNotEmpty
-              ? customerInfo.activeSubscriptions.first
+          (resolvedCustomerInfo.activeSubscriptions.isNotEmpty
+              ? resolvedCustomerInfo.activeSubscriptions.first
               : null);
-      final revenueCatUserId = customerInfo.originalAppUserId;
+      final revenueCatUserId = resolvedCustomerInfo.originalAppUserId;
 
       debugPrint('[SubscriptionSync] RevenueCat data:');
       debugPrint('  - originalAppUserId: $revenueCatUserId');
@@ -108,12 +116,13 @@ class SubscriptionSyncService {
       debugPrint('  - isTrialFromEntitlement: $isTrialFromEntitlement');
       debugPrint('  - productId: $productId');
       debugPrint('  - expiresAt: $expirationDateIso');
-      debugPrint('  - activeSubscriptions: ${customerInfo.activeSubscriptions}');
+      debugPrint(
+          '  - activeSubscriptions: ${resolvedCustomerInfo.activeSubscriptions}');
 
       await _syncCreditPackPurchases(
         userId: user.id,
         revenueCatUserId: revenueCatUserId,
-        customerInfo: customerInfo,
+        customerInfo: resolvedCustomerInfo,
       );
 
       // Check if user has credits (users with credits should not have their status overwritten to 'free')
