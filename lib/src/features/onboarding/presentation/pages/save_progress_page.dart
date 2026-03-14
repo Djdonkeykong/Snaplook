@@ -279,24 +279,25 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
   }
 
   Future<void> _navigateNewUserOfferFlow(String userId) async {
-    debugPrint('[SaveProgress] New user - checking trial eligibility');
+    debugPrint(
+        '[SaveProgress] New user - checking whether trial intro should be skipped');
 
     try {
-      final isEligibleForTrial =
-          await RevenueCatService().isEligibleForTrial().timeout(
+      final hasUsedFreeTrialBefore =
+          await RevenueCatService().hasUsedFreeTrialBefore().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           debugPrint(
-              '[SaveProgress] Trial eligibility check timed out - defaulting to trial intro');
-          return true;
+              '[SaveProgress] Trial history check timed out - defaulting to trial intro');
+          return false;
         },
       );
 
       if (!mounted) return;
 
-      if (isEligibleForTrial) {
+      if (!hasUsedFreeTrialBefore) {
         debugPrint(
-            '[SaveProgress] New user is eligible for trial - navigating to trial intro');
+            '[SaveProgress] No prior trial history detected - navigating to trial intro');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const TrialIntroPage()),
         );
@@ -304,7 +305,7 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
       }
 
       debugPrint(
-          '[SaveProgress] New user is not eligible for trial - navigating directly to paywall');
+          '[SaveProgress] Prior trial history detected - navigating directly to paywall');
       unawaited(OnboardingStateService().updateCheckpoint(
         userId,
         OnboardingCheckpoint.paywall,
@@ -395,7 +396,13 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
     }
 
     try {
-      await SubscriptionSyncService().identify(userId);
+      // This is account creation during onboarding, not a purchase-restore flow.
+      // Avoid restoring store purchases here so brand-new accounts keep the
+      // correct trial/paywall eligibility until the user actually buys.
+      await SubscriptionSyncService().identify(
+        userId,
+        attemptRestoreOnNoEntitlement: false,
+      );
       await FraudPreventionService.updateUserDeviceFingerprint(userId);
 
       final email = authService.currentUser?.email;

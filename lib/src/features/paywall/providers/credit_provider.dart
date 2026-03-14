@@ -169,9 +169,11 @@ class PurchaseController {
     try {
       final success = await _superwallService.presentPaywall(placement: placement);
       final didObservePurchase = _superwallService.lastPurchaseObservedAt != null;
-      final shouldSync = success ||
-          didObservePurchase ||
-          placement == SuperwallService.creditsPlacement;
+      final purchasedProductId = _superwallService.lastPurchasedProductId;
+      final isCreditsPlacement = placement == SuperwallService.creditsPlacement;
+      final didCompletePurchase =
+          isCreditsPlacement ? didObservePurchase : (success || didObservePurchase);
+      final shouldSync = didCompletePurchase;
 
       if (shouldSync) {
         // Allow RevenueCat a brief moment to flush transaction state before sync.
@@ -179,7 +181,8 @@ class PurchaseController {
 
         // Sync subscription/credit purchases data to Supabase.
         await _subscriptionSyncService.syncSubscriptionToSupabase(
-          attemptRestoreOnNoEntitlement: true,
+          attemptRestoreOnNoEntitlement: !isCreditsPlacement,
+          purchasedProductId: purchasedProductId,
         );
 
         // Refresh local state from Supabase.
@@ -187,7 +190,7 @@ class PurchaseController {
         await _subscriptionNotifier.refresh();
       }
 
-      return success || didObservePurchase;
+      return didCompletePurchase;
     } catch (e) {
       return false;
     }

@@ -50,20 +50,31 @@ class _LoginPageState extends ConsumerState<LoginPage>
       return;
     }
 
-    print(
-        '[LoginPage] Linking RevenueCat subscription to $providerLabel account...');
-    try {
-      await SubscriptionSyncService().identify(userId);
-      print('[LoginPage] RevenueCat subscription linked and synced');
-    } catch (linkError) {
-      print('[LoginPage] Error linking RevenueCat subscription: $linkError');
-    }
-
     final userResponse = await supabase
         .from('users')
         .select('onboarding_state, onboarding_checkpoint')
         .eq('id', userId)
         .maybeSingle();
+
+    final onboardingState = userResponse?['onboarding_state'] as String?;
+    final checkpoint = userResponse?['onboarding_checkpoint'] as String?;
+    final hasOnboardingHistory =
+        (onboardingState != null && onboardingState != 'not_started') ||
+            checkpoint != null;
+
+    print(
+        '[LoginPage] Linking RevenueCat subscription to $providerLabel account...');
+    print(
+        '[LoginPage] Auto-restore on sign-in: $hasOnboardingHistory (onboardingState=$onboardingState checkpoint=$checkpoint)');
+    try {
+      await SubscriptionSyncService().identify(
+        userId,
+        attemptRestoreOnNoEntitlement: hasOnboardingHistory,
+      );
+      print('[LoginPage] RevenueCat subscription linked and synced');
+    } catch (linkError) {
+      print('[LoginPage] Error linking RevenueCat subscription: $linkError');
+    }
 
     print('[LoginPage] Database response: $userResponse');
     print(
@@ -136,7 +147,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
       return;
     }
 
-    final checkpoint = userResponse?['onboarding_checkpoint'];
     debugPrint(
         '[LoginPage] User hasn\'t completed onboarding - checkpoint: $checkpoint');
 

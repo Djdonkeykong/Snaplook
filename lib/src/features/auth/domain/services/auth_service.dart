@@ -348,6 +348,12 @@ class AuthService {
     try {
       await _supabase.auth.signOut();
 
+      try {
+        await SubscriptionSyncService().resetOnLogout();
+      } catch (resetError) {
+        print('[Auth] Error resetting RevenueCat/Superwall on logout: $resetError');
+      }
+
       // Clear auth flag for share extension
       await _updateAuthFlag(false);
 
