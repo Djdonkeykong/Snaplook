@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import '../../../../../core/theme/theme_extensions.dart';
 import '../widgets/progress_indicator.dart';
 import '../widgets/onboarding_bottom_bar.dart';
 import 'add_first_style_page.dart';
+import 'discovery_source_page.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../../../../services/analytics_service.dart';
 import '../../../../services/onboarding_state_service.dart';
@@ -21,6 +23,9 @@ class AwesomeIntroPage extends ConsumerStatefulWidget {
 }
 
 class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
+  bool get _shouldSkipShareAndDiscover =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
   @override
   void initState() {
     super.initState();
@@ -123,7 +128,9 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
               if (!context.mounted) return;
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const AddFirstStylePage(),
+                  builder: (context) => _shouldSkipShareAndDiscover
+                      ? const DiscoverySourcePage()
+                      : const AddFirstStylePage(),
                 ),
               );
             },
@@ -135,8 +142,8 @@ class _AwesomeIntroPageState extends ConsumerState<AwesomeIntroPage> {
                 borderRadius: BorderRadius.circular(28),
               ),
             ),
-            child: const Text(
-              'Show me how',
+            child: Text(
+              _shouldSkipShareAndDiscover ? 'Continue' : 'Show me how',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
