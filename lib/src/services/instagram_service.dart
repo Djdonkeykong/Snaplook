@@ -16,6 +16,7 @@ class InstagramService {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
   static const String _jinaProxyBase = 'https://r.jina.ai/';
+  static const String _imdbGraphqlEndpoint = 'https://api.graphql.imdb.com/';
 
   /// Apify Instagram scraper - Returns a single high-quality image
   static Future<List<XFile>> _apifyInstagramScraper(
@@ -94,12 +95,14 @@ class InstagramService {
       String? imageUrl = item['displayUrl'] as String?;
 
       if (imageUrl != null && imageUrl.isNotEmpty) {
-        print('Found Instagram displayUrl from Apify: ${_previewUrl(imageUrl)}');
+        print(
+            'Found Instagram displayUrl from Apify: ${_previewUrl(imageUrl)}');
 
         final downloadedImage = await _downloadImage(imageUrl);
         if (downloadedImage != null) {
           // Save to cache for future requests
-          await _saveToInstagramCache(instagramUrl, imageUrl, 'apify_display_url');
+          await _saveToInstagramCache(
+              instagramUrl, imageUrl, 'apify_display_url');
           return [downloadedImage];
         }
       }
@@ -109,10 +112,12 @@ class InstagramService {
       if (images != null && images.isNotEmpty) {
         for (final img in images) {
           if (img is String && img.isNotEmpty) {
-            print('Found Instagram image from Apify images array: ${_previewUrl(img)}');
+            print(
+                'Found Instagram image from Apify images array: ${_previewUrl(img)}');
             final downloadedImage = await _downloadImage(img);
             if (downloadedImage != null) {
-              await _saveToInstagramCache(instagramUrl, img, 'apify_images_array');
+              await _saveToInstagramCache(
+                  instagramUrl, img, 'apify_images_array');
               return [downloadedImage];
             }
           }
@@ -126,10 +131,12 @@ class InstagramService {
           if (child is Map<String, dynamic>) {
             final childDisplayUrl = child['displayUrl'] as String?;
             if (childDisplayUrl != null && childDisplayUrl.isNotEmpty) {
-              print('Found Instagram childPost displayUrl from Apify: ${_previewUrl(childDisplayUrl)}');
+              print(
+                  'Found Instagram childPost displayUrl from Apify: ${_previewUrl(childDisplayUrl)}');
               final downloadedImage = await _downloadImage(childDisplayUrl);
               if (downloadedImage != null) {
-                await _saveToInstagramCache(instagramUrl, childDisplayUrl, 'apify_child_display_url');
+                await _saveToInstagramCache(
+                    instagramUrl, childDisplayUrl, 'apify_child_display_url');
                 return [downloadedImage];
               }
             }
@@ -1206,7 +1213,21 @@ class InstagramService {
   /// Downloads image(s) from an IMDb page using direct HTML scrape.
   static Future<List<XFile>> downloadImageFromImdbUrl(String url) async {
     try {
-      print('Attempting IMDb scrape (direct): $url');
+      print('Attempting IMDb scrape (GraphQL): $url');
+      final graphqlCandidates = await _extractImdbImageUrlsViaGraphql(url);
+      if (graphqlCandidates.isNotEmpty) {
+        final files = await _downloadCandidateImages(
+          graphqlCandidates,
+          retriesPerUrl: 2,
+        );
+        if (files.isNotEmpty) {
+          print(
+              'Successfully extracted ${files.length} image(s) from IMDb via GraphQL');
+          return files;
+        }
+      }
+
+      print('Attempting IMDb scrape (direct HTML fallback): $url');
       final html = await _fetchHtmlDirect(url);
       if (html != null && html.isNotEmpty) {
         final candidates = _extractImdbImageUrls(html);
@@ -1222,6 +1243,206 @@ class InstagramService {
       print('Error downloading IMDb images: $e');
     }
     return [];
+  }
+
+  static Future<List<String>> _extractImdbImageUrlsViaGraphql(
+      String url) async {
+    final candidates = <String>{};
+
+    final mediaId = _extractImdbMediaId(url);
+    if (mediaId != null) {
+      final mediaUrl = await _fetchImdbImageUrlByMediaId(mediaId);
+      if (mediaUrl != null && mediaUrl.isNotEmpty) {
+        candidates.add(mediaUrl);
+      }
+
+      // If the shared URL points to a specific IMDb media item (rm...), only
+      // use that exact media result. Falling back to name/title primary image
+      // can return a different photo than the one user shared.
+      if (candidates.isEmpty) {
+        print(
+            'IMDb GraphQL media lookup returned no candidates for media ID $mediaId');
+      } else {
+        print(
+            'IMDb GraphQL extracted ${candidates.length} media-only candidate image URL(s)');
+      }
+      return candidates.toList();
+    }
+
+    final entityId = _extractImdbEntityId(url);
+    if (entityId != null) {
+      final primaryImageUrl = await _fetchImdbPrimaryImageUrl(entityId);
+      if (primaryImageUrl != null && primaryImageUrl.isNotEmpty) {
+        candidates.add(primaryImageUrl);
+      }
+    }
+
+    if (candidates.isEmpty) {
+      print('IMDb GraphQL extraction returned no image candidates for $url');
+    } else {
+      print(
+          'IMDb GraphQL extracted ${candidates.length} candidate image URL(s)');
+    }
+    return candidates.toList();
+  }
+
+  static String? _extractImdbMediaId(String url) {
+    final mediaViewerMatch = RegExp(
+      r'/mediaviewer/(rm\d+)',
+      caseSensitive: false,
+    ).firstMatch(url);
+    if (mediaViewerMatch != null) {
+      return mediaViewerMatch.group(1);
+    }
+
+    final genericMatch = RegExp(
+      r'/(rm\d+)(?:[/?#]|$)',
+      caseSensitive: false,
+    ).firstMatch(url);
+    return genericMatch?.group(1);
+  }
+
+  static String? _extractImdbEntityId(String url) {
+    final match = RegExp(
+      r'/(tt\d+|nm\d+)(?:[/?#]|$)',
+      caseSensitive: false,
+    ).firstMatch(url);
+    return match?.group(1);
+  }
+
+  static Future<String?> _fetchImdbImageUrlByMediaId(String mediaId) async {
+    try {
+      final payload = {
+        'query': '''
+query ImageById(\$id: ID!) {
+  image(id: \$id) {
+    id
+    url
+    width
+    height
+  }
+}
+''',
+        'variables': {'id': mediaId}
+      };
+
+      final response = await http
+          .post(
+            Uri.parse(_imdbGraphqlEndpoint),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'User-Agent': _userAgent,
+            },
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        print(
+            'IMDb GraphQL image lookup failed with status ${response.statusCode}');
+        return null;
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) return null;
+      final data = decoded['data'];
+      if (data is! Map<String, dynamic>) return null;
+      final image = data['image'];
+      if (image is! Map<String, dynamic>) return null;
+      final imageUrl = image['url'];
+      if (imageUrl is String && imageUrl.isNotEmpty) {
+        print('IMDb GraphQL resolved media ID $mediaId to image URL');
+        return imageUrl;
+      }
+    } on TimeoutException {
+      print('IMDb GraphQL image lookup timed out for media ID $mediaId');
+    } catch (e) {
+      print('IMDb GraphQL image lookup error for media ID $mediaId: $e');
+    }
+    return null;
+  }
+
+  static Future<String?> _fetchImdbPrimaryImageUrl(String entityId) async {
+    try {
+      final lower = entityId.toLowerCase();
+      final query = lower.startsWith('tt')
+          ? '''
+query TitlePrimaryImage(\$id: ID!) {
+  title(id: \$id) {
+    id
+    primaryImage {
+      url
+      width
+      height
+    }
+  }
+}
+'''
+          : '''
+query NamePrimaryImage(\$id: ID!) {
+  name(id: \$id) {
+    id
+    primaryImage {
+      url
+      width
+      height
+    }
+  }
+}
+''';
+
+      final payload = {
+        'query': query,
+        'variables': {'id': entityId}
+      };
+
+      final response = await http
+          .post(
+            Uri.parse(_imdbGraphqlEndpoint),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'User-Agent': _userAgent,
+            },
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        print(
+            'IMDb GraphQL primary image lookup failed with status ${response.statusCode}');
+        return null;
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) return null;
+      final data = decoded['data'];
+      if (data is! Map<String, dynamic>) return null;
+
+      Map<String, dynamic>? node;
+      if (lower.startsWith('tt')) {
+        final title = data['title'];
+        if (title is Map<String, dynamic>) node = title;
+      } else if (lower.startsWith('nm')) {
+        final name = data['name'];
+        if (name is Map<String, dynamic>) node = name;
+      }
+
+      if (node == null) return null;
+      final primaryImage = node['primaryImage'];
+      if (primaryImage is! Map<String, dynamic>) return null;
+      final imageUrl = primaryImage['url'];
+      if (imageUrl is String && imageUrl.isNotEmpty) {
+        print('IMDb GraphQL resolved primary image for entity $entityId');
+        return imageUrl;
+      }
+    } on TimeoutException {
+      print('IMDb GraphQL primary image lookup timed out for $entityId');
+    } catch (e) {
+      print('IMDb GraphQL primary image lookup error for $entityId: $e');
+    }
+    return null;
   }
 
   static String? _rewriteXHost(String originalUrl, String newHost) {
@@ -1280,9 +1501,8 @@ class InstagramService {
     Duration timeout = const Duration(seconds: 12),
   }) async {
     try {
-      final response = await http
-          .get(Uri.parse(url), headers: headers)
-          .timeout(timeout);
+      final response =
+          await http.get(Uri.parse(url), headers: headers).timeout(timeout);
       if (response.statusCode >= 200 &&
           response.statusCode < 300 &&
           response.bodyBytes.isNotEmpty) {
@@ -1330,10 +1550,17 @@ class InstagramService {
   static Future<List<XFile>> _downloadCandidateImages(
     List<String> urls, {
     double? cropToAspect,
+    int retriesPerUrl = 1,
   }) async {
     for (final url in urls) {
-      final file = await _downloadImage(url, cropToAspectRatio: cropToAspect);
-      if (file != null) return [file];
+      final attempts = retriesPerUrl < 1 ? 1 : retriesPerUrl;
+      for (var attempt = 1; attempt <= attempts; attempt++) {
+        final file = await _downloadImage(url, cropToAspectRatio: cropToAspect);
+        if (file != null) return [file];
+        if (attempt < attempts) {
+          print('Retrying image download (${attempt + 1}/$attempts): $url');
+        }
+      }
     }
     return [];
   }

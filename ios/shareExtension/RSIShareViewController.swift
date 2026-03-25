@@ -3126,9 +3126,51 @@ open class RSIShareViewController: SLComposeServiceViewController {
         from urlString: String,
         completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
     ) {
-        shareLog("Attempting to fetch IMDb content...")
+        shareLog("Attempting IMDb scrape (GraphQL): \(urlString)")
 
-        // Try lightweight scrape first (og/twitter/img)
+        fetchImdbGraphqlCandidates(urlString: urlString) { [weak self] graphqlCandidates, isMediaOnly in
+            guard let self = self else { return }
+
+            if !graphqlCandidates.isEmpty {
+                if isMediaOnly {
+                    shareLog("IMDb GraphQL extracted \(graphqlCandidates.count) media-only candidate image URL(s)")
+                } else {
+                    shareLog("IMDb GraphQL extracted \(graphqlCandidates.count) candidate image URL(s)")
+                }
+
+                let retryCandidates = self.expandCandidatesForRetry(
+                    graphqlCandidates,
+                    attemptsPerUrl: 2
+                )
+
+                self.downloadFirstValidImage(
+                    from: retryCandidates,
+                    platform: "imdb",
+                    session: URLSession.shared
+                ) { result in
+                    switch result {
+                    case .success:
+                        completion(result)
+                    case .failure:
+                        shareLog("IMDb GraphQL image download failed; trying direct scrape fallback")
+                        self.downloadImdbViaDirectScrape(
+                            from: urlString,
+                            completion: completion
+                        )
+                    }
+                }
+                return
+            }
+
+            shareLog("IMDb GraphQL returned no candidates; trying direct scrape fallback")
+            self.downloadImdbViaDirectScrape(from: urlString, completion: completion)
+        }
+    }
+
+    private func downloadImdbViaDirectScrape(
+        from urlString: String,
+        completion: @escaping (Result<[SharedMediaFile], Error>) -> Void
+    ) {
         quickGenericImageScrape(urlString: urlString) { [weak self] quickImages in
             guard let self = self else { return }
 
@@ -3145,6 +3187,227 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             completion(.failure(self.makeDownloadError("IMDb", "No images found in IMDb content")))
         }
+    }
+
+    private func fetchImdbGraphqlCandidates(
+        urlString: String,
+        completion: @escaping ([String], Bool) -> Void
+    ) {
+        if let mediaId = extractImdbMediaId(from: urlString) {
+            fetchImdbGraphqlImageUrl(mediaId: mediaId) { mediaUrl in
+                if let mediaUrl = mediaUrl, !mediaUrl.isEmpty {
+                    completion([mediaUrl], true)
+                } else {
+                    completion([], true)
+                }
+            }
+            return
+        }
+
+        if let entityId = extractImdbEntityId(from: urlString) {
+            fetchImdbGraphqlPrimaryImageUrl(entityId: entityId) { primaryImageUrl in
+                if let primaryImageUrl = primaryImageUrl, !primaryImageUrl.isEmpty {
+                    completion([primaryImageUrl], false)
+                } else {
+                    completion([], false)
+                }
+            }
+            return
+        }
+
+        completion([], false)
+    }
+
+    private func extractImdbMediaId(from urlString: String) -> String? {
+        if let mediaViewerId = extractFirstMatch(
+            in: urlString,
+            pattern: "/mediaviewer/(rm\\d+)"
+        ) {
+            return mediaViewerId
+        }
+
+        return extractFirstMatch(
+            in: urlString,
+            pattern: "/(rm\\d+)(?:[/?#]|$)"
+        )
+    }
+
+    private func extractImdbEntityId(from urlString: String) -> String? {
+        return extractFirstMatch(
+            in: urlString,
+            pattern: "/(tt\\d+|nm\\d+)(?:[/?#]|$)"
+        )
+    }
+
+    private func fetchImdbGraphqlImageUrl(
+        mediaId: String,
+        completion: @escaping (String?) -> Void
+    ) {
+        let query = """
+        query ImageById($id: ID!) {
+          image(id: $id) {
+            id
+            url
+            width
+            height
+          }
+        }
+        """
+
+        executeImdbGraphql(query: query, variables: ["id": mediaId]) { dataNode in
+            guard let dataNode = dataNode,
+                  let imageNode = dataNode["image"] as? [String: Any],
+                  let imageUrl = imageNode["url"] as? String,
+                  !imageUrl.isEmpty else {
+                completion(nil)
+                return
+            }
+
+            shareLog("IMDb GraphQL resolved media ID \(mediaId) to image URL")
+            completion(imageUrl)
+        }
+    }
+
+    private func fetchImdbGraphqlPrimaryImageUrl(
+        entityId: String,
+        completion: @escaping (String?) -> Void
+    ) {
+        let lower = entityId.lowercased()
+        let isTitle = lower.hasPrefix("tt")
+        let query: String
+
+        if isTitle {
+            query = """
+            query TitlePrimaryImage($id: ID!) {
+              title(id: $id) {
+                id
+                primaryImage {
+                  url
+                  width
+                  height
+                }
+              }
+            }
+            """
+        } else {
+            query = """
+            query NamePrimaryImage($id: ID!) {
+              name(id: $id) {
+                id
+                primaryImage {
+                  url
+                  width
+                  height
+                }
+              }
+            }
+            """
+        }
+
+        executeImdbGraphql(query: query, variables: ["id": entityId]) { dataNode in
+            guard let dataNode = dataNode else {
+                completion(nil)
+                return
+            }
+
+            let rootNode: [String: Any]?
+            if isTitle {
+                rootNode = dataNode["title"] as? [String: Any]
+            } else {
+                rootNode = dataNode["name"] as? [String: Any]
+            }
+
+            guard let rootNode = rootNode,
+                  let imageNode = rootNode["primaryImage"] as? [String: Any],
+                  let imageUrl = imageNode["url"] as? String,
+                  !imageUrl.isEmpty else {
+                completion(nil)
+                return
+            }
+
+            shareLog("IMDb GraphQL resolved primary image for entity \(entityId)")
+            completion(imageUrl)
+        }
+    }
+
+    private func executeImdbGraphql(
+        query: String,
+        variables: [String: Any],
+        completion: @escaping ([String: Any]?) -> Void
+    ) {
+        guard let endpoint = URL(string: "https://api.graphql.imdb.com/") else {
+            completion(nil)
+            return
+        }
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 12.0
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            forHTTPHeaderField: "User-Agent"
+        )
+
+        let payload: [String: Any] = [
+            "query": query,
+            "variables": variables
+        ]
+
+        guard let body = try? JSONSerialization.data(withJSONObject: payload) else {
+            shareLog("IMDb GraphQL request encoding failed")
+            completion(nil)
+            return
+        }
+
+        request.httpBody = body
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                shareLog("IMDb GraphQL request failed: \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+
+            guard let http = response as? HTTPURLResponse else {
+                shareLog("IMDb GraphQL request failed: invalid response")
+                completion(nil)
+                return
+            }
+
+            guard (200...299).contains(http.statusCode) else {
+                shareLog("IMDb GraphQL request failed with status \(http.statusCode)")
+                completion(nil)
+                return
+            }
+
+            guard let data = data, !data.isEmpty else {
+                shareLog("IMDb GraphQL request returned empty body")
+                completion(nil)
+                return
+            }
+
+            guard let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let dataNode = jsonObject["data"] as? [String: Any] else {
+                shareLog("IMDb GraphQL response parse failed")
+                completion(nil)
+                return
+            }
+
+            completion(dataNode)
+        }.resume()
+    }
+
+    private func expandCandidatesForRetry(_ urls: [String], attemptsPerUrl: Int) -> [String] {
+        let attempts = max(1, attemptsPerUrl)
+        var expanded: [String] = []
+        for url in urls {
+            for _ in 0..<attempts {
+                expanded.append(url)
+            }
+        }
+        return expanded
     }
 
     private func extractImagesFromRedditHtml(_ html: String, baseUrl: String) -> [String] {
