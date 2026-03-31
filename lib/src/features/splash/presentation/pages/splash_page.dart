@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,7 +24,9 @@ class SplashPage extends ConsumerStatefulWidget {
 class _SplashPageState extends ConsumerState<SplashPage> {
   static const _assetPath = 'assets/images/snaplook-logo-splash.png';
   // Keep launch and splash logos in sync: fixed width so it doesn't vary by device size.
-  static const double _logoWidth = 93.027; // about +8% from original (~+1% from prior)
+  static const double _logoWidth =
+      93.027; // about +8% from original (~+1% from prior)
+  static const Color _loaderColor = Color(0xCCFFFFFF);
   bool _started = false;
 
   @override
@@ -100,24 +103,29 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
         try {
           // Determine where user should go based on onboarding completion
-          final onboardingRoute = await onboardingService.determineOnboardingRoute(user.id);
+          final onboardingRoute =
+              await onboardingService.determineOnboardingRoute(user.id);
 
           if (onboardingRoute == null) {
             // Onboarding complete - go to home
-            debugPrint('[Splash] User has completed onboarding - routing to home');
+            debugPrint(
+                '[Splash] User has completed onboarding - routing to home');
             await _bootstrapHistoryUiState();
             nextPage = const MainNavigation();
           } else if (onboardingRoute == 'welcome') {
             // Payment complete but need to finish onboarding
-            debugPrint('[Splash] User paid but needs to complete onboarding - routing to welcome');
+            debugPrint(
+                '[Splash] User paid but needs to complete onboarding - routing to welcome');
             nextPage = const WelcomeFreeAnalysisPage();
           } else if (onboardingRoute == 'paywall') {
             // User abandoned at paywall - send them back to complete payment
-            debugPrint('[Splash] User abandoned at paywall - routing back to paywall');
+            debugPrint(
+                '[Splash] User abandoned at paywall - routing back to paywall');
             nextPage = PaywallPresentationPage(userId: user.id);
           } else {
             // Onboarding not started or abandoned before account creation - send to login
-            debugPrint('[Splash] User onboarding not started or incomplete - routing to login');
+            debugPrint(
+                '[Splash] User onboarding not started or incomplete - routing to login');
             nextPage = const LoginPage();
           }
         } catch (e) {
@@ -170,15 +178,48 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         // Android: light icons directly
         statusBarIconBrightness: Brightness.light,
       ),
-    child: Scaffold(
+      child: Scaffold(
         backgroundColor: const Color(0xFFF2003C),
-        body: Center(
-          child: SizedBox(
-            width: _logoWidth,
-            child: Image.asset(
-              _assetPath,
-              fit: BoxFit.contain,
-            ),
+        body: SafeArea(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Center(
+                child: SizedBox(
+                  width: _logoWidth,
+                  child: Image.asset(
+                    _assetPath,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 44),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      CupertinoActivityIndicator(
+                        radius: 11,
+                        color: _loaderColor,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Loading...',
+                        style: TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: _loaderColor,
+                          letterSpacing: -0.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
