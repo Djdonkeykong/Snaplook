@@ -1498,62 +1498,71 @@ open class RSIShareViewController: SLComposeServiceViewController {
         content: NSExtensionItem,
         completion: @escaping () -> Void
     ) {
-        // Only process URLs
-        guard type == .url else {
+        let normalizedItem: String
+        let normalizedType: SharedMediaType
+
+        if type == .url {
+            normalizedItem = item
+            normalizedType = .url
+        } else if type == .text, let extractedUrl = extractFirstUrlFromSharedText(item) {
+            normalizedItem = extractedUrl
+            normalizedType = .url
+            shareLog("Extracted URL from shared text: \(extractedUrl.prefix(120))")
+        } else {
             appendLiteralShare(item: item, type: type)
             completion()
             return
         }
 
         // Debug: Log the URL being processed
-        shareLog("handleMedia processing URL: \(item.prefix(120))")
+        shareLog("handleMedia processing URL: \(normalizedItem.prefix(120))")
 
         // Determine the platform type
         let platformName: String
         let platformType: String
         let downloadFunction: (String, @escaping (Result<[SharedMediaFile], Error>) -> Void) -> Void
 
-        if isInstagramShareCandidate(item) {
+        if isInstagramShareCandidate(normalizedItem) {
             platformName = "Instagram"
             platformType = "instagram"
             downloadFunction = downloadInstagramMedia
-        } else if isTikTokShareCandidate(item) {
+        } else if isTikTokShareCandidate(normalizedItem) {
             platformName = "TikTok"
             platformType = "tiktok"
             downloadFunction = downloadTikTokMedia
-        } else if isPinterestShareCandidate(item) {
+        } else if isPinterestShareCandidate(normalizedItem) {
             platformName = "Pinterest"
             platformType = "pinterest"
             downloadFunction = downloadPinterestMedia
-        } else if isYouTubeShareCandidate(item) {
+        } else if isYouTubeShareCandidate(normalizedItem) {
             platformName = "YouTube"
             platformType = "youtube"
             downloadFunction = downloadYouTubeMedia
-        } else if isSnapchatShareCandidate(item) {
+        } else if isSnapchatShareCandidate(normalizedItem) {
             platformName = "Snapchat"
             platformType = "snapchat"
             downloadFunction = downloadSnapchatMedia
-        } else if isXShareCandidate(item) {
+        } else if isXShareCandidate(normalizedItem) {
             platformName = "X"
             platformType = "x"
             downloadFunction = downloadXMedia
-        } else if isRedditShareCandidate(item) {
+        } else if isRedditShareCandidate(normalizedItem) {
             platformName = "Reddit"
             platformType = "reddit"
             downloadFunction = downloadRedditMedia
-        } else if isImdbShareCandidate(item) {
+        } else if isImdbShareCandidate(normalizedItem) {
             platformName = "IMDb"
             platformType = "imdb"
             downloadFunction = downloadImdbMedia
-        } else if isFacebookShareCandidate(item) {
+        } else if isFacebookShareCandidate(normalizedItem) {
             platformName = "Facebook"
             platformType = "facebook"
             downloadFunction = downloadFacebookMedia
-        } else if isGoogleImageShareCandidate(item) {
+        } else if isGoogleImageShareCandidate(normalizedItem) {
             platformName = "Google Image"
             platformType = "google_image"
             downloadFunction = downloadGoogleImageMedia
-        } else if item.lowercased().hasPrefix("http://") || item.lowercased().hasPrefix("https://") {
+        } else if normalizedItem.lowercased().hasPrefix("http://") || normalizedItem.lowercased().hasPrefix("https://") {
             // Generic web link (e.g., from Safari/Chrome/Firefox/Brave)
             platformName = "Generic Link"
             platformType = "generic"
@@ -1570,9 +1579,9 @@ open class RSIShareViewController: SLComposeServiceViewController {
         let isFromSpecificPlatform = platformType != "generic"
         let isGenericWebLink = platformType == "generic"
 
-        if isFromSpecificPlatform && !isGenericWebLink && !isTutorialSupportedUrl(item) {
+        if isFromSpecificPlatform && !isGenericWebLink && !isTutorialSupportedUrl(normalizedItem) {
             shareLog("URL from \(platformName) is not in tutorial - showing unsupported alert")
-            presentUnsupportedAlert(for: item)
+            presentUnsupportedAlert(for: normalizedItem)
             completion()
             return
         }
@@ -1584,20 +1593,20 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
         if hasDetectionConfig {
             // Store the URL and completion for later processing
-            pendingInstagramUrl = item
+            pendingInstagramUrl = normalizedItem
             pendingInstagramCompletion = completion
             pendingPlatformType = platformType
 
             // Choice UI is already visible - just wait for user decision
             shareLog("\(platformName) URL detected - awaiting user decision (buttons already visible)")
-            shareLog("DEBUG: Stored pendingInstagramUrl for \(platformName) - URL: \(item.prefix(50))...")
+            shareLog("DEBUG: Stored pendingInstagramUrl for \(platformName) - URL: \(normalizedItem.prefix(50))...")
             return
         } else {
             // No detection configured - proceed with normal download flow
             shareLog("No detection configured - starting normal \(platformName) download")
             updateProcessingStatus("processing")
 
-            downloadFunction(item) { [weak self] result in
+            downloadFunction(normalizedItem) { [weak self] result in
                 guard let self = self else {
                     completion()
                     return
@@ -1607,7 +1616,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 case .success(let downloaded):
                     if downloaded.isEmpty {
                         shareLog("\(platformName) download succeeded but returned no files - falling back to literal URL")
-                        self.appendLiteralShare(item: item, type: type)
+                        self.appendLiteralShare(item: normalizedItem, type: normalizedType)
                     } else {
                         self.sharedMedia.append(contentsOf: downloaded)
                         shareLog("Appended \(downloaded.count) downloaded \(platformName) file(s) - count now \(self.sharedMedia.count)")
@@ -1615,12 +1624,34 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     completion()
                 case .failure(let error):
                     shareLog("ERROR: \(platformName) download failed - \(error.localizedDescription)")
-                    self.appendLiteralShare(item: item, type: type)
+                    self.appendLiteralShare(item: normalizedItem, type: normalizedType)
                     completion()
                 }
             }
             return
         }
+    }
+
+    private func extractFirstUrlFromSharedText(_ text: String) -> String? {
+        guard let match = extractFirstMatch(
+            in: text,
+            pattern: "(https?://[^\\s<>\"]+|www\\.[^\\s<>\"]+)"
+        ) else {
+            return nil
+        }
+
+        var normalized = match.replacingOccurrences(
+            of: "[).,!?;:]+$",
+            with: "",
+            options: .regularExpression
+        )
+
+        if !normalized.lowercased().hasPrefix("http://") &&
+            !normalized.lowercased().hasPrefix("https://") {
+            normalized = "https://\(normalized)"
+        }
+
+        return normalized
     }
 
     private func handleMedia(

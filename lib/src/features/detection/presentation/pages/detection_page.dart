@@ -81,7 +81,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   Timer? _statusRotationTimer;
   final List<Timer> _overlayTimers = [];
   int _statusIndex = 0;
-  Map<String, dynamic>? _loadedSearchData;
 
   // Results sheet state
   static const double _resultsMinExtent = 0.4;
@@ -97,6 +96,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
   bool _isResultsSheetVisible = false;
   List<DetectionResult> _results = [];
   bool _isLoadingExistingResults = false;
+  bool _showNoResultsState = false;
 
   static const List<String> _detectionPhaseMessages = [
     'Detecting garments...',
@@ -149,10 +149,12 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
       final supabaseService = SupabaseService();
       final searchData = await supabaseService.getSearchById(searchId);
+      final cloudinaryUrl = searchData?['cloudinary_url'] as String?;
 
       if (searchData == null) {
         print("[DETECTION PAGE] No search data found for searchId: $searchId");
         setState(() {
+          _showNoResultsState = true;
           _isLoadingExistingResults = false;
         });
         return;
@@ -162,6 +164,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       if (searchResults == null || searchResults.isEmpty) {
         print("[DETECTION PAGE] No results found in search data");
         setState(() {
+          _loadedImageUrl = cloudinaryUrl;
+          _showNoResultsState = true;
           _isLoadingExistingResults = false;
         });
         return;
@@ -187,6 +191,8 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       if (results.isEmpty) {
         print("[DETECTION PAGE] Failed to parse any results");
         setState(() {
+          _loadedImageUrl = cloudinaryUrl;
+          _showNoResultsState = true;
           _isLoadingExistingResults = false;
         });
         return;
@@ -195,10 +201,6 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       print(
           "[DETECTION PAGE] Successfully loaded ${results.length} existing results");
 
-      _loadedSearchData = searchData;
-
-      // Get the Cloudinary URL for the analyzed image
-      final cloudinaryUrl = searchData['cloudinary_url'] as String?;
       print("[DETECTION PAGE] Cloudinary URL: $cloudinaryUrl");
 
       // Pre-cache the image so it displays instantly
@@ -224,6 +226,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
         _results = results;
         _isResultsSheetVisible = true;
         _loadedImageUrl = cloudinaryUrl;
+        _showNoResultsState = false;
         _isLoadingExistingResults = false;
       });
     } catch (e) {
@@ -231,6 +234,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
       await _ensureMinimumLoadDuration(start);
       if (mounted) {
         setState(() {
+          _showNoResultsState = true;
           _isLoadingExistingResults = false;
         });
       }
@@ -356,6 +360,11 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                   ),
                 ),
               )
+            : _showNoResultsState &&
+                    selectedImage == null &&
+                    widget.imageUrl == null &&
+                    _loadedImageUrl == null
+                ? _buildNoResultsEmptyState()
             : selectedImage == null &&
                     widget.imageUrl == null &&
                     _loadedImageUrl == null
@@ -420,8 +429,15 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                                     width: double.infinity,
                                     height: double.infinity,
                                     gaplessPlayback: true,
-                                  ),
+                                ),
                       ),
+                      if (_showNoResultsState)
+                        Positioned(
+                          left: 16,
+                          right: 16,
+                          bottom: 180,
+                          child: _buildNoResultsBanner(),
+                        ),
                       if (imagesState.hasMultipleImages)
                         Positioned(
                           bottom: 40,
@@ -516,6 +532,96 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
     return DetectionProgressOverlay(
       statusText: _activeStatusText,
       progress: _currentProgress,
+    );
+  }
+
+  Widget _buildNoResultsBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.15)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.search_off_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'No matches were found for this search. Tap Scan to try again.',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'PlusJakartaSans',
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoResultsEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.search_off_rounded,
+              size: 52,
+              color: Colors.black54,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'No results for this search',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.w700,
+                fontSize: 19,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'We could not find shoppable matches for this previous search.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                color: Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: 170,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Go back',
+                  style: TextStyle(fontFamily: 'PlusJakartaSans'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1848,6 +1954,11 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
 
   void _startDetection() async {
     print('[SAVE] _startDetection() called');
+    if (_showNoResultsState) {
+      setState(() {
+        _showNoResultsState = false;
+      });
+    }
 
     try {
       if (_isAnalysisOverlayVisible ||
