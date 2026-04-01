@@ -804,24 +804,12 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
     }
 
-    open override func viewDidLoad() {
-        super.viewDidLoad()
-
-        // Force light mode for the share extension UI (prevents dark appearance from host apps like YouTube)
-        if #available(iOS 13.0, *) {
-            overrideUserInterfaceStyle = .light
-        }
-
-        // Immediately hide and disable all default SLComposeServiceViewController UI
-        hideDefaultUI()
-        navigationController?.setNavigationBarHidden(true, animated: false)
-        navigationItem.leftBarButtonItem = nil
-        navigationItem.rightBarButtonItem = nil
-
+    private func configureInvocationContext() {
         loadIds()
         ShareLogger.shared.configure(appGroupId: appGroupId)
         sharedMedia.removeAll()
-        shareLog("View did load - cleared sharedMedia array")
+        shareLog("Prepared invocation context - cleared sharedMedia array")
+
         if let sourceBundle = readSourceApplicationBundleIdentifier() {
             shareLog("Source application bundle: \(sourceBundle)")
             sourceApplicationBundleId = sourceBundle
@@ -843,6 +831,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         } else {
             shareLog("Source application bundle: nil")
         }
+
         suppressKeyboard()
         if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) {
             shareLog("Resolved container URL: \(containerURL.path)")
@@ -850,34 +839,105 @@ open class RSIShareViewController: SLComposeServiceViewController {
             shareLog("ERROR: Failed to resolve container URL for \(appGroupId)")
         }
         loadingHideWorkItem?.cancel()
+    }
 
-        // Create a completely blank overlay to hide default UI immediately
+    private func buildInitialOverlayUI() {
         let blankOverlay = UIView(frame: view.bounds)
         blankOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         blankOverlay.backgroundColor = UIColor.systemBackground
         blankOverlay.tag = 9999
         view.addSubview(blankOverlay)
 
-        // Hide default share extension UI immediately
         hideDefaultUI()
 
-        // Check authentication and credits, then build complete UI immediately to prevent white flash
         if !isUserAuthenticated() {
-            shareLog("User not authenticated - building login modal in viewDidLoad")
+            shareLog("User not authenticated - building login modal")
             showLoginRequiredModal()
         } else {
             resolveCreditAccess { [weak self] hasCredits in
                 guard let self = self else { return }
                 if hasCredits {
-                    shareLog("User authenticated with credits - building choice buttons in viewDidLoad")
+                    shareLog("User authenticated with credits - building choice buttons")
                     self.addLogoAndCancel()
                     self.showChoiceButtons()
                 } else {
-                    shareLog("User authenticated but no credits - building out of credits modal in viewDidLoad")
+                    shareLog("User authenticated but no credits - building out of credits modal")
                     self.showOutOfCreditsModal()
                 }
             }
         }
+    }
+
+    private func resetForFreshInvocation() {
+        shareLog("Resetting share extension state for a fresh invocation")
+
+        loadingHideWorkItem?.cancel()
+        loadingHideWorkItem = nil
+        detectionTask?.cancel()
+        detectionTask = nil
+        endExtendedExecution()
+        stopSmoothProgress()
+        stopStatusPolling()
+        stopStatusRotation()
+
+        currentProcessingSession = nil
+        didCompleteRequest = false
+        hasProcessedAttachments = false
+        hasQueuedRedirect = false
+        pendingPostMessage = nil
+        pendingAttachmentCount = 0
+        shouldAttemptDetection = false
+        isShowingDetectionResults = false
+        isShowingResults = false
+        isShowingPreview = false
+        hasPresentedDetectionFailureAlert = false
+        hasPresentedUnsupportedAlert = false
+        hasShownPostAnalysisOutOfCreditsModal = false
+        shouldShowOutOfCreditsAfterAnalysis = false
+        isPhotosSourceApp = false
+
+        pendingImageData = nil
+        pendingSharedFile = nil
+        pendingImageUrl = nil
+        pendingInstagramUrl = nil
+        pendingInstagramCompletion = nil
+        pendingPlatformType = nil
+        downloadedImageUrl = nil
+        sourceApplicationBundleId = nil
+        inferredPlatformType = nil
+        currentSearchId = nil
+        currentImageCacheId = nil
+
+        if let defaults = UserDefaults(suiteName: appGroupId) {
+            defaults.removeObject(forKey: kProcessingStatusKey)
+            defaults.removeObject(forKey: kProcessingSessionKey)
+            defaults.synchronize()
+        }
+
+        clearSharedData()
+        resetAnalysisOutputState()
+        hideLoadingUI()
+
+        view.subviews
+            .filter { $0.tag == 9999 || $0.tag == 9997 || $0.tag == 9996 || $0.tag == 9998 }
+            .forEach { $0.removeFromSuperview() }
+    }
+
+    open override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // Force light mode for the share extension UI (prevents dark appearance from host apps like YouTube)
+        if #available(iOS 13.0, *) {
+            overrideUserInterfaceStyle = .light
+        }
+
+        // Immediately hide and disable all default SLComposeServiceViewController UI
+        hideDefaultUI()
+        navigationController?.setNavigationBarHidden(true, animated: false)
+        navigationItem.leftBarButtonItem = nil
+        navigationItem.rightBarButtonItem = nil
+        configureInvocationContext()
+        buildInitialOverlayUI()
     }
 
     private func addLogoAndCancel() {
@@ -1068,6 +1128,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
     open override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: false)
+
+        if didCompleteRequest {
+            shareLog("Controller reused after completion - rebuilding for a fresh share session")
+            resetForFreshInvocation()
+            configureInvocationContext()
+            buildInitialOverlayUI()
+        }
+
         hideDefaultUI()
     }
 
@@ -4177,6 +4245,16 @@ open class RSIShareViewController: SLComposeServiceViewController {
                 }
             }
 
+            let normalizedData = self.normalizedImageData(
+                from: dataToSave,
+                maxDimension: 2200,
+                compressionQuality: 0.9
+            ) ?? dataToSave
+            if normalizedData.count != dataToSave.count {
+                shareLog("Normalized \(platform) image for extension memory: \(dataToSave.count) -> \(normalizedData.count) bytes")
+            }
+            dataToSave = normalizedData
+
             // Save to shared container
             guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: self.appGroupId) else {
                 DispatchQueue.main.async {
@@ -4757,31 +4835,74 @@ open class RSIShareViewController: SLComposeServiceViewController {
         backButtonView = nil
     }
 
+    private func normalizedImageData(
+        from imageData: Data,
+        maxDimension: CGFloat,
+        compressionQuality: CGFloat
+    ) -> Data? {
+        return autoreleasepool { () -> Data? in
+            guard let image = UIImage(data: imageData) else { return nil }
+
+            let size = image.size
+            guard size.width > 0, size.height > 0 else { return imageData }
+
+            let maxDim = max(size.width, size.height)
+            if maxDim <= maxDimension && imageData.count <= 2_000_000 {
+                return imageData
+            }
+            let outputImage: UIImage
+
+            if maxDim > maxDimension {
+                let scale = maxDimension / maxDim
+                let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+
+                UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
+                image.draw(in: CGRect(origin: .zero, size: newSize))
+                outputImage = UIGraphicsGetImageFromCurrentImageContext() ?? image
+                UIGraphicsEndImageContext()
+            } else {
+                outputImage = image
+            }
+
+            return outputImage.jpegData(compressionQuality: compressionQuality) ?? imageData
+        }
+    }
+
     // Resize image to max dimension to prevent server timeout and reduce bandwidth
     private func resizeImageForAPI(_ imageData: Data, maxDimension: CGFloat) -> Data? {
-        // If image is already small in file size, don't resize (would make it bigger)
-        let maxFileSize = 1_000_000 // 1MB
-        if imageData.count <= maxFileSize {
-            return imageData
-        }
+        return normalizedImageData(
+            from: imageData,
+            maxDimension: maxDimension,
+            compressionQuality: 0.8
+        )
+    }
 
-        guard let image = UIImage(data: imageData) else { return nil }
+    private func resetAnalysisOutputState() {
+        detectionResults.removeAll(keepingCapacity: false)
+        filteredResults.removeAll(keepingCapacity: false)
+        favoritedProductIds.removeAll()
+        favoriteIdByProductId.removeAll()
+        currentSearchId = nil
+        currentImageCacheId = nil
+        shouldShowOutOfCreditsAfterAnalysis = false
+        hasShownPostAnalysisOutOfCreditsModal = false
+        hasPresentedDetectionFailureAlert = false
+        selectedGroup = nil
+        isImageComparisonExpanded = false
 
-        let size = image.size
-        let maxDim = max(size.width, size.height)
-
-        // Already small enough, no need to resize
-        if maxDim <= maxDimension { return imageData }
-
-        let scale = maxDimension / maxDim
-        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
-
-        UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
-        image.draw(in: CGRect(origin: .zero, size: newSize))
-        let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-
-        return resizedImage?.jpegData(compressionQuality: 0.8)
+        resultsTableView?.removeFromSuperview()
+        resultsTableView = nil
+        categoryFilterView?.removeFromSuperview()
+        categoryFilterView = nil
+        resultsHeaderContainerView?.removeFromSuperview()
+        resultsHeaderContainerView = nil
+        imageComparisonContainerView?.removeFromSuperview()
+        imageComparisonContainerView = nil
+        imageComparisonThumbnailImageView?.image = nil
+        imageComparisonThumbnailImageView = nil
+        imageComparisonFullImageView?.image = nil
+        imageComparisonFullImageView = nil
+        imageComparisonWidthConstraint = nil
     }
 
     // Trigger detection using the Cloudinary-backed API
@@ -7263,6 +7384,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         isShowingResults = false
         isShowingPreview = true
 
+        if resetOriginal {
+            resetAnalysisOutputState()
+        }
+
         // Hide loading UI
         hideLoadingUI()
 
@@ -7459,6 +7584,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
             dismissWithError()
             return
         }
+
+        resetAnalysisOutputState()
 
         // Replace preview overlay with the standard loading UI used during detection
         hideLoadingUI()
@@ -7764,6 +7891,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         stopSmoothProgress()
         loadingView?.removeFromSuperview()
         loadingView = nil
+        previewImageView?.image = nil
+        previewImageView = nil
+        revertCropButton?.removeFromSuperview()
+        revertCropButton = nil
         resultsHeaderContainerView?.removeFromSuperview()
         resultsHeaderContainerView = nil
         removeResultsHeader()
@@ -8819,6 +8950,8 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
                                 if let imageData = try? Data(contentsOf: fileURL) {
                                     shareLog("Downloaded \(platformName) image (\(imageData.count) bytes) - showing preview")
+                                    self.pendingImageData = imageData
+                                    self.pendingSharedFile = firstFile
 
                                     // Update progress to completion
                                     if isInstagram {
