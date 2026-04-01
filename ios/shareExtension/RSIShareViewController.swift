@@ -682,6 +682,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var isShowingPreview = false
     private var shouldShowOutOfCreditsAfterAnalysis = false
     private var hasShownPostAnalysisOutOfCreditsModal = false
+    private var hasBuiltInitialOverlayUI = false
     private let bannedKeywordPatterns: [NSRegularExpression] = [
         try! NSRegularExpression(pattern: "\\bwig\\b", options: [.caseInsensitive]),
         try! NSRegularExpression(pattern: "\\bwigs\\b", options: [.caseInsensitive]),
@@ -841,12 +842,29 @@ open class RSIShareViewController: SLComposeServiceViewController {
         loadingHideWorkItem?.cancel()
     }
 
-    private func buildInitialOverlayUI() {
+    private func ensureBlankOverlay() {
+        if let existing = view.subviews.first(where: { $0.tag == 9999 }) {
+            existing.frame = view.bounds
+            loadingView = existing
+            return
+        }
+
         let blankOverlay = UIView(frame: view.bounds)
         blankOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         blankOverlay.backgroundColor = UIColor.systemBackground
         blankOverlay.tag = 9999
         view.addSubview(blankOverlay)
+        loadingView = blankOverlay
+    }
+
+    private func buildInitialOverlayUI() {
+        guard !hasBuiltInitialOverlayUI else {
+            shareLog("Initial overlay UI already built for this invocation")
+            return
+        }
+        hasBuiltInitialOverlayUI = true
+
+        ensureBlankOverlay()
 
         hideDefaultUI()
 
@@ -895,6 +913,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         hasShownPostAnalysisOutOfCreditsModal = false
         shouldShowOutOfCreditsAfterAnalysis = false
         isPhotosSourceApp = false
+        hasBuiltInitialOverlayUI = false
 
         pendingImageData = nil
         pendingSharedFile = nil
@@ -937,7 +956,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         navigationItem.leftBarButtonItem = nil
         navigationItem.rightBarButtonItem = nil
         configureInvocationContext()
-        buildInitialOverlayUI()
+        ensureBlankOverlay()
     }
 
     private func addLogoAndCancel() {
@@ -1127,13 +1146,14 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        shareLog("viewWillAppear (didCompleteRequest=\(didCompleteRequest), hasBuiltInitialOverlayUI=\(hasBuiltInitialOverlayUI), hasProcessedAttachments=\(hasProcessedAttachments))")
         navigationController?.setNavigationBarHidden(true, animated: false)
 
         if didCompleteRequest {
             shareLog("Controller reused after completion - rebuilding for a fresh share session")
             resetForFreshInvocation()
             configureInvocationContext()
-            buildInitialOverlayUI()
+            ensureBlankOverlay()
         }
 
         hideDefaultUI()
@@ -1141,11 +1161,17 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     open override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        shareLog("viewDidAppear start (hasBuiltInitialOverlayUI=\(hasBuiltInitialOverlayUI), hasProcessedAttachments=\(hasProcessedAttachments), pending=\(pendingAttachmentCount))")
         suppressKeyboard()
         hideDefaultUI()
         applySheetCornerRadius(38)
         DispatchQueue.main.async { [weak self] in
             self?.applySheetCornerRadius(38)
+        }
+
+        if !hasBuiltInitialOverlayUI {
+            shareLog("Building initial overlay UI after presentation")
+            buildInitialOverlayUI()
         }
 
         // UI is already built in viewDidLoad - just check if we should process attachments
