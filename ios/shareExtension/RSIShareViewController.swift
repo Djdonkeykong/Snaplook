@@ -653,6 +653,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private var categoryFilterView: UIView?
     private var hasProcessedAttachments = false
     private var deferredShareAction: DeferredShareAction?
+    private var isPrimaryActionInProgress = false
     private var progressView: UIProgressView?
     private var progressTimer: Timer?
     private var currentProgress: Float = 0.0
@@ -914,6 +915,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shouldShowOutOfCreditsAfterAnalysis = false
         isPhotosSourceApp = false
         hasBuiltInitialOverlayUI = false
+        isPrimaryActionInProgress = false
 
         pendingImageData = nil
         pendingSharedFile = nil
@@ -1265,6 +1267,26 @@ open class RSIShareViewController: SLComposeServiceViewController {
         maybeRunDeferredShareAction()
     }
 
+    private func beginPrimaryAction(_ actionLabel: String) -> Bool {
+        guard !isPrimaryActionInProgress else {
+            shareLog("[SKIP] \(actionLabel) ignored - another primary action is already in progress")
+            return false
+        }
+
+        isPrimaryActionInProgress = true
+        shareLog("[STATE] Primary action started: \(actionLabel)")
+        return true
+    }
+
+    private func endPrimaryAction(_ reason: String) {
+        guard isPrimaryActionInProgress else {
+            return
+        }
+
+        isPrimaryActionInProgress = false
+        shareLog("[STATE] Primary action finished: \(reason)")
+    }
+
     private func hasSharePayloadReady() -> Bool {
         return pendingInstagramUrl != nil || pendingImageData != nil || !sharedMedia.isEmpty
     }
@@ -1308,6 +1330,11 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func maybeFinalizeShare() {
         guard pendingAttachmentCount == 0, !hasQueuedRedirect else {
             shareLog("[WAITING] maybeFinalizeShare: waiting (pending=\(pendingAttachmentCount), hasQueued=\(hasQueuedRedirect))")
+            return
+        }
+
+        if deferredShareAction != nil || isPrimaryActionInProgress {
+            shareLog("[BLOCKED] maybeFinalizeShare: BLOCKED - user action pending (deferred=\(deferredShareAction != nil), inFlight=\(isPrimaryActionInProgress))")
             return
         }
 
@@ -5070,6 +5097,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     // Show UI when no results are found
     private func showNoResultsUI() {
         shareLog("Displaying no results UI")
+        endPrimaryAction("No results UI displayed")
 
         // Treat this as a results state so the back button appears in the header
         isShowingResults = true
@@ -5212,6 +5240,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         shareLog("detectionResults.count: \(detectionResults.count)")
         shareLog("loadingView exists: \(loadingView != nil)")
         shareLog("resultsTableView exists: \(resultsTableView != nil)")
+        endPrimaryAction("Detection results displayed")
 
         guard !detectionResults.isEmpty else {
             shareLog("No results found - showing empty state UI")
@@ -6706,6 +6735,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     // Public method that can be called from WebViewController to close the entire extension
     func closeExtension() {
         shareLog("Closing share extension")
+        endPrimaryAction("Share extension closed")
 
         // Cancel any pending detection API call
         if let task = detectionTask {
@@ -6756,6 +6786,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
         shareLog("[INFO] Proceeding with normal flow (detection failed or no results)")
+        endPrimaryAction("Proceeding with normal flow")
         isShowingDetectionResults = false
         shouldAttemptDetection = false
         hasQueuedRedirect = true
@@ -7194,6 +7225,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
         guard !didCompleteRequest else { return }
         didCompleteRequest = true
         DispatchQueue.main.async {
+            self.endPrimaryAction("Extension request completed")
             self.endExtendedExecution()
             self.currentProcessingSession = nil
             if let defaults = UserDefaults(suiteName: self.appGroupId) {
@@ -7237,6 +7269,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
     private func dismissWithError() {
         shareLog("ERROR: dismissWithError called")
         DispatchQueue.main.async {
+            self.endPrimaryAction("Dismissed with error")
             self.endExtendedExecution()
             self.hideLoadingUI()
             let alert = UIAlertController(title: "Error", message: "Error loading data", preferredStyle: .alert)
@@ -7405,6 +7438,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
     private func showImagePreview(imageData: Data, resetOriginal: Bool = false) {
         shareLog("Showing image preview")
+        endPrimaryAction("Image preview displayed")
 
         // Mark that we're showing preview (and not results) so back button appears on the header
         isShowingResults = false
@@ -7594,6 +7628,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
                     self.showOutOfCreditsModal()
                 }
             }
+            return
+        }
+
+        guard beginPrimaryAction("Analyze from preview") else {
             return
         }
 
@@ -8699,6 +8737,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
             return
         }
 
+        guard beginPrimaryAction("Analyze in app") else {
+            return
+        }
+
         // Keep extension alive while network/download work is running.
         requestExtendedExecution()
 
@@ -8833,6 +8875,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
 
             } catch {
                 shareLog("ERROR: Failed to save image - \(error.localizedDescription)")
+                endPrimaryAction("Analyze in app failed while saving image")
             }
         } else if !sharedMedia.isEmpty {
             // Fallback: We have media in sharedMedia (e.g., from a non-social-media URL)
@@ -8865,6 +8908,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             }
         } else {
             shareLog("ERROR: No pending URL, image data, or shared media")
+            endPrimaryAction("Analyze in app aborted - no payload available")
         }
     }
 
@@ -8896,6 +8940,10 @@ open class RSIShareViewController: SLComposeServiceViewController {
         }
 
         if deferActionIfAttachmentsStillLoading(.analyzeNow) {
+            return
+        }
+
+        guard beginPrimaryAction("Analyze now") else {
             return
         }
 
@@ -9056,6 +9104,7 @@ open class RSIShareViewController: SLComposeServiceViewController {
             saveAndRedirect(message: nil)
         } else {
             shareLog("ERROR: No pending URL, image data, or shared media")
+            endPrimaryAction("Analyze now aborted - no payload available")
         }
     }
 
