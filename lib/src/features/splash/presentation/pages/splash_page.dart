@@ -26,7 +26,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   // Keep launch and splash logos in sync: fixed width so it doesn't vary by device size.
   static const double _logoWidth =
       93.027; // about +8% from original (~+1% from prior)
-  static const Color _loaderColor = Color(0xCCFFFFFF);
+  static const Color _loaderTextColor = Color(0xF2FFFFFF);
+  static const double _loaderBottomSpacing = 44;
   bool _started = false;
 
   @override
@@ -170,6 +171,8 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -180,47 +183,44 @@ class _SplashPageState extends ConsumerState<SplashPage> {
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF2003C),
-        body: SafeArea(
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Center(
-                child: SizedBox(
-                  width: _logoWidth,
-                  child: Image.asset(
-                    _assetPath,
-                    fit: BoxFit.contain,
-                  ),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Center(
+              child: SizedBox(
+                width: _logoWidth,
+                child: Image.asset(
+                  _assetPath,
+                  fit: BoxFit.contain,
                 ),
               ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 44),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      CupertinoActivityIndicator(
-                        radius: 11,
-                        color: _loaderColor,
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Loading...',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: _loaderColor,
-                          letterSpacing: -0.1,
-                        ),
-                      ),
-                    ],
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: bottomInset + _loaderBottomSpacing,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  CupertinoActivityIndicator(
+                    radius: 12,
+                    color: Colors.white,
                   ),
-                ),
+                  SizedBox(height: 9),
+                  Text(
+                    'Loading...',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _loaderTextColor,
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
