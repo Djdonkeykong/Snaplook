@@ -4,9 +4,36 @@ import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:superwallkit_flutter/superwallkit_flutter.dart' as sw;
 
-/// RevenueCat purchase controller for Superwall
-/// This allows Superwall to use RevenueCat for purchases and access trial eligibility
+/// RevenueCat purchase controller for Superwall.
+/// This allows Superwall to use RevenueCat for purchases and access trial eligibility.
 class RCPurchaseController extends sw.PurchaseController {
+  Future<Package?> _findPackageForProduct(String productId) async {
+    final offerings = await Purchases.getOfferings();
+
+    for (final offering in offerings.all.values) {
+      if (offering == null) continue;
+
+      for (final package in offering.availablePackages) {
+        if (kDebugMode) {
+          debugPrint(
+            '[RCPurchaseController] Checking offering=${offering.identifier} package=${package.identifier} product=${package.storeProduct.identifier}',
+          );
+        }
+
+        if (package.storeProduct.identifier == productId) {
+          if (kDebugMode) {
+            debugPrint(
+              '[RCPurchaseController] Found matching package in offering=${offering.identifier}: ${package.identifier}',
+            );
+          }
+          return package;
+        }
+      }
+    }
+
+    return null;
+  }
+
   @override
   Future<sw.PurchaseResult> purchaseFromAppStore(String productId) async {
     try {
@@ -14,55 +41,40 @@ class RCPurchaseController extends sw.PurchaseController {
         debugPrint('[RCPurchaseController] Purchasing iOS product: $productId');
       }
 
-      // Find the RevenueCat package that matches this product
-      final offerings = await Purchases.getOfferings();
-      final currentOffering = offerings.current;
-
-      if (currentOffering == null) {
-        if (kDebugMode) {
-          debugPrint('[RCPurchaseController] No current offering found');
-        }
-        return sw.PurchaseResult.failed('No offerings available');
-      }
-
-      // Find the package with this product identifier
-      Package? matchingPackage;
-      for (final package in currentOffering.availablePackages) {
-        if (kDebugMode) {
-          debugPrint('[RCPurchaseController] Checking package: ${package.identifier} with product: ${package.storeProduct.identifier}');
-        }
-        if (package.storeProduct.identifier == productId) {
-          matchingPackage = package;
-          if (kDebugMode) {
-            debugPrint('[RCPurchaseController] ✓ Found matching package: ${package.identifier}');
-          }
-          break;
-        }
-      }
+      // Search every RevenueCat offering, not just offerings.current.
+      // Credit packs live in a separate offering and won't be found if we
+      // only inspect the default subscription offering.
+      final matchingPackage = await _findPackageForProduct(productId);
 
       if (matchingPackage == null) {
         if (kDebugMode) {
-          debugPrint('[RCPurchaseController] No matching package found for $productId');
+          debugPrint(
+            '[RCPurchaseController] No matching package found for $productId',
+          );
         }
         return sw.PurchaseResult.failed('Product not found in offerings');
       }
 
       if (kDebugMode) {
-        debugPrint('[RCPurchaseController] Purchasing package: ${matchingPackage.identifier}');
-        debugPrint('[RCPurchaseController] Product ID: ${matchingPackage.storeProduct.identifier}');
+        debugPrint(
+          '[RCPurchaseController] Purchasing package: ${matchingPackage.identifier}',
+        );
+        debugPrint(
+          '[RCPurchaseController] Product ID: ${matchingPackage.storeProduct.identifier}',
+        );
       }
 
-      // Purchase through RevenueCat
       final customerInfo = await Purchases.purchasePackage(matchingPackage);
 
       if (kDebugMode) {
         debugPrint('[RCPurchaseController] Purchase completed');
-        debugPrint('[RCPurchaseController] All purchased product IDs: ${customerInfo.allPurchasedProductIdentifiers}');
-      }
-
-      if (kDebugMode) {
+        debugPrint(
+          '[RCPurchaseController] All purchased product IDs: ${customerInfo.allPurchasedProductIdentifiers}',
+        );
         debugPrint('[RCPurchaseController] Purchase successful');
-        debugPrint('[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}');
+        debugPrint(
+          '[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}',
+        );
       }
 
       return sw.PurchaseResult.purchased;
@@ -82,7 +94,6 @@ class RCPurchaseController extends sw.PurchaseController {
         debugPrint('[RCPurchaseController] Purchase error: $e');
       }
 
-      // Check if user cancelled
       if (e.toString().contains('purchaseCancelledError') ||
           e.toString().contains('cancelled')) {
         return sw.PurchaseResult.cancelled;
@@ -100,7 +111,9 @@ class RCPurchaseController extends sw.PurchaseController {
   ) async {
     try {
       if (kDebugMode) {
-        debugPrint('[RCPurchaseController] Purchasing Android product: $productId');
+        debugPrint(
+          '[RCPurchaseController] Purchasing Android product: $productId',
+        );
         debugPrint('[RCPurchaseController]   basePlanId: $basePlanId');
         debugPrint('[RCPurchaseController]   offerId: $offerId');
       }
@@ -111,7 +124,8 @@ class RCPurchaseController extends sw.PurchaseController {
       try {
         if (kDebugMode) {
           debugPrint(
-              '[RCPurchaseController] Attempting direct purchaseProduct path');
+            '[RCPurchaseController] Attempting direct purchaseProduct path',
+          );
         }
         // ignore: deprecated_member_use
         final customerInfo = await Purchases.purchaseProduct(
@@ -120,9 +134,11 @@ class RCPurchaseController extends sw.PurchaseController {
 
         if (kDebugMode) {
           debugPrint(
-              '[RCPurchaseController] Purchase successful (direct product)');
+            '[RCPurchaseController] Purchase successful (direct product)',
+          );
           debugPrint(
-              '[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}');
+            '[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}',
+          );
         }
         return sw.PurchaseResult.purchased;
       } on PlatformException catch (e) {
@@ -132,17 +148,63 @@ class RCPurchaseController extends sw.PurchaseController {
         }
         if (kDebugMode) {
           debugPrint(
-              '[RCPurchaseController] Direct purchaseProduct failed: ${e.message}');
+            '[RCPurchaseController] Direct purchaseProduct failed: ${e.message}',
+          );
         }
       } on TimeoutException {
         if (kDebugMode) {
           debugPrint(
-              '[RCPurchaseController] Direct purchaseProduct timed out, trying option path');
+            '[RCPurchaseController] Direct purchaseProduct timed out, trying package lookup',
+          );
         }
       } catch (e) {
         if (kDebugMode) {
           debugPrint(
-              '[RCPurchaseController] Direct purchaseProduct error, trying option path: $e');
+            '[RCPurchaseController] Direct purchaseProduct error, trying package lookup: $e',
+          );
+        }
+      }
+
+      // One-time products can live in non-default offerings, so try a package
+      // lookup before falling back to manual StoreProduct resolution.
+      try {
+        final matchingPackage = await _findPackageForProduct(productId);
+        if (matchingPackage != null) {
+          if (kDebugMode) {
+            debugPrint(
+              '[RCPurchaseController] Falling back to purchasePackage for ${matchingPackage.identifier}',
+            );
+          }
+
+          final customerInfo = await Purchases.purchasePackage(
+            matchingPackage,
+          );
+
+          if (kDebugMode) {
+            debugPrint(
+              '[RCPurchaseController] Purchase successful (package fallback)',
+            );
+            debugPrint(
+              '[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}',
+            );
+          }
+          return sw.PurchaseResult.purchased;
+        }
+      } on PlatformException catch (e) {
+        final errorCode = PurchasesErrorHelper.getErrorCode(e);
+        if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
+          return sw.PurchaseResult.cancelled;
+        }
+        if (kDebugMode) {
+          debugPrint(
+            '[RCPurchaseController] Package fallback failed: ${e.message}',
+          );
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+            '[RCPurchaseController] Package fallback error, trying option path: $e',
+          );
         }
       }
 
@@ -156,7 +218,8 @@ class RCPurchaseController extends sw.PurchaseController {
       if (products.isEmpty) {
         if (kDebugMode) {
           debugPrint(
-              '[RCPurchaseController] No StoreProduct found for $productId');
+            '[RCPurchaseController] No StoreProduct found for $productId',
+          );
         }
         return sw.PurchaseResult.failed('Store product not found');
       }
@@ -166,7 +229,8 @@ class RCPurchaseController extends sw.PurchaseController {
 
       if (kDebugMode) {
         debugPrint(
-            '[RCPurchaseController] StoreProduct resolved: ${storeProduct.identifier}');
+          '[RCPurchaseController] StoreProduct resolved: ${storeProduct.identifier}',
+        );
         final optionIds = options.map((o) => o.id).toList(growable: false);
         debugPrint('[RCPurchaseController] Subscription options: $optionIds');
       }
@@ -195,20 +259,25 @@ class RCPurchaseController extends sw.PurchaseController {
       if (selectedOption == null) {
         if (kDebugMode) {
           debugPrint(
-              '[RCPurchaseController] No subscription option found; falling back to purchaseStoreProduct');
+            '[RCPurchaseController] No subscription option found; falling back to purchaseStoreProduct',
+          );
         }
         final customerInfo = await Purchases.purchaseStoreProduct(storeProduct);
         if (kDebugMode) {
-          debugPrint('[RCPurchaseController] Purchase successful (storeProduct)');
           debugPrint(
-              '[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}');
+            '[RCPurchaseController] Purchase successful (storeProduct)',
+          );
+          debugPrint(
+            '[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}',
+          );
         }
         return sw.PurchaseResult.purchased;
       }
 
       if (kDebugMode) {
         debugPrint(
-            '[RCPurchaseController] Purchasing option id=${selectedOption.id} storeProductId=${selectedOption.storeProductId}');
+          '[RCPurchaseController] Purchasing option id=${selectedOption.id} storeProductId=${selectedOption.storeProductId}',
+        );
       }
 
       final customerInfo =
@@ -216,7 +285,9 @@ class RCPurchaseController extends sw.PurchaseController {
 
       if (kDebugMode) {
         debugPrint('[RCPurchaseController] Purchase successful');
-        debugPrint('[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}');
+        debugPrint(
+          '[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}',
+        );
       }
 
       return sw.PurchaseResult.purchased;
@@ -236,7 +307,6 @@ class RCPurchaseController extends sw.PurchaseController {
         debugPrint('[RCPurchaseController] Purchase error: $e');
       }
 
-      // Check if user cancelled
       if (e.toString().contains('purchaseCancelledError') ||
           e.toString().contains('cancelled')) {
         return sw.PurchaseResult.cancelled;
@@ -257,7 +327,9 @@ class RCPurchaseController extends sw.PurchaseController {
 
       if (kDebugMode) {
         debugPrint('[RCPurchaseController] Restore complete');
-        debugPrint('[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}');
+        debugPrint(
+          '[RCPurchaseController] Active entitlements: ${customerInfo.entitlements.active.keys}',
+        );
       }
 
       return sw.RestorationResult.restored;

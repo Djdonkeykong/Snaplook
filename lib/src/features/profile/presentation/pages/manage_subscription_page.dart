@@ -6,6 +6,8 @@ import 'dart:io';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
+import '../../../../services/revenuecat_service.dart';
+import '../../../../services/subscription_sync_service.dart';
 
 // Provider to fetch user subscription info from Supabase
 final userSubscriptionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
@@ -15,7 +17,9 @@ final userSubscriptionProvider = FutureProvider.autoDispose<Map<String, dynamic>
   try {
     final response = await Supabase.instance.client
         .from('users')
-        .select('subscription_status, is_trial, paid_credits_remaining')
+        .select(
+          'subscription_status, is_trial, paid_credits_remaining, subscription_product_id',
+        )
         .eq('id', userId)
         .maybeSingle();
 
@@ -61,20 +65,59 @@ class ManageSubscriptionPage extends ConsumerWidget {
     }
   }
 
-  Future<void> _restorePurchases(BuildContext context) async {
-    // TODO: Implement Superwall restore purchases
-    // This will call Superwall's restore purchases method
+  Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
+    final storeLabel = Platform.isIOS ? 'App Store' : 'Google Play';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Restoring purchases...',
+          'Checking $storeLabel purchases...',
           style: context.snackTextStyle(
             merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
           ),
         ),
-        duration: const Duration(milliseconds: 2000),
+        duration: const Duration(milliseconds: 1500),
       ),
     );
+
+    try {
+      await RevenueCatService().restorePurchases();
+      final accessState = await SubscriptionSyncService()
+          .syncSubscriptionToSupabase();
+      ref.invalidate(userSubscriptionProvider);
+
+      if (!context.mounted) return;
+
+      final message = accessState?.hasActiveSubscription == true
+          ? 'Subscription restored successfully.'
+          : accessState?.hasCredits == true
+              ? 'Your remaining credits are already synced to your Snaplook account.'
+              : 'No active subscription was found to restore.';
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: context.snackTextStyle(
+              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+          ),
+          duration: const Duration(milliseconds: 2500),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not restore purchases right now.',
+            style: context.snackTextStyle(
+              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
+            ),
+          ),
+          duration: const Duration(milliseconds: 2500),
+        ),
+      );
+    }
   }
 
   @override
@@ -123,10 +166,17 @@ class ManageSubscriptionPage extends ConsumerWidget {
             final subscriptionStatus = subscriptionData?['subscription_status'] as String? ?? 'free';
             final isTrial = subscriptionData?['is_trial'] as bool? ?? false;
             final credits = subscriptionData?['paid_credits_remaining'] as int? ?? 0;
+            final subscriptionProductId =
+                subscriptionData?['subscription_product_id'] as String?;
 
             // Determine display values
-            final isSubscribed = subscriptionStatus == 'active';
+            final isSubscribed = subscriptionStatus == 'active' || isTrial;
             final displayStatus = _formatSubscriptionStatus(subscriptionStatus, isTrial);
+            final displayCredits = credits > 0 ? '$credits credits' : '0 credits';
+            final subscriptionSummary =
+                subscriptionProductId != null && subscriptionProductId.isNotEmpty
+                    ? _formatMembership(subscriptionProductId)
+                    : displayStatus;
 
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: spacing.l),
@@ -141,9 +191,19 @@ class ManageSubscriptionPage extends ConsumerWidget {
                       const SizedBox(height: 8),
                       _SettingsRow.value(
                         label: 'Current Plan',
-                        value: displayStatus,
+                        value: subscriptionSummary,
                         valueColor:
                             isSubscribed ? AppColors.secondary : colorScheme.onSurface,
+                      ),
+                      const SizedBox(height: 8),
+                      _Divider(),
+                      const SizedBox(height: 8),
+                      _SettingsRow.value(
+                        label: 'Credits',
+                        value: displayCredits,
+                        valueColor: credits > 0
+                            ? AppColors.secondary
+                            : colorScheme.onSurface,
                       ),
                       const SizedBox(height: 8),
                     ],
@@ -165,7 +225,7 @@ class ManageSubscriptionPage extends ConsumerWidget {
                       const SizedBox(height: 8),
                       _SettingsRow.disclosure(
                         label: 'Restore Purchases',
-                        onTap: () => _restorePurchases(context),
+                        onTap: () => _restorePurchases(context, ref),
                       ),
                       const SizedBox(height: 8),
                     ],
@@ -179,7 +239,7 @@ class ManageSubscriptionPage extends ConsumerWidget {
                         padding:
                             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         child: Text(
-                          'To cancel or modify your subscription, use the ${Platform.isIOS ? 'App Store' : 'Google Play'} subscription management. Changes take effect at the end of your billing period.',
+                          'Subscriptions are managed in the ${Platform.isIOS ? 'App Store' : 'Google Play'}. Remaining credit packs stay synced to your Snaplook account through Supabase, so they follow you when you sign in.',
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.45,

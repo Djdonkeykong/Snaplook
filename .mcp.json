@@ -16,6 +16,13 @@
         "token": "${REVENUECAT_MCP_KEY}"
       }
     },
+    "superwall": {
+      "type": "http",
+      "url": "https://superwall-mcp.superwall.com/mcp",
+      "authorization": {
+        "type": "oauth2"
+      }
+    },
     "amplitude": {
       "type": "http",
       "url": "https://mcp.amplitude.com/mcp",

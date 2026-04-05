@@ -22,31 +22,72 @@ interface RevenueCatWebhookEvent {
   }
 }
 
+const normalizeProductId = (productId: string | null | undefined): string =>
+  (productId ?? '').trim().toLowerCase()
+
+const creditPackAmountForProduct = (
+  productId: string | null | undefined,
+): number => {
+  const normalized = normalizeProductId(productId)
+  if (
+    normalized === 'com.snaplook.credits20' ||
+    normalized.startsWith('com.snaplook.credits20:')
+  ) {
+    return 20
+  }
+  if (
+    normalized === 'com.snaplook.credits50' ||
+    normalized.startsWith('com.snaplook.credits50:')
+  ) {
+    return 50
+  }
+  if (
+    normalized === 'com.snaplook.credits100' ||
+    normalized.startsWith('com.snaplook.credits100:')
+  ) {
+    return 100
+  }
+  return 0
+}
+
 serve(async (req) => {
   try {
-    // Verify Authorization header for security
     const authHeader = req.headers.get('Authorization')
 
     if (REVENUECAT_WEBHOOK_AUTH) {
       if (!authHeader) {
         console.error('[RevenueCat Webhook] Missing Authorization header')
-        return new Response(JSON.stringify({ error: 'Unauthorized - Missing Authorization header' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        })
+        return new Response(
+          JSON.stringify({
+            error: 'Unauthorized - Missing Authorization header',
+          }),
+          {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        )
       }
 
       if (authHeader !== REVENUECAT_WEBHOOK_AUTH) {
         console.error('[RevenueCat Webhook] Invalid Authorization header')
-        return new Response(JSON.stringify({ error: 'Unauthorized - Invalid Authorization header' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        })
+        return new Response(
+          JSON.stringify({
+            error: 'Unauthorized - Invalid Authorization header',
+          }),
+          {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        )
       }
 
-      console.log('[RevenueCat Webhook] Authorization verified successfully')
+      console.log(
+        '[RevenueCat Webhook] Authorization verified successfully',
+      )
     } else {
-      console.warn('[RevenueCat Webhook] REVENUECAT_WEBHOOK_AUTH not set - running without authorization verification')
+      console.warn(
+        '[RevenueCat Webhook] REVENUECAT_WEBHOOK_AUTH not set - running without authorization verification',
+      )
     }
 
     const body = await req.text()
@@ -58,87 +99,152 @@ serve(async (req) => {
     const expirationAtMs = webhookData.event.expiration_at_ms
     const isTrialConversion = webhookData.event.is_trial_conversion
 
-    console.log(`[RevenueCat Webhook] Received event: ${eventType} for user ${userId}`)
-    console.log(`[RevenueCat Webhook] Product: ${productId}, Period: ${periodType}, Trial Conversion: ${isTrialConversion}`)
+    console.log(
+      `[RevenueCat Webhook] Received event: ${eventType} for user ${userId}`,
+    )
+    console.log(
+      `[RevenueCat Webhook] Product: ${productId}, Period: ${periodType}, Trial Conversion: ${isTrialConversion}`,
+    )
 
-    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Calculate subscription details
     const isTrial = periodType === 'TRIAL' || periodType === 'INTRO'
     const expiresAt = expirationAtMs
       ? new Date(expirationAtMs).toISOString()
       : null
+    const purchasedAtIso = webhookData.event.purchased_at_ms
+      ? new Date(webhookData.event.purchased_at_ms).toISOString()
+      : new Date().toISOString()
+    const creditPackAmount = creditPackAmountForProduct(productId)
+    const transactionId =
+      webhookData.event.transaction_id ||
+      webhookData.event.original_transaction_id ||
+      `${eventType}:${userId}:${productId}:${webhookData.event.purchased_at_ms ?? Date.now()}`
 
-    console.log(`[RevenueCat Webhook] Is Trial: ${isTrial}, Expires At: ${expiresAt}`)
+    console.log(
+      `[RevenueCat Webhook] Is Trial: ${isTrial}, Expires At: ${expiresAt}`,
+    )
+    console.log(
+      `[RevenueCat Webhook] Credit pack amount: ${creditPackAmount}`,
+    )
 
-    // Handle different event types
     switch (eventType) {
       case 'INITIAL_PURCHASE':
       case 'RENEWAL':
       case 'NON_RENEWING_PURCHASE':
-        // User has an active subscription
-        await supabase.from('users').upsert({
-          id: userId,
-          subscription_status: 'active',
-          subscription_product_id: productId,
-          subscription_expires_at: expiresAt,
-          is_trial: isTrial,
-          revenue_cat_user_id: userId,
-          subscription_last_synced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' })
+        if (creditPackAmount > 0) {
+          const { data, error } = await supabase.rpc('apply_credit_purchase', {
+            p_user_id: userId,
+            p_product_id: productId,
+            p_transaction_id: transactionId,
+            p_purchased_at: purchasedAtIso,
+            p_source: 'revenuecat_webhook',
+          })
 
-        console.log(`[RevenueCat Webhook] Updated user ${userId} to active subscription (trial: ${isTrial})`)
+          if (error) {
+            console.error(
+              `[RevenueCat Webhook] Failed to apply credit purchase for user ${userId}:`,
+              error,
+            )
+            throw error
+          }
+
+          await supabase.from('users').upsert(
+            {
+              id: userId,
+              revenue_cat_user_id: userId,
+              subscription_last_synced_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'id' },
+          )
+
+          console.log(
+            `[RevenueCat Webhook] Applied credit pack for user ${userId}. Product=${productId}, tx=${transactionId}, response=${JSON.stringify(data)}`,
+          )
+        } else {
+          await supabase.from('users').upsert(
+            {
+              id: userId,
+              subscription_status: 'active',
+              subscription_product_id: productId,
+              subscription_expires_at: expiresAt,
+              is_trial: isTrial,
+              revenue_cat_user_id: userId,
+              subscription_last_synced_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'id' },
+          )
+
+          console.log(
+            `[RevenueCat Webhook] Updated user ${userId} to active subscription (trial: ${isTrial})`,
+          )
+        }
         break
 
       case 'CANCELLATION':
-        // Subscription cancelled but may still be active until expiration
         await supabase.from('users').update({
-          subscription_status: 'active', // Still active until expires
+          subscription_status: 'active',
           subscription_expires_at: expiresAt,
           subscription_last_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq('id', userId)
 
-        console.log(`[RevenueCat Webhook] Marked subscription as cancelled for user ${userId}`)
+        console.log(
+          `[RevenueCat Webhook] Marked subscription as cancelled for user ${userId}`,
+        )
         break
 
       case 'EXPIRATION':
       case 'BILLING_ISSUE':
-        // Subscription has expired or billing failed
         await supabase.from('users').update({
           subscription_status: 'expired',
           subscription_expires_at: expiresAt,
-          is_trial: false, // No longer in trial
+          is_trial: false,
           subscription_last_synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq('id', userId)
 
-        console.log(`[RevenueCat Webhook] Marked subscription as expired for user ${userId}`)
+        console.log(
+          `[RevenueCat Webhook] Marked subscription as expired for user ${userId}`,
+        )
         break
 
       case 'PRODUCT_CHANGE':
-        // User changed subscription plan
-        await supabase.from('users').update({
-          subscription_product_id: productId,
-          subscription_expires_at: expiresAt,
-          is_trial: isTrial,
-          subscription_last_synced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }).eq('id', userId)
+        // RevenueCat can emit PRODUCT_CHANGE while the subscription is active.
+        // Keep the row active so the credit trigger can top up when needed.
+        await supabase.from('users').upsert(
+          {
+            id: userId,
+            subscription_status: 'active',
+            subscription_product_id: productId,
+            subscription_expires_at: expiresAt,
+            is_trial: isTrial,
+            revenue_cat_user_id: userId,
+            subscription_last_synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' },
+        )
 
-        console.log(`[RevenueCat Webhook] Updated product to ${productId} for user ${userId}`)
+        console.log(
+          `[RevenueCat Webhook] Synced product change to active subscription for user ${userId}`,
+        )
         break
 
       case 'TEST':
-        console.log(`[RevenueCat Webhook] Test event received - webhook is working correctly`)
+        console.log(
+          '[RevenueCat Webhook] Test event received - webhook is working correctly',
+        )
         break
 
       default:
-        console.log(`[RevenueCat Webhook] Unhandled event type: ${eventType}`)
+        console.log(
+          `[RevenueCat Webhook] Unhandled event type: ${eventType}`,
+        )
     }
 
     return new Response(JSON.stringify({ success: true }), {

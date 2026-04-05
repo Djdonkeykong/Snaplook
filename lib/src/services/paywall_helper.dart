@@ -27,14 +27,17 @@ class PaywallHelper {
 
       debugPrint('[PaywallHelper] Purchase result: $didPurchase');
 
-      // If user purchased and has account, identify user and sync subscription to Supabase
+      // If user purchased and has account, identify user and sync purchase data
+      // to Supabase. This covers both subscriptions and one-time credit packs.
       if (didPurchase && userId != null) {
         try {
-          debugPrint('[PaywallHelper] Identifying user and syncing subscription...');
+          debugPrint('[PaywallHelper] Identifying user and syncing purchase data...');
           // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
-          await SubscriptionSyncService().identify(userId);
+          final accessState = await SubscriptionSyncService().identify(userId);
           await OnboardingStateService().markPaymentComplete(userId);
-          debugPrint('[PaywallHelper] User identified and subscription synced successfully');
+          debugPrint(
+              '[PaywallHelper] User identified and purchase data synced successfully. '
+              'hasAccess=${accessState?.hasAccess} credits=${accessState?.paidCreditsRemaining}');
         } catch (e) {
           debugPrint('[PaywallHelper] Error syncing subscription: $e');
         }

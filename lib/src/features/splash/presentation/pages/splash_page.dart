@@ -123,6 +123,14 @@ class _SplashPageState extends ConsumerState<SplashPage> {
             debugPrint(
                 '[Splash] User abandoned at paywall - routing back to paywall');
             nextPage = PaywallPresentationPage(userId: user.id);
+          } else if (onboardingRoute == 'resubscribe_paywall') {
+            debugPrint(
+                '[Splash] User needs more access - routing to credits paywall');
+            nextPage = PaywallPresentationPage(
+              userId: user.id,
+              placement: 'credits_paywall',
+              dismissToHomeIfNoPurchase: true,
+            );
           } else {
             // Onboarding not started or abandoned before account creation - send to login
             debugPrint(

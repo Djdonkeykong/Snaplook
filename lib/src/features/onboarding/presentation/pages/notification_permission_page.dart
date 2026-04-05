@@ -4,7 +4,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,6 +22,7 @@ import '../../../../services/notification_service.dart';
 import '../../../../services/revenuecat_service.dart';
 import '../../../../services/paywall_helper.dart';
 import '../../../../services/subscription_sync_service.dart';
+import '../../../../services/superwall_service.dart';
 
 // Provider to store notification permission choice
 final notificationPermissionGrantedProvider =
@@ -228,25 +228,26 @@ class _NotificationPermissionPageState
           OnboardingCheckpoint.notification,
         ));
 
-        // Check subscription status from RevenueCat
-        CustomerInfo? customerInfo;
+        UserAccessState? accessState;
         try {
-          customerInfo = await Purchases.getCustomerInfo()
+          accessState = await SubscriptionSyncService()
+              .syncSubscriptionToSupabase()
               .timeout(const Duration(seconds: 5));
         } catch (e) {
           debugPrint(
-              '[NotificationPermission] Error fetching customer info: $e');
+              '[NotificationPermission] Error syncing purchase state: $e');
         }
 
-        final activeEntitlements = customerInfo?.entitlements.active.values;
-        final hasActiveSubscription =
-            activeEntitlements != null && activeEntitlements.isNotEmpty;
+        final hasAccess = accessState?.hasAccess ?? false;
 
         debugPrint(
-            '[NotificationPermission] Has active subscription: $hasActiveSubscription');
+          '[NotificationPermission] Access after sync: hasAccess=$hasAccess '
+          'hasActiveSubscription=${accessState?.hasActiveSubscription} '
+          'credits=${accessState?.paidCreditsRemaining}',
+        );
 
-        if (hasActiveSubscription) {
-          // User has subscription - go to home
+        if (hasAccess) {
+          // User already has access - go to home
           debugPrint('[NotificationPermission] Navigating to home');
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
@@ -297,11 +298,15 @@ class _NotificationPermissionPageState
               isReturningUser = userResponse?['onboarding_state'] == 'completed';
             } catch (_) {}
 
+            final placement = isReturningUser
+                ? SuperwallService.creditsPlacement
+                : SuperwallService.defaultPlacement;
+
             if (mounted) {
               await PaywallHelper.presentPaywallAndNavigate(
                 context: context,
                 userId: user.id,
-                placement: 'onboarding_paywall',
+                placement: placement,
                 isReturningUser: isReturningUser,
               );
             }

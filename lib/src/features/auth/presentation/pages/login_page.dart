@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -345,46 +344,23 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                 print(
                                     '[LoginPage] Has completed onboarding: $hasCompletedOnboarding');
 
-                                // Check subscription status from RevenueCat (source of truth)
-                                CustomerInfo? customerInfo;
-                                try {
-                                  customerInfo =
-                                      await Purchases.getCustomerInfo();
-                                  print(
-                                      '[LoginPage] RevenueCat customer info fetched successfully');
-                                  print(
-                                      '[LoginPage] All entitlements: ${customerInfo.entitlements.all.keys.toList()}');
-                                  print(
-                                      '[LoginPage] Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
-                                } catch (e) {
-                                  debugPrint(
-                                      '[LoginPage] Error fetching RevenueCat customer info: $e');
-                                }
-
-                                final activeEntitlements =
-                                    customerInfo?.entitlements.active.values;
+                                final accessState = await SubscriptionSyncService()
+                                    .getUserAccessState(userId: userId);
                                 final hasActiveSubscription =
-                                    activeEntitlements != null &&
-                                        activeEntitlements.isNotEmpty;
-
-                                print(
-                                    '[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');
-
-                                // Check if user has credits (even without subscription)
-                                final userCreditsResponse = await supabase
-                                    .from('users')
-                                    .select('paid_credits_remaining')
-                                    .eq('id', userId)
-                                    .maybeSingle();
-
+                                    accessState?.hasActiveSubscription ?? false;
                                 final hasCredits =
-                                    (userCreditsResponse?['paid_credits_remaining'] ?? 0) > 0;
+                                    accessState?.hasCredits ?? false;
+                                final hasAccess =
+                                    accessState?.hasAccess ?? false;
 
                                 print(
-                                    '[LoginPage] User has credits: $hasCredits (${userCreditsResponse?['paid_credits_remaining']} remaining)');
+                                    '[LoginPage] Access state: hasAccess=$hasAccess '
+                                    'hasActiveSubscription=$hasActiveSubscription '
+                                    'hasCredits=$hasCredits '
+                                    'credits=${accessState?.paidCreditsRemaining}');
 
                                 if (hasCompletedOnboarding &&
-                                    (hasActiveSubscription || hasCredits)) {
+                                    hasAccess) {
                                   // User completed onboarding and has active subscription OR credits - go to home
                                   debugPrint(
                                       '[LoginPage] User has completed onboarding and has access (subscription: $hasActiveSubscription, credits: $hasCredits) - going to home');
@@ -405,13 +381,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     (route) => false,
                                   );
                                 } else if (hasCompletedOnboarding &&
-                                    !hasActiveSubscription && !hasCredits) {
+                                    !hasAccess) {
                                   // User completed onboarding but NO subscription and NO credits - present Superwall paywall
                                   debugPrint(
                                       '[LoginPage] User completed onboarding but no subscription or credits - presenting Superwall paywall');
                                   await PaywallHelper.presentPaywallAndNavigate(
                                     context: navigator.context,
                                     userId: userId,
+                                    placement: 'credits_paywall',
                                     isReturningUser: true,  // Skip onboarding check - we know they completed it
                                   );
                                 } else {
@@ -473,7 +450,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     case 'save_progress':
                                       debugPrint(
                                           '[LoginPage] Already authenticated - checking trial/subscription');
-                                      nextPage = hasActiveSubscription
+                                      nextPage = hasAccess
                                           ? const MainNavigation(
                                               key: ValueKey('fresh-main-nav'))
                                           : const TrialIntroPage();
@@ -481,8 +458,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     case 'paywall':
                                     case 'account':
                                       debugPrint(
-                                          '[LoginPage] Resuming at paywall/account - has subscription: $hasActiveSubscription');
-                                      nextPage = hasActiveSubscription
+                                          '[LoginPage] Resuming at paywall/account - has access: $hasAccess');
+                                      nextPage = hasAccess
                                           ? const MainNavigation(
                                               key: ValueKey('fresh-main-nav'))
                                           : const TrialIntroPage();
@@ -608,46 +585,23 @@ class _LoginPageState extends ConsumerState<LoginPage>
                               print(
                                   '[LoginPage] Has completed onboarding: $hasCompletedOnboarding');
 
-                              // Check subscription status from RevenueCat (source of truth)
-                              CustomerInfo? customerInfo;
-                              try {
-                                customerInfo =
-                                    await Purchases.getCustomerInfo();
-                                print(
-                                    '[LoginPage] RevenueCat customer info fetched successfully');
-                                print(
-                                    '[LoginPage] All entitlements: ${customerInfo.entitlements.all.keys.toList()}');
-                                print(
-                                    '[LoginPage] Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
-                              } catch (e) {
-                                debugPrint(
-                                    '[LoginPage] Error fetching RevenueCat customer info: $e');
-                              }
-
-                              final activeEntitlements =
-                                  customerInfo?.entitlements.active.values;
+                              final accessState = await SubscriptionSyncService()
+                                  .getUserAccessState(userId: userId);
                               final hasActiveSubscription =
-                                  activeEntitlements != null &&
-                                      activeEntitlements.isNotEmpty;
-
-                              print(
-                                  '[LoginPage] Has active subscription (RevenueCat): $hasActiveSubscription');
-
-                              // Check if user has credits (even without subscription)
-                              final userCreditsResponse = await supabase
-                                  .from('users')
-                                  .select('paid_credits_remaining')
-                                  .eq('id', userId)
-                                  .maybeSingle();
-
+                                  accessState?.hasActiveSubscription ?? false;
                               final hasCredits =
-                                  (userCreditsResponse?['paid_credits_remaining'] ?? 0) > 0;
+                                  accessState?.hasCredits ?? false;
+                              final hasAccess =
+                                  accessState?.hasAccess ?? false;
 
                               print(
-                                  '[LoginPage] User has credits: $hasCredits (${userCreditsResponse?['paid_credits_remaining']} remaining)');
+                                  '[LoginPage] Access state: hasAccess=$hasAccess '
+                                  'hasActiveSubscription=$hasActiveSubscription '
+                                  'hasCredits=$hasCredits '
+                                  'credits=${accessState?.paidCreditsRemaining}');
 
                               if (hasCompletedOnboarding &&
-                                  (hasActiveSubscription || hasCredits)) {
+                                  hasAccess) {
                                 // User completed onboarding and has active subscription OR credits - go to home
                                 debugPrint(
                                     '[LoginPage] User has completed onboarding and has access (subscription: $hasActiveSubscription, credits: $hasCredits) - going to home');
@@ -666,13 +620,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   (route) => false,
                                 );
                               } else if (hasCompletedOnboarding &&
-                                  !hasActiveSubscription && !hasCredits) {
+                                  !hasAccess) {
                                 // User completed onboarding but NO subscription and NO credits - present Superwall paywall
                                 debugPrint(
                                     '[LoginPage] User completed onboarding but no subscription or credits - presenting Superwall paywall');
                                 await PaywallHelper.presentPaywallAndNavigate(
                                   context: navigator.context,
                                   userId: userId,
+                                  placement: 'credits_paywall',
                                   isReturningUser: true,  // Skip onboarding check - we know they completed it
                                 );
                               } else {
@@ -734,7 +689,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   case 'save_progress':
                                     debugPrint(
                                         '[LoginPage] Already authenticated - checking trial/subscription');
-                                    nextPage = hasActiveSubscription
+                                    nextPage = hasAccess
                                         ? const MainNavigation(
                                             key: ValueKey('fresh-main-nav'))
                                         : const TrialIntroPage();
@@ -742,8 +697,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                   case 'paywall':
                                   case 'account':
                                     debugPrint(
-                                        '[LoginPage] Resuming at paywall/account - has subscription: $hasActiveSubscription');
-                                    nextPage = hasActiveSubscription
+                                        '[LoginPage] Resuming at paywall/account - has access: $hasAccess');
+                                    nextPage = hasAccess
                                         ? const MainNavigation(
                                             key: ValueKey('fresh-main-nav'))
                                         : const TrialIntroPage();

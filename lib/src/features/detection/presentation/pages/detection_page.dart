@@ -1044,7 +1044,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
                 final didPurchase = await PaywallHelper.presentPaywall(
                   context: context,
                   userId: userId,
-                  placement: 'out_of_credits',
+                  placement: SuperwallService.creditsPlacement,
                 );
 
                 if (!mounted) return;
@@ -1979,7 +1979,7 @@ class _DetectionPageState extends ConsumerState<DetectionPage> {
               : 'soon';
           final message = (latestBalance?.hasActiveSubscription ?? false)
               ? 'You\'ve used all your credits for this month. They will refill on $refillDateStr.'
-              : 'You are out of credits. Please subscribe to continue.';
+              : 'You are out of credits. Buy more credits or subscribe to continue.';
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

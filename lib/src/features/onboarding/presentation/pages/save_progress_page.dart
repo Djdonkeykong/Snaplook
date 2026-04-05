@@ -7,7 +7,6 @@ import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../services/analytics_service.dart';
@@ -21,7 +20,6 @@ import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../../services/fraud_prevention_service.dart';
 import '../../../../services/onboarding_state_service.dart';
-import '../../../../services/revenuecat_service.dart';
 import '../../../../services/superwall_service.dart';
 import '../../domain/providers/gender_provider.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
@@ -128,51 +126,24 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         debugPrint(
             '[SaveProgress] User completed onboarding, checking subscription status');
 
-        // Get subscription status from RevenueCat with retry logic
-        CustomerInfo? customerInfo;
-        int retryCount = 0;
-        const maxRetries = 3;
-
-        while (retryCount < maxRetries) {
-          try {
-            customerInfo = RevenueCatService().currentCustomerInfo ??
-                await Purchases.getCustomerInfo()
-                    .timeout(const Duration(seconds: 10));
-            break;
-          } catch (e) {
-            retryCount++;
-            debugPrint(
-                '[SaveProgress] Error fetching customer info (attempt $retryCount/$maxRetries): $e');
-
-            if (retryCount >= maxRetries) {
-              debugPrint(
-                  '[SaveProgress] Max retries reached, defaulting to paywall');
-              break;
-            }
-
-            await Future.delayed(Duration(seconds: retryCount));
-          }
+        UserAccessState? accessState;
+        try {
+          accessState = await SubscriptionSyncService()
+              .syncSubscriptionToSupabase()
+              .timeout(const Duration(seconds: 10));
+        } catch (e) {
+          debugPrint('[SaveProgress] Error syncing purchase state: $e');
         }
 
-        final activeEntitlements = customerInfo?.entitlements.active.values;
-        final hasActiveSubscription =
-            activeEntitlements != null && activeEntitlements.isNotEmpty;
-
+        final hasAccess = accessState?.hasAccess ?? false;
         debugPrint(
-            '[SaveProgress] Has active subscription: $hasActiveSubscription');
+          '[SaveProgress] Access after sync: hasAccess=$hasAccess '
+          'hasActiveSubscription=${accessState?.hasActiveSubscription} '
+          'credits=${accessState?.paidCreditsRemaining}',
+        );
 
-        if (hasActiveSubscription) {
-          // Completed onboarding + subscription → Home
-          debugPrint('[SaveProgress] User has subscription - going to home');
-
-          // Sync subscription to Supabase
-          try {
-            await SubscriptionSyncService()
-                .syncSubscriptionToSupabase()
-                .timeout(const Duration(seconds: 10));
-          } catch (e) {
-            debugPrint('[SaveProgress] Error syncing subscription: $e');
-          }
+        if (hasAccess) {
+          debugPrint('[SaveProgress] User has access - going to home');
 
           if (mounted) {
             _resetMainNavigationState();
@@ -186,18 +157,17 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
             );
           }
         } else {
-          // Completed onboarding + NO subscription → Present paywall
-          debugPrint('[SaveProgress] User has no subscription - presenting paywall');
+          debugPrint('[SaveProgress] User has no access - presenting paywall');
           if (mounted) {
             final didPurchase = await SuperwallService().presentPaywall(
-              placement: 'onboarding_paywall',
+              placement: SuperwallService.creditsPlacement,
             );
 
             if (!mounted) return;
 
             if (didPurchase) {
-              // User purchased - sync subscription and navigate to home
-              debugPrint('[SaveProgress] Purchase completed - syncing subscription');
+              // User purchased - sync purchase data and navigate to home
+              debugPrint('[SaveProgress] Purchase completed - syncing access state');
 
               try {
                 await Future.delayed(const Duration(milliseconds: 500));

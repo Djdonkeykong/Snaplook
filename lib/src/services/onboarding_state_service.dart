@@ -310,7 +310,8 @@ class OnboardingStateService {
           .from('users')
           .select('onboarding_state, onboarding_checkpoint, '
               'payment_completed_at, subscription_status, is_trial, '
-              'onboarding_started_at, preferred_gender_filter')
+              'paid_credits_remaining, onboarding_started_at, '
+              'preferred_gender_filter')
           .eq('id', userId)
           .maybeSingle();
 
@@ -340,6 +341,10 @@ class OnboardingStateService {
       final subscriptionStatusRaw = state['subscription_status'];
       final subscriptionStatus = subscriptionStatusRaw ?? 'free';
       final isTrial = state['is_trial'] == true;
+      final creditsRaw = state['paid_credits_remaining'];
+      final paidCreditsRemaining =
+          creditsRaw is int ? creditsRaw : (creditsRaw as num?)?.toInt() ?? 0;
+      final hasCredits = paidCreditsRemaining > 0;
       final checkpoint = state['onboarding_checkpoint'];
 
       debugPrint('[OnboardingState]   - onboarding_state (raw): $onboardingStateRaw');
@@ -350,15 +355,18 @@ class OnboardingStateService {
       debugPrint('[OnboardingState]   - subscription_status (processed): $subscriptionStatus');
       debugPrint('[OnboardingState]   - subscription_status == "active": ${subscriptionStatus == 'active'}');
       debugPrint('[OnboardingState]   - is_trial: $isTrial');
+      debugPrint('[OnboardingState]   - paid_credits_remaining: $paidCreditsRemaining');
 
       // Check if user has completed onboarding
       if (onboardingState == OnboardingState.completed) {
         debugPrint('[OnboardingState]   - Onboarding IS completed');
-        // Check if subscription is active or in trial
+        // Check if the user still has access through either a subscription
+        // or remaining purchased credits.
         final hasActiveSubscription = subscriptionStatus == 'active';
-        final hasAccess = hasActiveSubscription || isTrial;
+        final hasAccess = hasActiveSubscription || isTrial || hasCredits;
         debugPrint('[OnboardingState]   - hasActiveSubscription: $hasActiveSubscription');
-        debugPrint('[OnboardingState]   - hasAccess (active || trial): $hasAccess');
+        debugPrint('[OnboardingState]   - hasCredits: $hasCredits');
+        debugPrint('[OnboardingState]   - hasAccess (active || trial || credits): $hasAccess');
 
         if (hasAccess) {
           debugPrint('[OnboardingState]   - Has active subscription/trial → routing to home (return null)');
@@ -378,7 +386,7 @@ class OnboardingStateService {
         // BUGFIX: If user has active subscription and payment was completed a while ago,
         // they likely completed onboarding but it wasn't persisted. Auto-complete and send to home.
         final hasActiveSubscription = subscriptionStatus == 'active';
-        final hasAccess = hasActiveSubscription || isTrial;
+        final hasAccess = hasActiveSubscription || isTrial || hasCredits;
         final paymentCompletedAtStr = state['payment_completed_at'];
 
         if (hasAccess && paymentCompletedAtStr != null) {
@@ -442,9 +450,16 @@ class OnboardingStateService {
       final onboardingState = OnboardingState.fromString(state['onboarding_state'] ?? 'not_started');
       final subscriptionStatus = state['subscription_status'] ?? 'free';
       final isTrial = state['is_trial'] == true;
+      final creditsRaw = state['paid_credits_remaining'];
+      final paidCreditsRemaining =
+          creditsRaw is int ? creditsRaw : (creditsRaw as num?)?.toInt() ?? 0;
 
-      // User must complete onboarding AND have active subscription or trial
-      return onboardingState == OnboardingState.completed && (subscriptionStatus == 'active' || isTrial);
+      // User must complete onboarding and still have access, either from an
+      // active subscription/trial or from purchased credits.
+      return onboardingState == OnboardingState.completed &&
+          (subscriptionStatus == 'active' ||
+              isTrial ||
+              paidCreditsRemaining > 0);
     } catch (e) {
       debugPrint('[OnboardingState] Error checking home access: $e');
       return false;

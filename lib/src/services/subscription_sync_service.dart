@@ -1,55 +1,224 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import 'superwall_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'revenuecat_service.dart';
+import 'superwall_service.dart';
 
-/// Service for syncing subscription data between RevenueCat and Supabase.
+class UserAccessState {
+  const UserAccessState({
+    required this.subscriptionStatus,
+    required this.isTrial,
+    required this.paidCreditsRemaining,
+    this.subscriptionProductId,
+    this.subscriptionExpiresAt,
+    this.subscriptionLastSyncedAt,
+  });
+
+  final String subscriptionStatus;
+  final bool isTrial;
+  final int paidCreditsRemaining;
+  final String? subscriptionProductId;
+  final DateTime? subscriptionExpiresAt;
+  final DateTime? subscriptionLastSyncedAt;
+
+  bool get hasActiveSubscription => subscriptionStatus == 'active' || isTrial;
+  bool get hasCredits => paidCreditsRemaining > 0;
+  bool get hasAccess => hasActiveSubscription || hasCredits;
+
+  factory UserAccessState.fromRow(Map<String, dynamic>? row) {
+    final subscriptionStatus = row?['subscription_status'] as String? ?? 'free';
+    final isTrial = row?['is_trial'] == true;
+    final creditsRaw = row?['paid_credits_remaining'];
+    final paidCreditsRemaining =
+        creditsRaw is int ? creditsRaw : (creditsRaw as num?)?.toInt() ?? 0;
+    final expiresAtRaw = row?['subscription_expires_at'] as String?;
+    final lastSyncedRaw = row?['subscription_last_synced_at'] as String?;
+
+    return UserAccessState(
+      subscriptionStatus: subscriptionStatus,
+      isTrial: isTrial,
+      paidCreditsRemaining: paidCreditsRemaining,
+      subscriptionProductId: row?['subscription_product_id'] as String?,
+      subscriptionExpiresAt:
+          expiresAtRaw != null ? DateTime.tryParse(expiresAtRaw) : null,
+      subscriptionLastSyncedAt:
+          lastSyncedRaw != null ? DateTime.tryParse(lastSyncedRaw) : null,
+    );
+  }
+}
+
+/// Service for syncing RevenueCat purchase data into Supabase.
+/// This now handles both subscriptions and one-time credit packs.
 class SubscriptionSyncService {
+  SubscriptionSyncService._internal();
+
   static final SubscriptionSyncService _instance =
       SubscriptionSyncService._internal();
+
   factory SubscriptionSyncService() => _instance;
-  SubscriptionSyncService._internal();
 
   final _supabase = Supabase.instance.client;
   final _superwall = SuperwallService();
   final _revenueCat = RevenueCatService();
+
   static const MethodChannel _authChannel = MethodChannel('snaplook/auth');
 
-  /// Sync subscription data from RevenueCat to Supabase.
+  static const Set<String> _creditPackProductIds = {
+    'com.snaplook.credits20',
+    'com.snaplook.credits50',
+    'com.snaplook.credits100',
+  };
+
+  static const String _userAccessSelect =
+      'subscription_status, subscription_expires_at, is_trial, '
+      'subscription_last_synced_at, paid_credits_remaining, '
+      'subscription_product_id';
+
+  bool _isCreditPackProduct(String? productId) {
+    final normalized = productId?.trim().toLowerCase() ?? '';
+    if (normalized.isEmpty) return false;
+
+    return _creditPackProductIds.contains(normalized) ||
+        _creditPackProductIds.any((id) => normalized.startsWith('$id:'));
+  }
+
+  Map<String, dynamic>? _extractRpcRow(dynamic response) {
+    if (response is List && response.isNotEmpty && response.first is Map) {
+      return Map<String, dynamic>.from(response.first as Map);
+    }
+
+    if (response is Map) {
+      return Map<String, dynamic>.from(response);
+    }
+
+    return null;
+  }
+
+  Future<int> _syncCreditPurchasesToSupabase({
+    required String userId,
+    required CustomerInfo customerInfo,
+  }) async {
+    final transactions = customerInfo.nonSubscriptionTransactions;
+    if (transactions.isEmpty) {
+      debugPrint('[SubscriptionSync] No non-subscription transactions to sync');
+      return 0;
+    }
+
+    var grantedCredits = 0;
+
+    for (final transaction in transactions) {
+      final productId = transaction.productIdentifier;
+      final transactionId = transaction.transactionIdentifier;
+
+      if (!_isCreditPackProduct(productId)) {
+        continue;
+      }
+
+      if (transactionId.trim().isEmpty) {
+        debugPrint(
+          '[SubscriptionSync] Skipping credit transaction with empty transaction id for product=$productId',
+        );
+        continue;
+      }
+
+      try {
+        final response = await _supabase.rpc('apply_credit_purchase', params: {
+          'p_user_id': userId,
+          'p_product_id': productId,
+          'p_transaction_id': transactionId,
+          'p_source': 'client_sync',
+        });
+
+        final row = _extractRpcRow(response);
+        final success = row?['success'] == true;
+        final creditsAdded = (row?['credits_added'] as num?)?.toInt() ?? 0;
+        final remaining =
+            (row?['paid_credits_remaining'] as num?)?.toInt() ?? 0;
+        final message = row?['message']?.toString() ?? 'unknown';
+
+        if (success && creditsAdded > 0) {
+          grantedCredits += creditsAdded;
+        }
+
+        debugPrint(
+          '[SubscriptionSync] Credit sync tx=$transactionId product=$productId '
+          'success=$success added=$creditsAdded remaining=$remaining message=$message',
+        );
+      } catch (e) {
+        debugPrint(
+          '[SubscriptionSync] Failed to sync credit tx=$transactionId product=$productId: $e',
+        );
+      }
+    }
+
+    return grantedCredits;
+  }
+
+  Future<UserAccessState?> getUserAccessState({String? userId}) async {
+    try {
+      final resolvedUserId = userId ?? _supabase.auth.currentUser?.id;
+      if (resolvedUserId == null) return null;
+
+      final response = await _supabase
+          .from('users')
+          .select(_userAccessSelect)
+          .eq('id', resolvedUserId)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return UserAccessState.fromRow(response);
+    } catch (e) {
+      debugPrint('[SubscriptionSync] Error getting access state: $e');
+      return null;
+    }
+  }
+
+  /// Sync RevenueCat data into Supabase and return the current access state.
   /// Call this after:
-  /// - Successful paywall flow
-  /// - User login
-  /// - App startup (if authenticated)
-  Future<void> syncSubscriptionToSupabase() async {
+  /// - successful paywall flow
+  /// - user login
+  /// - app startup (if authenticated)
+  Future<UserAccessState?> syncSubscriptionToSupabase({
+    CustomerInfo? customerInfo,
+  }) async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
         debugPrint('[SubscriptionSync] No authenticated user - skipping sync');
-        return;
+        return null;
       }
 
       debugPrint(
-          '[SubscriptionSync] Starting RevenueCat sync for user ${user.id}');
+        '[SubscriptionSync] Starting RevenueCat sync for user ${user.id}',
+      );
 
-      // Get FRESH RevenueCat customer info (don't use cache after purchase)
-      CustomerInfo? customerInfo;
+      CustomerInfo? resolvedCustomerInfo = customerInfo;
       try {
-        customerInfo = await Purchases.getCustomerInfo();
+        resolvedCustomerInfo ??= await Purchases.getCustomerInfo();
         debugPrint(
-            '[SubscriptionSync] Fetched fresh customer info from RevenueCat');
+          '[SubscriptionSync] Fetched fresh customer info from RevenueCat',
+        );
       } catch (e) {
         debugPrint(
-            '[SubscriptionSync] Error fetching RevenueCat customer info: $e');
-        await _syncShareExtensionAuthSnapshot(userId: user.id);
-        return;
+          '[SubscriptionSync] Error fetching RevenueCat customer info: $e',
+        );
+        final accessState = await getUserAccessState(userId: user.id);
+        await _syncShareExtensionAuthSnapshot(
+          userId: user.id,
+          accessState: accessState,
+        );
+        return accessState;
       }
 
-      // Parse RevenueCat subscription data
-      final activeEntitlements = customerInfo.entitlements.active.values;
+      final creditsGranted = await _syncCreditPurchasesToSupabase(
+        userId: user.id,
+        customerInfo: resolvedCustomerInfo,
+      );
+
+      final activeEntitlements = resolvedCustomerInfo.entitlements.active.values;
       final entitlement =
-          (activeEntitlements.isNotEmpty) ? activeEntitlements.first : null;
+          activeEntitlements.isNotEmpty ? activeEntitlements.first : null;
       final hasActiveRevenueCat = entitlement != null;
       final isTrial = entitlement?.periodType == PeriodType.trial ||
           entitlement?.periodType == PeriodType.intro;
@@ -57,7 +226,7 @@ class SubscriptionSyncService {
           ? DateTime.tryParse(entitlement!.expirationDate!)?.toIso8601String()
           : null;
       final productId = entitlement?.productIdentifier;
-      final revenueCatUserId = customerInfo.originalAppUserId;
+      final revenueCatUserId = resolvedCustomerInfo.originalAppUserId;
 
       debugPrint('[SubscriptionSync] RevenueCat data:');
       debugPrint('  - originalAppUserId: $revenueCatUserId');
@@ -65,27 +234,17 @@ class SubscriptionSyncService {
       debugPrint('  - isTrial: $isTrial');
       debugPrint('  - productId: $productId');
       debugPrint('  - expiresAt: $expirationDateIso');
+      debugPrint('  - grantedCreditsFromTransactions: $creditsGranted');
 
-      // Check if user has credits (users with credits should not have their status overwritten to 'free')
-      final userResponse = await _supabase
-          .from('users')
-          .select(
-              'paid_credits_remaining, subscription_status, subscription_expires_at, subscription_product_id, is_trial')
-          .eq('id', user.id)
-          .maybeSingle();
+      final currentAccess = await getUserAccessState(userId: user.id);
+      final hasCredits = currentAccess?.hasCredits ?? false;
+      final currentStatus = currentAccess?.subscriptionStatus ?? 'free';
 
-      final hasCredits = (userResponse?['paid_credits_remaining'] ?? 0) > 0;
-      final currentStatus = userResponse?['subscription_status'] ?? 'free';
-
-      // Determine what to sync
       if (hasActiveRevenueCat) {
-        // RevenueCat says active - sync all data from RevenueCat
-        const subscriptionStatus = 'active';
-
         await _supabase.from('users').upsert({
           'id': user.id,
           'revenue_cat_user_id': revenueCatUserId,
-          'subscription_status': subscriptionStatus,
+          'subscription_status': 'active',
           'subscription_expires_at': expirationDateIso,
           'subscription_product_id': productId,
           'is_trial': isTrial,
@@ -94,28 +253,23 @@ class SubscriptionSyncService {
         }, onConflict: 'id');
 
         debugPrint(
-            '[SubscriptionSync] Sync complete - Status: $subscriptionStatus, Trial: $isTrial, Expires: $expirationDateIso');
-
-        // Also sync status to Superwall so it knows about the subscription
-        await _superwall.syncSubscriptionStatus();
+          '[SubscriptionSync] Sync complete - Status: active, Trial: $isTrial, Expires: $expirationDateIso',
+        );
       } else if (hasCredits &&
           (currentStatus == 'active' || currentStatus == 'expired')) {
-        // User has credits but no active RevenueCat subscription
-        // Preserve their existing subscription data entirely (don't overwrite with nulls)
-        // Only update the sync timestamp
+        // The user bought credits but no longer has an active subscription.
+        // Preserve the last known subscription metadata while still updating
+        // the sync timestamp.
         await _supabase.from('users').update({
           'subscription_last_synced_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('id', user.id);
 
         debugPrint(
-            '[SubscriptionSync] User has credits - preserving existing subscription data. Status: $currentStatus');
-
-        // Sync status to Superwall
-        await _superwall.syncSubscriptionStatus();
+          '[SubscriptionSync] User has credits - preserving existing subscription data. Status: $currentStatus',
+        );
       } else {
-        // No RevenueCat subscription and no credits - set to free or expired
-        String subscriptionStatus = 'free';
+        var subscriptionStatus = 'free';
         if (expirationDateIso != null) {
           final expirationDate = DateTime.parse(expirationDateIso);
           if (expirationDate.isBefore(DateTime.now())) {
@@ -133,32 +287,33 @@ class SubscriptionSyncService {
           'subscription_last_synced_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         }, onConflict: 'id');
-
-        // Sync status to Superwall
-        await _superwall.syncSubscriptionStatus();
       }
 
-      await _syncShareExtensionAuthSnapshot(userId: user.id);
+      await _superwall.syncSubscriptionStatus();
+
+      final accessState = await getUserAccessState(userId: user.id);
+      await _syncShareExtensionAuthSnapshot(
+        userId: user.id,
+        accessState: accessState,
+      );
+      return accessState;
     } catch (e, stackTrace) {
       debugPrint('[SubscriptionSync] Error syncing subscription: $e');
       debugPrint('[SubscriptionSync] Stack trace: $stackTrace');
+      return null;
     }
   }
 
-  Future<void> _syncShareExtensionAuthSnapshot({required String userId}) async {
+  Future<void> _syncShareExtensionAuthSnapshot({
+    required String userId,
+    UserAccessState? accessState,
+  }) async {
     try {
-      final userResponse = await _supabase
-          .from('users')
-          .select('subscription_status, is_trial, paid_credits_remaining')
-          .eq('id', userId)
-          .maybeSingle();
-
-      final subscriptionStatus = userResponse?['subscription_status'] ?? 'free';
-      final isTrial = userResponse?['is_trial'] == true;
-      final hasActiveSubscription = subscriptionStatus == 'active' || isTrial;
-      final creditsRaw = userResponse?['paid_credits_remaining'];
-      final availableCredits =
-          creditsRaw is int ? creditsRaw : (creditsRaw as num?)?.toInt() ?? 0;
+      final resolvedAccessState =
+          accessState ?? await getUserAccessState(userId: userId);
+      final hasActiveSubscription =
+          resolvedAccessState?.hasActiveSubscription ?? false;
+      final availableCredits = resolvedAccessState?.paidCreditsRemaining ?? 0;
       final accessToken = _supabase.auth.currentSession?.accessToken;
 
       await _authChannel.invokeMethod('setAuthFlag', {
@@ -175,25 +330,26 @@ class SubscriptionSyncService {
       );
     } catch (e) {
       debugPrint(
-          '[SubscriptionSync] Failed to sync share extension auth snapshot: $e');
+        '[SubscriptionSync] Failed to sync share extension auth snapshot: $e',
+      );
     }
   }
 
-  /// Get cached subscription status from Supabase
+  /// Get cached subscription status from Supabase.
   /// This is fast but may be slightly out of date.
   Future<Map<String, dynamic>?> getCachedSubscriptionStatus() async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) return null;
 
-      final response = await _supabase
+      return await _supabase
           .from('users')
           .select(
-              'subscription_status, subscription_expires_at, is_trial, subscription_last_synced_at')
+            'subscription_status, subscription_expires_at, is_trial, '
+            'subscription_last_synced_at, paid_credits_remaining',
+          )
           .eq('id', user.id)
           .single();
-
-      return response;
     } catch (e) {
       debugPrint('[SubscriptionSync] Error getting cached status: $e');
       return null;
@@ -215,29 +371,25 @@ class SubscriptionSyncService {
       return hoursSinceSync > 1;
     } catch (e) {
       debugPrint('[SubscriptionSync] Error checking cache staleness: $e');
-      return true; // If error, assume stale
+      return true;
     }
   }
 
   /// Identify user with RevenueCat and Superwall.
   /// This links any anonymous purchases to the identified user.
-  Future<void> identify(String userId) async {
+  Future<UserAccessState?> identify(String userId) async {
     debugPrint('[SubscriptionSync] Identifying user $userId with RevenueCat');
 
-    // Identify with RevenueCat - this merges anonymous purchases with the user account
     await _revenueCat.identify(userId);
-
-    // Also identify with Superwall (for backwards compatibility)
     await _superwall.identify(userId);
 
-    // Sync subscription data to Supabase
-    await syncSubscriptionToSupabase();
+    return syncSubscriptionToSupabase();
   }
 
   /// Identify user with Superwall (deprecated - use identify() instead).
   @deprecated
-  Future<void> identifyWithSuperwall(String userId) async {
-    await identify(userId);
+  Future<UserAccessState?> identifyWithSuperwall(String userId) async {
+    return identify(userId);
   }
 
   /// Reset RevenueCat and Superwall identity on logout.

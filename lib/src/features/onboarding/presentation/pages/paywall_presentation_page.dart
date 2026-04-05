@@ -15,10 +15,12 @@ class PaywallPresentationPage extends StatefulWidget {
     super.key,
     required this.userId,
     this.placement = 'onboarding_paywall',
+    this.dismissToHomeIfNoPurchase = false,
   });
 
   final String? userId;
   final String placement;
+  final bool dismissToHomeIfNoPurchase;
 
   @override
   State<PaywallPresentationPage> createState() =>
@@ -65,7 +67,9 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
       debugPrint('[PaywallPresentationPage] Purchase result: $didPurchase');
 
-      // If user purchased and has account, sync subscription to Supabase
+      var hasAccessAfterPurchase = didPurchase;
+
+      // If user purchased and has account, sync purchase data to Supabase.
       if (didPurchase && widget.userId != null) {
         // Show loading overlay while syncing
         if (mounted) {
@@ -82,11 +86,14 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
           await Future.delayed(const Duration(milliseconds: 500));
 
           debugPrint(
-              '[PaywallPresentationPage] Syncing subscription to Supabase...');
-          await SubscriptionSyncService().syncSubscriptionToSupabase();
+              '[PaywallPresentationPage] Syncing purchase data to Supabase...');
+          final accessState =
+              await SubscriptionSyncService().syncSubscriptionToSupabase();
+          hasAccessAfterPurchase = accessState?.hasAccess ?? didPurchase;
           await OnboardingStateService().markPaymentComplete(widget.userId!);
           debugPrint(
-              '[PaywallPresentationPage] Subscription synced successfully');
+              '[PaywallPresentationPage] Purchase data synced successfully. '
+              'hasAccess=$hasAccessAfterPurchase credits=${accessState?.paidCreditsRemaining}');
         } catch (e) {
           debugPrint(
               '[PaywallPresentationPage] Error syncing subscription: $e');
@@ -96,9 +103,15 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       if (!mounted) return;
 
       // Only navigate forward if user purchased
-      if (!didPurchase) {
+      if (!hasAccessAfterPurchase) {
         debugPrint(
             '[PaywallPresentationPage] User dismissed paywall without purchasing - going back');
+        if (widget.dismissToHomeIfNoPurchase) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const MainNavigation()),
+          );
+          return;
+        }
         Navigator.of(context).pop();
         return;
       }
