@@ -69,6 +69,21 @@ class SubscriptionSyncService {
       'subscription_last_synced_at, paid_credits_remaining, '
       'subscription_product_id';
 
+  static Duration purchaseGrantTimeout({
+    required String placement,
+    required bool didPurchase,
+  }) {
+    if (didPurchase) {
+      return const Duration(seconds: 10);
+    }
+
+    if (placement == SuperwallService.defaultPlacement) {
+      return const Duration(seconds: 15);
+    }
+
+    return const Duration(seconds: 6);
+  }
+
   Future<void> _persistUserSyncFields(
     String userId,
     Map<String, dynamic> fields,

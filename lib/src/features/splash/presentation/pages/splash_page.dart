@@ -9,6 +9,7 @@ import '../../../../shared/services/image_preloader.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/subscription_sync_service.dart';
 import '../../../onboarding/presentation/pages/paywall_presentation_page.dart';
+import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../home/domain/providers/history_bootstrap_provider.dart';
 import '../../../wardrobe/domain/providers/history_provider.dart';
 
@@ -129,6 +130,10 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                 '[Splash] User has completed onboarding - routing to home');
             await _bootstrapHistoryUiState();
             nextPage = const MainNavigation();
+          } else if (onboardingRoute == 'welcome') {
+            debugPrint(
+                '[Splash] User has access but still needs to finish onboarding - routing to welcome');
+            nextPage = const WelcomeFreeAnalysisPage();
           } else if (onboardingRoute == 'resubscribe_paywall') {
             debugPrint(
                 '[Splash] User needs more access - routing to credits paywall');
@@ -154,8 +159,16 @@ class _SplashPageState extends ConsumerState<SplashPage> {
               await _bootstrapHistoryUiState();
               nextPage = const MainNavigation();
             } else {
-              await _signOutIncompleteOnboardingSession();
-              nextPage = const LoginPage();
+              final accessState = await SubscriptionSyncService()
+                  .getUserAccessState(userId: user.id);
+              if (accessState?.hasAccess == true) {
+                debugPrint(
+                    '[Splash] Error fallback found access for incomplete onboarding - routing to welcome');
+                nextPage = const WelcomeFreeAnalysisPage();
+              } else {
+                await _signOutIncompleteOnboardingSession();
+                nextPage = const LoginPage();
+              }
             }
           } catch (e2) {
             debugPrint('[Splash] Error checking home access: $e2');

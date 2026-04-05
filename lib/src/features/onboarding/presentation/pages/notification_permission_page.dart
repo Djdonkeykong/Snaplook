@@ -15,7 +15,7 @@ import '../../../../shared/widgets/snaplook_back_button.dart';
 import '../widgets/progress_indicator.dart';
 import 'save_progress_page.dart';
 import 'trial_intro_page.dart';
-import '../../../../../shared/navigation/main_navigation.dart';
+import 'welcome_free_analysis_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../services/onboarding_state_service.dart';
 import '../../../../services/notification_service.dart';
@@ -247,16 +247,13 @@ class _NotificationPermissionPageState
         );
 
         if (hasAccess) {
-          // User already has access - go to home
-          debugPrint('[NotificationPermission] Navigating to home');
+          // User already has access during onboarding - finish onboarding first.
+          debugPrint('[NotificationPermission] User has access during onboarding - navigating to welcome');
           if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
+            Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (context) => const MainNavigation(
-                  key: ValueKey('fresh-main-nav'),
-                ),
+                builder: (context) => const WelcomeFreeAnalysisPage(),
               ),
-              (route) => false,
             );
           }
         } else {

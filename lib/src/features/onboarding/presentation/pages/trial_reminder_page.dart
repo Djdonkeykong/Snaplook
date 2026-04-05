@@ -217,24 +217,27 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                           params: const {
                             'occurrence': 1,
                             'source': 'trial_reminder',
-                          },
+                            },
                         );
-
-                        final grantedAccessState = userId != null
-                            ? await SubscriptionSyncService().waitForPurchaseGrant(
-                                userId: userId,
-                                previousAccessState: accessStateBeforePaywall,
-                                timeout: didPurchase
-                                    ? const Duration(seconds: 10)
-                                    : const Duration(seconds: 6),
-                              )
-                            : null;
 
                         if (!mounted) return;
 
                         setState(() {
                           _isPresenting = false;
                         });
+
+                        final grantedAccessState = userId != null
+                            ? await SubscriptionSyncService().waitForPurchaseGrant(
+                                userId: userId,
+                                previousAccessState: accessStateBeforePaywall,
+                                timeout: SubscriptionSyncService.purchaseGrantTimeout(
+                                  placement: 'onboarding_paywall',
+                                  didPurchase: didPurchase,
+                                ),
+                              )
+                            : null;
+
+                        if (!mounted) return;
 
                         if ((didPurchase || grantedAccessState?.hasAccess == true) &&
                             userId != null) {

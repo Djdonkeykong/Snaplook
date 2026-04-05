@@ -25,6 +25,7 @@ import '../../domain/providers/gender_provider.dart';
 import '../../domain/providers/onboarding_preferences_provider.dart';
 import 'notification_permission_page.dart';
 import 'discovery_source_page.dart';
+import 'welcome_free_analysis_page.dart';
 
 class SaveProgressPage extends ConsumerStatefulWidget {
   const SaveProgressPage({super.key});
@@ -168,9 +169,10 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                 .waitForPurchaseGrant(
               userId: userId,
               previousAccessState: accessStateBeforePaywall,
-              timeout: didPurchase
-                  ? const Duration(seconds: 10)
-                  : const Duration(seconds: 6),
+              timeout: SubscriptionSyncService.purchaseGrantTimeout(
+                placement: SuperwallService.creditsPlacement,
+                didPurchase: didPurchase,
+              ),
             );
 
             if (!mounted) return;
@@ -203,8 +205,30 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
           }
         }
       } else {
-        // New user (hasn't completed onboarding) → TrialIntroPage
-        debugPrint('[SaveProgress] New user - navigating to trial intro');
+        UserAccessState? accessState;
+        try {
+          accessState = await SubscriptionSyncService()
+              .syncSubscriptionToSupabase()
+              .timeout(const Duration(seconds: 10));
+        } catch (e) {
+          debugPrint('[SaveProgress] Error syncing new-user purchase state: $e');
+        }
+
+        final hasAccess = accessState?.hasAccess ?? false;
+        if (hasAccess) {
+          debugPrint('[SaveProgress] New user with access - navigating to welcome');
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => const WelcomeFreeAnalysisPage(),
+              ),
+            );
+          }
+          return;
+        }
+
+        // New user (hasn't completed onboarding and has no access) -> TrialIntroPage
+        debugPrint('[SaveProgress] New user without access - navigating to trial intro');
         if (mounted) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const TrialIntroPage()),

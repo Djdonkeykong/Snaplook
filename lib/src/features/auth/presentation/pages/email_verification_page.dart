@@ -11,6 +11,7 @@ import '../../domain/providers/auth_provider.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../onboarding/presentation/pages/notification_permission_page.dart';
+import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../../services/paywall_helper.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
@@ -326,17 +327,13 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage>
               final hasOnboardingData = discoverySource != null;
 
               if (hasAccess) {
-                // User already has access - go straight to home
+                // User already has access, but onboarding still needs to finish.
                 print(
-                    '[EmailVerification] New user with access - navigating to home');
-                ref.read(selectedIndexProvider.notifier).state = 0;
-                ref.invalidate(selectedIndexProvider);
-                ref.invalidate(scrollToTopTriggerProvider);
-                ref.invalidate(isAtHomeRootProvider);
+                    '[EmailVerification] New user with access - navigating to welcome');
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                     builder: (context) =>
-                        const MainNavigation(key: ValueKey('fresh-main-nav')),
+                        const WelcomeFreeAnalysisPage(),
                   ),
                   (route) => false,
                 );

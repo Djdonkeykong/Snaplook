@@ -451,8 +451,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                       debugPrint(
                                           '[LoginPage] Already authenticated - checking trial/subscription');
                                       nextPage = hasAccess
-                                          ? const MainNavigation(
-                                              key: ValueKey('fresh-main-nav'))
+                                          ? const WelcomeFreeAnalysisPage()
                                           : const TrialIntroPage();
                                       break;
                                     case 'paywall':
@@ -460,8 +459,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                       debugPrint(
                                           '[LoginPage] Resuming at paywall/account - has access: $hasAccess');
                                       nextPage = hasAccess
-                                          ? const MainNavigation(
-                                              key: ValueKey('fresh-main-nav'))
+                                          ? const WelcomeFreeAnalysisPage()
                                           : const TrialIntroPage();
                                       break;
                                     case 'welcome':
@@ -690,8 +688,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     debugPrint(
                                         '[LoginPage] Already authenticated - checking trial/subscription');
                                     nextPage = hasAccess
-                                        ? const MainNavigation(
-                                            key: ValueKey('fresh-main-nav'))
+                                        ? const WelcomeFreeAnalysisPage()
                                         : const TrialIntroPage();
                                     break;
                                   case 'paywall':
@@ -699,8 +696,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                                     debugPrint(
                                         '[LoginPage] Resuming at paywall/account - has access: $hasAccess');
                                     nextPage = hasAccess
-                                        ? const MainNavigation(
-                                            key: ValueKey('fresh-main-nav'))
+                                        ? const WelcomeFreeAnalysisPage()
                                         : const TrialIntroPage();
                                     break;
                                   case 'welcome':

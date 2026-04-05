@@ -95,9 +95,10 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
               ? await SubscriptionSyncService().waitForPurchaseGrant(
                   userId: userId,
                   previousAccessState: accessStateBeforePaywall,
-                  timeout: didPurchase
-                      ? const Duration(seconds: 10)
-                      : const Duration(seconds: 6),
+                  timeout: SubscriptionSyncService.purchaseGrantTimeout(
+                    placement: 'onboarding_paywall',
+                    didPurchase: didPurchase,
+                  ),
                 )
               : null;
 

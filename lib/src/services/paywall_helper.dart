@@ -36,9 +36,10 @@ class PaywallHelper {
         grantedAccessState = await syncService.waitForPurchaseGrant(
           userId: userId,
           previousAccessState: accessStateBeforePaywall,
-          timeout: didPurchase
-              ? const Duration(seconds: 10)
-              : const Duration(seconds: 6),
+          timeout: SubscriptionSyncService.purchaseGrantTimeout(
+            placement: placement,
+            didPurchase: didPurchase,
+          ),
         );
       }
 
