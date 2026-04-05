@@ -10,7 +10,8 @@ import '../../../../services/revenuecat_service.dart';
 import '../../../../services/subscription_sync_service.dart';
 
 // Provider to fetch user subscription info from Supabase
-final userSubscriptionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+final userSubscriptionProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
   final userId = Supabase.instance.client.auth.currentUser?.id;
   if (userId == null) return null;
 
@@ -81,8 +82,8 @@ class ManageSubscriptionPage extends ConsumerWidget {
 
     try {
       await RevenueCatService().restorePurchases();
-      final accessState = await SubscriptionSyncService()
-          .syncSubscriptionToSupabase();
+      final accessState =
+          await SubscriptionSyncService().syncSubscriptionToSupabase();
       ref.invalidate(userSubscriptionProvider);
 
       if (!context.mounted) return;
@@ -163,20 +164,24 @@ class ManageSubscriptionPage extends ConsumerWidget {
           ),
           data: (subscriptionData) {
             // Extract subscription info from Supabase users table
-            final subscriptionStatus = subscriptionData?['subscription_status'] as String? ?? 'free';
+            final subscriptionStatus =
+                subscriptionData?['subscription_status'] as String? ?? 'free';
             final isTrial = subscriptionData?['is_trial'] as bool? ?? false;
-            final credits = subscriptionData?['paid_credits_remaining'] as int? ?? 0;
+            final credits =
+                subscriptionData?['paid_credits_remaining'] as int? ?? 0;
             final subscriptionProductId =
                 subscriptionData?['subscription_product_id'] as String?;
 
             // Determine display values
             final isSubscribed = subscriptionStatus == 'active' || isTrial;
-            final displayStatus = _formatSubscriptionStatus(subscriptionStatus, isTrial);
-            final displayCredits = credits > 0 ? '$credits credits' : '0 credits';
-            final subscriptionSummary =
-                subscriptionProductId != null && subscriptionProductId.isNotEmpty
-                    ? _formatMembership(subscriptionProductId)
-                    : (credits > 0 && !isSubscribed ? 'Credits Pack' : displayStatus);
+            final displayStatus =
+                _formatSubscriptionStatus(subscriptionStatus, isTrial);
+            final displayCredits =
+                credits > 0 ? '$credits credits' : '0 credits';
+            final subscriptionSummary = subscriptionProductId != null &&
+                    subscriptionProductId.isNotEmpty
+                ? _formatMembership(subscriptionProductId)
+                : (credits > 0 && !isSubscribed ? 'Scan Pack' : displayStatus);
 
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: spacing.l),
@@ -184,7 +189,6 @@ class ManageSubscriptionPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: spacing.l),
-
                   _SettingsCard(
                     showShadow: true,
                     children: [
@@ -192,8 +196,9 @@ class ManageSubscriptionPage extends ConsumerWidget {
                       _SettingsRow.value(
                         label: 'Current Plan',
                         value: subscriptionSummary,
-                        valueColor:
-                            isSubscribed ? AppColors.secondary : colorScheme.onSurface,
+                        valueColor: isSubscribed
+                            ? AppColors.secondary
+                            : colorScheme.onSurface,
                       ),
                       const SizedBox(height: 8),
                       _Divider(),
@@ -208,9 +213,7 @@ class ManageSubscriptionPage extends ConsumerWidget {
                       const SizedBox(height: 8),
                     ],
                   ),
-
                   SizedBox(height: spacing.l),
-
                   _SettingsCard(
                     children: [
                       const SizedBox(height: 8),
@@ -230,14 +233,12 @@ class ManageSubscriptionPage extends ConsumerWidget {
                       const SizedBox(height: 8),
                     ],
                   ),
-
                   SizedBox(height: spacing.l),
-
                   _SettingsCard(
                     children: [
                       Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
                         child: Text(
                           'Subscriptions are managed in the ${Platform.isIOS ? 'App Store' : 'Google Play'}. Remaining credit packs stay synced to your Snaplook account through Supabase, so they follow you when you sign in.',
                           style: TextStyle(
@@ -272,19 +273,24 @@ class ManageSubscriptionPage extends ConsumerWidget {
   }
 
   String _formatMembership(String raw) {
-    final cleaned = raw.trim();
-    final normalized = cleaned.replaceAll(RegExp(r'[_-]+'), ' ').trim();
-    final segments =
-        normalized.split(RegExp(r'\s+')).where((segment) => segment.isNotEmpty);
-    if (segments.isEmpty) {
+    final normalized = raw.trim().toLowerCase();
+    if (normalized.isEmpty) {
       return 'Free';
     }
-    return segments
-        .map(
-          (segment) =>
-              segment[0].toUpperCase() + segment.substring(1).toLowerCase(),
-        )
-        .join(' ');
+
+    if (normalized.contains('yearly')) {
+      return 'Yearly';
+    }
+
+    if (normalized.contains('monthly')) {
+      return 'Monthly';
+    }
+
+    if (normalized.contains('credits') || normalized.contains('scanpack')) {
+      return 'Scan Pack';
+    }
+
+    return 'Premium';
   }
 }
 
@@ -304,13 +310,15 @@ class _SettingsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: showShadow ? [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ] : null,
+        boxShadow: showShadow
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
       ),
       child: Column(children: children),
     );
@@ -381,7 +389,8 @@ class _SettingsRow extends StatelessWidget {
             ),
             if (value != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
                   color: AppColors.outlineVariant,
