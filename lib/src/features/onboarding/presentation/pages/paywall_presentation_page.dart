@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../services/analytics_service.dart';
@@ -28,6 +29,8 @@ class PaywallPresentationPage extends StatefulWidget {
 }
 
 class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
+  static const _splashAssetPath = 'assets/images/snaplook-logo-splash.png';
+  static const _logoWidth = 93.027;
   bool _isLoading = true;
   bool _hasPresented = false;
 
@@ -177,21 +180,60 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.secondary,
-                ),
-                backgroundColor: colorScheme.outlineVariant,
-                strokeWidth: 3,
-              ),
-            )
-          : const SizedBox.shrink(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.secondary,
+        body: _isLoading
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  Center(
+                    child: SizedBox(
+                      width: _logoWidth,
+                      child: Image.asset(
+                        _splashAssetPath,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 44,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                            strokeWidth: 2.4,
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          'Loading paywall...',
+                          style: TextStyle(
+                            color: Color(0xF2FFFFFF),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : const SizedBox.shrink(),
+      ),
     );
   }
 }

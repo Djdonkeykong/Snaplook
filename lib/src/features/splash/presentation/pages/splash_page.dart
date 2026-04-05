@@ -2,14 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../../../shared/navigation/main_navigation.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../auth/domain/providers/auth_provider.dart';
 import '../../../../shared/services/image_preloader.dart';
 import '../../../../services/onboarding_state_service.dart';
-import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
+import '../../../../services/subscription_sync_service.dart';
 import '../../../onboarding/presentation/pages/paywall_presentation_page.dart';
 import '../../../home/domain/providers/history_bootstrap_provider.dart';
 import '../../../wardrobe/domain/providers/history_provider.dart';
@@ -29,6 +27,15 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   static const Color _loaderTextColor = Color(0xF2FFFFFF);
   static const double _loaderBottomSpacing = 44;
   bool _started = false;
+
+  Future<void> _signOutIncompleteOnboardingSession() async {
+    try {
+      await ref.read(authServiceProvider).signOut();
+      debugPrint('[Splash] Signed out incomplete onboarding session');
+    } catch (e) {
+      debugPrint('[Splash] Failed to sign out incomplete onboarding session: $e');
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -99,6 +106,15 @@ class _SplashPageState extends ConsumerState<SplashPage> {
         // No user - go to login
         nextPage = const LoginPage();
       } else {
+        try {
+          await SubscriptionSyncService()
+              .identify(user.id)
+              .timeout(const Duration(seconds: 4));
+          debugPrint('[Splash] Re-identified restored user with RevenueCat');
+        } catch (e) {
+          debugPrint('[Splash] Failed to re-identify restored user: $e');
+        }
+
         // User is authenticated - check onboarding state
         final onboardingService = OnboardingStateService();
 
@@ -113,16 +129,6 @@ class _SplashPageState extends ConsumerState<SplashPage> {
                 '[Splash] User has completed onboarding - routing to home');
             await _bootstrapHistoryUiState();
             nextPage = const MainNavigation();
-          } else if (onboardingRoute == 'welcome') {
-            // Payment complete but need to finish onboarding
-            debugPrint(
-                '[Splash] User paid but needs to complete onboarding - routing to welcome');
-            nextPage = const WelcomeFreeAnalysisPage();
-          } else if (onboardingRoute == 'paywall') {
-            // User abandoned at paywall - send them back to complete payment
-            debugPrint(
-                '[Splash] User abandoned at paywall - routing back to paywall');
-            nextPage = PaywallPresentationPage(userId: user.id);
           } else if (onboardingRoute == 'resubscribe_paywall') {
             debugPrint(
                 '[Splash] User needs more access - routing to credits paywall');
@@ -132,9 +138,11 @@ class _SplashPageState extends ConsumerState<SplashPage> {
               dismissToHomeIfNoPurchase: true,
             );
           } else {
-            // Onboarding not started or abandoned before account creation - send to login
+            // Product decision: incomplete onboarding sessions should not auto-resume
+            // after relaunch. Sign the user out and require an explicit login.
             debugPrint(
-                '[Splash] User onboarding not started or incomplete - routing to login');
+                '[Splash] Incomplete onboarding route ($onboardingRoute) - signing out and routing to login');
+            await _signOutIncompleteOnboardingSession();
             nextPage = const LoginPage();
           }
         } catch (e) {
@@ -146,12 +154,12 @@ class _SplashPageState extends ConsumerState<SplashPage> {
               await _bootstrapHistoryUiState();
               nextPage = const MainNavigation();
             } else {
-              // Default to login
+              await _signOutIncompleteOnboardingSession();
               nextPage = const LoginPage();
             }
           } catch (e2) {
             debugPrint('[Splash] Error checking home access: $e2');
-            // Last resort - go to login
+            await _signOutIncompleteOnboardingSession();
             nextPage = const LoginPage();
           }
         }

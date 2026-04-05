@@ -69,6 +69,32 @@ class SubscriptionSyncService {
       'subscription_last_synced_at, paid_credits_remaining, '
       'subscription_product_id';
 
+  Future<void> _persistUserSyncFields(
+    String userId,
+    Map<String, dynamic> fields,
+  ) async {
+    final payload = <String, dynamic>{
+      ...fields,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    final updatedRow = await _supabase
+        .from('users')
+        .update(payload)
+        .eq('id', userId)
+        .select('id')
+        .maybeSingle();
+
+    if (updatedRow != null) {
+      return;
+    }
+
+    await _supabase.from('users').upsert({
+      'id': userId,
+      ...payload,
+    }, onConflict: 'id');
+  }
+
   bool _hasMeaningfulPurchaseChange(
     UserAccessState? before,
     UserAccessState? after,
@@ -161,16 +187,14 @@ class SubscriptionSyncService {
       final currentStatus = currentAccess?.subscriptionStatus ?? 'free';
 
       if (hasActiveRevenueCat) {
-        await _supabase.from('users').upsert({
-          'id': user.id,
+        await _persistUserSyncFields(user.id, {
           'revenue_cat_user_id': revenueCatUserId,
           'subscription_status': 'active',
           'subscription_expires_at': expirationDateIso,
           'subscription_product_id': productId,
           'is_trial': isTrial,
           'subscription_last_synced_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        }, onConflict: 'id');
+        });
 
         debugPrint(
           '[SubscriptionSync] Sync complete - Status: active, Trial: $isTrial, Expires: $expirationDateIso',
@@ -197,16 +221,14 @@ class SubscriptionSyncService {
           }
         }
 
-        await _supabase.from('users').upsert({
-          'id': user.id,
+        await _persistUserSyncFields(user.id, {
           'revenue_cat_user_id': revenueCatUserId,
           'subscription_status': subscriptionStatus,
           'subscription_expires_at': expirationDateIso,
           'subscription_product_id': productId,
           'is_trial': isTrial,
           'subscription_last_synced_at': DateTime.now().toIso8601String(),
-          'updated_at': DateTime.now().toIso8601String(),
-        }, onConflict: 'id');
+        });
       }
 
       await _superwall.syncSubscriptionStatus();

@@ -38,6 +38,7 @@ import 'src/features/favorites/domain/providers/favorites_provider.dart';
 import 'src/services/analytics_service.dart';
 import 'src/services/superwall_service.dart';
 import 'src/services/revenuecat_service.dart';
+import 'src/services/subscription_sync_service.dart';
 import 'src/services/notification_service.dart';
 import 'src/services/debug_log_service.dart';
 import 'dart:io';
@@ -256,6 +257,8 @@ void main() async {
     debugPrint('[Auth] Failed to sync auth state: $e');
   }
 
+  final restoredUserId = Supabase.instance.client.auth.currentUser?.id;
+
   // Initialize RevenueCat for subscriptions
   try {
     // Use platform-specific API key
@@ -265,9 +268,12 @@ void main() async {
         : (dotenv.env['REVENUECAT_ANDROID_API_KEY'] ??
             'goog_OiuFmkgbbrZuNQJnVUQRanFRnYp');
 
-    await RevenueCatService().initialize(apiKey: revenueCatApiKey);
+    await RevenueCatService().initialize(
+      apiKey: revenueCatApiKey,
+      userId: restoredUserId,
+    );
     debugPrint(
-        '[RevenueCat] Initialized successfully with ${Platform.isIOS ? "iOS" : "Android"} API key');
+        '[RevenueCat] Initialized successfully with ${Platform.isIOS ? "iOS" : "Android"} API key for ${restoredUserId ?? "anonymous"}');
   } catch (e) {
     debugPrint('[RevenueCat] Initialization failed: $e');
   }
@@ -309,7 +315,10 @@ void main() async {
           tag: 'Main',
           level: DebugLogLevel.info,
         );
-        await SuperwallService().initialize(apiKey: superwallApiKey);
+        await SuperwallService().initialize(
+          apiKey: superwallApiKey,
+          userId: Supabase.instance.client.auth.currentUser?.id,
+        );
         debugLog.log(
           'Superwall initialized successfully',
           tag: 'Main',
