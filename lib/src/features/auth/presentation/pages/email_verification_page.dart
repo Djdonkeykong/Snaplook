@@ -179,12 +179,23 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage>
                   '[EmailVerification] Error updating checkpoint: $checkpointError');
             }
 
+            final syncService = SubscriptionSyncService();
+            final accessStateBeforeIdentify =
+                await syncService.getUserAccessState(userId: userId);
+
             // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
-            // This must happen BEFORE checking subscription status
+            // This must happen BEFORE checking subscription status.
+            // Credit packs are granted asynchronously by the RevenueCat webhook,
+            // so we also wait briefly for the resulting balance to land.
             print(
                 '[EmailVerification] Linking RevenueCat subscription to account...');
             try {
-              await SubscriptionSyncService().identify(userId);
+              await syncService.identify(userId);
+              await syncService.waitForPurchaseGrant(
+                userId: userId,
+                previousAccessState: accessStateBeforeIdentify,
+                timeout: const Duration(seconds: 30),
+              );
               print(
                   '[EmailVerification] RevenueCat subscription linked and synced');
             } catch (linkError) {
@@ -283,15 +294,14 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage>
             print(
                 '[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
 
-            final accessState = await SubscriptionSyncService()
-                .getUserAccessState(userId: userId);
+            final accessState =
+                await syncService.getUserAccessState(userId: userId);
             final hasActiveSubscription =
                 accessState?.hasActiveSubscription ?? false;
             final hasCredits = accessState?.hasCredits ?? false;
             final hasAccess = accessState?.hasAccess ?? false;
 
-            print(
-                '[EmailVerification] Access state: hasAccess=$hasAccess '
+            print('[EmailVerification] Access state: hasAccess=$hasAccess '
                 'hasActiveSubscription=$hasActiveSubscription '
                 'hasCredits=$hasCredits '
                 'credits=${accessState?.paidCreditsRemaining}');
@@ -332,8 +342,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage>
                     '[EmailVerification] New user with access - navigating to welcome');
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (context) =>
-                        const WelcomeFreeAnalysisPage(),
+                    builder: (context) => const WelcomeFreeAnalysisPage(),
                   ),
                   (route) => false,
                 );
