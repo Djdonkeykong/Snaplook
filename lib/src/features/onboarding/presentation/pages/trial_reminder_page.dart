@@ -207,6 +207,10 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                       try {
                         final userId =
                             Supabase.instance.client.auth.currentUser?.id;
+                        final accessStateBeforePaywall = userId != null
+                            ? await SubscriptionSyncService()
+                                .getUserAccessState(userId: userId)
+                            : null;
                         final didPurchase =
                             await SuperwallService().presentPaywall(
                           placement: 'onboarding_paywall',
@@ -216,13 +220,24 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                           },
                         );
 
+                        final grantedAccessState = userId != null
+                            ? await SubscriptionSyncService().waitForPurchaseGrant(
+                                userId: userId,
+                                previousAccessState: accessStateBeforePaywall,
+                                timeout: didPurchase
+                                    ? const Duration(seconds: 10)
+                                    : const Duration(seconds: 6),
+                              )
+                            : null;
+
                         if (!mounted) return;
 
                         setState(() {
                           _isPresenting = false;
                         });
 
-                        if (didPurchase && userId != null) {
+                        if ((didPurchase || grantedAccessState?.hasAccess == true) &&
+                            userId != null) {
                           // User purchased - sync subscription and navigate to welcome or home
                           debugPrint(
                               '[TrialReminder] Purchase completed - syncing subscription');

@@ -64,95 +64,23 @@ class SubscriptionSyncService {
 
   static const MethodChannel _authChannel = MethodChannel('snaplook/auth');
 
-  static const Set<String> _creditPackProductIds = {
-    'com.snaplook.credits20',
-    'com.snaplook.credits50',
-    'com.snaplook.credits100',
-  };
-
   static const String _userAccessSelect =
       'subscription_status, subscription_expires_at, is_trial, '
       'subscription_last_synced_at, paid_credits_remaining, '
       'subscription_product_id';
 
-  bool _isCreditPackProduct(String? productId) {
-    final normalized = productId?.trim().toLowerCase() ?? '';
-    if (normalized.isEmpty) return false;
+  bool _hasMeaningfulPurchaseChange(
+    UserAccessState? before,
+    UserAccessState? after,
+  ) {
+    if (after == null) return false;
+    if (before == null) return after.hasAccess;
 
-    return _creditPackProductIds.contains(normalized) ||
-        _creditPackProductIds.any((id) => normalized.startsWith('$id:'));
-  }
-
-  Map<String, dynamic>? _extractRpcRow(dynamic response) {
-    if (response is List && response.isNotEmpty && response.first is Map) {
-      return Map<String, dynamic>.from(response.first as Map);
-    }
-
-    if (response is Map) {
-      return Map<String, dynamic>.from(response);
-    }
-
-    return null;
-  }
-
-  Future<int> _syncCreditPurchasesToSupabase({
-    required String userId,
-    required CustomerInfo customerInfo,
-  }) async {
-    final transactions = customerInfo.nonSubscriptionTransactions;
-    if (transactions.isEmpty) {
-      debugPrint('[SubscriptionSync] No non-subscription transactions to sync');
-      return 0;
-    }
-
-    var grantedCredits = 0;
-
-    for (final transaction in transactions) {
-      final productId = transaction.productIdentifier;
-      final transactionId = transaction.transactionIdentifier;
-
-      if (!_isCreditPackProduct(productId)) {
-        continue;
-      }
-
-      if (transactionId.trim().isEmpty) {
-        debugPrint(
-          '[SubscriptionSync] Skipping credit transaction with empty transaction id for product=$productId',
-        );
-        continue;
-      }
-
-      try {
-        final response = await _supabase.rpc('apply_credit_purchase', params: {
-          'p_user_id': userId,
-          'p_product_id': productId,
-          'p_transaction_id': transactionId,
-          'p_source': 'client_sync',
-        });
-
-        final row = _extractRpcRow(response);
-        final success = row?['success'] == true;
-        final creditsAdded = (row?['credits_added'] as num?)?.toInt() ?? 0;
-        final remaining =
-            (row?['paid_credits_remaining'] as num?)?.toInt() ?? 0;
-        final message = row?['message']?.toString() ?? 'unknown';
-
-        if (success && creditsAdded > 0) {
-          grantedCredits += creditsAdded;
-        }
-
-        debugPrint(
-          '[SubscriptionSync] Credit sync tx=$transactionId product=$productId '
-          'success=$success added=$creditsAdded remaining=$remaining message=$message',
-        );
-      } catch (e) {
-        debugPrint(
-          '[SubscriptionSync] Failed to sync credit tx=$transactionId product=$productId: $e',
-        );
-      }
-    }
-
-    return grantedCredits;
+    return (!before.hasActiveSubscription && after.hasActiveSubscription) ||
+        after.paidCreditsRemaining > before.paidCreditsRemaining ||
+        ((before.subscriptionProductId ?? '') !=
+                (after.subscriptionProductId ?? '') &&
+            after.subscriptionProductId != null);
   }
 
   Future<UserAccessState?> getUserAccessState({String? userId}) async {
@@ -174,11 +102,9 @@ class SubscriptionSyncService {
     }
   }
 
-  /// Sync RevenueCat data into Supabase and return the current access state.
-  /// Call this after:
-  /// - successful paywall flow
-  /// - user login
-  /// - app startup (if authenticated)
+  /// Sync RevenueCat subscription metadata into Supabase and return the
+  /// current access state. Credit packs are granted by the RevenueCat webhook
+  /// so we don't blindly replay all historical consumable transactions here.
   Future<UserAccessState?> syncSubscriptionToSupabase({
     CustomerInfo? customerInfo,
   }) async {
@@ -211,11 +137,6 @@ class SubscriptionSyncService {
         return accessState;
       }
 
-      final creditsGranted = await _syncCreditPurchasesToSupabase(
-        userId: user.id,
-        customerInfo: resolvedCustomerInfo,
-      );
-
       final activeEntitlements = resolvedCustomerInfo.entitlements.active.values;
       final entitlement =
           activeEntitlements.isNotEmpty ? activeEntitlements.first : null;
@@ -234,7 +155,6 @@ class SubscriptionSyncService {
       debugPrint('  - isTrial: $isTrial');
       debugPrint('  - productId: $productId');
       debugPrint('  - expiresAt: $expirationDateIso');
-      debugPrint('  - grantedCreditsFromTransactions: $creditsGranted');
 
       final currentAccess = await getUserAccessState(userId: user.id);
       final hasCredits = currentAccess?.hasCredits ?? false;
@@ -301,6 +221,46 @@ class SubscriptionSyncService {
       debugPrint('[SubscriptionSync] Error syncing subscription: $e');
       debugPrint('[SubscriptionSync] Stack trace: $stackTrace');
       return null;
+    }
+  }
+
+  /// Poll Supabase for the result of a purchase that may still be propagating
+  /// through the RevenueCat webhook or RC customer-info refresh.
+  Future<UserAccessState?> waitForPurchaseGrant({
+    required String userId,
+    UserAccessState? previousAccessState,
+    Duration timeout = const Duration(seconds: 10),
+    Duration pollInterval = const Duration(seconds: 1),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+
+    while (true) {
+      UserAccessState? latestAccessState;
+      try {
+        latestAccessState =
+            await syncSubscriptionToSupabase() ??
+                await getUserAccessState(userId: userId);
+      } catch (e) {
+        debugPrint('[SubscriptionSync] Error while waiting for purchase grant: $e');
+      }
+
+      if (_hasMeaningfulPurchaseChange(previousAccessState, latestAccessState)) {
+        debugPrint(
+          '[SubscriptionSync] Purchase grant detected for user=$userId '
+          'credits=${latestAccessState?.paidCreditsRemaining} '
+          'subscription=${latestAccessState?.subscriptionStatus}',
+        );
+        return latestAccessState;
+      }
+
+      if (DateTime.now().isAfter(deadline)) {
+        debugPrint(
+          '[SubscriptionSync] Timed out waiting for purchase grant for user=$userId',
+        );
+        return null;
+      }
+
+      await Future.delayed(pollInterval);
     }
   }
 

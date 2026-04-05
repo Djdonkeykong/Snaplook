@@ -167,6 +167,9 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
                     controller: _emailController,
                     focusNode: _emailFocusNode,
                     keyboardType: TextInputType.emailAddress,
+                    cursorColor: AppColors.secondary,
+                    cursorWidth: 2.4,
+                    cursorRadius: const Radius.circular(2),
                     style: const TextStyle(
                       fontSize: 16,
                       fontFamily: 'PlusJakartaSans',
@@ -202,7 +205,7 @@ class _EmailSignInPageState extends ConsumerState<EmailSignInPage> {
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: const BorderSide(
-                          color: Colors.black,
+                          color: AppColors.secondary,
                           width: 2,
                         ),
                       ),

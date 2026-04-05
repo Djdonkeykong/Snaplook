@@ -17,6 +17,10 @@ class PaywallHelper {
   }) async {
     try {
       debugPrint('[PaywallHelper] Presenting Superwall paywall...');
+      final syncService = SubscriptionSyncService();
+      final accessStateBeforePaywall = userId != null
+          ? await syncService.getUserAccessState(userId: userId)
+          : null;
 
       // Present Superwall paywall
       final didPurchase = await SuperwallService().presentPaywall(
@@ -27,13 +31,27 @@ class PaywallHelper {
 
       debugPrint('[PaywallHelper] Purchase result: $didPurchase');
 
+      UserAccessState? grantedAccessState;
+      if (userId != null) {
+        grantedAccessState = await syncService.waitForPurchaseGrant(
+          userId: userId,
+          previousAccessState: accessStateBeforePaywall,
+          timeout: didPurchase
+              ? const Duration(seconds: 10)
+              : const Duration(seconds: 6),
+        );
+      }
+
+      final purchaseConfirmed = didPurchase || grantedAccessState != null;
+
       // If user purchased and has account, identify user and sync purchase data
       // to Supabase. This covers both subscriptions and one-time credit packs.
-      if (didPurchase && userId != null) {
+      if (purchaseConfirmed && userId != null) {
         try {
           debugPrint('[PaywallHelper] Identifying user and syncing purchase data...');
           // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
-          final accessState = await SubscriptionSyncService().identify(userId);
+          final accessState =
+              grantedAccessState ?? await SubscriptionSyncService().identify(userId);
           await OnboardingStateService().markPaymentComplete(userId);
           debugPrint(
               '[PaywallHelper] User identified and purchase data synced successfully. '
@@ -43,7 +61,7 @@ class PaywallHelper {
         }
       }
 
-      return didPurchase;
+      return purchaseConfirmed;
     } catch (e) {
       debugPrint('[PaywallHelper] Error during paywall presentation: $e');
       return false;

@@ -39,16 +39,22 @@ class EmailVerificationPage extends ConsumerStatefulWidget {
       _EmailVerificationPageState();
 }
 
-class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
+class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage>
+    with SingleTickerProviderStateMixin {
   static const int _otpLength = 6;
   final TextEditingController _otpController = TextEditingController();
   final FocusNode _otpFocusNode = FocusNode();
   bool _isVerifying = false;
   bool _isResending = false;
+  late final AnimationController _cursorBlinkController;
 
   @override
   void initState() {
     super.initState();
+    _cursorBlinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
     _otpController.addListener(_onOtpChanged);
     _otpFocusNode.addListener(_onOtpFocusChanged);
 
@@ -62,6 +68,7 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
 
   @override
   void dispose() {
+    _cursorBlinkController.dispose();
     _otpController
       ..removeListener(_onOtpChanged)
       ..dispose();
@@ -542,19 +549,39 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: Colors.black,
+                                color: isActive
+                                    ? AppColors.secondary
+                                    : Colors.black,
                                 width: isActive ? 2.4 : 2,
                               ),
                             ),
-                            child: Text(
-                              digit,
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'PlusJakartaSans',
-                                color: Colors.black,
-                              ),
-                            ),
+                            child: digit.isNotEmpty
+                                ? Text(
+                                    digit,
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      fontFamily: 'PlusJakartaSans',
+                                      color: Colors.black,
+                                    ),
+                                  )
+                                : isActive
+                                    ? FadeTransition(
+                                        opacity: Tween<double>(
+                                          begin: 1,
+                                          end: 0.15,
+                                        ).animate(_cursorBlinkController),
+                                        child: Container(
+                                          width: 3,
+                                          height: 34,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.secondary,
+                                            borderRadius:
+                                                BorderRadius.circular(2),
+                                          ),
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(),
                           );
                         }),
                       ),

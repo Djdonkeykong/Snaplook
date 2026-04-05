@@ -345,6 +345,8 @@ class OnboardingStateService {
       final paidCreditsRemaining =
           creditsRaw is int ? creditsRaw : (creditsRaw as num?)?.toInt() ?? 0;
       final hasCredits = paidCreditsRemaining > 0;
+      final hasActiveSubscription = subscriptionStatus == 'active';
+      final hasAccess = hasActiveSubscription || isTrial || hasCredits;
       final checkpoint = state['onboarding_checkpoint'];
 
       debugPrint('[OnboardingState]   - onboarding_state (raw): $onboardingStateRaw');
@@ -362,8 +364,6 @@ class OnboardingStateService {
         debugPrint('[OnboardingState]   - Onboarding IS completed');
         // Check if the user still has access through either a subscription
         // or remaining purchased credits.
-        final hasActiveSubscription = subscriptionStatus == 'active';
-        final hasAccess = hasActiveSubscription || isTrial || hasCredits;
         debugPrint('[OnboardingState]   - hasActiveSubscription: $hasActiveSubscription');
         debugPrint('[OnboardingState]   - hasCredits: $hasCredits');
         debugPrint('[OnboardingState]   - hasAccess (active || trial || credits): $hasAccess');
@@ -385,8 +385,6 @@ class OnboardingStateService {
 
         // BUGFIX: If user has active subscription and payment was completed a while ago,
         // they likely completed onboarding but it wasn't persisted. Auto-complete and send to home.
-        final hasActiveSubscription = subscriptionStatus == 'active';
-        final hasAccess = hasActiveSubscription || isTrial || hasCredits;
         final paymentCompletedAtStr = state['payment_completed_at'];
 
         if (hasAccess && paymentCompletedAtStr != null) {
@@ -423,8 +421,15 @@ class OnboardingStateService {
         // If user reached save_progress or paywall checkpoint, they likely created an account
         // Send them back to paywall instead of resetting
         if (checkpoint == OnboardingCheckpoint.saveProgress ||
-            checkpoint == OnboardingCheckpoint.paywall) {
-          debugPrint('[OnboardingState] User abandoned at paywall - sending back to paywall');
+            checkpoint == OnboardingCheckpoint.paywall ||
+            checkpoint == OnboardingCheckpoint.account) {
+          if (hasAccess) {
+            debugPrint(
+                '[OnboardingState] User has access during in-progress onboarding - routing to welcome');
+            return 'welcome';
+          }
+
+          debugPrint('[OnboardingState] User abandoned at paywall/account - sending back to paywall');
           return 'paywall';
         }
 

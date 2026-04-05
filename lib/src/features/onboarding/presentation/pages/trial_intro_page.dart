@@ -84,13 +84,27 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         // If not eligible, present paywall directly
         if (!isEligible && mounted) {
           final userId = Supabase.instance.client.auth.currentUser?.id;
+          final accessStateBeforePaywall = userId != null
+              ? await SubscriptionSyncService().getUserAccessState(userId: userId)
+              : null;
           final didPurchase = await SuperwallService().presentPaywall(
             placement: 'onboarding_paywall',
           );
 
+          final grantedAccessState = userId != null
+              ? await SubscriptionSyncService().waitForPurchaseGrant(
+                  userId: userId,
+                  previousAccessState: accessStateBeforePaywall,
+                  timeout: didPurchase
+                      ? const Duration(seconds: 10)
+                      : const Duration(seconds: 6),
+                )
+              : null;
+
           if (!mounted) return;
 
-          if (didPurchase && userId != null) {
+          if ((didPurchase || grantedAccessState?.hasAccess == true) &&
+              userId != null) {
             // User purchased - sync subscription and navigate
             debugPrint('[TrialIntro] Purchase completed - syncing subscription');
 

@@ -159,13 +159,23 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         } else {
           debugPrint('[SaveProgress] User has no access - presenting paywall');
           if (mounted) {
+            final accessStateBeforePaywall = await SubscriptionSyncService()
+                .getUserAccessState(userId: userId);
             final didPurchase = await SuperwallService().presentPaywall(
               placement: SuperwallService.creditsPlacement,
+            );
+            final grantedAccessState = await SubscriptionSyncService()
+                .waitForPurchaseGrant(
+              userId: userId,
+              previousAccessState: accessStateBeforePaywall,
+              timeout: didPurchase
+                  ? const Duration(seconds: 10)
+                  : const Duration(seconds: 6),
             );
 
             if (!mounted) return;
 
-            if (didPurchase) {
+            if (didPurchase || grantedAccessState?.hasAccess == true) {
               // User purchased - sync purchase data and navigate to home
               debugPrint('[SaveProgress] Purchase completed - syncing access state');
 

@@ -1746,6 +1746,8 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                       ? (balance.isTrialSubscription
                           ? 'Premium (Trial)'
                           : 'Premium')
+                      : balance.availableCredits > 0
+                          ? 'Credits Pack'
                       : 'Free';
                   final showsMonthlyAllowance = balance.hasActiveSubscription;
                   final maxCredits = SubscriptionPlan.monthly.creditsPerMonth;

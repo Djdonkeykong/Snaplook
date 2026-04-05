@@ -176,7 +176,7 @@ class ManageSubscriptionPage extends ConsumerWidget {
             final subscriptionSummary =
                 subscriptionProductId != null && subscriptionProductId.isNotEmpty
                     ? _formatMembership(subscriptionProductId)
-                    : displayStatus;
+                    : (credits > 0 && !isSubscribed ? 'Credits Pack' : displayStatus);
 
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: spacing.l),
@@ -262,6 +262,8 @@ class ManageSubscriptionPage extends ConsumerWidget {
   String _formatSubscriptionStatus(String status, bool isTrial) {
     if (status == 'active') {
       return isTrial ? 'Premium (Trial)' : 'Premium';
+    } else if (status == 'free') {
+      return 'Free';
     } else if (status == 'cancelled' || status == 'expired') {
       return 'Expired';
     } else {

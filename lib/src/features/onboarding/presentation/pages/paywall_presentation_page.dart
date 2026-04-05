@@ -47,6 +47,10 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
     try {
       debugPrint('[PaywallPresentationPage] Presenting Superwall paywall...');
+      final syncService = SubscriptionSyncService();
+      final accessStateBeforePaywall = widget.userId != null
+          ? await syncService.getUserAccessState(userId: widget.userId)
+          : null;
 
       // Keep loading overlay visible while Superwall initializes
       await Future.delayed(const Duration(milliseconds: 500));
@@ -67,10 +71,21 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
       debugPrint('[PaywallPresentationPage] Purchase result: $didPurchase');
 
-      var hasAccessAfterPurchase = didPurchase;
+      final grantedAccessState = widget.userId != null
+          ? await syncService.waitForPurchaseGrant(
+              userId: widget.userId!,
+              previousAccessState: accessStateBeforePaywall,
+              timeout: didPurchase
+                  ? const Duration(seconds: 10)
+                  : const Duration(seconds: 6),
+            )
+          : null;
+
+      var hasAccessAfterPurchase =
+          didPurchase || grantedAccessState?.hasAccess == true;
 
       // If user purchased and has account, sync purchase data to Supabase.
-      if (didPurchase && widget.userId != null) {
+      if (hasAccessAfterPurchase && widget.userId != null) {
         // Show loading overlay while syncing
         if (mounted) {
           setState(() {
@@ -87,7 +102,7 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
           debugPrint(
               '[PaywallPresentationPage] Syncing purchase data to Supabase...');
-          final accessState =
+          final accessState = grantedAccessState ??
               await SubscriptionSyncService().syncSubscriptionToSupabase();
           hasAccessAfterPurchase = accessState?.hasAccess ?? didPurchase;
           await OnboardingStateService().markPaymentComplete(widget.userId!);
