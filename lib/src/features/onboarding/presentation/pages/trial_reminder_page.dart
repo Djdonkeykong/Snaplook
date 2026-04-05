@@ -217,7 +217,7 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                           params: const {
                             'occurrence': 1,
                             'source': 'trial_reminder',
-                            },
+                          },
                         );
 
                         if (!mounted) return;
@@ -226,20 +226,31 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                           _isPresenting = false;
                         });
 
+                        final syncService = SubscriptionSyncService();
                         final grantedAccessState = userId != null
-                            ? await SubscriptionSyncService().waitForPurchaseGrant(
+                            ? await syncService.waitForPurchaseGrant(
                                 userId: userId,
                                 previousAccessState: accessStateBeforePaywall,
-                                timeout: SubscriptionSyncService.purchaseGrantTimeout(
+                                timeout: SubscriptionSyncService
+                                    .purchaseGrantTimeout(
                                   placement: 'onboarding_paywall',
                                   didPurchase: didPurchase,
                                 ),
                               )
                             : null;
+                        final accessStateAfterPaywall = userId != null
+                            ? await syncService.refreshAccessState(
+                                userId: userId)
+                            : null;
 
                         if (!mounted) return;
 
-                        if ((didPurchase || grantedAccessState?.hasAccess == true) &&
+                        if ((didPurchase ||
+                                grantedAccessState?.hasAccess == true ||
+                                syncService.gainedAccess(
+                                  accessStateBeforePaywall,
+                                  accessStateAfterPaywall,
+                                )) &&
                             userId != null) {
                           // User purchased - sync subscription and navigate to welcome or home
                           debugPrint(
@@ -266,7 +277,8 @@ class _TrialReminderPageState extends ConsumerState<TrialReminderPage> {
                                 .maybeSingle();
 
                             final hasCompletedOnboarding =
-                                userResponse?['onboarding_state'] == 'completed';
+                                userResponse?['onboarding_state'] ==
+                                    'completed';
 
                             debugPrint(
                                 '[TrialReminder] Has completed onboarding: $hasCompletedOnboarding');

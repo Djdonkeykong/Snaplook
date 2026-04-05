@@ -160,13 +160,13 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         } else {
           debugPrint('[SaveProgress] User has no access - presenting paywall');
           if (mounted) {
-            final accessStateBeforePaywall = await SubscriptionSyncService()
-                .getUserAccessState(userId: userId);
+            final syncService = SubscriptionSyncService();
+            final accessStateBeforePaywall =
+                await syncService.getUserAccessState(userId: userId);
             final didPurchase = await SuperwallService().presentPaywall(
               placement: SuperwallService.creditsPlacement,
             );
-            final grantedAccessState = await SubscriptionSyncService()
-                .waitForPurchaseGrant(
+            final grantedAccessState = await syncService.waitForPurchaseGrant(
               userId: userId,
               previousAccessState: accessStateBeforePaywall,
               timeout: SubscriptionSyncService.purchaseGrantTimeout(
@@ -174,16 +174,24 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
                 didPurchase: didPurchase,
               ),
             );
+            final accessStateAfterPaywall =
+                await syncService.refreshAccessState(userId: userId);
 
             if (!mounted) return;
 
-            if (didPurchase || grantedAccessState?.hasAccess == true) {
+            if (didPurchase ||
+                grantedAccessState?.hasAccess == true ||
+                syncService.gainedAccess(
+                  accessStateBeforePaywall,
+                  accessStateAfterPaywall,
+                )) {
               // User purchased - sync purchase data and navigate to home
-              debugPrint('[SaveProgress] Purchase completed - syncing access state');
+              debugPrint(
+                  '[SaveProgress] Purchase completed - syncing access state');
 
               try {
                 await Future.delayed(const Duration(milliseconds: 500));
-                await SubscriptionSyncService().syncSubscriptionToSupabase();
+                await syncService.syncSubscriptionToSupabase();
                 await OnboardingStateService().markPaymentComplete(userId);
               } catch (e) {
                 debugPrint('[SaveProgress] Error syncing subscription: $e');
@@ -211,12 +219,14 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
               .syncSubscriptionToSupabase()
               .timeout(const Duration(seconds: 10));
         } catch (e) {
-          debugPrint('[SaveProgress] Error syncing new-user purchase state: $e');
+          debugPrint(
+              '[SaveProgress] Error syncing new-user purchase state: $e');
         }
 
         final hasAccess = accessState?.hasAccess ?? false;
         if (hasAccess) {
-          debugPrint('[SaveProgress] New user with access - navigating to welcome');
+          debugPrint(
+              '[SaveProgress] New user with access - navigating to welcome');
           if (mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
@@ -228,7 +238,8 @@ class _SaveProgressPageState extends ConsumerState<SaveProgressPage> {
         }
 
         // New user (hasn't completed onboarding and has no access) -> TrialIntroPage
-        debugPrint('[SaveProgress] New user without access - navigating to trial intro');
+        debugPrint(
+            '[SaveProgress] New user without access - navigating to trial intro');
         if (mounted) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const TrialIntroPage()),

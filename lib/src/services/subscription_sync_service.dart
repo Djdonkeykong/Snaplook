@@ -124,6 +124,15 @@ class SubscriptionSyncService {
             after.subscriptionProductId != null);
   }
 
+  bool gainedAccess(
+    UserAccessState? before,
+    UserAccessState? after,
+  ) {
+    final hadAccessBefore = before?.hasAccess ?? false;
+    final hasAccessAfter = after?.hasAccess ?? false;
+    return !hadAccessBefore && hasAccessAfter;
+  }
+
   Future<UserAccessState?> getUserAccessState({String? userId}) async {
     try {
       final resolvedUserId = userId ?? _supabase.auth.currentUser?.id;
@@ -141,6 +150,11 @@ class SubscriptionSyncService {
       debugPrint('[SubscriptionSync] Error getting access state: $e');
       return null;
     }
+  }
+
+  Future<UserAccessState?> refreshAccessState({required String userId}) async {
+    return await syncSubscriptionToSupabase() ??
+        await getUserAccessState(userId: userId);
   }
 
   /// Sync RevenueCat subscription metadata into Supabase and return the
@@ -178,7 +192,8 @@ class SubscriptionSyncService {
         return accessState;
       }
 
-      final activeEntitlements = resolvedCustomerInfo.entitlements.active.values;
+      final activeEntitlements =
+          resolvedCustomerInfo.entitlements.active.values;
       final entitlement =
           activeEntitlements.isNotEmpty ? activeEntitlements.first : null;
       final hasActiveRevenueCat = entitlement != null;
@@ -274,14 +289,15 @@ class SubscriptionSyncService {
     while (true) {
       UserAccessState? latestAccessState;
       try {
-        latestAccessState =
-            await syncSubscriptionToSupabase() ??
-                await getUserAccessState(userId: userId);
+        latestAccessState = await syncSubscriptionToSupabase() ??
+            await getUserAccessState(userId: userId);
       } catch (e) {
-        debugPrint('[SubscriptionSync] Error while waiting for purchase grant: $e');
+        debugPrint(
+            '[SubscriptionSync] Error while waiting for purchase grant: $e');
       }
 
-      if (_hasMeaningfulPurchaseChange(previousAccessState, latestAccessState)) {
+      if (_hasMeaningfulPurchaseChange(
+          previousAccessState, latestAccessState)) {
         debugPrint(
           '[SubscriptionSync] Purchase grant detected for user=$userId '
           'credits=${latestAccessState?.paidCreditsRemaining} '

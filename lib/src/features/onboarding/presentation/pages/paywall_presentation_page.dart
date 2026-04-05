@@ -84,9 +84,16 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
               ),
             )
           : null;
+      final accessStateAfterPaywall = widget.userId != null
+          ? await syncService.refreshAccessState(userId: widget.userId!)
+          : null;
 
-      var hasAccessAfterPurchase =
-          didPurchase || grantedAccessState?.hasAccess == true;
+      var hasAccessAfterPurchase = didPurchase ||
+          grantedAccessState?.hasAccess == true ||
+          syncService.gainedAccess(
+            accessStateBeforePaywall,
+            accessStateAfterPaywall,
+          );
 
       // If user purchased and has account, sync purchase data to Supabase.
       if (hasAccessAfterPurchase && widget.userId != null) {
@@ -106,8 +113,9 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
           debugPrint(
               '[PaywallPresentationPage] Syncing purchase data to Supabase...');
-          final accessState = grantedAccessState ??
-              await SubscriptionSyncService().syncSubscriptionToSupabase();
+          final accessState = accessStateAfterPaywall ??
+              grantedAccessState ??
+              await syncService.syncSubscriptionToSupabase();
           hasAccessAfterPurchase = accessState?.hasAccess ?? didPurchase;
           await OnboardingStateService().markPaymentComplete(widget.userId!);
           debugPrint(
@@ -136,7 +144,8 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       }
 
       if (widget.userId == null) {
-        debugPrint('[PaywallPresentationPage] WARNING: No user found after paywall');
+        debugPrint(
+            '[PaywallPresentationPage] WARNING: No user found after paywall');
         Navigator.of(context).pop();
         return;
       }

@@ -85,14 +85,16 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
         if (!isEligible && mounted) {
           final userId = Supabase.instance.client.auth.currentUser?.id;
           final accessStateBeforePaywall = userId != null
-              ? await SubscriptionSyncService().getUserAccessState(userId: userId)
+              ? await SubscriptionSyncService()
+                  .getUserAccessState(userId: userId)
               : null;
           final didPurchase = await SuperwallService().presentPaywall(
             placement: 'onboarding_paywall',
           );
 
+          final syncService = SubscriptionSyncService();
           final grantedAccessState = userId != null
-              ? await SubscriptionSyncService().waitForPurchaseGrant(
+              ? await syncService.waitForPurchaseGrant(
                   userId: userId,
                   previousAccessState: accessStateBeforePaywall,
                   timeout: SubscriptionSyncService.purchaseGrantTimeout(
@@ -101,13 +103,22 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
                   ),
                 )
               : null;
+          final accessStateAfterPaywall = userId != null
+              ? await syncService.refreshAccessState(userId: userId)
+              : null;
 
           if (!mounted) return;
 
-          if ((didPurchase || grantedAccessState?.hasAccess == true) &&
+          if ((didPurchase ||
+                  grantedAccessState?.hasAccess == true ||
+                  syncService.gainedAccess(
+                    accessStateBeforePaywall,
+                    accessStateAfterPaywall,
+                  )) &&
               userId != null) {
             // User purchased - sync subscription and navigate
-            debugPrint('[TrialIntro] Purchase completed - syncing subscription');
+            debugPrint(
+                '[TrialIntro] Purchase completed - syncing subscription');
 
             try {
               await Future.delayed(const Duration(milliseconds: 500));
@@ -128,7 +139,8 @@ class _TrialIntroPageState extends ConsumerState<TrialIntroPage>
               final hasCompletedOnboarding =
                   userResponse?['onboarding_state'] == 'completed';
 
-              debugPrint('[TrialIntro] Has completed onboarding: $hasCompletedOnboarding');
+              debugPrint(
+                  '[TrialIntro] Has completed onboarding: $hasCompletedOnboarding');
 
               if (hasCompletedOnboarding) {
                 // Returning user - go directly to home

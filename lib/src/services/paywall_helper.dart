@@ -43,16 +43,26 @@ class PaywallHelper {
         );
       }
 
-      final purchaseConfirmed = didPurchase || grantedAccessState != null;
+      final accessStateAfterPaywall = userId != null
+          ? await syncService.refreshAccessState(userId: userId)
+          : null;
+      final purchaseConfirmed = didPurchase ||
+          grantedAccessState?.hasAccess == true ||
+          syncService.gainedAccess(
+            accessStateBeforePaywall,
+            accessStateAfterPaywall,
+          );
 
       // If user purchased and has account, identify user and sync purchase data
       // to Supabase. This covers both subscriptions and one-time credit packs.
       if (purchaseConfirmed && userId != null) {
         try {
-          debugPrint('[PaywallHelper] Identifying user and syncing purchase data...');
+          debugPrint(
+              '[PaywallHelper] Identifying user and syncing purchase data...');
           // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
-          final accessState =
-              grantedAccessState ?? await SubscriptionSyncService().identify(userId);
+          final accessState = accessStateAfterPaywall ??
+              grantedAccessState ??
+              await SubscriptionSyncService().identify(userId);
           await OnboardingStateService().markPaymentComplete(userId);
           debugPrint(
               '[PaywallHelper] User identified and purchase data synced successfully. '
@@ -93,7 +103,8 @@ class PaywallHelper {
 
       // Only navigate forward if user purchased
       if (!didPurchase) {
-        debugPrint('[PaywallHelper] User dismissed paywall without purchasing - staying on current page');
+        debugPrint(
+            '[PaywallHelper] User dismissed paywall without purchasing - staying on current page');
         return;
       }
 
@@ -107,7 +118,8 @@ class PaywallHelper {
       Widget nextPage;
       if (isReturningUser) {
         // Returning user (login flow) - go directly to main app
-        debugPrint('[PaywallHelper] Returning user purchased - navigating to MainNavigation');
+        debugPrint(
+            '[PaywallHelper] Returning user purchased - navigating to MainNavigation');
         nextPage = const MainNavigation();
       } else {
         // New user (onboarding flow) - check onboarding state
