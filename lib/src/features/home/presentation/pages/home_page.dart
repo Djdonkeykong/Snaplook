@@ -1746,17 +1746,13 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                       ? (balance.isTrialSubscription
                           ? 'Premium (Trial)'
                           : 'Premium')
-                      : balance.availableCredits > 0
-                          ? 'Credits Pack'
                       : 'Free';
-                  final showsMonthlyAllowance = balance.hasActiveSubscription;
                   final maxCredits = SubscriptionPlan.monthly.creditsPerMonth;
                   final creditsRemaining =
-                      balance.availableCredits < 0 ? 0 : balance.availableCredits;
-                  final creditsPercentage =
-                      showsMonthlyAllowance && maxCredits > 0
-                          ? (creditsRemaining / maxCredits).clamp(0.0, 1.0)
-                          : (creditsRemaining > 0 ? 1.0 : 0.0);
+                      balance.availableCredits.clamp(0, maxCredits).toInt();
+                  final creditsPercentage = maxCredits > 0
+                      ? (creditsRemaining / maxCredits).clamp(0.0, 1.0)
+                      : 0.0;
 
                   return Column(
                     mainAxisSize: MainAxisSize.min,
@@ -1803,6 +1799,15 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                               letterSpacing: -2,
                             ),
                           ),
+                          Text(
+                            ' / $maxCredits',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurfaceVariant,
+                              fontFamily: 'PlusJakartaSans',
+                            ),
+                          ),
                         ],
                       ),
                       SizedBox(height: spacing.xs),
@@ -1830,9 +1835,7 @@ class _InfoBottomSheetContent extends ConsumerWidget {
                       ),
                       SizedBox(height: spacing.m),
                       Text(
-                        showsMonthlyAllowance
-                            ? 'Resets monthly on the 1st'
-                            : 'Top up anytime with credit packs',
+                        'Resets monthly on the 1st',
                         style: TextStyle(
                           fontSize: 12,
                           color: colorScheme.onSurfaceVariant,

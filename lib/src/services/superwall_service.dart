@@ -13,8 +13,6 @@ class SuperwallService {
   factory SuperwallService() => _instance;
 
   static const String defaultPlacement = 'onboarding_paywall';
-  static const String creditsPlacement = 'credits_paywall';
-  static const String legacyCreditsPlacement = 'showScanPacks';
 
   sw.SubscriptionStatus _latestStatus = sw.SubscriptionStatus.unknown;
   StreamSubscription<sw.SubscriptionStatus>? _statusSub;
@@ -297,22 +295,6 @@ class SuperwallService {
         return false;
       }
 
-      _CustomerInfoSnapshot? beforePurchaseSnapshot;
-      try {
-        final customerInfo = await Purchases.getCustomerInfo();
-        beforePurchaseSnapshot =
-            _CustomerInfoSnapshot.fromRevenueCat(customerInfo);
-        _log(
-          'Pre-placement purchase snapshot: activeProducts=${beforePurchaseSnapshot.activeProductIds.length} '
-          'nonSubscriptionTransactions=${beforePurchaseSnapshot.nonSubscriptionTransactionIds.length}',
-        );
-      } catch (e) {
-        _log(
-          'Unable to capture pre-placement purchase snapshot: $e',
-          level: DebugLogLevel.warning,
-        );
-      }
-
       // Non-blocking RC health probe for debugging only.
       if (kDebugMode) {
         unawaited(_logRevenueCatOfferingsCheck());
@@ -427,31 +409,16 @@ class SuperwallService {
         }
       }
 
-      // Compare before/after RevenueCat state so one-time purchases and
-      // subscription upgrades count as success, while dismissing a paywall
-      // during an already-active subscription does not.
+      // Validate actual entitlement state so non-gated paywalls don't incorrectly
+      // get treated as purchases.
       try {
         final customerInfo = await Purchases.getCustomerInfo();
-        final afterPurchaseSnapshot =
-            _CustomerInfoSnapshot.fromRevenueCat(customerInfo);
-        final hadActiveEntitlementBefore =
-            beforePurchaseSnapshot?.hasActiveEntitlement ?? false;
-        final hasActiveEntitlementAfter =
-            afterPurchaseSnapshot.hasActiveEntitlement;
-        final didCustomerInfoChange = beforePurchaseSnapshot != null &&
-            afterPurchaseSnapshot.didChangeComparedTo(beforePurchaseSnapshot);
-        final didEntitlementBecomeActive =
-            !hadActiveEntitlementBefore && hasActiveEntitlementAfter;
-        final didPurchase = didEntitlementBecomeActive || didCustomerInfoChange;
-
+        final hasActiveEntitlement =
+            customerInfo.entitlements.active.isNotEmpty;
         _log(
-          'Post-placement purchase check: '
-          'hadActiveEntitlementBefore=$hadActiveEntitlementBefore '
-          'hasActiveEntitlementAfter=$hasActiveEntitlementAfter '
-          'didCustomerInfoChange=$didCustomerInfoChange '
-          'didPurchase=$didPurchase',
+          'Post-placement entitlement check: hasActiveEntitlement=$hasActiveEntitlement',
         );
-        return didPurchase;
+        return hasActiveEntitlement;
       } catch (e) {
         _log(
           'Post-placement entitlement check failed: $e',
@@ -489,43 +456,6 @@ class SuperwallService {
   void dispose() {
     _statusSub?.cancel();
     _statusSub = null;
-  }
-}
-
-class _CustomerInfoSnapshot {
-  const _CustomerInfoSnapshot({
-    required this.activeProductIds,
-    required this.nonSubscriptionTransactionIds,
-  });
-
-  final Set<String> activeProductIds;
-  final Set<String> nonSubscriptionTransactionIds;
-
-  bool get hasActiveEntitlement => activeProductIds.isNotEmpty;
-
-  factory _CustomerInfoSnapshot.fromRevenueCat(CustomerInfo customerInfo) {
-    final activeProductIds = customerInfo.entitlements.active.values
-        .map((entitlement) => entitlement.productIdentifier.toLowerCase())
-        .toSet();
-    final nonSubscriptionTransactionIds = customerInfo.nonSubscriptionTransactions
-        .map((transaction) => transaction.transactionIdentifier.trim())
-        .where((transactionId) => transactionId.isNotEmpty)
-        .toSet();
-
-    return _CustomerInfoSnapshot(
-      activeProductIds: activeProductIds,
-      nonSubscriptionTransactionIds: nonSubscriptionTransactionIds,
-    );
-  }
-
-  bool didChangeComparedTo(_CustomerInfoSnapshot? other) {
-    if (other == null) return false;
-
-    return !setEquals(activeProductIds, other.activeProductIds) ||
-        !setEquals(
-          nonSubscriptionTransactionIds,
-          other.nonSubscriptionTransactionIds,
-        );
   }
 }
 

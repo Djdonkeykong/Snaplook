@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../services/analytics_service.dart';
@@ -16,12 +15,10 @@ class PaywallPresentationPage extends StatefulWidget {
     super.key,
     required this.userId,
     this.placement = 'onboarding_paywall',
-    this.dismissToHomeIfNoPurchase = false,
   });
 
   final String? userId;
   final String placement;
-  final bool dismissToHomeIfNoPurchase;
 
   @override
   State<PaywallPresentationPage> createState() =>
@@ -29,8 +26,6 @@ class PaywallPresentationPage extends StatefulWidget {
 }
 
 class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
-  static const _splashAssetPath = 'assets/images/snaplook-logo-splash.png';
-  static const _logoWidth = 93.027;
   bool _isLoading = true;
   bool _hasPresented = false;
 
@@ -50,10 +45,6 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
     try {
       debugPrint('[PaywallPresentationPage] Presenting Superwall paywall...');
-      final syncService = SubscriptionSyncService();
-      final accessStateBeforePaywall = widget.userId != null
-          ? await syncService.getUserAccessState(userId: widget.userId)
-          : null;
 
       // Keep loading overlay visible while Superwall initializes
       await Future.delayed(const Duration(milliseconds: 500));
@@ -74,29 +65,8 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
       debugPrint('[PaywallPresentationPage] Purchase result: $didPurchase');
 
-      final grantedAccessState = widget.userId != null
-          ? await syncService.waitForPurchaseGrant(
-              userId: widget.userId!,
-              previousAccessState: accessStateBeforePaywall,
-              timeout: SubscriptionSyncService.purchaseGrantTimeout(
-                placement: widget.placement,
-                didPurchase: didPurchase,
-              ),
-            )
-          : null;
-      final accessStateAfterPaywall = widget.userId != null
-          ? await syncService.refreshAccessState(userId: widget.userId!)
-          : null;
-
-      var hasAccessAfterPurchase = didPurchase ||
-          grantedAccessState?.hasAccess == true ||
-          syncService.gainedAccess(
-            accessStateBeforePaywall,
-            accessStateAfterPaywall,
-          );
-
-      // If user purchased and has account, sync purchase data to Supabase.
-      if (hasAccessAfterPurchase && widget.userId != null) {
+      // If user purchased and has account, sync subscription to Supabase
+      if (didPurchase && widget.userId != null) {
         // Show loading overlay while syncing
         if (mounted) {
           setState(() {
@@ -112,15 +82,11 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
           await Future.delayed(const Duration(milliseconds: 500));
 
           debugPrint(
-              '[PaywallPresentationPage] Syncing purchase data to Supabase...');
-          final accessState = accessStateAfterPaywall ??
-              grantedAccessState ??
-              await syncService.syncSubscriptionToSupabase();
-          hasAccessAfterPurchase = accessState?.hasAccess ?? didPurchase;
+              '[PaywallPresentationPage] Syncing subscription to Supabase...');
+          await SubscriptionSyncService().syncSubscriptionToSupabase();
           await OnboardingStateService().markPaymentComplete(widget.userId!);
           debugPrint(
-              '[PaywallPresentationPage] Purchase data synced successfully. '
-              'hasAccess=$hasAccessAfterPurchase credits=${accessState?.paidCreditsRemaining}');
+              '[PaywallPresentationPage] Subscription synced successfully');
         } catch (e) {
           debugPrint(
               '[PaywallPresentationPage] Error syncing subscription: $e');
@@ -130,22 +96,15 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
       if (!mounted) return;
 
       // Only navigate forward if user purchased
-      if (!hasAccessAfterPurchase) {
+      if (!didPurchase) {
         debugPrint(
             '[PaywallPresentationPage] User dismissed paywall without purchasing - going back');
-        if (widget.dismissToHomeIfNoPurchase) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const MainNavigation()),
-          );
-          return;
-        }
         Navigator.of(context).pop();
         return;
       }
 
       if (widget.userId == null) {
-        debugPrint(
-            '[PaywallPresentationPage] WARNING: No user found after paywall');
+        debugPrint('[PaywallPresentationPage] WARNING: No user found after paywall');
         Navigator.of(context).pop();
         return;
       }
@@ -190,60 +149,21 @@ class _PaywallPresentationPageState extends State<PaywallPresentationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarBrightness: Brightness.dark,
-        statusBarIconBrightness: Brightness.light,
-      ),
-      child: Scaffold(
-        backgroundColor: AppColors.secondary,
-        body: _isLoading
-            ? Stack(
-                fit: StackFit.expand,
-                children: [
-                  Center(
-                    child: SizedBox(
-                      width: _logoWidth,
-                      child: Image.asset(
-                        _splashAssetPath,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 44,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                            strokeWidth: 2.4,
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        Text(
-                          'Loading paywall...',
-                          style: TextStyle(
-                            color: Color(0xF2FFFFFF),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              )
-            : const SizedBox.shrink(),
-      ),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.secondary,
+                ),
+                backgroundColor: colorScheme.outlineVariant,
+                strokeWidth: 3,
+              ),
+            )
+          : const SizedBox.shrink(),
     );
   }
 }

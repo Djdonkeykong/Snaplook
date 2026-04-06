@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
@@ -11,7 +12,6 @@ import '../../domain/providers/auth_provider.dart';
 import '../../domain/services/auth_service.dart';
 import '../../../onboarding/presentation/pages/how_it_works_page.dart';
 import '../../../onboarding/presentation/pages/notification_permission_page.dart';
-import '../../../onboarding/presentation/pages/welcome_free_analysis_page.dart';
 import '../../../../services/paywall_helper.dart';
 import '../../../../../shared/navigation/main_navigation.dart'
     show
@@ -179,23 +179,12 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage>
                   '[EmailVerification] Error updating checkpoint: $checkpointError');
             }
 
-            final syncService = SubscriptionSyncService();
-            final accessStateBeforeIdentify =
-                await syncService.getUserAccessState(userId: userId);
-
             // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
-            // This must happen BEFORE checking subscription status.
-            // Credit packs are granted asynchronously by the RevenueCat webhook,
-            // so we also wait briefly for the resulting balance to land.
+            // This must happen BEFORE checking subscription status
             print(
                 '[EmailVerification] Linking RevenueCat subscription to account...');
             try {
-              await syncService.identify(userId);
-              await syncService.waitForPurchaseGrant(
-                userId: userId,
-                previousAccessState: accessStateBeforeIdentify,
-                timeout: const Duration(seconds: 30),
-              );
+              await SubscriptionSyncService().identify(userId);
               print(
                   '[EmailVerification] RevenueCat subscription linked and synced');
             } catch (linkError) {
@@ -294,22 +283,25 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage>
             print(
                 '[EmailVerification] Has completed onboarding: $hasCompletedOnboarding');
 
-            final accessState =
-                await syncService.getUserAccessState(userId: userId);
+            // Check subscription status from RevenueCat (source of truth)
+            CustomerInfo? customerInfo;
+            try {
+              customerInfo = await Purchases.getCustomerInfo();
+            } catch (e) {
+              debugPrint(
+                  '[EmailVerification] Error fetching RevenueCat customer info: $e');
+            }
+
+            final activeEntitlements = customerInfo?.entitlements.active.values;
             final hasActiveSubscription =
-                accessState?.hasActiveSubscription ?? false;
-            final hasCredits = accessState?.hasCredits ?? false;
-            final hasAccess = accessState?.hasAccess ?? false;
+                activeEntitlements != null && activeEntitlements.isNotEmpty;
+            print(
+                '[EmailVerification] Has active subscription (RevenueCat): $hasActiveSubscription');
 
-            print('[EmailVerification] Access state: hasAccess=$hasAccess '
-                'hasActiveSubscription=$hasActiveSubscription '
-                'hasCredits=$hasCredits '
-                'credits=${accessState?.paidCreditsRemaining}');
-
-            if (hasCompletedOnboarding && hasAccess) {
-              // Existing user who completed onboarding and already has access - go to main app
+            if (hasCompletedOnboarding && hasActiveSubscription) {
+              // Existing user who completed onboarding and has active subscription - go to main app
               print(
-                  '[EmailVerification] Existing user with access - navigating to main app');
+                  '[EmailVerification] Existing user with subscription - navigating to main app');
               // Reset to home tab
               ref.read(selectedIndexProvider.notifier).state = 0;
               // Invalidate all providers to refresh state
@@ -323,33 +315,37 @@ class _EmailVerificationPageState extends ConsumerState<EmailVerificationPage>
                 ),
                 (route) => false,
               );
-            } else if (hasCompletedOnboarding && !hasAccess) {
-              // Existing user who completed onboarding but has no access - present paywall
+            } else if (hasCompletedOnboarding && !hasActiveSubscription) {
+              // Existing user who completed onboarding but NO subscription - present Superwall paywall
               print(
-                  '[EmailVerification] Existing user without access - presenting Superwall paywall');
+                  '[EmailVerification] Existing user without subscription - presenting Superwall paywall');
               await PaywallHelper.presentPaywallAndNavigate(
                 context: context,
                 userId: userId,
-                placement: 'credits_paywall',
               );
             } else {
               // New user - check onboarding progress
               final hasOnboardingData = discoverySource != null;
 
-              if (hasAccess) {
-                // User already has access, but onboarding still needs to finish.
+              if (hasActiveSubscription) {
+                // User purchased subscription - go straight to home
                 print(
-                    '[EmailVerification] New user with access - navigating to welcome');
+                    '[EmailVerification] New user with subscription - navigating to home');
+                ref.read(selectedIndexProvider.notifier).state = 0;
+                ref.invalidate(selectedIndexProvider);
+                ref.invalidate(scrollToTopTriggerProvider);
+                ref.invalidate(isAtHomeRootProvider);
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (context) => const WelcomeFreeAnalysisPage(),
+                    builder: (context) =>
+                        const MainNavigation(key: ValueKey('fresh-main-nav')),
                   ),
                   (route) => false,
                 );
               } else if (hasOnboardingData) {
-                // User went through onboarding but has no access - present paywall
+                // User went through onboarding but no subscription - present Superwall paywall
                 print(
-                    '[EmailVerification] New user with onboarding data but no access - presenting Superwall paywall');
+                    '[EmailVerification] New user with onboarding data but no subscription - presenting Superwall paywall');
                 await PaywallHelper.presentPaywallAndNavigate(
                   context: context,
                   userId: userId,

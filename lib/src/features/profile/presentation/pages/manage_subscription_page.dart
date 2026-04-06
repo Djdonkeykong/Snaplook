@@ -6,21 +6,16 @@ import 'dart:io';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/theme_extensions.dart';
 import '../../../../shared/widgets/snaplook_back_button.dart';
-import '../../../../services/revenuecat_service.dart';
-import '../../../../services/subscription_sync_service.dart';
 
 // Provider to fetch user subscription info from Supabase
-final userSubscriptionProvider =
-    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+final userSubscriptionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
   final userId = Supabase.instance.client.auth.currentUser?.id;
   if (userId == null) return null;
 
   try {
     final response = await Supabase.instance.client
         .from('users')
-        .select(
-          'subscription_status, is_trial, paid_credits_remaining, subscription_product_id',
-        )
+        .select('subscription_status, is_trial, paid_credits_remaining')
         .eq('id', userId)
         .maybeSingle();
 
@@ -66,59 +61,20 @@ class ManageSubscriptionPage extends ConsumerWidget {
     }
   }
 
-  Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
-    final storeLabel = Platform.isIOS ? 'App Store' : 'Google Play';
+  Future<void> _restorePurchases(BuildContext context) async {
+    // TODO: Implement Superwall restore purchases
+    // This will call Superwall's restore purchases method
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Checking $storeLabel purchases...',
+          'Restoring purchases...',
           style: context.snackTextStyle(
             merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
           ),
         ),
-        duration: const Duration(milliseconds: 1500),
+        duration: const Duration(milliseconds: 2000),
       ),
     );
-
-    try {
-      await RevenueCatService().restorePurchases();
-      final accessState =
-          await SubscriptionSyncService().syncSubscriptionToSupabase();
-      ref.invalidate(userSubscriptionProvider);
-
-      if (!context.mounted) return;
-
-      final message = accessState?.hasActiveSubscription == true
-          ? 'Subscription restored successfully.'
-          : accessState?.hasCredits == true
-              ? 'Your remaining credits are already synced to your Snaplook account.'
-              : 'No active subscription was found to restore.';
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            message,
-            style: context.snackTextStyle(
-              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-            ),
-          ),
-          duration: const Duration(milliseconds: 2500),
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not restore purchases right now.',
-            style: context.snackTextStyle(
-              merge: const TextStyle(fontFamily: 'PlusJakartaSans'),
-            ),
-          ),
-          duration: const Duration(milliseconds: 2500),
-        ),
-      );
-    }
   }
 
   @override
@@ -164,24 +120,13 @@ class ManageSubscriptionPage extends ConsumerWidget {
           ),
           data: (subscriptionData) {
             // Extract subscription info from Supabase users table
-            final subscriptionStatus =
-                subscriptionData?['subscription_status'] as String? ?? 'free';
+            final subscriptionStatus = subscriptionData?['subscription_status'] as String? ?? 'free';
             final isTrial = subscriptionData?['is_trial'] as bool? ?? false;
-            final credits =
-                subscriptionData?['paid_credits_remaining'] as int? ?? 0;
-            final subscriptionProductId =
-                subscriptionData?['subscription_product_id'] as String?;
+            final credits = subscriptionData?['paid_credits_remaining'] as int? ?? 0;
 
             // Determine display values
-            final isSubscribed = subscriptionStatus == 'active' || isTrial;
-            final displayStatus =
-                _formatSubscriptionStatus(subscriptionStatus, isTrial);
-            final displayCredits =
-                credits > 0 ? '$credits credits' : '0 credits';
-            final subscriptionSummary = subscriptionProductId != null &&
-                    subscriptionProductId.isNotEmpty
-                ? _formatMembership(subscriptionProductId)
-                : (credits > 0 && !isSubscribed ? 'Scan Pack' : displayStatus);
+            final isSubscribed = subscriptionStatus == 'active';
+            final displayStatus = _formatSubscriptionStatus(subscriptionStatus, isTrial);
 
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: spacing.l),
@@ -189,31 +134,23 @@ class ManageSubscriptionPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: spacing.l),
+
                   _SettingsCard(
                     showShadow: true,
                     children: [
                       const SizedBox(height: 8),
                       _SettingsRow.value(
                         label: 'Current Plan',
-                        value: subscriptionSummary,
-                        valueColor: isSubscribed
-                            ? AppColors.secondary
-                            : colorScheme.onSurface,
-                      ),
-                      const SizedBox(height: 8),
-                      _Divider(),
-                      const SizedBox(height: 8),
-                      _SettingsRow.value(
-                        label: 'Credits',
-                        value: displayCredits,
-                        valueColor: credits > 0
-                            ? AppColors.secondary
-                            : colorScheme.onSurface,
+                        value: displayStatus,
+                        valueColor:
+                            isSubscribed ? AppColors.secondary : colorScheme.onSurface,
                       ),
                       const SizedBox(height: 8),
                     ],
                   ),
+
                   SizedBox(height: spacing.l),
+
                   _SettingsCard(
                     children: [
                       const SizedBox(height: 8),
@@ -228,19 +165,21 @@ class ManageSubscriptionPage extends ConsumerWidget {
                       const SizedBox(height: 8),
                       _SettingsRow.disclosure(
                         label: 'Restore Purchases',
-                        onTap: () => _restorePurchases(context, ref),
+                        onTap: () => _restorePurchases(context),
                       ),
                       const SizedBox(height: 8),
                     ],
                   ),
+
                   SizedBox(height: spacing.l),
+
                   _SettingsCard(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         child: Text(
-                          'Subscriptions are managed in the ${Platform.isIOS ? 'App Store' : 'Google Play'}. Remaining credit packs stay synced to your Snaplook account through Supabase, so they follow you when you sign in.',
+                          'To cancel or modify your subscription, use the ${Platform.isIOS ? 'App Store' : 'Google Play'} subscription management. Changes take effect at the end of your billing period.',
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.45,
@@ -263,8 +202,6 @@ class ManageSubscriptionPage extends ConsumerWidget {
   String _formatSubscriptionStatus(String status, bool isTrial) {
     if (status == 'active') {
       return isTrial ? 'Premium (Trial)' : 'Premium';
-    } else if (status == 'free') {
-      return 'Free';
     } else if (status == 'cancelled' || status == 'expired') {
       return 'Expired';
     } else {
@@ -273,24 +210,19 @@ class ManageSubscriptionPage extends ConsumerWidget {
   }
 
   String _formatMembership(String raw) {
-    final normalized = raw.trim().toLowerCase();
-    if (normalized.isEmpty) {
+    final cleaned = raw.trim();
+    final normalized = cleaned.replaceAll(RegExp(r'[_-]+'), ' ').trim();
+    final segments =
+        normalized.split(RegExp(r'\s+')).where((segment) => segment.isNotEmpty);
+    if (segments.isEmpty) {
       return 'Free';
     }
-
-    if (normalized.contains('yearly')) {
-      return 'Yearly';
-    }
-
-    if (normalized.contains('monthly')) {
-      return 'Monthly';
-    }
-
-    if (normalized.contains('credits') || normalized.contains('scanpack')) {
-      return 'Scan Pack';
-    }
-
-    return 'Premium';
+    return segments
+        .map(
+          (segment) =>
+              segment[0].toUpperCase() + segment.substring(1).toLowerCase(),
+        )
+        .join(' ');
   }
 }
 
@@ -310,15 +242,13 @@ class _SettingsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: showShadow
-            ? [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : null,
+        boxShadow: showShadow ? [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ] : null,
       ),
       child: Column(children: children),
     );
@@ -389,8 +319,7 @@ class _SettingsRow extends StatelessWidget {
             ),
             if (value != null)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
                   color: AppColors.outlineVariant,

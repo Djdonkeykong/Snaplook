@@ -17,10 +17,6 @@ class PaywallHelper {
   }) async {
     try {
       debugPrint('[PaywallHelper] Presenting Superwall paywall...');
-      final syncService = SubscriptionSyncService();
-      final accessStateBeforePaywall = userId != null
-          ? await syncService.getUserAccessState(userId: userId)
-          : null;
 
       // Present Superwall paywall
       final didPurchase = await SuperwallService().presentPaywall(
@@ -31,48 +27,20 @@ class PaywallHelper {
 
       debugPrint('[PaywallHelper] Purchase result: $didPurchase');
 
-      UserAccessState? grantedAccessState;
-      if (userId != null) {
-        grantedAccessState = await syncService.waitForPurchaseGrant(
-          userId: userId,
-          previousAccessState: accessStateBeforePaywall,
-          timeout: SubscriptionSyncService.purchaseGrantTimeout(
-            placement: placement,
-            didPurchase: didPurchase,
-          ),
-        );
-      }
-
-      final accessStateAfterPaywall = userId != null
-          ? await syncService.refreshAccessState(userId: userId)
-          : null;
-      final purchaseConfirmed = didPurchase ||
-          grantedAccessState?.hasAccess == true ||
-          syncService.gainedAccess(
-            accessStateBeforePaywall,
-            accessStateAfterPaywall,
-          );
-
-      // If user purchased and has account, identify user and sync purchase data
-      // to Supabase. This covers both subscriptions and one-time credit packs.
-      if (purchaseConfirmed && userId != null) {
+      // If user purchased and has account, identify user and sync subscription to Supabase
+      if (didPurchase && userId != null) {
         try {
-          debugPrint(
-              '[PaywallHelper] Identifying user and syncing purchase data...');
+          debugPrint('[PaywallHelper] Identifying user and syncing subscription...');
           // CRITICAL: Identify user with RevenueCat to link any anonymous purchases
-          final accessState = accessStateAfterPaywall ??
-              grantedAccessState ??
-              await SubscriptionSyncService().identify(userId);
+          await SubscriptionSyncService().identify(userId);
           await OnboardingStateService().markPaymentComplete(userId);
-          debugPrint(
-              '[PaywallHelper] User identified and purchase data synced successfully. '
-              'hasAccess=${accessState?.hasAccess} credits=${accessState?.paidCreditsRemaining}');
+          debugPrint('[PaywallHelper] User identified and subscription synced successfully');
         } catch (e) {
           debugPrint('[PaywallHelper] Error syncing subscription: $e');
         }
       }
 
-      return purchaseConfirmed;
+      return didPurchase;
     } catch (e) {
       debugPrint('[PaywallHelper] Error during paywall presentation: $e');
       return false;
@@ -103,8 +71,7 @@ class PaywallHelper {
 
       // Only navigate forward if user purchased
       if (!didPurchase) {
-        debugPrint(
-            '[PaywallHelper] User dismissed paywall without purchasing - staying on current page');
+        debugPrint('[PaywallHelper] User dismissed paywall without purchasing - staying on current page');
         return;
       }
 
@@ -118,8 +85,7 @@ class PaywallHelper {
       Widget nextPage;
       if (isReturningUser) {
         // Returning user (login flow) - go directly to main app
-        debugPrint(
-            '[PaywallHelper] Returning user purchased - navigating to MainNavigation');
+        debugPrint('[PaywallHelper] Returning user purchased - navigating to MainNavigation');
         nextPage = const MainNavigation();
       } else {
         // New user (onboarding flow) - check onboarding state
